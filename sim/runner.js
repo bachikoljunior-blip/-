@@ -52,13 +52,13 @@ function mergeEventsByRun(sim) {
 function summarize(sim) {
   const total = sim.runs.reduce((a, r) => a + r.runCookies, 0);
   const fullT = fullUnlockTime(sim);
-  // 条件: 転生後の各周回(回=転生から転生まで)が前回の100倍以上 / 獲得PTが前回の2倍以上(途中周回は除く)
+  // 条件: 転生後の各周回(回=転生から転生まで)が前回の100倍以上 / 獲得PTが前回の2倍〜100倍に収まる(途中周回は除く)
   const full = sim.runs.filter(r => !r.partial);
   let doubleOk = 0, doubleAll = 0, gainOk = 0;
   for (let i = 1; i < full.length; i++) {
     doubleAll++;
     if (full[i].runCookies >= 100 * full[i - 1].runCookies) doubleOk++;
-    if (full[i].gain >= 2 * full[i - 1].gain) gainOk++;
+    if (full[i].gain >= 2 * full[i - 1].gain && full[i].gain <= 100 * full[i - 1].gain) gainOk++;
   }
   // 条件4: 解放ペース (全スキル解放後は無視、同一周回内の解放は1つに統合)
   const ev = mergeEventsByRun(sim);
@@ -95,7 +95,7 @@ function runBaseline(hours, only) {
 }
 
 function printBaseline(results) {
-  console.log('ID  名称              周回数 総クッキー   100倍達成  PT2倍   解放数 ペース適合 ノルマ帯域 全解放');
+  console.log('ID  名称              周回数 総クッキー   100倍達成  PT2-100倍   解放数 ペース適合 ノルマ帯域 全解放');
   for (const r of results) {
     const fullT = r.sum.fullT === Infinity ? '未' : fmtT(r.sum.fullT);
     console.log(
@@ -381,7 +381,7 @@ if (mode === 'baseline') {
   console.log(`戦略: ${s.id} ${s.name}`);
   printDetail(sim);
   const sum = summarize(sim);
-  console.log(`合計: ${fmtN(sum.total)} / 100倍達成 ${sum.doubleOk}/${sum.doubleAll} / PT2倍 ${sum.gainOk}/${sum.doubleAll} / ペース ${sum.paceOk}/${sum.paceAll}`);
+  console.log(`合計: ${fmtN(sum.total)} / 100倍達成 ${sum.doubleOk}/${sum.doubleAll} / PT2-100倍 ${sum.gainOk}/${sum.doubleAll} / ペース ${sum.paceOk}/${sum.paceAll}`);
 } else if (mode === 'pacing') {
   const s = STRATEGIES.find(x => x.id === arg) || STRATEGIES[0];
   const sim = G.simulate(s, { hours });
