@@ -3,7 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>背景除去・画像くっきり・クッキーゲーム</title>
+  <title>クッキーストラテジャー｜無料ブラウザで遊べるクッキークリッカー系放置ゲーム</title>
+  <meta name="description" content="クッキーストラテジャーは、インストール不要・無料でブラウザから遊べるクッキークリッカー系の放置ゲームです。クッキーをタップして強化・研究を進め、金のクッキーやクッキーモンスター、転生スキルツリーでどこまでも生産量を伸ばそう。">
+  <meta name="theme-color" content="#1d130d">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="クッキーストラテジャー｜無料ブラウザクッキークリッカー">
+  <meta property="og:description" content="インストール不要・無料でブラウザから遊べるクッキークリッカー系放置ゲーム。強化・研究・転生スキルツリーでクッキー生産を極めよう。">
+  <meta property="og:locale" content="ja_JP">
+  <link rel="canonical" href="https://bachikoljunior-blip.github.io/exist-debug/">
+
+  <!--
+    Google AdSense 用スニペット
+    AdSense の審査に申し込むと「サイトにコードを貼り付けてください」と
+    ca-pub-XXXXXXXXXXXXXXXX 形式のコードが発行されます。
+    発行されたら、下のコメントを外して client= の値を自分のIDに書き換えてください。
+
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX"
+          crossorigin="anonymous"></script>
+  -->
 
   <style>
     * {
@@ -50,14 +67,19 @@
       padding: 8px;
     }
 
-    body.skillChoiceMode {
+    body.skillChoiceMode,
+    body.titleScreenMode {
       padding: 0;
     }
 
     body.skillChoiceMode .game,
     body.skillChoiceMode #goldenCookie,
     body.skillChoiceMode #monsterWrap,
-    body.skillChoiceMode #rewardModal {
+    body.skillChoiceMode #rewardModal,
+    body.titleScreenMode .game,
+    body.titleScreenMode #goldenCookie,
+    body.titleScreenMode #monsterWrap,
+    body.titleScreenMode #rewardModal {
       display: none !important;
     }
 
@@ -597,51 +619,11 @@
       border: 1px solid rgba(255,255,255,0.06);
     }
 
-    .debugSwitch {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      background: #402818;
-      border-radius: 12px;
-      padding: 10px;
-      margin: 8px 0;
-      text-align: left;
-    }
 
-    .debugSwitch input {
-      transform: scale(1.25);
-    }
 
-    .debugControls {
-      display: none;
-    }
 
-    .debugControls.active {
-      display: block;
-    }
 
-    .debugRow {
-      display: grid;
-      grid-template-columns: 1fr 90px;
-      gap: 8px;
-      align-items: center;
-      padding: 6px 0;
-      border-top: 1px solid rgba(255,255,255,0.08);
-      font-size: 13px;
-    }
 
-    .debugRow input {
-      width: 90px;
-      border: none;
-      border-radius: 8px;
-      padding: 7px;
-      background: #fff3df;
-      color: #20140d;
-      font-size: 14px;
-      user-select: text;
-      -webkit-user-select: text;
-    }
 
     #goldenCookie {
       display: none;
@@ -1091,9 +1073,9 @@
     .skillMap {
       position: relative;
       width: 2000px;
-      height: 2960px;
+      height: 3320px;
       min-width: 2000px;
-      min-height: 2960px;
+      min-height: 3320px;
       transform-origin: 0 0;
       background:
         radial-gradient(circle at 50% 50%, rgba(55,176,255,0.18), transparent 18%),
@@ -1131,7 +1113,7 @@
       position: absolute;
       inset: 0;
       width: 2000px;
-      height: 2960px;
+      height: 3320px;
       pointer-events: none;
       z-index: 2;
       overflow: visible;
@@ -1496,7 +1478,7 @@
     #prestigeTab { background-image: linear-gradient(180deg, rgba(38,22,12,0.76), rgba(13,7,4,0.96)), var(--screen-prestige); }
     #infoTab { background-image: linear-gradient(180deg, rgba(35,21,13,0.76), rgba(12,7,4,0.96)), var(--screen-info); }
 
-    .quotaBox, .stats div, .infoBox, .debugSwitch, .skillSummary div {
+    .quotaBox, .stats div, .infoBox, .skillSummary div {
       background: linear-gradient(180deg, rgba(48,28,15,0.82), rgba(23,13,7,0.90));
       border-color: rgba(226,164,81,0.22);
     }
@@ -1542,7 +1524,8 @@
     #cookieMonster {
       border-radius: 28px;
       background: radial-gradient(circle at 50% 50%, rgba(255,119,54,0.22), transparent 68%), var(--monster-art);
-      background-size: 132% 132%;
+      background-size: contain;
+      background-repeat: no-repeat;
       background-position: center;
       box-shadow: 0 0 20px rgba(255,107,63,0.42), 0 11px 24px rgba(0,0,0,0.40), inset 0 0 14px rgba(255,214,141,0.08);
     }
@@ -1759,7 +1742,6 @@
     .quotaBox,
     .stats div,
     .infoBox,
-    .debugSwitch,
     .skillSummary div {
       background: rgba(24, 13, 7, 0.66) !important;
       border-color: rgba(255,205,122,0.24) !important;
@@ -1887,7 +1869,8 @@
     #cookieMonster {
       width: 112px !important;
       height: 112px !important;
-      background-size: 138% 138% !important;
+      background-size: contain !important;
+      background-repeat: no-repeat !important;
       background-position: center !important;
     }
 
@@ -1983,7 +1966,6 @@
     .quotaBox,
     .stats div,
     .infoBox,
-    .debugSwitch,
     .skillSummary div {
       background: rgba(12, 6, 3, 0.38) !important;
       border-color: rgba(255, 213, 132, 0.30) !important;
@@ -2144,7 +2126,8 @@
       width: 118px !important;
       height: 118px !important;
       background: var(--monster-art) !important;
-      background-size: 146% 146% !important;
+      background-size: contain !important;
+      background-repeat: no-repeat !important;
       background-position: center !important;
     }
 
@@ -2190,6 +2173,8 @@
       justify-content: space-between;
       gap: 8px;
       margin-bottom: 8px;
+      cursor: pointer;
+      touch-action: manipulation;
     }
 
     .tabPageHead h2 {
@@ -2197,23 +2182,37 @@
       text-align: left;
     }
 
-    .pageFullBtn {
+    .tabPageHead.fullscreenActive::after {
+      content: "✕ 閉じる";
       flex: 0 0 auto;
       border: 1px solid rgba(255, 213, 132, 0.34);
       border-radius: 10px;
       padding: 8px 12px;
-      background: rgba(45, 24, 11, 0.68);
+      background: rgba(112, 58, 20, 0.82);
       color: #fff4de;
       font-size: 12px;
       font-weight: 800;
       box-shadow:
         inset 0 1px 0 rgba(255, 239, 193, 0.10),
         0 4px 10px rgba(0,0,0,0.16);
-      touch-action: manipulation;
     }
 
     .pageHeadRow {
       flex: 0 0 auto;
+    }
+
+    .backToTitleBtn {
+      flex: 0 0 auto;
+      width: 100%;
+      margin-bottom: 8px;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 213, 132, 0.34);
+      background: rgba(255, 255, 255, 0.05);
+      color: #f3dcb4;
+      font-size: 12px;
+      font-weight: 800;
+      touch-action: manipulation;
     }
 
     .pageScroll,
@@ -2285,20 +2284,10 @@
       padding: 2px;
     }
 
-    body.sectionFullscreen .pageFullBtn {
-      background: rgba(112, 58, 20, 0.82);
-      border-color: rgba(255, 228, 151, 0.62);
-    }
 
   
 
-    /* 追加修正：ゲーム名非表示 / ノルマ階層ゲージ / ブラウザ拡大抑制 */
-    .top h1 {
-      display: none !important;
-      margin: 0 !important;
-      height: 0 !important;
-      overflow: hidden !important;
-    }
+    /* 追加修正：ノルマ階層ゲージ / ブラウザ拡大抑制 */
 
     .quotaBox {
       padding-top: 8px !important;
@@ -2448,22 +2437,550 @@
       margin-bottom: 4px !important;
     }
 
-    .artCard::before {
-      opacity: 0.30 !important;
-      mix-blend-mode: screen !important;
-      filter:
-        saturate(1.08)
-        contrast(1.04)
-        drop-shadow(0 0 10px rgba(255,183,78,0.24)) !important;
+
+    /* 追加修正：ノルマゲージ色を段階数から自動生成 */
+    .quotaLayer {
+      will-change: width, background;
     }
 
-    .rewardBtn::before {
-      opacity: 0.34 !important;
-      mix-blend-mode: screen !important;
+
+    /* 追加修正：ノルマ層番号表示 */
+    .quotaStageBadge {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 12;
+      font-size: 10px;
+      font-weight: 900;
+      color: #fff8d8;
+      background: rgba(0,0,0,0.42);
+      border: 1px solid rgba(255,235,170,0.35);
+      border-radius: 999px;
+      padding: 1px 6px;
+      pointer-events: none;
+      text-shadow: 0 1px 3px #000;
+    }
+
+    .quotaStageNumber {
+      color: #ffe28a;
+    }
+
+
+    /* 実装修正：通常画面内だけに出現物を置き、ノルマ表示より後ろにする */
+    .top {
+      position: relative !important;
+      isolation: isolate;
+    }
+
+    .quotaBox {
+      position: relative !important;
+      z-index: 30 !important;
+    }
+
+    #goldenCookie,
+    .monsterInstance {
+      position: absolute !important;
+      z-index: 4 !important;
+    }
+
+    #goldenCookie {
+      pointer-events: auto !important;
+    }
+
+    .monsterInstance {
+      display: block;
+      width: 142px;
+      text-align: center;
+      pointer-events: auto;
       filter:
-        saturate(1.08)
-        contrast(1.04)
-        drop-shadow(0 0 10px rgba(255,183,78,0.22)) !important;
+        drop-shadow(0 0 18px rgba(255, 128, 63, 0.62))
+        drop-shadow(0 10px 18px rgba(0,0,0,0.42));
+      touch-action: manipulation;
+    }
+
+    .monsterInstance .cookieMonsterButton {
+      width: 118px;
+      height: 118px;
+      border: none;
+      border-radius: 28px;
+      background: var(--monster-art);
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      box-shadow:
+        0 0 20px rgba(255,107,63,0.42),
+        0 11px 24px rgba(0,0,0,0.40),
+        inset 0 0 14px rgba(255,214,141,0.08);
+      touch-action: manipulation;
+    }
+
+    .monsterInstance .monsterHp {
+      width: 142px !important;
+      height: 12px !important;
+      background: rgba(0,0,0,0.72) !important;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 5px;
+      border: 1px solid rgba(255,226,160,0.36) !important;
+    }
+
+    .monsterInstance .monsterHpFill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #ff6262, #ffd36e);
+    }
+
+    .monsterInstance .monsterHpText {
+      margin-top: 2px;
+      font-size: 12px;
+      color: #fff;
+      text-shadow: 0 2px 4px #000, 0 0 8px #000;
+      font-weight: 800;
+    }
+
+    body.sectionFullscreen #goldenCookie,
+    body.sectionFullscreen .monsterInstance,
+    body.skillChoiceMode #goldenCookie,
+    body.skillChoiceMode .monsterInstance {
+      display: none !important;
+    }
+
+    #monsterWrap {
+      display: none !important;
+    }
+
+    /* 追加実装：タブを画面下に隙間なく固定するレイアウト */
+    .top { order: 1; }
+    .tabPages {
+      order: 2;
+      padding-bottom: 4px !important;
+      margin-bottom: 0 !important;
+    }
+    .tabs {
+      order: 3;
+      gap: 0 !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      min-height: 44px !important;
+      border-radius: 0 0 14px 14px;
+      overflow: hidden;
+      background: rgba(32,20,13,0.96) !important;
+      border: 1px solid rgba(255,255,255,0.06);
+      border-top: none;
+    }
+    .tab {
+      border-radius: 0 !important;
+      min-height: 44px !important;
+      border-left: 1px solid rgba(255,255,255,0.08);
+    }
+    .tab:first-child { border-left: none; }
+
+    /* 追加調整：タブ表示を画面の半分弱に固定し、上部エリアが残りを埋める */
+    .top {
+      flex: 1 1 auto !important;
+      /* 基底ルールのmin-height:0を打ち消し、クッキー本体などの中身より
+         小さく潰れてタブ側にはみ出すことがないようにする */
+      min-height: auto !important;
+    }
+
+    .tabPages {
+      flex: 0 1 40dvh !important;
+      max-height: 40dvh !important;
+      min-height: 90px !important;
+    }
+
+    body.sectionFullscreen .tabPages {
+      height: auto !important;
+      max-height: none !important;
+    }
+
+    /* 追加実装：報酬を誤タップしないための獲得演出とロック */
+    #rewardModal.rewardLocked .rewardBtn {
+      pointer-events: none;
+      opacity: 0.42;
+      filter: grayscale(0.25);
+    }
+    .rewardPanel {
+      position: relative;
+    }
+    .rewardLockNotice {
+      display: none;
+      margin: 0 0 10px;
+      padding: 10px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(255,211,138,0.22), rgba(0,0,0,0.18));
+      border: 1px solid rgba(255,211,138,0.32);
+      color: #fff4d2;
+      font-weight: 900;
+      text-align: center;
+      box-shadow: 0 0 18px rgba(255,210,120,0.13);
+    }
+    #rewardModal.rewardLocked .rewardLockNotice {
+      display: block;
+    }
+
+    /* 追加実装：クッキー本体が見えている通常画面では、下タブが強化以外でも出現物を残す。全画面・スキル中は上の規則で非表示。 */
+
+
+
+    /* 実装追加：方針選択・分析表示 */
+    .policyGrid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+
+    .policyBtn.done {
+      background: linear-gradient(145deg, #31502c, #263f22) !important;
+      box-shadow: 0 0 0 2px rgba(156,255,178,0.20);
+    }
+
+
+    /* 実装追加：研究タブ全画面時、研究購入欄の下に解析欄を追加 */
+    .researchAnalysisPanel {
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: 14px;
+      background: rgba(8, 4, 2, 0.50);
+      border: 1px solid rgba(149, 255, 103, 0.34);
+      text-align: left;
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 236, 181, 0.05),
+        0 8px 18px rgba(0,0,0,0.20);
+    }
+
+    .researchAnalysisPanel h3 {
+      margin: 0 0 8px;
+      color: #d8ffb9;
+      font-size: 15px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.86), 0 0 8px rgba(149,255,103,0.22);
+    }
+
+    .researchAnalysisGuide {
+      margin-bottom: 8px;
+      color: #dfc6a7;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .researchFormulaCard {
+      margin: 8px 0;
+      padding: 9px;
+      border-radius: 12px;
+      background: rgba(15, 7, 3, 0.62);
+      border: 1px solid rgba(255, 213, 132, 0.24);
+    }
+
+    .researchFormulaCard b {
+      color: #fff3d2;
+    }
+
+    .researchFormulaBlock {
+      margin-top: 5px;
+      color: #dfc6a7;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+
+    /* 実装追加：焼き加減システム */
+    .bakeBox {
+      display: none;
+      margin: 6px 0 4px;
+      padding: 7px 8px;
+      border-radius: 12px;
+      background: rgba(18, 9, 4, 0.52);
+      border: 1px solid rgba(255, 213, 132, 0.32);
+      color: #fff4de;
+      text-align: left;
+      font-size: 11px;
+      line-height: 1.35;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.82);
+    }
+
+    .bakeBox.active {
+      display: block;
+    }
+
+    .bakeHead {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-weight: 900;
+      color: #ffe28a;
+    }
+
+    .bakeStateName {
+      color: #fff4de;
+    }
+
+    .bakeEffectText {
+      margin-top: 3px;
+      color: #dfc6a7;
+    }
+
+
+
+    /* 実装追加：注文ボード */
+    .orderBoardBox {
+      border-color: rgba(255, 213, 132, 0.36) !important;
+      background: rgba(12, 6, 3, 0.48) !important;
+    }
+
+    .orderCard {
+      margin-top: 8px;
+      padding: 10px;
+      border-radius: 14px;
+      background: rgba(18, 9, 4, 0.58);
+      border: 1px solid rgba(255, 213, 132, 0.30);
+      text-align: left;
+    }
+
+    .orderHead {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      font-weight: 900;
+      color: #ffe28a;
+    }
+
+    .orderProgressBar {
+      position: relative;
+      height: 12px;
+      margin: 7px 0 5px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.45);
+      border: 1px solid rgba(255,255,255,0.12);
+      overflow: hidden;
+    }
+
+    .orderProgressFill {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, rgba(255,211,96,0.95), rgba(156,255,178,0.84));
+      box-shadow: 0 0 10px rgba(255,211,96,0.24);
+    }
+
+    .orderFormula {
+      margin-top: 7px;
+      padding-top: 7px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      color: #dfc6a7;
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    .orderMiniBtn {
+      margin-top: 8px;
+      width: 100%;
+      border: 1px solid rgba(255, 213, 132, 0.34);
+      border-radius: 10px;
+      padding: 8px;
+      background: rgba(112, 58, 20, 0.70);
+      color: #fff4de;
+      font-weight: 900;
+    }
+
+
+    /* タイトル画面 */
+    body:not(.titleScreenMode) #titleScreen {
+      display: none;
+    }
+
+    .titleScreen {
+      position: fixed;
+      inset: 0;
+      z-index: 9000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 16px;
+      overflow-y: auto;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(255, 200, 110, 0.16), transparent 46%),
+        radial-gradient(circle at 50% 100%, rgba(0, 0, 0, 0.60), transparent 55%),
+        linear-gradient(180deg, rgba(14, 8, 4, 0.80), rgba(6, 3, 1, 0.94)),
+        var(--screen-play);
+      background-size: cover;
+      background-position: center 30%;
+    }
+
+    .titleScreenFrame {
+      position: relative;
+      width: min(420px, 100%);
+      text-align: center;
+      padding: 34px 22px 26px;
+      border-radius: 22px;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(255, 205, 120, 0.14), transparent 55%),
+        linear-gradient(165deg, rgba(58, 37, 19, 0.92), rgba(19, 11, 6, 0.96));
+      border: 1px solid rgba(255, 213, 138, 0.32);
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 232, 168, 0.06),
+        inset 0 0 60px rgba(255, 172, 67, 0.05),
+        0 24px 60px rgba(0, 0, 0, 0.55);
+    }
+
+    .titleOrnament {
+      color: rgba(255, 211, 138, 0.55);
+      font-size: 13px;
+      letter-spacing: 0.5em;
+      text-indent: 0.5em;
+      margin-bottom: 10px;
+      text-shadow: 0 0 10px rgba(255, 189, 89, 0.35);
+    }
+
+    .titleOrnamentBottom {
+      margin: 14px 0 22px;
+    }
+
+    .titleLogo {
+      margin: 0;
+      line-height: 1.05;
+    }
+
+    .titleLogoMain,
+    .titleLogoSub {
+      display: block;
+      font-weight: 900;
+      background: linear-gradient(180deg, #fff6df 0%, #ffd889 38%, #e8a545 68%, #b9752a 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      filter:
+        drop-shadow(0 0 14px rgba(255, 194, 92, 0.55))
+        drop-shadow(0 3px 2px rgba(0, 0, 0, 0.65));
+    }
+
+    .titleLogoMain {
+      font-size: clamp(40px, 12vw, 54px);
+      letter-spacing: 0.06em;
+    }
+
+    .titleLogoSub {
+      margin-top: 2px;
+      font-size: clamp(26px, 8vw, 36px);
+      letter-spacing: 0.14em;
+    }
+
+    .titleTagline {
+      margin: 14px 0 0;
+      color: var(--sub);
+      font-size: 13px;
+      letter-spacing: 0.05em;
+    }
+
+    .titleButtons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .titleStartBtn,
+    .titleAboutBtn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      touch-action: manipulation;
+    }
+
+    .titleStartBtn {
+      border: 1px solid rgba(255, 224, 158, 0.55);
+      background: linear-gradient(180deg, rgba(255, 200, 105, 0.98), rgba(180, 100, 30, 0.98));
+      color: #2a1608;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 246, 214, 0.55),
+        0 0 22px rgba(255, 180, 70, 0.30),
+        0 10px 20px rgba(0, 0, 0, 0.35);
+    }
+
+    .titleStartBtn:active {
+      transform: scale(0.98);
+    }
+
+    .titleAboutBtn {
+      border: 1px solid rgba(255, 213, 132, 0.30);
+      background: rgba(255, 255, 255, 0.04);
+      color: #f3dcb4;
+    }
+
+    .titleFooter {
+      margin-top: 16px;
+      font-size: 11px;
+    }
+
+    .titleFooter a {
+      color: rgba(255, 213, 132, 0.75);
+    }
+
+    .titleAboutOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9100;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(4, 2, 1, 0.72);
+      backdrop-filter: blur(3px);
+    }
+
+    .titleAboutOverlay.active {
+      display: flex;
+    }
+
+    .titleAboutPanel {
+      width: min(460px, 100%);
+      max-height: min(640px, 86dvh);
+      display: flex;
+      flex-direction: column;
+      border-radius: 18px;
+      padding: 16px;
+      background: linear-gradient(165deg, rgba(52, 33, 18, 0.98), rgba(16, 9, 5, 0.99));
+      border: 1px solid rgba(255, 213, 138, 0.30);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+    }
+
+    .titleAboutHead {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .titleAboutHead h2 {
+      margin: 0;
+    }
+
+    .titleAboutCloseBtn {
+      flex: 0 0 auto;
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 213, 132, 0.34);
+      background: rgba(255, 255, 255, 0.06);
+      color: #fff4de;
+      font-size: 14px;
+      font-weight: 900;
+      touch-action: manipulation;
+    }
+
+    .titleAboutBody {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-right: 2px;
     }
 
 
@@ -2574,7 +3091,8 @@
       border: none;
       border-radius: 28px;
       background: var(--monster-art);
-      background-size: 146% 146%;
+      background-size: contain;
+      background-repeat: no-repeat;
       background-position: center;
       box-shadow:
         0 0 20px rgba(255,107,63,0.42),
@@ -2891,7 +3409,71 @@
   </style>
 </head>
 
-<body>
+<body class="titleScreenMode">
+
+<section id="titleScreen" class="titleScreen">
+  <div class="titleScreenFrame">
+    <div class="titleOrnament" aria-hidden="true">❖ ✦ ❖</div>
+
+    <h1 class="titleLogo">
+      <span class="titleLogoMain">クッキー</span>
+      <span class="titleLogoSub">ストラテジャー</span>
+    </h1>
+
+    <p class="titleTagline">タップして焼いて、育てて極める放置ゲーム</p>
+
+    <div class="titleOrnament titleOrnamentBottom" aria-hidden="true">❖ ✦ ❖</div>
+
+    <div class="titleButtons">
+      <button id="titleStartBtn" type="button" class="titleStartBtn">ゲームをはじめる</button>
+      <button id="titleAboutBtn" type="button" class="titleAboutBtn">このゲームについて</button>
+    </div>
+
+    <div class="titleFooter">
+      <a href="privacy.html">プライバシーポリシー</a>
+    </div>
+  </div>
+
+  <div id="titleAboutOverlay" class="titleAboutOverlay">
+    <div class="titleAboutPanel">
+      <div class="titleAboutHead">
+        <h2>このゲームについて</h2>
+        <button id="titleAboutCloseBtn" type="button" class="titleAboutCloseBtn" aria-label="閉じる">✕</button>
+      </div>
+
+      <div class="titleAboutBody">
+        <div class="infoBox">
+          <h3>このゲームについて</h3>
+          <p>「クッキーストラテジャー」は、インストール不要・完全無料でブラウザからそのまま遊べるクッキークリッカー系の放置ゲームです。クッキーをタップして焼き上げ、稼いだクッキーで強化や研究を購入し、毎秒の自動生産をどんどん伸ばしていきます。プレイデータはお使いのブラウザ内（ローカルストレージ）にのみ保存されるため、会員登録や個人情報の入力は一切不要です。</p>
+        </div>
+
+        <div class="infoBox">
+          <h3>遊び方</h3>
+          <p>1. 画面中央の大きなクッキーをタップすると、クッキーが手に入ります。</p>
+          <p>2. 「強化」タブで、おばあちゃんやオーブンなどの設備を購入すると、タップの威力や毎秒の自動生産量が増えます。</p>
+          <p>3. 「研究」タブでは、特定の設備をさらに強くする研究を解放できます。</p>
+          <p>4. ときどき現れる金のクッキーをタップすると、一定時間すべての生産がブーストされます。</p>
+          <p>5. クッキーモンスターが現れたら、連打して撃退しましょう。撃破すると好きな報酬を1つ選べます。</p>
+        </div>
+
+        <div class="infoBox">
+          <h3>よくある質問</h3>
+          <p><b>Q. 料金はかかりますか？</b><br>A. 完全無料です。アプリのインストールや会員登録も不要で、ブラウザだけで遊べます。</p>
+          <p><b>Q. セーブデータはどこに保存されますか？</b><br>A. お使いのブラウザのローカルストレージに自動保存されます。同じ端末・同じブラウザで開けば続きから遊べます。ブラウザのデータを削除するとセーブデータも消えるのでご注意ください。</p>
+          <p><b>Q. 放置していても進みますか？</b><br>A. はい。ゲームを閉じている間も一定時間分のクッキーが自動で生産され、次に開いたときにまとめて受け取れます。</p>
+          <p><b>Q. スマートフォンでも遊べますか？</b><br>A. はい。スマートフォン・タブレット・パソコンのブラウザに対応しています。</p>
+        </div>
+
+        <div class="infoBox">
+          <h3>サイト情報</h3>
+          <p>本サイトのご利用にあたっては、<a href="privacy.html">プライバシーポリシー</a>をご確認ください。</p>
+          <p>ゲームへのご意見・ご感想・不具合のご報告は、メール（<a href="mailto:bachikoljunior@gmail.com">bachikoljunior@gmail.com</a>）までお気軽にお寄せください。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <main class="game">
   <section class="top">
 
@@ -2937,34 +3519,31 @@
 
   <div class="tabPages">
     <section id="shopTab" class="tabPage active">
-      <div class="tabPageHead">
+      <div class="tabPageHead" data-full-target="shopTab">
         <h2>強化</h2>
-        <button class="pageFullBtn" data-full-target="shopTab">全画面</button>
       </div>
       <div id="shop" class="pageScroll"></div>
     </section>
 
     <section id="researchTab" class="tabPage">
-      <div class="tabPageHead">
+      <div class="tabPageHead" data-full-target="researchTab">
         <h2>研究</h2>
-        <button class="pageFullBtn" data-full-target="researchTab">全画面</button>
       </div>
       <div id="research" class="pageScroll"></div>
     </section>
 
     <section id="prestigeTab" class="tabPage">
-      <div class="tabPageHead">
+      <div class="tabPageHead" data-full-target="prestigeTab">
         <h2>転生</h2>
-        <button class="pageFullBtn" data-full-target="prestigeTab">全画面</button>
       </div>
       <div id="prestigePanel" class="pageScroll"></div>
     </section>
 
     <section id="infoTab" class="tabPage">
-      <div class="tabPageHead">
+      <div class="tabPageHead" data-full-target="infoTab">
         <h2>一覧</h2>
-        <button class="pageFullBtn" data-full-target="infoTab">全画面</button>
       </div>
+      <button id="backToTitleBtn" type="button" class="backToTitleBtn">タイトル画面に戻る</button>
       <div id="infoPanel" class="pageScroll"></div>
     </section>
   </div>
@@ -3244,6 +3823,11 @@ const SKILL_GROUPS = {
   master: "超越"
 };
 
+// SKILL_NODESのyは-120〜2920まで存在し、そのままだとキャンバス上端より
+// 上(負の座標)に配置されるノードが出現して届かなくなるため、全ノードを
+// 一律で下にずらして必ずキャンバス内に収める
+const SKILL_MAP_Y_OFFSET = 220;
+
 const SKILL_NODES = [
   // 座標規則：中央x=1000。左側はタップ/金色、右側は自動/怪物、上側は研究/設備、下側は報酬/周回。各列は原則x=200刻み、各段はy=140〜160刻み。
   { id: "core", name: "分岐炉心", branchId: "core", cost: 15, x: 1000, y: 1120, icon: "◎", prereqs: [], desc: "転生後に周回方針を選べるようにする。スキルツリーの分岐を開く最初の特殊効果。", effects: [{ type: "unlockSystem", target: "runPolicy" }] },
@@ -3338,6 +3922,7 @@ const SKILL_NODES = [
 
 const SKILLS = SKILL_NODES.map(skill => ({
   ...skill,
+  y: skill.y + SKILL_MAP_Y_OFFSET,
   branchName: SKILL_GROUPS[skill.branchId] || "スキル",
   prereqs: skill.prereqs || []
 }));
@@ -3367,16 +3952,23 @@ let selectedSkillId = null;
 let skillMapZoom = 0.72;
 
 const SKILL_MAP_WIDTH = 2000;
-const SKILL_MAP_HEIGHT = 3060;
+const SKILL_MAP_HEIGHT = 3320;
 const SKILL_ZOOM_MIN = 0.45;
 const SKILL_ZOOM_MAX = 1.65;
 const SKILL_ZOOM_STEP = 0.12;
 
 let goldenSpawnTimer = null;
+let goldenSpawnDeadline = null;
+let goldenSpawnCallback = null;
+let goldenSpawnPausedRemaining = null;
 let goldenHideTimer = null;
 let goldenVisible = false;
 
 let monsterSpawnTimer = null;
+let monsterSpawnDeadline = null;
+let monsterSpawnCallback = null;
+let monsterSpawnPausedRemaining = null;
+let rewardSpawnPauseActive = false;
 let monsterHideTimer = null;
 let monsterVisible = false;
 let monster = { level: 1, hp: 1, maxHp: 1 };
@@ -3584,6 +4176,18 @@ function rewardChoiceArt(choice) {
   if (choice.kind === "upgrade") return ASSETS.upgrades[choice.id] || "";
   if (choice.kind === "perk") return ASSETS.rewards[choice.id] || "";
   return "";
+}
+
+// 報酬モーダルを開く直前に選択肢画像をデコードしておき、表示時のカクつきを防ぐ
+function preloadRewardChoiceImages(choices) {
+  (choices || []).forEach(choice => {
+    const src = rewardChoiceArt(choice);
+    if (!src) return;
+
+    const img = new Image();
+    img.src = src;
+    if (typeof img.decode === "function") img.decode().catch(() => {});
+  });
 }
 
 function addTap(el, handler) {
@@ -4620,6 +5224,10 @@ function resetRunLimitedEffects() {
   state.nextBakeGoodBias = 0;
 }
 
+
+
+
+
 function highestOwnedUpgradeIndex() {
   let index = -1;
 
@@ -5319,7 +5927,7 @@ function checkQuotaState() {
   if (quota !== null && quota > 0 && state.runCookies < quota) {
     state.quotaFailed = true;
     state.quotaActive = false;
-    clearTimeout(monsterSpawnTimer);
+    clearMonsterSpawnTimer();
     hideMonster(false);
     showMessage("ノルマ終了：この周回のモンスターチャンス終了");
     return;
@@ -5607,6 +6215,8 @@ function tapCookie() {
     return;
   }
 
+  if (rewardModalOpen()) return;
+
   let tapPower = currentClickPower();
   let critical = false;
 
@@ -5841,7 +6451,7 @@ function skillLinePoints(from, to) {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const d = Math.max(1, Math.hypot(dx, dy));
-  const radius = 58;
+  const radius = 46;
 
   return {
     x1: from.x + dx / d * radius,
@@ -5855,8 +6465,7 @@ function renderSkillChoiceScreen() {
   $("skillScreenPoints").textContent = fmt(state.prestige);
 
   const visibleSkills = SKILLS.filter(skillVisible);
-  const chosenThisTime = boughtSkillCount() > state.skillChoiceStartCount;
-  const canStart = debugMode || (pausedForSkillChoice() && chosenThisTime);
+  const canStart = debugMode || pausedForSkillChoice();
 
   if (!selectedSkillId || !visibleSkills.some(s => s.id === selectedSkillId)) {
     const firstCanBuy = visibleSkills.find(skillCanBuy);
@@ -5903,12 +6512,13 @@ function renderSkillChoiceScreen() {
       if (!from || !skillVisible(from)) return "";
 
       const done = hasSkill(reqId) && hasSkill(skill.id);
-      const ready = hasSkill(reqId) && !hasSkill(skill.id);
+      if (!done) return "";
+
       const p = skillLinePoints(from, skill);
 
       return `
         <line
-          class="skillLine branch-${skill.branchId} ${done ? "done" : ""} ${ready ? "ready" : ""}"
+          class="skillLine branch-${skill.branchId} done"
           x1="${p.x1.toFixed(1)}"
           y1="${p.y1.toFixed(1)}"
           x2="${p.x2.toFixed(1)}"
@@ -5984,10 +6594,6 @@ addTap($("skillStartBtn"), () => {
     }
     return;
   }
-
-  const chosenThisTime = boughtSkillCount() > state.skillChoiceStartCount;
-
-  if (!debugMode && !chosenThisTime) return;
 
   state.awaitingSkillChoice = false;
   state.skillChoiceStartCount = boughtSkillCount();
@@ -6071,26 +6677,37 @@ function upgradeShopEffectText(u) {
 
 function renderShop() {
   const box = $("shop");
-  box.innerHTML = "";
+  const items = visibleUpgrades();
+  const ids = items.map(u => u.id);
+  const existingIds = [...box.children].map(el => el.dataset.id);
+  const sameList = ids.length === existingIds.length && ids.every((id, i) => id === existingIds[i]);
 
-  visibleUpgrades().forEach(u => {
+  if (!sameList) {
+    box.innerHTML = "";
+
+    items.forEach(u => {
+      const btn = document.createElement("button");
+
+      btn.className = "item artCard";
+      btn.dataset.id = u.id;
+      btn.dataset.art = upgradeArt(u);
+      setArtImage(btn, ASSETS.upgrades[u.id]);
+
+      addTap(btn, () => buyUpgrade(u.id));
+      box.appendChild(btn);
+    });
+  }
+
+  [...box.children].forEach((btn, i) => {
+    const u = items[i];
     const cost = costOf(u);
-    const btn = document.createElement("button");
 
-    btn.className = "item artCard";
-    btn.dataset.art = upgradeArt(u);
-    setArtImage(btn, ASSETS.upgrades[u.id]);
-
-    if ((debugMode || state.cookies >= cost) && !pausedForSkillChoice()) btn.classList.add("canBuy");
-
+    btn.classList.toggle("canBuy", (debugMode || state.cookies >= cost) && !pausedForSkillChoice());
     btn.innerHTML = `
       <b>${u.name}</b>
       <div class="price">${fmt(cost)} クッキー</div>
       <div class="desc">${upgradeShopEffectText(u)} / 所持 ${fmt(state.upgrades[u.id])}</div>
     `;
-
-    addTap(btn, () => buyUpgrade(u.id));
-    box.appendChild(btn);
   });
 }
 
@@ -6258,8 +6875,6 @@ function appendResearchAnalysisPanel(box) {
 
 function renderResearch() {
   const box = $("research");
-  box.innerHTML = "";
-
   const list = debugMode ? RESEARCH : RESEARCH.filter(r => researchUnlocked(r));
 
   if (list.length === 0) {
@@ -6268,16 +6883,46 @@ function renderResearch() {
     return;
   }
 
-  list.forEach(r => {
+  const ids = list.map(r => r.id);
+  let cards = [...box.querySelectorAll(".item.artCard")];
+  const existingIds = cards.map(el => el.dataset.id);
+  const sameList = ids.length === existingIds.length && ids.every((id, i) => id === existingIds[i]);
+
+  if (!sameList) {
+    box.innerHTML = "";
+
+    list.forEach(r => {
+      const btn = document.createElement("button");
+
+      btn.className = "item artCard";
+      btn.dataset.id = r.id;
+      btn.dataset.art = researchArt(r);
+      setArtImage(btn, ASSETS.research[r.id]);
+
+      addTap(btn, () => {
+        if (r.id === "blackHoleCompression" && state.research[r.id] && resStage2("blackHoleCompression") && (state.bhCharge || 0) >= 2500) {
+          fireBhBoost();
+          renderActiveTab();
+          return;
+        }
+        buyResearch(r.id);
+      });
+      box.appendChild(btn);
+    });
+
+    cards = [...box.querySelectorAll(".item.artCard")];
+  } else {
+    const oldPanel = box.querySelector(".researchAnalysisPanel");
+    if (oldPanel) oldPanel.remove();
+  }
+
+  cards.forEach((btn, i) => {
+    const r = list[i];
     const cost = researchCost(r);
-    const btn = document.createElement("button");
+    const done = Boolean(state.research[r.id]);
 
-    btn.className = "item artCard";
-    btn.dataset.art = researchArt(r);
-    setArtImage(btn, ASSETS.research[r.id]);
-
-    if (!state.research[r.id] && (debugMode || state.cookies >= cost) && !pausedForSkillChoice()) btn.classList.add("canBuy");
-    if (state.research[r.id]) btn.classList.add("done");
+    btn.classList.toggle("canBuy", !done && (debugMode || state.cookies >= cost) && !pausedForSkillChoice());
+    btn.classList.toggle("done", done);
 
     const stg = researchStageOf(r.id);
     const stageInfo = state.research[r.id]
@@ -6292,21 +6937,11 @@ function renderResearch() {
     }
     btn.innerHTML = `
       <b>${r.name}</b>
-      <div class="price">${state.research[r.id] ? "解放済み" : fmt(cost) + " クッキー"}</div>
+      <div class="price">${done ? "解放済み" : fmt(cost) + " クッキー"}</div>
       <div class="desc">${r.desc}</div>
       ${stageInfo}${extra}
       ${state.research[r.id] && r.detail ? `<div class="desc">詳細：${r.detail}</div>` : ""}
     `;
-
-    addTap(btn, () => {
-      if (r.id === "blackHoleCompression" && state.research[r.id] && resStage2("blackHoleCompression") && (state.bhCharge || 0) >= 2500) {
-        fireBhBoost();
-        renderActiveTab();
-        return;
-      }
-      buyResearch(r.id);
-    });
-    box.appendChild(btn);
   });
 
   appendResearchAnalysisPanel(box);
@@ -6610,8 +7245,8 @@ function switchTab(tabId) {
     scheduleGoldenCookie();
     scheduleMonster();
   } else {
-    clearTimeout(goldenSpawnTimer);
-    clearTimeout(monsterSpawnTimer);
+    clearGoldenSpawnTimer();
+    clearMonsterSpawnTimer();
     if (goldenVisible) hideGoldenCookie();
     hideMonster(false);
   }
@@ -6798,9 +7433,8 @@ function syncTabPageFullscreen() {
     page.classList.toggle("pageFullscreen", page.id === pageFullscreenId);
   });
 
-  document.querySelectorAll(".pageFullBtn").forEach(btn => {
-    const active = btn.dataset.fullTarget === pageFullscreenId;
-    btn.textContent = active ? "戻る" : "全画面";
+  document.querySelectorAll(".tabPageHead").forEach(head => {
+    head.classList.toggle("fullscreenActive", head.dataset.fullTarget === pageFullscreenId);
   });
 }
 
@@ -6824,8 +7458,8 @@ function toggleTabPageFullscreen(targetId) {
   renderActiveTab();
 }
 
-document.querySelectorAll(".pageFullBtn").forEach(btn => {
-  addTap(btn, () => toggleTabPageFullscreen(btn.dataset.fullTarget));
+document.querySelectorAll(".tabPageHead").forEach(head => {
+  addTap(head, () => toggleTabPageFullscreen(head.dataset.fullTarget));
 });
 
 document.addEventListener("keydown", e => {
@@ -6834,7 +7468,12 @@ document.addEventListener("keydown", e => {
 
 document.querySelectorAll(".tab").forEach(btn => {
   addTap(btn, () => {
-    switchTab(btn.dataset.tab);
+    const tabId = btn.dataset.tab;
+    if (activeTab === tabId) {
+      toggleTabPageFullscreen(tabId);
+      return;
+    }
+    switchTab(tabId);
   });
 });
 
@@ -6882,9 +7521,9 @@ function prestigeReset() {
   clearGoldenBoosts();
   selectedSkillId = null;
 
-  clearTimeout(goldenSpawnTimer);
+  clearGoldenSpawnTimer();
   clearTimeout(goldenHideTimer);
-  clearTimeout(monsterSpawnTimer);
+  clearMonsterSpawnTimer();
   clearTimeout(monsterHideTimer);
   clearTimeout(rewardOpenTimer);
 
@@ -6919,9 +7558,9 @@ function completeReset() {
   clearGoldenBoosts();
   selectedSkillId = null;
 
-  clearTimeout(goldenSpawnTimer);
+  clearGoldenSpawnTimer();
   clearTimeout(goldenHideTimer);
-  clearTimeout(monsterSpawnTimer);
+  clearMonsterSpawnTimer();
   clearTimeout(monsterHideTimer);
   clearTimeout(rewardOpenTimer);
 
@@ -7007,22 +7646,93 @@ function loadGame() {
   }
 }
 
+function titleScreenActive() {
+  return document.body.classList.contains("titleScreenMode");
+}
+
 function normalPlayScreenActive() {
   const rewardOpen = $("rewardModal") && $("rewardModal").style.display === "flex";
-  // クッキー本体が見えている通常画面なら、下タブが強化以外でも出現物は残す。全画面・スキル画面・報酬画面では出さない。
+  // クッキー本体が見えている通常画面なら、下タブが強化以外でも出現物は残す。全画面・スキル画面・報酬画面・タイトル画面では出さない。
   return !pausedForSkillChoice()
+    && !titleScreenActive()
     && !document.body.classList.contains("sectionFullscreen")
     && !rewardOpen;
 }
 
-function scheduleGoldenCookie() {
+function setGoldenSpawnTimer(fn, wait) {
   clearTimeout(goldenSpawnTimer);
+  goldenSpawnCallback = fn;
+  goldenSpawnDeadline = Date.now() + wait;
+  goldenSpawnPausedRemaining = null;
+  goldenSpawnTimer = setTimeout(fn, wait);
+}
+
+function clearGoldenSpawnTimer() {
+  clearTimeout(goldenSpawnTimer);
+  goldenSpawnTimer = null;
+  goldenSpawnCallback = null;
+  goldenSpawnDeadline = null;
+  goldenSpawnPausedRemaining = null;
+}
+
+function setMonsterSpawnTimer(fn, wait) {
+  clearTimeout(monsterSpawnTimer);
+  monsterSpawnCallback = fn;
+  monsterSpawnDeadline = Date.now() + wait;
+  monsterSpawnPausedRemaining = null;
+  monsterSpawnTimer = setTimeout(fn, wait);
+}
+
+function clearMonsterSpawnTimer() {
+  clearTimeout(monsterSpawnTimer);
+  monsterSpawnTimer = null;
+  monsterSpawnCallback = null;
+  monsterSpawnDeadline = null;
+  monsterSpawnPausedRemaining = null;
+}
+
+// 報酬選択モーダルが開いている間、金クッキー・モンスターの出現カウントダウンを
+// 一時停止し、閉じたときに残り時間から再開する(ノルマと同様にじっくり考えられるように)
+function updateSpawnTimerPauseState() {
+  const shouldPause = rewardModalOpen();
+
+  if (shouldPause && !rewardSpawnPauseActive) {
+    rewardSpawnPauseActive = true;
+
+    if (goldenSpawnTimer && goldenSpawnDeadline != null) {
+      goldenSpawnPausedRemaining = Math.max(0, goldenSpawnDeadline - Date.now());
+      clearTimeout(goldenSpawnTimer);
+      goldenSpawnTimer = null;
+    }
+
+    if (monsterSpawnTimer && monsterSpawnDeadline != null) {
+      monsterSpawnPausedRemaining = Math.max(0, monsterSpawnDeadline - Date.now());
+      clearTimeout(monsterSpawnTimer);
+      monsterSpawnTimer = null;
+    }
+  } else if (!shouldPause && rewardSpawnPauseActive) {
+    rewardSpawnPauseActive = false;
+
+    if (goldenSpawnPausedRemaining != null && goldenSpawnCallback) {
+      setGoldenSpawnTimer(goldenSpawnCallback, goldenSpawnPausedRemaining);
+    }
+    goldenSpawnPausedRemaining = null;
+
+    if (monsterSpawnPausedRemaining != null && monsterSpawnCallback) {
+      setMonsterSpawnTimer(monsterSpawnCallback, monsterSpawnPausedRemaining);
+    }
+    monsterSpawnPausedRemaining = null;
+  }
+}
+
+function scheduleGoldenCookie() {
+  clearGoldenSpawnTimer();
 
   if (pausedForSkillChoice()) return;
   if (goldenVisible) return;
 
   if (!normalPlayScreenActive()) {
-    goldenSpawnTimer = setTimeout(scheduleGoldenCookie, 5000);
+    setGoldenSpawnTimer(scheduleGoldenCookie, 5000);
     return;
   }
 
@@ -7033,22 +7743,30 @@ function scheduleGoldenCookie() {
   const wait = protectedWait(raw, 1000);
   state.nextGoldenSpawnMultiplier = 1;
 
-  goldenSpawnTimer = setTimeout(showGoldenCookie, wait);
+  setGoldenSpawnTimer(showGoldenCookie, wait);
+}
+
+
+function fireMonsterSpawn() {
+  if (canMonsterAppear() && normalPlayScreenActive()) {
+    showMonster();
+  }
+  scheduleMonster();
 }
 
 
 function scheduleMonster() {
-  clearTimeout(monsterSpawnTimer);
+  clearMonsterSpawnTimer();
 
   if (pausedForSkillChoice()) return;
 
   if (!normalPlayScreenActive()) {
-    monsterSpawnTimer = setTimeout(scheduleMonster, 5000);
+    setMonsterSpawnTimer(scheduleMonster, 5000);
     return;
   }
 
   if (!canMonsterAppear()) {
-    monsterSpawnTimer = setTimeout(scheduleMonster, 10000);
+    setMonsterSpawnTimer(scheduleMonster, 10000);
     return;
   }
 
@@ -7061,16 +7779,42 @@ function scheduleMonster() {
   const wait = protectedWait(raw, 1000);
   state.nextMonsterSpawnMultiplier = 1;
 
-  monsterSpawnTimer = setTimeout(() => {
-    if (canMonsterAppear() && normalPlayScreenActive()) {
-      showMonster();
-    }
-    scheduleMonster();
-  }, wait);
+  setMonsterSpawnTimer(fireMonsterSpawn, wait);
 }
 
 
-function placeFixedElement(el, size, minY) {
+function rectRelativeToHost(el, host) {
+  const r = el.getBoundingClientRect();
+  const h = host.getBoundingClientRect();
+  return { left: r.left - h.left, top: r.top - h.top, right: r.right - h.left, bottom: r.bottom - h.top };
+}
+
+// クッキー本体・金クッキー・他のモンスターと重ならないようにするための配置済み矩形一覧
+// (タップ判定は見た目の丸みに関係なく要素の矩形全体なので、矩形のまま扱う)
+function occupiedRects(host, excludeEl) {
+  const rects = [];
+  const cookie = $("cookie");
+
+  if (cookie) rects.push(rectRelativeToHost(cookie, host));
+
+  const golden = $("goldenCookie");
+  if (goldenVisible && golden && golden !== excludeEl) rects.push(rectRelativeToHost(golden, host));
+
+  monsters.forEach(m => {
+    if (m.el && m.el !== excludeEl) rects.push(rectRelativeToHost(m.el, host));
+  });
+
+  return rects;
+}
+
+function overlapArea(a, b, margin) {
+  const m = margin || 0;
+  const ox = Math.min(a.right, b.right + m) - Math.max(a.left, b.left - m);
+  const oy = Math.min(a.bottom, b.bottom + m) - Math.max(a.top, b.top - m);
+  return ox > 0 && oy > 0 ? ox * oy : 0;
+}
+
+function placeFixedElement(el, width, height, minY) {
   const host = document.querySelector(".top");
   if (!el || !host) return;
 
@@ -7078,14 +7822,52 @@ function placeFixedElement(el, size, minY) {
   const quota = $("quotaBox");
   const hostW = host.clientWidth || 360;
   const hostH = host.clientHeight || 320;
+  const naturalW = Number(width) || 0;
+  const naturalH = Number(height) || naturalW;
 
+  // ノルマ表示より下・.top の内側、という条件は絶対に譲らない(隠れたりはみ出たりしない)
   const quotaBottom = quota ? quota.offsetTop + quota.offsetHeight : 0;
-  const yMin = Math.max(pad, quotaBottom + 4, Number(minY) || 0);
-  const maxX = Math.max(pad, hostW - size - pad);
-  const maxY = Math.max(yMin, hostH - size - 8);
+  const minYFixed = Math.max(pad, quotaBottom + 4, Number(minY) || 0);
 
-  const x = pad + Math.random() * Math.max(1, maxX - pad);
-  const y = yMin + Math.random() * Math.max(1, maxY - yMin);
+  const blockers = occupiedRects(host, el);
+  const margin = 6;
+
+  function tryPlace(w, h) {
+    const maxX = Math.max(pad, hostW - w - pad);
+    const maxY = Math.max(minYFixed, hostH - h - pad);
+    let best = null;
+
+    for (let attempt = 0; attempt < 60; attempt++) {
+      const x = pad + Math.random() * Math.max(1, maxX - pad);
+      const y = minYFixed + Math.random() * Math.max(1, maxY - minYFixed);
+      const candidate = { left: x, top: y, right: x + w, bottom: y + h };
+      const score = blockers.reduce((sum, b) => sum + overlapArea(candidate, b, margin), 0);
+
+      if (!best || score < best.score) best = { x, y, score };
+      if (score === 0) break;
+    }
+
+    return best;
+  }
+
+  // まず等身大で置き場所を探し、クッキー本体などとどうしても重なる場合は
+  // 段階的に縮小しながら再挑戦して、隠したり枠外に出したりせず収める
+  let scale = 1;
+  let best = tryPlace(naturalW, naturalH);
+
+  while (best.score > 0 && scale > 0.4) {
+    scale = Math.max(0.4, scale * 0.85);
+    best = tryPlace(naturalW * scale, naturalH * scale);
+  }
+
+  el.style.transform = scale < 0.999 ? `translateZ(0) scale(${scale.toFixed(3)})` : "translateZ(0)";
+  el.style.transformOrigin = "top left";
+
+  // 最終安全策：ごく小さい端末でも .top の外には絶対に出さない
+  const finalW = naturalW * scale;
+  const finalH = naturalH * scale;
+  const x = Math.min(Math.max(best.x, pad), Math.max(pad, hostW - finalW - pad));
+  const y = Math.min(Math.max(best.y, pad), Math.max(pad, hostH - finalH - pad));
 
   el.style.left = x + "px";
   el.style.top = y + "px";
@@ -7102,13 +7884,13 @@ function showGoldenCookie() {
   }
 
   goldenVisible = true;
-  goldenSpawnTimer = null;
+  clearGoldenSpawnTimer();
 
   const btn = $("goldenCookie");
   const top = document.querySelector(".top");
   if (btn && top && btn.parentElement !== top) top.appendChild(btn);
 
-  placeFixedElement(btn, 72, 90);
+  placeFixedElement(btn, 90, 90, 90);
 
   btn.style.display = "block";
 
@@ -7125,15 +7907,14 @@ function forceGoldenCookie() {
     return;
   }
 
-  clearTimeout(goldenSpawnTimer);
+  clearGoldenSpawnTimer();
   clearTimeout(goldenHideTimer);
 
   goldenVisible = true;
-  goldenSpawnTimer = null;
 
   const btn = $("goldenCookie");
 
-  placeFixedElement(btn, 72, 90);
+  placeFixedElement(btn, 90, 90, 90);
 
   btn.style.display = "block";
 
@@ -7282,7 +8063,7 @@ function showMonster() {
     return;
   }
 
-  monsterSpawnTimer = null;
+  clearMonsterSpawnTimer();
 
   const level = monsterLevel();
   const id = monsterIdSeq++;
@@ -7311,7 +8092,7 @@ function showMonster() {
   state.goldenFirstHitReady = false;
   state.nextMonsterHpMultiplier = 1;
 
-  placeFixedElement(mon.el, 118, 90);
+  placeFixedElement(mon.el, 142, 158, 90);
   renderMonsterHp(mon.id);
 
   mon.hideTimer = setTimeout(() => {
@@ -7325,7 +8106,7 @@ function forceMonster() {
     return;
   }
 
-  clearTimeout(monsterSpawnTimer);
+  clearMonsterSpawnTimer();
   state.quotaFailed = false;
   state.quotaActive = true;
 
@@ -7466,7 +8247,7 @@ function defeatMonster(id) {
     state.nextGoldenSpawnMultiplier *= Math.exp(-beastScentLv * 0.5);
 
     if (!goldenVisible) {
-      clearTimeout(goldenSpawnTimer);
+      clearGoldenSpawnTimer();
       scheduleGoldenCookie();
     }
   }
@@ -7493,6 +8274,10 @@ function defeatMonster(id) {
 
   playSound("golden");
   showMessage(message);
+
+  pendingRewardChoices = buildMonsterRewardChoices(defeatedLevel);
+  state.nextRewardCountBonus = 0;
+  preloadRewardChoiceImages(pendingRewardChoices);
 
   clearTimeout(rewardOpenTimer);
   rewardOpenTimer = setTimeout(() => {
@@ -7718,8 +8503,10 @@ function upgradeRewardPreviewText(choice) {
 }
 
 function showRewardChoices(level) {
-  pendingRewardChoices = buildMonsterRewardChoices(level);
-  state.nextRewardCountBonus = 0;
+  if (!pendingRewardChoices || pendingRewardChoices.length === 0) {
+    pendingRewardChoices = buildMonsterRewardChoices(level);
+    state.nextRewardCountBonus = 0;
+  }
 
   const modal = $("rewardModal");
   const notice = $("rewardLockNotice");
@@ -7791,9 +8578,9 @@ function chooseReward(choice) {
 }
 
 window.addEventListener("resize", () => {
-  if (goldenVisible) placeFixedElement($("goldenCookie"), 72, 90);
+  if (goldenVisible) placeFixedElement($("goldenCookie"), 90, 90, 90);
   monsters.forEach(m => {
-    if (m.el) placeFixedElement(m.el, 118, 90);
+    if (m.el) placeFixedElement(m.el, 142, 158, 90);
   });
 });
 
@@ -7835,7 +8622,10 @@ function installDebugPanel() {
       }
     }
 
+    let hasCustomPosition = false;
+
     if (saved && Number.isFinite(saved.left) && Number.isFinite(saved.top)) {
+      hasCustomPosition = true;
       requestAnimationFrame(() => setDebugPanelPosition(saved.left, saved.top, false));
     }
 
@@ -7869,8 +8659,11 @@ function installDebugPanel() {
     function finishDrag(e) {
       if (!drag || drag.pointerId !== e.pointerId) return;
       const wasMoved = drag.moved;
-      const rect = panel.getBoundingClientRect();
-      setDebugPanelPosition(rect.left, rect.top, true);
+      if (wasMoved) {
+        const rect = panel.getBoundingClientRect();
+        setDebugPanelPosition(rect.left, rect.top, true);
+        hasCustomPosition = true;
+      }
       panel.classList.remove("dragging");
       try { mini.releasePointerCapture(e.pointerId); } catch (_) {}
       drag = null;
@@ -7886,6 +8679,7 @@ function installDebugPanel() {
     });
 
     window.addEventListener("resize", () => {
+      if (!hasCustomPosition) return;
       const rect = panel.getBoundingClientRect();
       setDebugPanelPosition(rect.left, rect.top, true);
     });
@@ -7926,7 +8720,7 @@ function installDebugPanel() {
     SKILL_NODES.forEach(n => state.skills[n.id] = true);
     updateTopOnly();
     renderAllTabs();
-    renderSkillTree();
+    renderSkillChoiceScreen();
   });
 
   addTap($("debugGoldenBtn"), () => {
@@ -7971,8 +8765,48 @@ if (pausedForSkillChoice()) {
   scheduleMonster();
 }
 
+function startGameFromTitle() {
+  if (!titleScreenActive()) return;
+
+  document.body.classList.remove("titleScreenMode");
+  $("titleAboutOverlay").classList.remove("active");
+  scheduleGoldenCookie();
+  scheduleMonster();
+  updateTopOnly();
+  renderAllTabs();
+}
+
+function returnToTitleScreen() {
+  if (titleScreenActive() || pausedForSkillChoice()) return;
+
+  document.body.classList.add("titleScreenMode");
+  clearGoldenSpawnTimer();
+  clearMonsterSpawnTimer();
+  if (goldenVisible) hideGoldenCookie(false);
+  hideMonster(false);
+  saveGame();
+}
+
+addTap($("titleStartBtn"), startGameFromTitle);
+addTap($("backToTitleBtn"), returnToTitleScreen);
+
+addTap($("titleAboutBtn"), () => {
+  $("titleAboutOverlay").classList.add("active");
+});
+
+addTap($("titleAboutCloseBtn"), () => {
+  $("titleAboutOverlay").classList.remove("active");
+});
+
+$("titleAboutOverlay").addEventListener("click", e => {
+  if (e.target === $("titleAboutOverlay")) $("titleAboutOverlay").classList.remove("active");
+});
+
 setInterval(() => {
+  if (titleScreenActive()) return;
+
   updateQuotaPauseState();
+  updateSpawnTimerPauseState();
   if (!pausedForSkillChoice()) {
     earn(currentCps() / 20);
     // 最高到達ノルマ層を記録(段階式研究の変数)
