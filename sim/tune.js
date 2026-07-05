@@ -12,7 +12,8 @@ const HOURS = 100;
 const ITERS = Number(process.argv[2] || 8);
 const STRAT_ID = process.argv[3] || 'S1';
 
-function yCurve(x) { return 3600 / Math.pow(360000, 0.8) * Math.pow(x, 0.8); }
+// 帯域式(ユーザー承認済み・√型): Y(x) = 120 + 8×√x (x=経過秒)。runner.js と必ず一致させること
+function yCurve(x) { return 120 + 8 * Math.sqrt(x); }
 function dec(v) { return Math.log10(Math.max(1, v)); }
 // gain = 0.4*(run/1e4)^0.8 >= cost*1.2  →  run = 1e4*(3*cost)^1.25
 function costFromRunDec(d) { return Math.pow(10, (d - 4) / 1.25) / 3; }

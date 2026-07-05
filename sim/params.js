@@ -77,6 +77,19 @@ module.exports = {
     ctrlOven: 0.05, ctrlMoon: 0.07, ctrlBh: 0.10
   },
 
+  // ---- 研究段階コスト倍率(確定値): 段2 = 段1コスト×s2, 段3 = 段1コスト×s3 ----
+  resStageCost: { s2: 1500, s3: 2250000 },
+
+  // ---- クリック変更 案A+C(承認済み) ----
+  // 案A: クリック力 = 従来項 + 毎秒生産×cpsCoef×(1+fingerSqrt×√強い指)×(1+クリック系スキル効果)
+  // 案C: 神の指1個ごとにクリック×godFingerExp(指数)
+  clickLink: { cpsCoef: 0.004, fingerSqrt: 0.02, godFingerExp: 1.02 },
+
+  // ---- タイミング機能(条件⑬)の最適操作/完全放置モデル ----
+  // waveOpt=2/π(山に活動を寄せた正相平均) / waveIdle=1/π(全周期平均)
+  // bhIdleDelay=満タン後に放置プレイヤーが気づくまでの遅延秒 / matureIdleMul=放置時の熟成爆発係数
+  timing: { waveOpt: 0.6366, waveIdle: 0.3183, bhIdleDelay: 240, matureIdleMul: 0.5 },
+
   // ---- 研究コスト ----
   resCost: {
     fingerTechnique: 2500, grandmaCrowd: 12000, ovenBatch: 30000,

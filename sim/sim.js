@@ -297,14 +297,14 @@ function satLv(lv, half) { lv = Math.max(0, lv); return lv / (1 + lv / Math.max(
 function newSim(strategy, opts) {
   return {
     strat: strategy,
-    opt: Object.assign({ disableResearch: null, disableReward: null, hours: 100 }, opts || {}),
+    opt: Object.assign({ disableResearch: null, disableReward: null, disableStage: null, disableUpgrade: null, idleTiming: null, trackGain: false, hours: 100 }, opts || {}),
     t: 0,                       // 総経過秒
     // 永続
     prestige: 0, prestigeTotal: 0, prestigeRuns: 0, totalCookies: 0,
     skills: {},
-    everUpgrade: {}, everResearch: {},
+    everUpgrade: {}, everResearch: {}, everStage: {},
     unlockEvents: [],           // {t, kind, id}
-    firstResearchBuy: {}, firstPerk: {},
+    firstResearchBuy: {}, firstPerk: {}, firstStageBuy: {},
     runs: [],                   // 各周回の結果
     // 周回内
     run: null,
@@ -316,15 +316,19 @@ function newSim(strategy, opts) {
 function newRun(sim) {
   const upgrades = {}; UPGRADES.forEach(u => upgrades[u.id] = 0);
   const research = {}; RESEARCH.forEach(r => research[r.id] = false);
+  // 段階2/3: スキル取得後に研究購入欄へ追加され、クッキーで購入して有効化(転生でリセット)
+  const research2 = {}; RESEARCH.forEach(r => research2[r.id] = false);
+  const research3 = {}; RESEARCH.forEach(r => research3[r.id] = false);
   const perks = {}; REWARD_POOL.forEach(r => perks[r.id] = 0);
   const upgradePerks = {}; UPGRADES.forEach(u => upgradePerks[u.id] = 0);
   return {
     startT: sim.t,
     cookies: 0, runCookies: 0,
-    upgrades, research, perks, upgradePerks,
+    upgrades, research, research2, research3, perks, upgradePerks,
     rewardCategoryCounts: { golden: 0, hunt: 0, equipment: 0, risk: 0 },
     quotaFailed: false, quotaHoldSeconds: 0, quotaMonsterKills: 0,
-    lastGoldenT: sim.t, spiceBurstM: 1, spiceAromaUntil: 0, bhCharge: 0, bhUses: 0, bhBoostUntil: 0, bhBoostMult: 1,
+    quotaFailAt: null, gainSeries: null,
+    lastGoldenT: sim.t, spiceBurstM: 1, spiceAromaUntil: 0, bhCharge: 0, bhUses: 0, bhBoostUntil: 0, bhBoostMult: 1, bhReadyAt: null,
     blackHoleCompressionUsed: false, blackHoleQuotaMultiplier: 1,
     maxStage: 1,
     boosts: [],                // {mult, until}
@@ -600,6 +604,8 @@ function computeProd(sim) {
     const u = UPGRADES[i];
     const owned = r.upgrades[u.id];
     if (!owned) continue;
+    // 設備トグル(条件⑩): この設備の生産だけをゼロ化(所持数は他の計算式に残す・購入行動同一)
+    if (sim.opt.disableUpgrade === u.id) continue;
     const boostRate = Math.max(P.upPerk.floor, P.upPerk.base - i * P.upPerk.slope) * upPerkPower;
     const personal = 1 + (r.upgradePerks[u.id] || 0) * boostRate;
     let resM = 1;
@@ -643,8 +649,9 @@ function computeProd(sim) {
         let amp = P.res2.waveAmpBase + P.res2.waveAmpPerRes * rc;
         if (resStage3(sim, 'quantumProofing')) amp *= 1 + P.res2.waveStageCoef * capv(r.maxStage, P.res2.waveStageCap);
         amp = Math.min(P.res2.waveAmpCap, amp);
-        const phase = Math.sin(2 * Math.PI * ((sim.t - r.startT) % P.res2.wavePeriod) / P.res2.wavePeriod);
-        resM *= 1 + amp * Math.max(0, phase);
+        // タイミング(条件⑬): 最適操作=山に活動を寄せる(正相平均2/π) / 完全放置=全周期平均(1/π)
+        const wf = sim.opt.idleTiming === 'wave' ? P.timing.waveIdle : P.timing.waveOpt;
+        resM *= 1 + amp * wf;
       }
     }
     let supM = 1;
@@ -671,6 +678,12 @@ function computeProd(sim) {
 
   let click = clickRaw * bankM * clickSkillMul * prestigeMul * globalRes * killMulAll;
   let cps = cpsRaw * cpsSkillMul * prestigeMul * globalRes * killMulAll * killMulCps * bake.cps;
+
+  // クリック変更 案A(指先連動): クリック力 = 従来項 + 毎秒生産×係数×(1+0.02×√強い指)×(1+クリック系スキル効果)
+  const CL = P.clickLink;
+  click += cps * CL.cpsCoef * (1 + CL.fingerSqrt * Math.sqrt(r.upgrades.finger || 0)) * clickSkillMul;
+  // クリック変更 案C(神の指=クリックの上位段): 1個ごとにクリック×godFingerExp(指数)
+  click *= Math.pow(CL.godFingerExp, r.upgrades.godFinger || 0);
 
   // 会心(期待値)
   let critEV = 1;
@@ -811,9 +824,23 @@ function researchCostOf(sim, id) {
   const disc = Math.exp(-Math.max(0, skillEffect(sim, 'researchDiscount')));
   return Math.floor(P.resCost[id] * disc);
 }
-// 研究の段階 (1=購入のみ / 2,3=対応スキル所持)
-function resStage2(sim, id) { return !!sim.skills[RES_STAGE2[id]]; }
-function resStage3(sim, id) { return !!sim.skills[RES_STAGE3[id]]; }
+// 研究の段階 (1=購入 / 2,3=対応スキル取得後に購入欄へカード追加→クッキーで購入して有効化)
+// disableStage='研究id:2' 等で単体効果ゼロ化(購入行動は同一。条件⑨用)
+function resStage2(sim, id) { return !!sim.run.research2[id] && sim.opt.disableStage !== id + ':2'; }
+function resStage3(sim, id) { return !!sim.run.research3[id] && sim.opt.disableStage !== id + ':3'; }
+// 段階カードの表示条件: 前段階を購入済み かつ 対応スキルを取得済み
+function researchStageUnlocked(sim, id, stage) {
+  const r = sim.run;
+  if (!r.research[id]) return false;
+  if (stage === 2) return !!sim.skills[RES_STAGE2[id]];
+  return !!r.research2[id] && !!sim.skills[RES_STAGE3[id]];
+}
+// 段階コスト: 段1コスト×倍率(確定: 段2=×1,500 / 段3=×2,250,000)。researchDiscountは段1と同様に効く
+function researchStageCostOf(sim, id, stage) {
+  const disc = Math.exp(-Math.max(0, skillEffect(sim, 'researchDiscount')));
+  const mult = stage === 2 ? P.resStageCost.s2 : P.resStageCost.s3;
+  return Math.floor(P.resCost[id] * mult * disc);
+}
 function capv(v, cap) { return Math.min(Math.max(0, v), cap); }
 
 function prestigeGainOf(runCookies) {
@@ -849,7 +876,9 @@ function collectGolden(sim, prod) {
   // 香料調合 段階2: 風味の熟成(前回の金からの経過秒で、全生産の短時間バーストが決まる)
   if (resActive(sim, 'spiceBlend') && resStage2(sim, 'spiceBlend')) {
     const mature = capv(sim.t - (r.lastGoldenT || r.startT), P.res2.matureCap);
-    let burst = 1 + P.res2.matureRate * mature;
+    // タイミング(条件⑬): 完全放置は爆発窓に行動を寄せられないため係数を減衰
+    const matureEff = sim.opt.idleTiming === 'mature' ? P.timing.matureIdleMul : 1;
+    let burst = 1 + P.res2.matureRate * mature * matureEff;
     if (resStage3(sim, 'spiceBlend')) burst *= 1 + P.res2.spiceStageCoef * capv(r.maxStage, P.res2.spiceStageCap);
     r.spiceBurstM = burst;
     r.spiceAromaUntil = sim.t + P.res2.aromaDur;
@@ -925,8 +954,9 @@ function applyReward(sim, choice) {
 function defeatMonster(sim, mon) {
   const r = sim.run;
   r.kills++;
-  // 異世界接続網 段階2: 狩り窓中の討伐で窓を延長
-  if (resActive(sim, 'portalNetwork') && resStage2(sim, 'portalNetwork') && sim.t < r.portalHuntUntil) {
+  // 異世界接続網 段階2: 狩り窓中の討伐で窓を延長(完全放置は窓中に討伐を寄せられず延長なし: 条件⑬)
+  if (resActive(sim, 'portalNetwork') && resStage2(sim, 'portalNetwork') && sim.t < r.portalHuntUntil
+    && sim.opt.idleTiming !== 'huntExtend') {
     r.portalHuntUntil += P.res2.huntExtendSec;
   }
   if (!r.quotaFailed) r.quotaMonsterKills++;
@@ -978,6 +1008,10 @@ function doPrestige(sim) {
     kills: r.kills, golden: r.goldenTaken,
     gain,
     researchBought: Object.keys(r.research).filter(k => r.research[k]),
+    stages2: Object.keys(r.research2).filter(k => r.research2[k]),
+    stages3: Object.keys(r.research3).filter(k => r.research3[k]),
+    quotaFailAt: r.quotaFailAt,
+    gainSeries: (sim.opt.trackGain && r.quotaFailAt != null) ? r.gainSeries : undefined,
     perks: Object.assign({}, r.perks),
     upgradePerkTotal: Object.values(r.upgradePerks).reduce((a, b) => a + b, 0),
     upCounts: Object.assign({}, r.upgrades)
@@ -1129,12 +1163,17 @@ function simulate(strategy, opts) {
       r.bhCharge += Math.sqrt(bh) * dt;
       const maxUses = resStage3(sim, 'blackHoleCompression') ? 3 : 2;
       if (r.bhCharge >= P.res2.bhChargeFull && r.bhUses < maxUses && sim.t >= r.bhBoostUntil) {
-        let mult = 1 + P.res2.bhBoostCoef * Math.sqrt(bh) / 10;
-        if (resStage3(sim, 'blackHoleCompression')) mult *= 1 + P.res2.bhBoostStageCoef * capv(r.maxStage, P.res2.bhBoostStageCap);
-        r.bhBoostMult = mult;
-        r.bhBoostUntil = sim.t + P.res2.bhBoostDur;
-        r.bhCharge = 0;
-        r.bhUses++;
+        // タイミング(条件⑬): 最適操作は満タンで即発動 / 完全放置は気づくまで遅延
+        if (r.bhReadyAt == null) r.bhReadyAt = sim.t + (sim.opt.idleTiming === 'bhCharge' ? P.timing.bhIdleDelay : 0);
+        if (sim.t >= r.bhReadyAt) {
+          let mult = 1 + P.res2.bhBoostCoef * Math.sqrt(bh) / 10;
+          if (resStage3(sim, 'blackHoleCompression')) mult *= 1 + P.res2.bhBoostStageCoef * capv(r.maxStage, P.res2.bhBoostStageCap);
+          r.bhBoostMult = mult;
+          r.bhBoostUntil = sim.t + P.res2.bhBoostDur;
+          r.bhCharge = 0;
+          r.bhUses++;
+          r.bhReadyAt = null;
+        }
       }
     }
 
@@ -1177,6 +1216,7 @@ function simulate(strategy, opts) {
       const el = elapsed(sim);
       if (quota !== null && quota > 0 && r.runCookies < quota) {
         r.quotaFailed = true;
+        r.quotaFailAt = el; // 未達に転じた経過秒(条件⑧用)
         if (r.monster) { r.monster = null; }
       } else {
         r.quotaHoldSeconds = Math.max(r.quotaHoldSeconds, el);
@@ -1184,6 +1224,12 @@ function simulate(strategy, opts) {
     }
     const st = currentStage(sim);
     if (st > r.maxStage) r.maxStage = st;
+
+    // 条件⑧用: 「いま転生した場合の獲得PT」の毎秒系列を記録
+    if (sim.opt.trackGain) {
+      if (!r.gainSeries) r.gainSeries = [];
+      r.gainSeries.push(prestigeGainOf(r.runCookies));
+    }
 
     // 購入(戦略)
     strategy.buy(sim, prod);
@@ -1203,6 +1249,10 @@ function simulate(strategy, opts) {
     kills: r.kills, golden: r.goldenTaken,
     gain: prestigeGainOf(r.runCookies), partial: true,
     researchBought: Object.keys(r.research).filter(k => r.research[k]),
+    stages2: Object.keys(r.research2).filter(k => r.research2[k]),
+    stages3: Object.keys(r.research3).filter(k => r.research3[k]),
+    quotaFailAt: r.quotaFailAt,
+    gainSeries: (sim.opt.trackGain && r.quotaFailAt != null) ? r.gainSeries : undefined,
     perks: Object.assign({}, r.perks),
     upgradePerkTotal: Object.values(r.upgradePerks).reduce((a, b) => a + b, 0),
     skillsBought: 0, skillIds: []
@@ -1237,6 +1287,25 @@ function tryBuyResearch(sim, id, budgetRatio) {
   if (!sim.everResearch[id]) {
     sim.everResearch[id] = true;
     sim.unlockEvents.push({ t: sim.t, kind: 'research', id });
+  }
+  return true;
+}
+// 研究段階(段2/段3)の購入。研究購入枠の延長として同じ予算基準で買う
+function tryBuyResearchStage(sim, id, stage, budgetRatio) {
+  const r = sim.run;
+  if (stage === 2 ? r.research2[id] : r.research3[id]) return false;
+  // 無効化(disableStage)でも購入行動は同じ: 効果だけがゼロになる
+  if (!researchStageUnlocked(sim, id, stage)) return false;
+  const cost = researchStageCostOf(sim, id, stage);
+  if (cost > r.cookies * budgetRatio) return false;
+  r.cookies -= cost;
+  if (stage === 2) r.research2[id] = true; else r.research3[id] = true;
+  const key = id + ':' + stage;
+  if (sim.firstStageBuy[key] === undefined) sim.firstStageBuy[key] = sim.t;
+  if (!sim.everStage[key]) {
+    sim.everStage[key] = true;
+    // 段階購入も「解放イベント」として記録(帯域判定⑥の対象)
+    sim.unlockEvents.push({ t: sim.t, kind: 'stage', id: key });
   }
   return true;
 }
@@ -1295,5 +1364,6 @@ module.exports = {
   P, UPGRADES, RESEARCH, REWARD_POOL, SKILL_NODES, SKILL_BY_ID,
   simulate, prestigeGainOf, skillCostOf, upgradeCost, researchCostOf,
   tryBuyUpgrade, tryBuyResearch, bestEfficiency, visibleUpgrades, quotaAtElapsed,
-  isUtilitySkill, buildSkillValues, skillRank
+  isUtilitySkill, buildSkillValues, skillRank,
+  tryBuyResearchStage, researchStageCostOf, researchStageUnlocked
 };

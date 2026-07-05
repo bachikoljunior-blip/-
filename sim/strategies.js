@@ -79,14 +79,18 @@ function pickRewardUpgradeFirst(fallback) {
   };
 }
 
-// 標準買い物: 研究→効率良アップグレード
+// 研究購入枠: 段1に加え、解放済みの段2/段3カードも同じ予算基準で買う(購入対象リストが増えるだけ)
+function buyResearchLine(sim, id, ratio) {
+  G.tryBuyResearch(sim, id, ratio);
+  G.tryBuyResearchStage(sim, id, 2, ratio);
+  G.tryBuyResearchStage(sim, id, 3, ratio);
+}
+
+// 標準買い物: 研究(段階含む)→効率良アップグレード
 function standardBuy(researchRatio, upgradeRatio) {
   return function (sim, prod) {
-    // 研究: 安い順に、コストが所持のresearchRatio以下なら買う
-    for (const r of G.RESEARCH) {
-      if (sim.run.research[r.id]) continue;
-      G.tryBuyResearch(sim, r.id, researchRatio);
-    }
+    // 研究: 安い順に、コストが所持のresearchRatio以下なら買う(段2/段3カードも同枠)
+    for (const r of G.RESEARCH) buyResearchLine(sim, r.id, researchRatio);
     // アップグレード: 効率最良を、コストが所持のupgradeRatio以下の間買い続ける(最大30回/秒)
     for (let i = 0; i < 30; i++) {
       const u = G.bestEfficiency(sim, prod, null);
@@ -126,9 +130,9 @@ const STRATEGIES = [
     tapRate: 7, goldenTake: 1,
     pickPolicy: sim => 'click',
     buy: function (sim, prod) {
-      G.tryBuyResearch(sim, 'fingerTechnique', 0.50);
-      G.tryBuyResearch(sim, 'bankClickDividend', 0.50);
-      for (const r of G.RESEARCH) { if (!sim.run.research[r.id]) G.tryBuyResearch(sim, r.id, 0.20); }
+      buyResearchLine(sim, 'fingerTechnique', 0.50);
+      buyResearchLine(sim, 'bankClickDividend', 0.50);
+      for (const r of G.RESEARCH) buyResearchLine(sim, r.id, 0.20);
       for (let i = 0; i < 30; i++) {
         const clicks = G.visibleUpgrades(sim).filter(u => u.type === 'click');
         let done = false;
@@ -149,8 +153,8 @@ const STRATEGIES = [
     tapRate: 4, goldenTake: 1,
     pickPolicy: sim => 'golden',
     buy: function (sim, prod) {
-      G.tryBuyResearch(sim, 'spiceBlend', 0.60);
-      for (const r of G.RESEARCH) { if (!sim.run.research[r.id]) G.tryBuyResearch(sim, r.id, 0.25); }
+      buyResearchLine(sim, 'spiceBlend', 0.60);
+      for (const r of G.RESEARCH) buyResearchLine(sim, r.id, 0.25);
       for (let i = 0; i < 30; i++) {
         const spice = G.UPGRADES.find(u => u.id === 'spiceRack');
         const vis = G.visibleUpgrades(sim);
@@ -172,7 +176,7 @@ const STRATEGIES = [
     tapRate: 6, goldenTake: 1,
     pickPolicy: sim => 'hunt',
     buy: function (sim, prod) {
-      for (const r of G.RESEARCH) { if (!sim.run.research[r.id]) G.tryBuyResearch(sim, r.id, 0.30); }
+      for (const r of G.RESEARCH) buyResearchLine(sim, r.id, 0.30);
       const quota = Math.max(1, G.quotaAtElapsed(sim, sim.t - sim.run.startT));
       const ratio = sim.run.runCookies / quota;
       const budget = ratio < 2.0 ? 0.50 : 0.20;
@@ -191,7 +195,7 @@ const STRATEGIES = [
     tapRate: 3, goldenTake: 1,
     pickPolicy: sim => 'bake',
     buy: function (sim, prod) {
-      for (const r of G.RESEARCH) { if (!sim.run.research[r.id]) G.tryBuyResearch(sim, r.id, 0.80); }
+      for (const r of G.RESEARCH) buyResearchLine(sim, r.id, 0.80);
       for (let i = 0; i < 30; i++) {
         const u = G.bestEfficiency(sim, prod, null);
         if (!u || !G.tryBuyUpgrade(sim, u, 0.08)) break;
@@ -228,7 +232,7 @@ const STRATEGIES = [
     tapRate: 4, goldenTake: 1,
     pickPolicy: sim => 'bake',
     buy: function (sim, prod) {
-      for (const r of G.RESEARCH) { if (!sim.run.research[r.id]) G.tryBuyResearch(sim, r.id, 0.20); }
+      for (const r of G.RESEARCH) buyResearchLine(sim, r.id, 0.20);
       const vis = G.visibleUpgrades(sim);
       const top = vis[vis.length - 1];
       for (let i = 0; i < 30; i++) {
@@ -250,7 +254,7 @@ const STRATEGIES = [
     tapRate: 5, goldenTake: 1,
     pickPolicy: sim => 'hunt',
     buy: function (sim, prod) {
-      for (const r of G.RESEARCH) { if (!sim.run.research[r.id]) G.tryBuyResearch(sim, r.id, 0.30); }
+      for (const r of G.RESEARCH) buyResearchLine(sim, r.id, 0.30);
       const quota = Math.max(1, G.quotaAtElapsed(sim, sim.t - sim.run.startT));
       const ratio = sim.run.runCookies / quota;
       const budget = ratio < 1.3 ? 0.60 : 0.15;
@@ -279,7 +283,7 @@ const STRATEGIES = [
     pickPolicy: sim => 'golden',
     buy: function (sim, prod) {
       if (sim.t % 30 !== 0) return;
-      for (const r of G.RESEARCH) { if (!sim.run.research[r.id]) G.tryBuyResearch(sim, r.id, 0.50); }
+      for (const r of G.RESEARCH) buyResearchLine(sim, r.id, 0.50);
       for (let i = 0; i < 30; i++) {
         const u = G.bestEfficiency(sim, prod, null);
         if (!u || !G.tryBuyUpgrade(sim, u, 0.50)) break;
