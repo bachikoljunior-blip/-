@@ -3,10 +3,11 @@
 module.exports = {
   // ---- 転生ポイント獲得量 ----
   // gain = floor( pA*(1-exp(-run/pD1)) + pB*(run/pD2)^pG ) , run>=pMin
-  prestige: { pA: 0, pD1: 200000, pB: 0.4, pD2: 10000, pG: 0.80, pMin: 10000 },
+  // pG=0.50 (2026-07-05変更): ⑤上限100倍 ⇔ 周回クッキー比 ≤ 100^(1/0.5)=1e4(4桁)。④下限2桁との窓が2桁に拡大
+  prestige: { pA: 0, pD1: 200000, pB: 0.4, pD2: 10000, pG: 0.50, pMin: 10000 },
 
   // ---- スキルコスト: 元コスト順の等比ラダー cost_k = round(C0 * R^rank) ----
-  skillCost: { mode: 'ladder', C0: 15, R: 150, segments: [ { until: 8, R: 900 }, { until: 12, R: 420 }, { until: 99, R: 210 } ], utilRatio: 0.20, rungCosts: [15,13500.00000000002,12149999.999999976,10935000000.000032,9841499999999.955,8857349999999967,7971614999999976000,7.174453499999984e+21,6.457008149999937e+24,2.71194342300002e+27,1.1390162376599999e+30,4.783868198171964e+32,2.0092246432322264e+35,2.175104139966328e+53,1.3643709084928149e+56,3.479363566606232e+58,5.276604323974015e+60,6.343873714262287e+62,7.627013744361661e+64,1.3463129354266957e+67,1.7150122970171982e+69,2.173083908782642e+71,2.612961664977987e+73,3.141470878821721e+75,4.584650639496054e+77,5.511962409012063e+79,6.839271897175666e+81,1.2998124869348498e+84,1.780697888554487e+86,3.351096704778869e+88,6.600101404086949e+90,1.9529400027822504e+93,9.725740742023831e+95,1.541426029367537e+99,1.8532016937021182e+101,2.2280384865108005e+103,3.531203029812238e+106,1.134697912236968e+109,1.3642069439171317e+111,1.6401374901296727e+113,1.971878972265501e+115,2.9114997446391703e+117,3.50039259437734e+119,4.208397523418035e+121,5.0596066691373193e+123,6.082985151456848e+125,7.313356703902357e+127,8.79258866277231e+129,1.057101663747173e+132,1.270915734098075e+134,1.5279767865018404e+136,1.837032147332099e+138,2.2085984159861574e+140,2.6553193258925876e+142,3.1923959880728247e+144,3.8381041576753826e+146] },
+  skillCost: { mode: 'ladder', C0: 15, R: 150, segments: [ { until: 8, R: 900 }, { until: 12, R: 420 }, { until: 99, R: 210 } ], utilRatio: 0.20, rungCosts: [4,264.77607824142746,5282.9773082037145,105409.25533894598,2103191.148267315,41964180.39313905,837295477.1698643,16706241120.909187,333333333333.3361,6650874383229.665,132702390184500.62,2647760782414306.5,52829773082037900,5.282977308203747e+39,2.6477607824143067e+41,1.327023901845017e+43,6.650874383229774e+44,3.333333333333443e+46,1.6706241120909734e+48,8.372954771698986e+49,4.1964180393141115e+51,2.103191148267435e+53,1.0540925533895289e+55,5.282977308204092e+56,2.64776078241448e+58,1.327023901845104e+60,6.650874383230209e+61,3.3333333333336605e+63,1.670624112091083e+65,8.372954771699533e+66,4.196418039314386e+68,2.1031911482675725e+70,1.0540925533895979e+72,5.282977308204439e+73,2.6477607824146537e+75,1.3270239018451908e+77,6.650874383230644e+78,3.3333333333338793e+80,1.670624112091192e+82,8.372954771700081e+83,4.19641803931466e+85,2.1031911482677105e+87,1.0540925533896669e+89,5.282977308204784e+90,2.6477607824148267e+92,1.3270239018452774e+94,2.7141390690651494e+95,3.8338233363820244e+96,5.415419402090551e+97,7.649483225331512e+98,1.0805182252742861e+100,1.5262725608490963e+101,2.155917295526894e+102,3.0453141230333276e+103,4.301620533954549e+104,6.07620050693106e+105] },
 
   // ---- 生産系数値ノードの1ノードあたり目標倍率 ----
   nodeM: { all: 14, cps: 14, click: 9 },
@@ -73,7 +74,6 @@ module.exports = {
     bhGlobal: 5, bhCompress: 0.0018,
     quantumRes: 0.30, quantumOwn: 0.019,
     antimatterOwn: 0.002, antimatterSkill: 0.032,
-    ownCap: 100000000,
     ctrlOven: 0.05, ctrlMoon: 0.07, ctrlBh: 0.10
   },
 
@@ -83,7 +83,7 @@ module.exports = {
   // ---- クリック変更 案A+C(承認済み) ----
   // 案A: クリック力 = 従来項 + 毎秒生産×cpsCoef×(1+fingerSqrt×√強い指)×(1+クリック系スキル効果)
   // 案C: 神の指1個ごとにクリック×godFingerExp(指数)
-  clickLink: { cpsCoef: 0.004, fingerSqrt: 0.02, godFingerExp: 1.02 },
+  clickLink: { cpsCoef: 0.004, fingerSqrt: 0.02, godFingerExp: 1.012 }, // 案C指数 1.02->1.012 (2026-07-05): キャップ撤廃後の最終周回プラトーがe308超(S2/S7でInfinity)となるため。全方針で約-20桁、S2/S7有限化を実測確認
 
   // ---- タイミング機能(条件⑬)の最適操作/完全放置モデル ----
   // waveOpt=2/π(山に活動を寄せた正相平均) / waveIdle=1/π(全周期平均)
@@ -129,22 +129,31 @@ module.exports = {
   bake: { powerOwn: 0.0018, powerStage: 0.004, burntCps: 0.008, burntOwn: 0.0014, softGold: 0.0010, crispyStay: 0.0012, burntHp: 0.006 },
 
   // ---- 段階式研究(第5次実装) ----
+  // 2026-07-05 キャップ全撤廃(WORKSHOP_SPEC 15): min(変数,N)/capv 型の頭打ちを全削除。
+  // 撤廃に伴う係数変更(ゲームへ反映すること):
+  //  - critCpsCoef: 0.1×min(最高層,400)/400 → 0.00025×最高層(上限点で同値の傾きに変換)
+  //  - comboCap(40)/critStageCap/supStageCap/factoryStageCap/spiceStageCap/matureCap(240)/
+  //    huntStageCap/bankCapStageCap/foldKillCap/foldStageCap/galaxyStageCap/bhBoostStageCap/
+  //    waveAmpCap(3)/antiStageCap/antiPrestigeCap(40)/res.ownCap: 削除(線形のまま無限)
+  //  - 月面発酵 段2: ×(1+min(1,余裕率/10)) → ×(1+log10(1+余裕率)/10)(暴走防止の逓減式に置換)
+  //  - 複利利息: min(利息, 毎秒生産×2) → 利息/(1+利息/(毎秒生産×2)) (漸近逓減式に置換)
+  //  - 重力圧縮 段3: 圧縮×(1-min(0.35,0.001×最高層)) → 圧縮×e^(-0.001×最高層)(負値防止の逓減式)
   res2: {
-    comboRate: 0.03, comboCap: 40, comboWindow: 30,
-    critCpsCoef: 0.1, critStageCap: 400,
-    supExtra: 0.008, supStageCoef: 0.001, supStageCap: 350,
+    comboRate: 0.03, comboWindow: 30,
+    critCpsCoef: 0.00025,
+    supExtra: 0.008, supStageCoef: 0.001,
     ovenBakeMulBake: 1.5, ovenBakeMulOther: 1.2,
-    factoryHiKind: 0.15, factoryStageCoef: 0.0012, factoryStageCap: 300,
-    matureRate: 0.006, matureCap: 240, aromaDur: 12, spiceStageCoef: 0.0015, spiceStageCap: 300,
-    huntExtendSec: 2, huntStageCoef: 0.0008, huntStageCap: 300,
-    bankIntRate: 0.0012, bankIntCapCps: 2.0, bankCapStageCoef: 0.004, bankCapStageCap: 500,
+    factoryHiKind: 0.15, factoryStageCoef: 0.0012,
+    matureRate: 0.006, aromaDur: 12, spiceStageCoef: 0.0015,
+    huntExtendSec: 2, huntStageCoef: 0.0008,
+    bankIntRate: 0.0012, bankIntCapCps: 2.0, bankCapStageCoef: 0.004,
     moonMarginDiv: 10, moonResCount: 0.05,
-    foldKillCoef: 0.002, foldKillCap: 300, foldStageCoef: 0.001, foldStageCap: 350,
-    galaxyBonusCoef: 0.05, galaxySat: 120, galaxyStageCoef: 0.0008, galaxyStageCap: 300,
-    bhChargeFull: 2500, bhBoostCoef: 0.5, bhBoostDur: 60, bhBoostStageCoef: 0.002, bhBoostStageCap: 250,
-    bhCompStageCoef: 0.001, bhCompStageMax: 0.35,
-    waveAmpBase: 0.5, waveAmpPerRes: 0.05, waveAmpCap: 3, wavePeriod: 90, waveStageCoef: 0.001, waveStageCap: 300,
-    antiStageCoef: 0.0008, antiStageCap: 350, antiPrestigeCoef: 0.03, antiPrestigeCap: 40
+    foldKillCoef: 0.002, foldStageCoef: 0.001,
+    galaxyBonusCoef: 0.05, galaxySat: 120, galaxyStageCoef: 0.0008,
+    bhChargeFull: 2500, bhBoostCoef: 0.5, bhBoostDur: 60, bhBoostStageCoef: 0.002,
+    bhCompStageCoef: 0.001,
+    waveAmpBase: 0.5, waveAmpPerRes: 0.05, wavePeriod: 90, waveStageCoef: 0.001,
+    antiStageCoef: 0.0008, antiPrestigeCoef: 0.03
   },
 
   // ---- 周回テンポ ----

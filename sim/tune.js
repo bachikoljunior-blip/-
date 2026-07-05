@@ -4,10 +4,11 @@
 // モデル: D_k = A(深さ) + B_k×(しきい値dec - 自然フロンティアdec)。B_k は反復間の割線で推定。
 const fs = require('fs');
 
-function decMinStep(k) { return 2.6; }
+function decMinStep(k) { return k >= 46 ? 2.3 : 2.6; } // 末尾(dec200+のB急騰帯)は2.3桁で周回長を抑える
 const RESUME = process.argv.includes('--resume');
-function decMaxStep(k) { return k === 13 ? 46 : (k <= 22 ? 9 : 4); } // 押し込み上限(ゾーン別)
-const TARGET_FRAC = 0.72;       // 帯域内の狙い位置 (0.5Y〜Y の中央やや下)
+// 押し込み上限: ⑤上限(PT比100倍 ⇔ pG=0.5で4.0桁)内に収める(rung13の初回キャッチアップのみ例外)
+function decMaxStep(k) { return k === 13 ? 46 : 3.4; } // 3.7->3.4: 実測間隔=しきい値+オーバーシュート(~0.3桁)が⑤上限4.0桁を超えないように
+const TARGET_FRAC = 0.62;       // 帯域内の狙い位置 (0.5Y寄り: 非スキル解放イベントの分割ペア被害と長周回を抑える)
 const HOURS = 100;
 const ITERS = Number(process.argv[2] || 8);
 const STRAT_ID = process.argv[3] || 'S1';
@@ -15,9 +16,13 @@ const STRAT_ID = process.argv[3] || 'S1';
 // 帯域式(ユーザー承認済み・√型): Y(x) = 120 + 8×√x (x=経過秒)。runner.js と必ず一致させること
 function yCurve(x) { return 120 + 8 * Math.sqrt(x); }
 function dec(v) { return Math.log10(Math.max(1, v)); }
-// gain = 0.4*(run/1e4)^0.8 >= cost*1.2  →  run = 1e4*(3*cost)^1.25
-function costFromRunDec(d) { return Math.pow(10, (d - 4) / 1.25) / 3; }
-function runDecFromCost(c) { return 4 + 1.25 * (Math.log10(c) + Math.log10(3)); }
+// 転生PT式は params.js から読む(pG=0.50 対応):
+// gain = pB*(run/pD2)^pG >= cost*1.2  →  run = pD2*(1.2*cost/pB)^(1/pG)
+const PP = require('./params.js').prestige;
+const INV_PG = 1 / PP.pG;
+const BUY_F = 1.2 / PP.pB; // = 3 (買付係数1.2 / pB)
+function costFromRunDec(d) { return Math.pow(10, (d - Math.log10(PP.pD2)) / INV_PG) / BUY_F; }
+function runDecFromCost(c) { return Math.log10(PP.pD2) + INV_PG * (Math.log10(c) + Math.log10(BUY_F)); }
 
 function freshSim(rungCosts) {
   for (const k of Object.keys(require.cache)) {
@@ -40,6 +45,33 @@ function currentRungCosts() {
   const costs = [];
   const byCost = G.SKILL_NODES.filter(n => !G.isUtilitySkill(n.id)).map(n => G.skillCostOf(n)).sort((a, b) => a - b);
   return byCost;
+}
+
+// 条件⑥(2026-07-05 新定義): 設備・研究(段階含む)・スキルの全解放を個別カウント、
+// 同一秒に発生した解放のみ1件に統合。全スキル解放後は免除。runner.js と同じ定義。
+function fullUnlockTimeOf(sim, G) {
+  const totalNodes = G.SKILL_NODES.length;
+  let n = 0;
+  const ev = sim.unlockEvents.filter(e => e.kind === 'skill').sort((a, b) => a.t - b.t);
+  for (const e of ev) { n += e.n || 1; if (n >= totalNodes) return e.t; }
+  return Infinity;
+}
+function paceCount(sim, G) {
+  const ts = [];
+  for (const e of sim.unlockEvents.slice().sort((a, b) => a.t - b.t)) {
+    if (ts.length && ts[ts.length - 1] === e.t) continue;
+    ts.push(e.t);
+  }
+  const fullT = fullUnlockTimeOf(sim, G);
+  let ok = 0, all = 0;
+  for (let i = 0; i + 1 < ts.length; i++) {
+    if (ts[i] >= fullT) continue;
+    const y = ts[i + 1] - ts[i];
+    const Y = yCurve(ts[i + 1]);
+    all++;
+    if (y >= 0.5 * Y && y <= Y) ok++;
+  }
+  return { ok, all };
 }
 
 function evalRun(rungCosts, stratId) {
@@ -68,7 +100,8 @@ let Bhat = new Array(NR).fill(null).map((_, i) => i <= 13 ? 700 : (i <= 20 ? 150
 let prevState = null; // {decT:[], D:[]}
 
 for (let it = 0; it < ITERS; it++) {
-  const { runs } = evalRun(rungCosts, STRAT_ID);
+  const { runs, sim, G } = evalRun(rungCosts, STRAT_ID);
+  const pace = paceCount(sim, G);
   const full = runs.filter(r => !r.partial);
   // 帯域判定+表示
   let ok = 0, all = 0;
@@ -132,9 +165,9 @@ for (let it = 0; it < ITERS; it++) {
   const holdOkPct = (100 * ok / all).toFixed(0);
   const total = full.reduce((a, r) => a + r.cookies, 0);
   let x100 = 0, x100all = 0, pt2 = 0; const fails = [];
-  for (let i = 1; i < full.length; i++) { x100all++; if (full[i].cookies >= 100 * full[i - 1].cookies) x100++; else fails.push(`${full[i-1].idx}->${full[i].idx}(x${(full[i].cookies/full[i-1].cookies).toFixed(0)})`); if (full[i].gain >= 2 * full[i - 1].gain) pt2++; }
-  console.log(`[iter ${it}] runs=${runs.length} band ${ok}/${all} (${holdOkPct}%) x100 ${x100}/${x100all} pt2 ${pt2}/${x100all} total=${total.toExponential(2)} ${fails.length?'FAIL:'+fails.join(' '):''}`);
-  const score = (x100 === x100all ? 1000 : 0) + ok - fails.length * 2;
+  for (let i = 1; i < full.length; i++) { x100all++; if (full[i].cookies >= 100 * full[i - 1].cookies) x100++; else fails.push(`${full[i-1].idx}->${full[i].idx}(x${(full[i].cookies/full[i-1].cookies).toFixed(0)})`); if (full[i].gain >= 2 * full[i - 1].gain && full[i].gain <= 100 * full[i - 1].gain) pt2++; }
+  console.log(`[iter ${it}] runs=${runs.length} band ${ok}/${all} (${holdOkPct}%) x100 ${x100}/${x100all} pt2-100 ${pt2}/${x100all} pace ${pace.ok}/${pace.all} total=${total.toExponential(2)} ${fails.length?'FAIL:'+fails.join(' '):''}`);
+  const score = (x100 === x100all ? 1000 : 0) + ok + pace.ok * 0.5 + pt2 * 0.5 - fails.length * 2;
   if (!globalThis.__best || score > globalThis.__best.score) globalThis.__best = { score, costs: rungCosts.slice(), ok, x100, x100all };
   if (it === ITERS - 1) {
     for (const { r, x, Y, inBand } of rows) {
