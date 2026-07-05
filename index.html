@@ -93,14 +93,11 @@
     }
 
     .game {
-      /* どの端末でも縦横比を390:844に固定し、余った領域はレターボックスにする。
-         幅・高さの両方を明示計算し、中身のmin-widthに比率を崩されないようにする */
-      height: min(calc(100dvh - 16px), calc((100vw - 16px) * 844 / 390));
-      width: min(calc(100vw - 16px), calc((100dvh - 16px) * 390 / 844));
-      /* svh対応ブラウザでは、URLバーの開閉で変わらない安定した高さを使う
-         (プレイ中にゲーム全体が伸縮しないようにする) */
-      height: min(calc(100svh - 16px), calc((100vw - 16px) * 844 / 390));
-      width: min(calc(100vw - 16px), calc((100svh - 16px) * 390 / 844));
+      /* 横幅は画面幅いっぱいに使う(左右の黒帯を出さない)。上限640pxでPCでも自然。
+         高さはURLバー開閉で変わらないsvh基準にして、プレイ中の伸縮を防ぐ */
+      width: min(calc(100vw - 12px), 640px);
+      height: calc(100dvh - 12px);
+      height: calc(100svh - 12px);
       max-width: none;
       margin: auto;
       display: flex;
@@ -3252,7 +3249,7 @@
     #debugPanel {
       position: fixed;
       left: 8px;
-      bottom: 8px;
+      bottom: 62px;
       z-index: 20000;
       width: min(320px, calc(100vw - 16px));
       background: rgba(16, 8, 4, 0.88);
@@ -3376,7 +3373,7 @@
       left: var(--debug-left, auto) !important;
       top: var(--debug-top, auto) !important;
       right: var(--debug-right, 8px) !important;
-      bottom: var(--debug-bottom, 8px) !important;
+      bottom: var(--debug-bottom, 62px) !important;
       width: auto !important;
       max-width: calc(100vw - 16px);
       padding: 0 !important;
@@ -4389,6 +4386,48 @@
 
     .workshopCard {
       width: 100%;
+    }
+
+    /* ===== 直近要望: 表示崩れ対策 ===== */
+    /* ダブルタップでの画面拡大を無効化(スクロール・パンは維持) */
+    html, body {
+      touch-action: manipulation;
+    }
+
+    /* タブは常に一行。収まらなければ横スワイプで全部見えるようにする */
+    .tabs {
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      grid-template-columns: none !important;
+      overflow-x: auto !important;
+      overflow-y: hidden !important;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      flex: 1 0 auto !important;
+      min-width: 72px !important;
+      white-space: nowrap;
+      touch-action: manipulation !important;
+    }
+
+    /* 報酬モーダルは選択数が最大でも画面からはみ出さないよう内部スクロール */
+    #rewardModal {
+      padding: 12px !important;
+    }
+    .rewardPanel {
+      max-height: calc(100dvh - 24px);
+      max-height: calc(100svh - 24px) !important;
+      display: flex !important;
+      flex-direction: column !important;
+      overflow: hidden !important;
+    }
+    #rewardChoices {
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
     }
 
   </style>
