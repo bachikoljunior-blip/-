@@ -1,0 +1,1369 @@
+'use strict';
+// クッキーゲーム 100時間プレイシミュレータ（期待値ベース・1秒刻み）
+// ゲーム本体(HTML)の式を移植し、params.js の値だけで挙動が変わる。
+const P = require('./params.js');
+
+// ================= 静的データ =================
+const UPGRADES = [
+  { id: 'finger', type: 'click', value: 1, base: 0.0506, growth: 1.32 },
+  { id: 'grandma', type: 'cps', value: 1, base: 40, growth: 1.30 },
+  { id: 'oven', type: 'cps', value: 8, base: 520, growth: 1.35 },
+  { id: 'factory', type: 'cps', value: 45, base: 7200, growth: 1.37 },
+  { id: 'bank', type: 'cps', value: 260, base: 78000, growth: 1.39 },
+  { id: 'spiceRack', type: 'cps', value: 780, base: 320000, growth: 1.40 },
+  { id: 'portal', type: 'cps', value: 1600, base: 980000, growth: 1.41 },
+  { id: 'moonBakery', type: 'cps', value: 9800, base: 12500000, growth: 1.43 },
+  { id: 'timeOven', type: 'cps', value: 65000, base: 180000000, growth: 1.45 },
+  { id: 'galaxyFactory', type: 'cps', value: 450000, base: 2800000000, growth: 1.47 },
+  { id: 'blackHoleMixer', type: 'cps', value: 3300000, base: 46000000000, growth: 1.49 },
+  { id: 'universeOven', type: 'cps', value: 26000000, base: 820000000000, growth: 1.51 },
+  { id: 'godFinger', type: 'click', value: 2600000, base: 1500000000000, growth: 1.51 },
+  { id: 'cookieSingularity', type: 'cps', value: 230000000, base: 16000000000000, growth: 1.53 },
+  { id: 'quantumBakery', type: 'cps', value: 2100000000, base: 320000000000000, growth: 1.55 },
+  { id: 'antimatterOven', type: 'cps', value: 22000000000, base: 7000000000000000, growth: 1.57 }
+];
+const UPIDX = {}; UPGRADES.forEach((u, i) => UPIDX[u.id] = i);
+
+const UPGRADE_UNLOCK_SKILLS = {
+  moonBakery: 'upgrade_moon', timeOven: 'upgrade_time', galaxyFactory: 'upgrade_galaxy',
+  blackHoleMixer: 'upgrade_blackhole', universeOven: 'upgrade_universe', godFinger: 'upgrade_godfinger',
+  cookieSingularity: 'upgrade_singularity', quantumBakery: 'upgrade_quantum', antimatterOven: 'upgrade_antimatter'
+};
+
+const RESEARCH = [
+  { id: 'fingerTechnique' }, { id: 'grandmaCrowd' }, { id: 'ovenBatch' },
+  { id: 'factoryNetwork', advanced: true, skill: 'research_factory' },
+  { id: 'spiceBlend', advanced: true, skill: 'research_spice' },
+  { id: 'portalNetwork', advanced: true, skill: 'research_portal' },
+  { id: 'bankClickDividend', advanced: true, skill: 'research_bank' },
+  { id: 'moonGlobalYeast', advanced: true, skill: 'research_moon' },
+  { id: 'portalGlobalFold', advanced: true, skill: 'research_portalGlobal' },
+  { id: 'galaxyAssembly', advanced: true, skill: 'research_galaxy' },
+  { id: 'blackHoleCompression', advanced: true, skill: 'research_blackhole' },
+  { id: 'quantumProofing', advanced: true, skill: 'research_quantum' },
+  { id: 'antimatterRecipe', advanced: true, skill: 'research_antimatter' }
+];
+
+// ==== 段階式研究: 対応設備(その回で購入済みのみ表示/購入可)と段階解放スキル ====
+const RES_EQUIP = {
+  fingerTechnique: 'finger', grandmaCrowd: 'grandma', ovenBatch: 'oven',
+  factoryNetwork: 'factory', spiceBlend: 'spiceRack', portalNetwork: 'portal',
+  bankClickDividend: 'bank', moonGlobalYeast: 'moonBakery', portalGlobalFold: 'portal',
+  galaxyAssembly: 'galaxyFactory', blackHoleCompression: 'blackHoleMixer',
+  quantumProofing: 'quantumBakery', antimatterRecipe: 'antimatterOven'
+};
+const RES_STAGE2 = {
+  fingerTechnique: 'click_2', grandmaCrowd: 'auto_2', ovenBatch: 'auto_3',
+  factoryNetwork: 'auto_4', spiceBlend: 'golden_1', portalNetwork: 'monster_3',
+  bankClickDividend: 'economy_2', moonGlobalYeast: 'upgrade_time', portalGlobalFold: 'upgrade_singularity',
+  galaxyAssembly: 'upgrade_universe', blackHoleCompression: 'upgrade_singularity',
+  quantumProofing: 'upgrade_antimatter', antimatterRecipe: 'research_analysis'
+};
+const RES_STAGE3 = {
+  fingerTechnique: 'click_4', grandmaCrowd: 'auto_4', ovenBatch: 'bake_temperature',
+  factoryNetwork: 'economy_2', spiceBlend: 'golden_3', portalNetwork: 'monster_4',
+  bankClickDividend: 'economy_analysis', moonGlobalYeast: 'research_analysis', portalGlobalFold: 'master_final',
+  galaxyAssembly: 'upgrade_singularity', blackHoleCompression: 'upgrade_quantum',
+  quantumProofing: 'master_final', antimatterRecipe: 'master_final'
+};
+
+const REWARD_POOL = [
+  { id: 'goldenRate', category: 'golden' },
+  { id: 'goldenPower', category: 'golden' },
+  { id: 'goldenAmount', category: 'golden' },
+  { id: 'monsterDamage', category: 'hunt' },
+  { id: 'monsterRate', category: 'hunt' },
+  { id: 'monsterStay', category: 'hunt' },
+  { id: 'goldenChain', category: 'golden', unlockSkill: 'unlock_reward_goldenChain' },
+  { id: 'crackedFang', category: 'hunt', unlockSkill: 'unlock_reward_crackedFang' },
+  { id: 'chainPrep', category: 'risk', unlockSkill: 'unlock_reward_chainPrep' },
+  { id: 'huntFocus', category: 'risk', unlockSkill: 'unlock_reward_huntFocus' },
+  { id: 'goldenTarget', category: 'golden', unlockSkill: 'unlock_reward_goldenTarget' },
+  { id: 'goldenFirstHit', category: 'golden', unlockSkill: 'unlock_reward_goldenFirstHit' },
+  { id: 'beastScent', category: 'golden', unlockSkill: 'unlock_reward_beastScent' },
+  { id: 'beastHeatFerment', category: 'hunt', unlockSkill: 'unlock_reward_beastHeatFerment' },
+  { id: 'biteRecovery', category: 'hunt', unlockSkill: 'unlock_reward_biteRecovery' },
+  { id: 'crushedMill', category: 'equipment', unlockSkill: 'unlock_reward_crushedMill' },
+  { id: 'huntingCore', category: 'hunt', unlockSkill: 'unlock_reward_huntingCore' },
+  { id: 'brandHunt', category: 'hunt', unlockSkill: 'unlock_reward_brandHunt' },
+  { id: 'deepPursuit', category: 'risk', unlockSkill: 'unlock_reward_deepPursuit' },
+  { id: 'goldenBeastMutation', category: 'risk', unlockSkill: 'unlock_reward_goldenBeastMutation' }
+];
+
+// スキルツリー（id, cost=元値, prereqs, effects[type,target,value]）
+const SKILL_NODES = [
+  { id: 'core', cost: 40, prereqs: [], effects: [['unlockSystem', 'runPolicy']] },
+  { id: 'click_1', cost: 40, prereqs: ['core'], effects: [['click', null, 0.06]] },
+  { id: 'click_2', cost: 41, prereqs: ['click_1'], effects: [['click', null, 0.10]] },
+  { id: 'click_3', cost: 43, prereqs: ['click_2', 'golden_2'], effects: [['click', null, 0.14], ['goldenAmount', null, 0.06]] },
+  { id: 'click_4', cost: 58, prereqs: ['golden_3', 'research_bank'], effects: [['click', null, 0.24], ['all', null, 0.02]] },
+  { id: 'golden_1', cost: 41, prereqs: ['core'], effects: [['goldenRate', null, 0.04]] },
+  { id: 'golden_2', cost: 43, prereqs: ['golden_1'], effects: [['goldenAmount', null, 0.15]] },
+  { id: 'golden_3', cost: 47, prereqs: ['golden_2', 'click_3'], effects: [['goldenPower', null, 0.35]] },
+  { id: 'golden_analysis', cost: 66, prereqs: ['golden_3'], effects: [['unlockSystem', 'goldenAnalysis']] },
+  { id: 'golden_4', cost: 78, prereqs: ['golden_analysis', 'click_4'], effects: [['goldenRate', null, 0.08], ['goldenAmount', null, 0.25]] },
+  { id: 'auto_1', cost: 40, prereqs: ['core'], effects: [['cps', null, 0.06]] },
+  { id: 'auto_2', cost: 41, prereqs: ['auto_1'], effects: [['cps', null, 0.10]] },
+  { id: 'auto_3', cost: 43, prereqs: ['auto_2', 'monster_2'], effects: [['cps', null, 0.14], ['monsterDamageSkill', null, 0.06]] },
+  { id: 'auto_4', cost: 58, prereqs: ['monster_3', 'research_factory'], effects: [['cps', null, 0.24], ['all', null, 0.02]] },
+  { id: 'bake_temperature', cost: 69, prereqs: ['auto_3', 'research_remodel'], effects: [['unlockSystem', 'bakeTemperature']] },
+  { id: 'monster_1', cost: 41, prereqs: ['core'], effects: [['monsterRate', null, 0.04]] },
+  { id: 'monster_2', cost: 43, prereqs: ['monster_1'], effects: [['monsterDamageSkill', null, 0.16]] },
+  { id: 'monster_3', cost: 47, prereqs: ['monster_2', 'auto_3'], effects: [['monsterHpDown', null, 0.07]] },
+  { id: 'hunt_analysis', cost: 69, prereqs: ['monster_3'], effects: [['unlockSystem', 'huntAnalysis']] },
+  { id: 'monster_4', cost: 83, prereqs: ['hunt_analysis'], effects: [['monsterStay', null, 0.10]] },
+  { id: 'economy_1', cost: 41, prereqs: ['core'], effects: [['upgradeDiscount', null, 0.02], ['researchDiscount', null, 0.02]] },
+  { id: 'research_1', cost: 41, prereqs: ['economy_1'], effects: [['researchDiscount', null, 0.04]] },
+  { id: 'research_remodel', cost: 44, prereqs: ['research_1'], effects: [['researchDiscount', null, 0.03], ['unlockSystem', 'researchRemodel']] },
+  { id: 'economy_2', cost: 47, prereqs: ['economy_1'], effects: [['upgradeDiscount', null, 0.05]] },
+  { id: 'economy_analysis', cost: 62, prereqs: ['economy_2'], effects: [['unlockSystem', 'economyAnalysis']] },
+  { id: 'order_board', cost: 86, prereqs: ['economy_analysis'], effects: [['unlockSystem', 'orderBoard']] },
+  { id: 'research_bank', cost: 48, prereqs: ['research_remodel', 'click_3'], effects: [['unlockResearch', 'bankClickDividend']] },
+  { id: 'research_factory', cost: 48, prereqs: ['research_remodel', 'auto_3'], effects: [['unlockResearch', 'factoryNetwork']] },
+  { id: 'research_spice', cost: 59, prereqs: ['research_remodel', 'golden_2', 'auto_2'], effects: [['unlockResearch', 'spiceBlend']] },
+  { id: 'upgrade_moon', cost: 52, prereqs: ['research_factory'], effects: [['unlockUpgrade', 'moonBakery']] },
+  { id: 'upgrade_time', cost: 62, prereqs: ['upgrade_moon', 'economy_2'], effects: [['unlockUpgrade', 'timeOven']] },
+  { id: 'research_moon', cost: 88, prereqs: ['research_bank', 'upgrade_moon'], effects: [['unlockResearch', 'moonGlobalYeast']] },
+  { id: 'research_portal', cost: 88, prereqs: ['research_factory', 'upgrade_time'], effects: [['unlockResearch', 'portalNetwork']] },
+  { id: 'upgrade_galaxy', cost: 98, prereqs: ['upgrade_time', 'auto_4'], effects: [['unlockUpgrade', 'galaxyFactory']] },
+  { id: 'research_galaxy', cost: 159, prereqs: ['upgrade_galaxy', 'research_moon'], effects: [['unlockResearch', 'galaxyAssembly']] },
+  { id: 'upgrade_blackhole', cost: 187, prereqs: ['upgrade_galaxy', 'research_portal'], effects: [['unlockUpgrade', 'blackHoleMixer']] },
+  { id: 'research_blackhole', cost: 267, prereqs: ['upgrade_blackhole', 'research_galaxy'], effects: [['unlockResearch', 'blackHoleCompression']] },
+  { id: 'research_portalGlobal', cost: 429, prereqs: ['research_portal', 'upgrade_blackhole'], effects: [['unlockResearch', 'portalGlobalFold']] },
+  { id: 'research_analysis', cost: 222, prereqs: ['research_moon', 'research_portal'], effects: [['unlockSystem', 'researchAnalysis']] },
+  { id: 'reward_1', cost: 159, prereqs: ['monster_4'], effects: [['rewardChoices', null, 1]] },
+  { id: 'reward_synergy', cost: 213, prereqs: ['reward_1'], effects: [['unlockSystem', 'rewardSynergy']] },
+  { id: 'reward_choice_2', cost: 357, prereqs: ['reward_synergy'], effects: [['rewardChoices', null, 1]] },
+  { id: 'reward_2', cost: 238, prereqs: ['reward_synergy', 'research_galaxy'], effects: [['upgradePerkPower', null, 0.15]] },
+  { id: 'unlock_reward_crackedFang', cost: 107, prereqs: ['monster_4'], effects: [['unlockReward', 'crackedFang']] },
+  { id: 'unlock_reward_chainPrep', cost: 141, prereqs: ['unlock_reward_crackedFang'], effects: [['unlockReward', 'chainPrep']] },
+  { id: 'unlock_reward_huntFocus', cost: 189, prereqs: ['unlock_reward_crackedFang', 'hunt_analysis'], effects: [['unlockReward', 'huntFocus']] },
+  { id: 'unlock_reward_biteRecovery', cost: 304, prereqs: ['unlock_reward_huntFocus', 'reward_1'], effects: [['unlockReward', 'biteRecovery']] },
+  { id: 'unlock_reward_beastHeatFerment', cost: 275, prereqs: ['unlock_reward_chainPrep', 'reward_2'], effects: [['unlockReward', 'beastHeatFerment']] },
+  { id: 'unlock_reward_huntingCore', cost: 412, prereqs: ['unlock_reward_beastHeatFerment', 'auto_4'], effects: [['unlockReward', 'huntingCore']] },
+  { id: 'unlock_reward_brandHunt', cost: 472, prereqs: ['unlock_reward_biteRecovery', 'click_4'], effects: [['unlockReward', 'brandHunt']] },
+  { id: 'unlock_reward_deepPursuit', cost: 808, prereqs: ['unlock_reward_huntingCore', 'upgrade_universe'], effects: [['unlockReward', 'deepPursuit']] },
+  { id: 'unlock_reward_goldenChain', cost: 102, prereqs: ['monster_4', 'golden_4'], effects: [['unlockReward', 'goldenChain']] },
+  { id: 'unlock_reward_goldenTarget', cost: 122, prereqs: ['unlock_reward_goldenChain'], effects: [['unlockReward', 'goldenTarget']] },
+  { id: 'unlock_reward_goldenFirstHit', cost: 165, prereqs: ['unlock_reward_goldenChain'], effects: [['unlockReward', 'goldenFirstHit']] },
+  { id: 'unlock_reward_beastScent', cost: 174, prereqs: ['unlock_reward_goldenChain', 'reward_1'], effects: [['unlockReward', 'beastScent']] },
+  { id: 'unlock_reward_goldenBeastMutation', cost: 1096, prereqs: ['unlock_reward_deepPursuit', 'golden_4'], effects: [['unlockReward', 'goldenBeastMutation']] },
+  { id: 'unlock_reward_crushedMill', cost: 357, prereqs: ['reward_2', 'upgrade_universe'], effects: [['unlockReward', 'crushedMill']] },
+  { id: 'start_1', cost: 139, prereqs: ['golden_4'], effects: [['startCookies', null, 50000]] },
+  { id: 'offline_1', cost: 139, prereqs: ['auto_4'], effects: [['offlineHours', null, 4]] },
+  { id: 'start_2', cost: 359, prereqs: ['start_1', 'offline_1'], effects: [['startCookies', null, 950000], ['offlineHours', null, 4]] },
+  { id: 'upgrade_universe', cost: 359, prereqs: ['upgrade_blackhole', 'reward_2'], effects: [['unlockUpgrade', 'universeOven']] },
+  { id: 'upgrade_godfinger', cost: 748, prereqs: ['upgrade_universe', 'click_4'], effects: [['unlockUpgrade', 'godFinger']] },
+  { id: 'upgrade_singularity', cost: 748, prereqs: ['upgrade_universe', 'research_portalGlobal'], effects: [['unlockUpgrade', 'cookieSingularity'], ['all', null, 0.08]] },
+  { id: 'upgrade_quantum', cost: 1279, prereqs: ['upgrade_singularity', 'research_blackhole'], effects: [['unlockUpgrade', 'quantumBakery']] },
+  { id: 'research_quantum', cost: 1810, prereqs: ['upgrade_quantum', 'upgrade_godfinger'], effects: [['unlockResearch', 'quantumProofing']] },
+  { id: 'upgrade_antimatter', cost: 2518, prereqs: ['upgrade_quantum', 'upgrade_singularity'], effects: [['unlockUpgrade', 'antimatterOven']] },
+  { id: 'research_antimatter', cost: 2872, prereqs: ['upgrade_antimatter', 'research_quantum'], effects: [['unlockResearch', 'antimatterRecipe']] },
+  { id: 'master_final', cost: 2440, prereqs: ['research_antimatter', 'start_2'], effects: [['all', null, 0.35], ['click', null, 0.20], ['cps', null, 0.20], ['rewardBonus', null, 0.10]] }
+];
+const SKILL_BY_ID = {}; SKILL_NODES.forEach(s => SKILL_BY_ID[s.id] = s);
+
+// QoL/解析系ノード: 生産に直接効かないノードは「直前ラングのおまけ価格」
+const UTILITY_SKILLS = new Set([
+  'golden_analysis', 'hunt_analysis', 'economy_analysis', 'research_analysis',
+  'order_board', 'bake_temperature', 'reward_synergy', 'reward_1', 'reward_choice_2',
+  'start_1', 'offline_1', 'start_2'
+]);
+function isUtilitySkill(id) { return UTILITY_SKILLS.has(id); }
+
+// スキルの想定取得順(前提条件を満たす手設計順)。数値ノード・解放ノードを均等に散らす。
+const SKILL_HAND_ORDER = [
+  'core', 'auto_1', 'click_1', 'monster_1', 'economy_1', 'auto_2', 'monster_2', 'research_1',
+  'auto_3', 'research_remodel', 'research_factory', 'monster_3', 'auto_4', 'offline_1',
+  'upgrade_moon', 'economy_2', 'upgrade_time', 'golden_1', 'golden_2', 'upgrade_galaxy',
+  'research_spice', 'research_portal', 'click_2', 'click_3', 'research_bank',
+  'upgrade_blackhole', 'golden_3',
+  'research_moon', 'hunt_analysis', 'monster_4', 'research_galaxy', 'reward_1',
+  'unlock_reward_crackedFang', 'reward_synergy', 'reward_2', 'upgrade_universe', 'click_4',
+  'golden_analysis', 'golden_4', 'start_1', 'start_2', 'unlock_reward_goldenChain', 'research_portalGlobal',
+  'unlock_reward_chainPrep', 'upgrade_singularity', 'unlock_reward_goldenTarget',
+  'upgrade_godfinger', 'unlock_reward_huntFocus', 'research_blackhole',
+  'unlock_reward_goldenFirstHit', 'upgrade_quantum', 'unlock_reward_beastScent',
+  'research_quantum', 'unlock_reward_beastHeatFerment', 'upgrade_antimatter',
+  'unlock_reward_biteRecovery', 'research_antimatter', 'unlock_reward_huntingCore',
+  'bake_temperature', 'unlock_reward_brandHunt', 'economy_analysis', 'unlock_reward_crushedMill',
+  'order_board', 'unlock_reward_deepPursuit', 'research_analysis',
+  'unlock_reward_goldenBeastMutation', 'reward_choice_2',
+  'master_final'
+];
+
+// スキルコスト: 手設計順のラダー。生産系ノードだけがラング(rung)を消費し、QoLノードは直前ラングの一定割合。
+let SKILL_COST_MAP = null;
+let SKILL_RANK = null;
+function buildSkillCosts() {
+  if (SKILL_COST_MAP) return SKILL_COST_MAP;
+  SKILL_COST_MAP = {};
+  SKILL_RANK = {};
+  const have = {};
+  if (SKILL_HAND_ORDER.length !== SKILL_NODES.length) throw new Error('order length mismatch');
+  let rank = 0, rung = 0;
+  let lastRungCost = P.skillCost.C0;
+  for (const id of SKILL_HAND_ORDER) {
+    const n = SKILL_BY_ID[id];
+    if (!n) throw new Error('unknown node ' + id);
+    if (!n.prereqs.every(q => have[q])) throw new Error('infeasible order at ' + id);
+    SKILL_RANK[id] = rank++;
+    if (isUtilitySkill(id)) {
+      // QoLノードは「前提ノードのコスト」基準のおまけ価格(解放時点でほぼ即買い可能)
+      const base = n.prereqs.length ? Math.max(...n.prereqs.map(q => SKILL_COST_MAP[q] || P.skillCost.C0)) : lastRungCost;
+      SKILL_COST_MAP[id] = Math.max(1, Math.round(base * (P.skillCost.utilRatio || 0.22)));
+    } else {
+      // 明示コスト: rungCosts[rung] があればそれを優先(自動チューナ用)
+      if (P.skillCost.rungCosts && P.skillCost.rungCosts[rung] != null) {
+        lastRungCost = P.skillCost.rungCosts[rung];
+      } else if (rung === 0) {
+        lastRungCost = P.skillCost.C0;
+      } else {
+        let ratio = P.skillCost.R;
+        if (P.skillCost.segments) {
+          for (const seg of P.skillCost.segments) { if (rung <= seg.until) { ratio = seg.R; break; } }
+        }
+        lastRungCost = lastRungCost * ratio;
+      }
+      rung++;
+      SKILL_COST_MAP[id] = Math.max(1, lastRungCost < 1e15 ? Math.round(lastRungCost) : lastRungCost);
+    }
+    have[id] = true;
+  }
+  return SKILL_COST_MAP;
+}
+function skillRank(id) {
+  buildSkillCosts();
+  return SKILL_RANK[id];
+}
+function skillCostOf(node) {
+  return buildSkillCosts()[node.id];
+}
+
+// ==== スキル効果値の再割り当て ====
+// 生産系数値ノード(click/cps/all)には、取得順に「取るたび生産が約M倍」になる幾何級数値を割り当てる。
+// その他の数値効果は fx タイプ倍率で従来値をスケール。
+let SKILL_VALUES = null; // id -> {type -> value}
+function buildSkillValues() {
+  if (SKILL_VALUES) return SKILL_VALUES;
+  SKILL_VALUES = {};
+  const order = SKILL_NODES.slice().sort((a, b) => skillRank(a.id) - skillRank(b.id));
+  let Sall = 0, Scps = 0, Sclick = 0;
+  const Mall = P.nodeM ? P.nodeM.all : 2.5;
+  const Mcps = P.nodeM ? P.nodeM.cps : 2.5;
+  const Mclick = P.nodeM ? P.nodeM.click : 2.2;
+  for (const n of order) {
+    const vals = {};
+    const types = n.effects.map(e => e[0]);
+    const hasAll = types.includes('all');
+    const hasCps = types.includes('cps');
+    const hasClick = types.includes('click');
+    for (const e of n.effects) {
+      const t = e[0];
+      if (typeof e[2] !== 'number') continue;
+      if (t === 'all' && hasAll) {
+        const v = (Mall - 1) * (1 + Scps + Sall);
+        vals.all = (vals.all || 0) + v;
+        Sall += v;
+      } else if (t === 'cps' && !hasAll) {
+        const v = (Mcps - 1) * (1 + Scps + Sall);
+        vals.cps = (vals.cps || 0) + v;
+        Scps += v;
+      } else if (t === 'click' && !hasAll) {
+        const v = (Mclick - 1) * (1 + Sclick + Sall);
+        vals.click = (vals.click || 0) + v;
+        Sclick += v;
+      } else if (t === 'cps' || t === 'click') {
+        // allと同居する副次効果は元値のまま(allが主軸)
+        vals[t] = (vals[t] || 0) + e[2];
+        if (t === 'cps') Scps += e[2]; else Sclick += e[2];
+      } else {
+        const scale = P.fx[t] != null ? P.fx[t] : 1;
+        vals[t] = (vals[t] || 0) + e[2] * scale;
+      }
+    }
+    SKILL_VALUES[n.id] = vals;
+  }
+  return SKILL_VALUES;
+}
+function lg(level, rate) { return Math.pow(1 + Math.max(0, rate), Math.max(0, level)); }
+// 所有数指数の逓減上限(計算式調整): capを超えた分は効果に乗らない
+function capOwn(n) { return Math.min(Math.max(0, n), (P.res.ownCap || Infinity)); }
+function ir(level, rate) { return Math.pow(1 - Math.min(0.95, Math.max(0, rate)), Math.max(0, level)); }
+// 報酬Lvの逓減: lvが大きいほど1Lvあたりの寄与が下がる(halfで半減)
+function satLv(lv, half) { lv = Math.max(0, lv); return lv / (1 + lv / Math.max(1, half)); }
+
+// ================= シミュレーション状態 =================
+function newSim(strategy, opts) {
+  return {
+    strat: strategy,
+    opt: Object.assign({ disableResearch: null, disableReward: null, disableStage: null, disableUpgrade: null, idleTiming: null, trackGain: false, hours: 100 }, opts || {}),
+    t: 0,                       // 総経過秒
+    // 永続
+    prestige: 0, prestigeTotal: 0, prestigeRuns: 0, totalCookies: 0,
+    skills: {},
+    everUpgrade: {}, everResearch: {}, everStage: {},
+    unlockEvents: [],           // {t, kind, id}
+    firstResearchBuy: {}, firstPerk: {}, firstStageBuy: {},
+    runs: [],                   // 各周回の結果
+    // 周回内
+    run: null,
+    rotIdx: 0, upRotIdx: 0, goldenAlt: 0,
+    _fx: {}, _fxHas: {}, _stT: -1, _stV: 1, _bkT: -1, _bkV: null
+  };
+}
+
+function newRun(sim) {
+  const upgrades = {}; UPGRADES.forEach(u => upgrades[u.id] = 0);
+  const research = {}; RESEARCH.forEach(r => research[r.id] = false);
+  // 段階2/3: スキル取得後に研究購入欄へ追加され、クッキーで購入して有効化(転生でリセット)
+  const research2 = {}; RESEARCH.forEach(r => research2[r.id] = false);
+  const research3 = {}; RESEARCH.forEach(r => research3[r.id] = false);
+  const perks = {}; REWARD_POOL.forEach(r => perks[r.id] = 0);
+  const upgradePerks = {}; UPGRADES.forEach(u => upgradePerks[u.id] = 0);
+  return {
+    startT: sim.t,
+    cookies: 0, runCookies: 0,
+    upgrades, research, research2, research3, perks, upgradePerks,
+    rewardCategoryCounts: { golden: 0, hunt: 0, equipment: 0, risk: 0 },
+    quotaFailed: false, quotaHoldSeconds: 0, quotaMonsterKills: 0,
+    quotaFailAt: null, gainSeries: null,
+    lastGoldenT: sim.t, spiceBurstM: 1, spiceAromaUntil: 0, bhCharge: 0, bhUses: 0, bhBoostUntil: 0, bhBoostMult: 1, bhReadyAt: null,
+    blackHoleCompressionUsed: false, blackHoleQuotaMultiplier: 1,
+    maxStage: 1,
+    boosts: [],                // {mult, until}
+    afterheats: [],
+    spiceBoostUntil: -1, portalHuntUntil: -1,
+    goldenTimer: 0, monsterTimer: 0,
+    goldenChainReady: false, goldenFirstHitReady: false,
+    nextMonsterSpawnMultiplier: 1, nextMonsterHpMultiplier: 1, nextGoldenSpawnMultiplier: 1,
+    nextRewardCountBonus: 0, huntFocusLv: 0, huntFocusRewardPenalty: 0,
+    nextMonsterStayMultiplier: 1,
+    monster: null,             // {level,hp,maxHp,stayLeft,goldenChainMultiplier,firstHit}
+    policy: 'balanced',
+    kills: 0, goldenTaken: 0
+  };
+}
+
+// ================= 効果計算(ゲーム式の移植) =================
+function hasSkill(sim, id) { return !!sim.skills[id]; }
+function skillEffect(sim, type, target) {
+  const key = type + '|' + (target || '');
+  if (sim._fx[key] !== undefined) return sim._fx[key];
+  const values = buildSkillValues();
+  let total = 0;
+  for (const s of SKILL_NODES) {
+    if (!sim.skills[s.id]) continue;
+    if (target) {
+      for (const e of s.effects) {
+        if (e[0] !== type || e[1] !== target) continue;
+        total += (typeof e[2] === 'number' ? e[2] : 0);
+      }
+    } else {
+      const v = values[s.id][type];
+      if (v) total += v;
+    }
+  }
+  sim._fx[key] = total;
+  return total;
+}
+function hasSkillEffect(sim, type, target) {
+  const key = type + '|' + (target || '');
+  if (sim._fxHas[key] !== undefined) return sim._fxHas[key];
+  const v = SKILL_NODES.some(s => sim.skills[s.id] && s.effects.some(e => e[0] === type && (!target || e[1] === target)));
+  sim._fxHas[key] = v;
+  return v;
+}
+function upgradeUnlocked(sim, u) {
+  const need = UPGRADE_UNLOCK_SKILLS[u.id];
+  return !need || hasSkill(sim, need);
+}
+function researchUnlocked(sim, r) {
+  if (r.advanced && !hasSkillEffect(sim, 'unlockSystem', 'researchRemodel')) return false;
+  if (r.skill && !hasSkill(sim, r.skill)) return false;
+  // その回で対応設備を購入済みの研究だけ表示・購入可能
+  const eq = RES_EQUIP[r.id];
+  if (eq && !(sim.run.upgrades[eq] > 0)) return false;
+  return true;
+}
+function rewardUnlockedFn(sim, r) {
+  // 無効化(disableReward)でも選択肢には残る: 効果だけがゼロになる
+  return !r.unlockSkill || hasSkill(sim, r.unlockSkill);
+}
+function resActive(sim, id) {
+  return sim.run.research[id] && sim.opt.disableResearch !== id;
+}
+function policyIs(sim, id) {
+  return hasSkillEffect(sim, 'unlockSystem', 'runPolicy') && sim.run.policy === id;
+}
+function rewardCategoryBonus(sim, cat) {
+  if (!hasSkillEffect(sim, 'unlockSystem', 'rewardSynergy')) return 0;
+  return lg(satLv(sim.run.rewardCategoryCounts[cat] || 0, P.rw.categoryHalf), P.rw.categoryBonusRate) - 1;
+}
+function elapsed(sim) { return sim.t - sim.run.startT; }
+
+function quotaControlMultiplier(sim) {
+  let raw = 0;
+  if (resActive(sim, 'ovenBatch')) raw += P.res.ctrlOven;
+  if (resActive(sim, 'moonGlobalYeast')) raw += P.res.ctrlMoon;
+  if (resActive(sim, 'blackHoleCompression')) raw += P.res.ctrlBh;
+  return 1 + Math.log1p(Math.max(0, raw) * P.quota.ctrlMul) / P.quota.ctrlDiv;
+}
+function quotaAtElapsed(sim, s) {
+  const q = P.quota;
+  if (s < q.graceSec) return 0;
+  const x = s - q.graceSec;
+  const base = q.baseCoef * Math.pow(x, q.basePow) + q.base2Coef * Math.pow(x, q.base2Pow);
+  const wall = 1
+    + q.w1 * Math.pow(Math.max(0, (s - q.w1T) / q.w1D), q.w1P)
+    + q.w2 * Math.pow(Math.max(0, (s - q.w2T) / q.w2D), q.w2P)
+    + q.w3 * Math.pow(Math.max(0, (s - q.w3T) / q.w3D), q.w3P);
+  return Math.max(1, Math.floor((base * wall) / quotaControlMultiplier(sim)));
+}
+function monsterQuotaRequired(sim) {
+  const r = sim.run;
+  if (r.quotaFailed) return null;
+  const baseQuota = quotaAtElapsed(sim, elapsed(sim));
+  if (!baseQuota || baseQuota <= 0) return baseQuota;
+  if (!r.blackHoleCompressionUsed && resActive(sim, 'blackHoleCompression')) {
+    const bh = r.upgrades.blackHoleMixer || 0;
+    let compression = bh > 0 ? ir(bh, P.res.bhCompress) : 1;
+    if (resStage3(sim, 'blackHoleCompression')) compression *= 1 - Math.min(P.res2.bhCompStageMax, P.res2.bhCompStageCoef * r.maxStage);
+    const ratio = r.runCookies / baseQuota;
+    if (compression < 1 && ratio < 1.03 && ratio >= compression) {
+      r.blackHoleCompressionUsed = true;
+      r.blackHoleQuotaMultiplier = compression;
+    }
+  }
+  return Math.max(1, Math.floor(baseQuota * (r.blackHoleQuotaMultiplier || 1)));
+}
+function quotaGaugeProgressRatio(run, quota) {
+  const base = Math.max(1, quota || 1);
+  const r = P.quota.gaugeR;
+  const total = Math.max(0, run);
+  if (total <= 0) return 0;
+  const fullStages = Math.max(0, Math.floor(Math.log(total * (r - 1) / base + 1) / Math.log(r)));
+  const used = base * (Math.pow(r, fullStages) - 1) / (r - 1);
+  const remaining = Math.max(0, total - used);
+  const nextNeed = base * Math.pow(r, fullStages);
+  return fullStages + remaining / nextNeed;
+}
+function currentStage(sim) {
+  if (sim._stT === sim.t) return sim._stV;
+  const v = currentStageRaw(sim);
+  sim._stT = sim.t; sim._stV = v;
+  return v;
+}
+function currentStageRaw(sim) {
+  const quota = monsterQuotaRequired(sim);
+  if (!quota || quota <= 0) return 1;
+  const pr = quotaGaugeProgressRatio(sim.run.runCookies, quota);
+  if (pr <= 0) return 1;
+  const whole = Math.floor(pr);
+  const frac = pr - whole;
+  return (frac <= 0.0001 && whole > 0) ? whole : whole + 1;
+}
+
+function runTempoRamp(sim) {
+  const s = elapsed(sim);
+  return 1 - P.tempo.ramp * (1 - Math.exp(-s / P.tempo.rampDiv));
+}
+
+// --- 焼き加減(期待値) ---
+const BAKE_NEUTRAL = { cps: 1, golden: 1, dmg: 1, stay: 1, hp: 1 };
+function bakeEV(sim) {
+  if (sim._bkT === sim.t && sim._bkV) return sim._bkV;
+  const v = bakeEVRaw(sim);
+  sim._bkT = sim.t; sim._bkV = v;
+  return v;
+}
+function bakeEVRaw(sim) {
+  if (!hasSkillEffect(sim, 'unlockSystem', 'bakeTemperature')) return BAKE_NEUTRAL;
+  const stage = currentStage(sim);
+  const oven = sim.run.upgrades.oven || 0;
+  const w = { soft: 1, good: 1, crispy: 1, burnt: stage >= 3 ? 0.72 : 0.34 };
+  if (policyIs(sim, 'golden')) w.soft += 0.85;
+  if (policyIs(sim, 'bake')) w.good += 0.85;
+  if (policyIs(sim, 'hunt')) w.crispy += 0.85;
+  if (stage >= 4) w.burnt += 0.30;
+  const W = w.soft + w.good + w.crispy + w.burnt;
+  const B = P.bake || { powerOwn: 0.0018, powerStage: 0.004, burntCps: 0.008, burntOwn: 0.0014, softGold: 0.0010, crispyStay: 0.0012, burntHp: 0.006 };
+  const powerMul = lg(oven, B.powerOwn) * lg(Math.max(0, stage - 1), B.powerStage);
+  const goodCps = 1.06 * powerMul;
+  const burntCps = lg(stage, B.burntCps) * lg(oven, B.burntOwn);
+  const softGold = ir(oven + Math.max(0, stage - 1) * 10, B.softGold);
+  const crispyDmg = 1.08 * powerMul;
+  const crispyStay = lg(oven, B.crispyStay);
+  const burntHp = lg(stage, B.burntHp);
+  return {
+    cps: (w.soft * 1 + w.good * goodCps + w.crispy * 1 + w.burnt * burntCps) / W,
+    golden: (w.soft * softGold + (W - w.soft) * 1) / W,
+    dmg: (w.crispy * crispyDmg + (W - w.crispy) * 1) / W,
+    stay: (w.crispy * crispyStay + (W - w.crispy) * 1) / W,
+    hp: (w.burnt * burntHp + (W - w.burnt) * 1) / W
+  };
+}
+
+function purgeBoosts(sim) {
+  const r = sim.run;
+  r.boosts = r.boosts.filter(b => b.until > sim.t);
+  r.afterheats = r.afterheats.filter(b => b.until > sim.t);
+}
+function goldenBoostMultiplier(sim) {
+  let m = 1; for (const b of sim.run.boosts) m *= b.mult; return m;
+}
+function goldenBoostActive(sim) { return sim.run.boosts.length > 0; }
+function afterheatMultiplier(sim) {
+  let m = 1; for (const b of sim.run.afterheats) m *= b.mult; return m;
+}
+
+// --- 生産計算 ---
+function computeProd(sim) {
+  const r = sim.run;
+  const R = P.res;
+  const stage = currentStage(sim);
+  const bake = bakeEV(sim);
+
+  const allSkill = skillEffect(sim, 'all');
+  const clickSkillMul = 1 + skillEffect(sim, 'click') + allSkill + (policyIs(sim, 'click') ? 0.12 : 0);
+  const cpsSkillMul = 1 + skillEffect(sim, 'cps') + allSkill + (policyIs(sim, 'bake') ? 0.12 : 0);
+  const prestigeMul = 1 + allSkill;
+
+  // 研究: グローバル
+  let globalRes = 1;
+  if (resActive(sim, 'moonGlobalYeast')) {
+    const moon = r.upgrades.moonBakery || 0;
+    const mStage = r.maxStage; // 最高到達ノルマ層
+    const layer = mStage < 3 ? 1 : lg(Math.max(0, mStage - 2), R.moonStage) * lg(capOwn(moon), R.moonOwn);
+    let moonM = R.moonBase * layer;
+    if (resStage2(sim, 'moonGlobalYeast')) {
+      // 段階2: ノルマ余裕率(今回クッキー/必要ノルマ)で発酵が進む
+      const q = monsterQuotaRequired(sim);
+      const margin = (q && q > 0) ? r.runCookies / q : 1;
+      moonM *= 1 + Math.min(1, margin / P.res2.moonMarginDiv);
+    }
+    if (resStage3(sim, 'moonGlobalYeast')) {
+      const rc0 = RESEARCH.filter(x => r.research[x.id]).length;
+      moonM *= 1 + P.res2.moonResCount * rc0;
+    }
+    globalRes *= moonM;
+  }
+  if (resActive(sim, 'portalGlobalFold')) {
+    const portal = r.upgrades.portal || 0;
+    const mcount = r.monster ? 1 : 0;
+    const goldM = goldenBoostActive(sim) ? R.foldGold : 1;
+    let foldM = lg(capOwn(portal), R.foldPortal) * lg(mcount, R.foldMonster) * goldM;
+    if (resStage2(sim, 'portalGlobalFold')) foldM *= 1 + P.res2.foldKillCoef * capv(r.quotaMonsterKills, P.res2.foldKillCap);
+    if (resStage3(sim, 'portalGlobalFold')) foldM *= 1 + P.res2.foldStageCoef * capv(r.maxStage, P.res2.foldStageCap);
+    globalRes *= foldM;
+  }
+  // 香料調合 段階2: 熟成の香り(金取得から12秒間、全生産バースト)
+  if (resActive(sim, 'spiceBlend') && resStage2(sim, 'spiceBlend') && sim.t < (r.spiceAromaUntil || 0)) {
+    globalRes *= r.spiceBurstM || 1;
+  }
+  if (resActive(sim, 'blackHoleCompression')) {
+    globalRes *= R.bhGlobal;
+    if (sim.t < (r.bhBoostUntil || 0)) globalRes *= r.bhBoostMult || 1; // 段階2: 圧縮チャージ発動中
+  }
+  if (resActive(sim, 'antimatterRecipe')) {
+    const anti = r.upgrades.antimatterOven || 0;
+    const skillCount = Object.keys(sim.skills).filter(k => sim.skills[k]).length;
+    let antiM = lg(capOwn(anti), R.antimatterOwn) * lg(skillCount, R.antimatterSkill);
+    if (resStage2(sim, 'antimatterRecipe')) antiM *= 1 + P.res2.antiStageCoef * capv(r.maxStage, P.res2.antiStageCap);
+    if (resStage3(sim, 'antimatterRecipe')) antiM *= 1 + P.res2.antiPrestigeCoef * capv(sim.prestigeRuns, P.res2.antiPrestigeCap);
+    globalRes *= antiM;
+  }
+
+  // 銀河分業 段階2: 編成ボーナス(全生産)。バランス係数=所持数の幾何平均/算術平均
+  if (resActive(sim, 'galaxyAssembly') && resStage2(sim, 'galaxyAssembly')) {
+    const counts = [];
+    for (const u of UPGRADES) { const c = r.upgrades[u.id]; if (c > 0) counts.push(c); }
+    if (counts.length > 1) {
+      let logSum = 0, sum = 0;
+      for (const c of counts) { logSum += Math.log(c); sum += c; }
+      const balance = Math.exp(logSum / counts.length) / (sum / counts.length);
+      const gal = r.upgrades.galaxyFactory || 0;
+      let bonus = P.res2.galaxyBonusCoef * counts.length * balance * (1 - Math.exp(-gal / P.res2.galaxySat));
+      if (resStage3(sim, 'galaxyAssembly')) bonus *= 1 + P.res2.galaxyStageCoef * capv(r.maxStage, P.res2.galaxyStageCap);
+      globalRes *= 1 + bonus;
+    }
+  }
+
+  const killMulAll = 1 + (r.quotaMonsterKills || 0) * (r.perks.beastHeatFerment * effRw(sim, 'beastHeatFerment'));
+  const killMulCps = 1 + (r.quotaMonsterKills || 0) * (r.perks.huntingCore * effRw(sim, 'huntingCore'));
+
+  // 個別強化倍率・研究倍率・支援倍率
+  const grandma = r.upgrades.grandma || 0;
+  const upPerkPower = 1 + skillEffect(sim, 'upgradePerkPower')
+    + (r.perks.crushedMill * effRw(sim, 'crushedMill'))
+    + rewardCategoryBonus(sim, 'equipment');
+
+  let clickRaw = 1;
+  let cpsRaw = 0;
+  for (let i = 0; i < UPGRADES.length; i++) {
+    const u = UPGRADES[i];
+    const owned = r.upgrades[u.id];
+    if (!owned) continue;
+    // 設備トグル(条件⑩): この設備の生産だけをゼロ化(所持数は他の計算式に残す・購入行動同一)
+    if (sim.opt.disableUpgrade === u.id) continue;
+    const boostRate = Math.max(P.upPerk.floor, P.upPerk.base - i * P.upPerk.slope) * upPerkPower;
+    const personal = 1 + (r.upgradePerks[u.id] || 0) * boostRate;
+    let resM = 1;
+    if (u.id === 'grandma' && resActive(sim, 'grandmaCrowd')) resM *= R.grandmaSelf;
+    if (u.id === 'oven' && resActive(sim, 'ovenBatch')) {
+      resM *= R.ovenSelf * lg(capOwn(owned), R.ovenOwn) * lg(Math.max(0, r.maxStage - 1), R.ovenStage) * (policyIs(sim, 'bake') ? 1.10 : 1);
+      // 段階2: 焼き加減連動(こんがり運用で×1.5、それ以外は期待値×1.2)
+      if (resStage2(sim, 'ovenBatch')) resM *= policyIs(sim, 'bake') ? P.res2.ovenBakeMulBake : P.res2.ovenBakeMulOther;
+      // 段階3: オーブンの個別強化Lvが研究倍率にも乗る
+      if (resStage3(sim, 'ovenBatch')) resM *= 1 + 0.05 * (r.upgradePerks.oven || 0);
+    }
+    if (u.id === 'factory' && resActive(sim, 'factoryNetwork')) {
+      const low = (r.upgrades.finger || 0) + (r.upgrades.grandma || 0) + (r.upgrades.oven || 0);
+      resM *= R.factorySelf * lg(capOwn(low), R.factoryLow) * lg(capOwn(owned), R.factoryOwn);
+      // 段階2: 銀行以上の上位設備の所持種類数で伸びる
+      if (resStage2(sim, 'factoryNetwork')) {
+        let hi = 0;
+        for (let j = UPIDX.bank; j < UPGRADES.length; j++) if ((r.upgrades[UPGRADES[j].id] || 0) > 0) hi++;
+        resM *= 1 + P.res2.factoryHiKind * hi;
+      }
+      // 段階3: 最高到達ノルマ層
+      if (resStage3(sim, 'factoryNetwork')) resM *= 1 + P.res2.factoryStageCoef * capv(r.maxStage, P.res2.factoryStageCap);
+    }
+    if (u.id === 'spiceRack' && resActive(sim, 'spiceBlend')) {
+      let m = lg(capOwn(owned), R.spiceOwn) * (policyIs(sim, 'golden') ? 1.08 : 1);
+      if (sim.t < r.spiceBoostUntil) {
+        m *= R.spiceGold * lg(capOwn(owned), R.spiceGoldOwn);
+      }
+      resM *= m;
+    }
+    if (u.id === 'portal' && resActive(sim, 'portalNetwork')) resM *= R.portalSelf;
+    if (u.id === 'galaxyFactory' && resActive(sim, 'galaxyAssembly')) {
+      const types = UPGRADES.filter(x => (r.upgrades[x.id] || 0) > 0).length;
+      resM *= lg(types, R.galaxyTypes) * lg(capOwn(owned), R.galaxyOwn);
+    }
+    if (u.id === 'quantumBakery' && resActive(sim, 'quantumProofing')) {
+      const rc = RESEARCH.filter(x => r.research[x.id]).length;
+      resM *= lg(rc, R.quantumRes) * lg(capOwn(owned), R.quantumOwn);
+      // 段階2: 観測ゆらぎ(90秒周期の波。山でのみ増幅、谷は×1)
+      if (resStage2(sim, 'quantumProofing')) {
+        let amp = P.res2.waveAmpBase + P.res2.waveAmpPerRes * rc;
+        if (resStage3(sim, 'quantumProofing')) amp *= 1 + P.res2.waveStageCoef * capv(r.maxStage, P.res2.waveStageCap);
+        amp = Math.min(P.res2.waveAmpCap, amp);
+        // タイミング(条件⑬): 最適操作=山に活動を寄せる(正相平均2/π) / 完全放置=全周期平均(1/π)
+        const wf = sim.opt.idleTiming === 'wave' ? P.timing.waveIdle : P.timing.waveOpt;
+        resM *= 1 + amp * wf;
+      }
+    }
+    let supM = 1;
+    if (resActive(sim, 'grandmaCrowd')) {
+      if (u.id === 'finger') supM *= lg(capOwn(grandma), R.grandmaSup[0]);
+      if (u.id === 'oven') supM *= lg(capOwn(grandma), R.grandmaSup[1]);
+      if (u.id === 'factory') supM *= lg(capOwn(grandma), R.grandmaSup[2]);
+      // 段階2: 支援先に銀行・香料棚を追加
+      if (resStage2(sim, 'grandmaCrowd') && (u.id === 'bank' || u.id === 'spiceRack')) supM *= lg(capOwn(grandma), P.res2.supExtra);
+      // 段階3: 最高到達ノルマ層で全支援が伸びる
+      if (supM > 1 && resStage3(sim, 'grandmaCrowd')) supM *= 1 + P.res2.supStageCoef * capv(r.maxStage, P.res2.supStageCap);
+    }
+    const contrib = owned * u.value * personal * resM * supM;
+    if (u.type === 'click') clickRaw += contrib; else cpsRaw += contrib;
+  }
+
+  // 銀行クリック配当
+  let bankM = 1;
+  if (resActive(sim, 'bankClickDividend')) {
+    const bank = r.upgrades.bank || 0;
+    const saved = Math.log10(r.cookies + 10);
+    bankM = lg(capOwn(bank), R.bankOwn) * (1 + Math.log1p(saved) * R.bankSaved) * (policyIs(sim, 'click') ? 1.08 : 1);
+  }
+
+  let click = clickRaw * bankM * clickSkillMul * prestigeMul * globalRes * killMulAll;
+  let cps = cpsRaw * cpsSkillMul * prestigeMul * globalRes * killMulAll * killMulCps * bake.cps;
+
+  // クリック変更 案A(指先連動): クリック力 = 従来項 + 毎秒生産×係数×(1+0.02×√強い指)×(1+クリック系スキル効果)
+  const CL = P.clickLink;
+  click += cps * CL.cpsCoef * (1 + CL.fingerSqrt * Math.sqrt(r.upgrades.finger || 0)) * clickSkillMul;
+  // クリック変更 案C(神の指=クリックの上位段): 1個ごとにクリック×godFingerExp(指数)
+  click *= Math.pow(CL.godFingerExp, r.upgrades.godFinger || 0);
+
+  // 会心(期待値)
+  let critEV = 1;
+  let critChanceOut = 0;
+  if (resActive(sim, 'fingerTechnique')) {
+    const f = r.upgrades.finger || 0;
+    const policyC = policyIs(sim, 'click') ? 0.010 : 0;
+    const score = R.fingerBase + Math.sqrt(f) * R.fingerSqrt + policyC;
+    const chance = 1 - Math.exp(-score);
+    critChanceOut = chance;
+    let critMul = R.fingerCritBase + score * R.fingerCritGrow;
+    // 段階2: 会心コンボ(期待値: 直近30秒の会心回数、上限あり)
+    if (resStage2(sim, 'fingerTechnique')) {
+      const combo = Math.min(P.res2.comboCap, chance * sim.strat.tapRate * P.res2.comboWindow);
+      critMul *= 1 + P.res2.comboRate * combo;
+    }
+    critEV = 1 + chance * (critMul - 1);
+  }
+
+  const boostM = goldenBoostMultiplier(sim) * afterheatMultiplier(sim);
+  return {
+    baseClick: click, clickEV: click * critEV * boostM, cps: cps * boostM,
+    baseCps: cps, boostM, bake, stage, prestigeMul, critChance: critChanceOut
+  };
+}
+
+// 報酬効果値(無効化対応)
+function effRw(sim, id) {
+  if (sim.opt.disableReward === id) return 0;
+  return P.rw[id] != null ? P.rw[id] : 0;
+}
+
+function monsterDamage(sim, prod) {
+  const r = sim.run;
+  const p = Math.max(1, prod.baseClick * prod.boostM);
+  const base = Math.max(1, Math.floor(1 + Math.sqrt(p) * P.monster.dmgSqrtCoef));
+  const goldTarget = goldenBoostActive(sim) ? (r.perks.goldenTarget || 0) * effRw(sim, 'goldenTarget') : 0;
+  const chain = r.monster ? ((r.monster.goldenChainMultiplier || 1) - 1) : 0;
+  const clickOwned = (r.upgrades.finger || 0) + (r.upgrades.godFinger || 0);
+  const mult = (1
+    + (sim.opt.disableReward === 'monsterDamage' ? 0 : r.perks.monsterDamage * P.rw.monsterDamage)
+    + skillEffect(sim, 'monsterDamageSkill')
+    + (r.perks.crackedFang || 0) * effRw(sim, 'crackedFang')
+    + goldTarget + chain
+    + Math.sqrt(clickOwned) * (r.perks.brandHunt || 0) * effRw(sim, 'brandHunt')
+    + rewardCategoryBonus(sim, 'hunt')
+    + (policyIs(sim, 'hunt') ? 0.14 : 0)
+  ) * prod.bake.dmg;
+  return Math.max(1, Math.ceil(base * mult));
+}
+
+function goldenSpawnFactor(sim) {
+  const r = sim.run;
+  const rateLv = satLv(sim.opt.disableReward === 'goldenRate' ? 0 : (r.perks.goldenRate || 0), P.golden.rateLvHalf);
+  return Math.exp(
+    -Math.max(0, rateLv) * P.golden.ratePerLv
+    - Math.max(0, skillEffect(sim, 'goldenRate')) * 1.8
+    - rewardCategoryBonus(sim, 'golden') * 1.2
+    - (policyIs(sim, 'golden') ? 0.12 : 0)
+  ) * runTempoRamp(sim) * bakeEV(sim).golden;
+}
+function monsterSpawnFactor(sim) {
+  const r = sim.run;
+  const rateLv = satLv(sim.opt.disableReward === 'monsterRate' ? 0 : (r.perks.monsterRate || 0), P.monster.rateLvHalf);
+  const deep = Math.exp(-(sim.opt.disableReward === 'deepPursuit' ? 0 : (r.perks.deepPursuit || 0)) * P.rw.deepPursuitSpawn);
+  let portalHunt = 1;
+  if (resActive(sim, 'portalNetwork') && sim.t < r.portalHuntUntil) {
+    portalHunt = ir(r.upgrades.portal || 0, P.res.portalHuntSpawn);
+    if (resStage3(sim, 'portalNetwork')) portalHunt *= Math.exp(-P.res2.huntStageCoef * capv(r.maxStage, P.res2.huntStageCap));
+  }
+  return Math.exp(
+    -Math.max(0, rateLv) * P.monster.ratePerLv
+    - Math.max(0, skillEffect(sim, 'monsterRate')) * 1.8
+    - rewardCategoryBonus(sim, 'hunt') * 1.0
+    - (policyIs(sim, 'hunt') ? 0.10 : 0)
+  ) * deep * portalHunt * runTempoRamp(sim);
+}
+function monsterLevel(sim) {
+  const s = elapsed(sim);
+  const early = Math.floor(Math.max(0, s - 45) / P.monster.lvEarlyDiv);
+  const late = Math.floor(Math.pow(Math.max(0, s - 720) / P.monster.lvLateDiv, P.monster.lvLatePow));
+  return Math.max(1, 1 + early + late);
+}
+function monsterHpValue(sim, level) {
+  const s = elapsed(sim);
+  const M = P.monster;
+  const timePressure = 1 + Math.pow(Math.max(0, s - 45) / M.hpPressureDiv, M.hpPressurePow);
+  let hp = M.hpBase * Math.pow(M.hpGrowth, Math.max(0, level - 1)) * timePressure;
+  hp *= Math.exp(-Math.max(0, skillEffect(sim, 'monsterHpDown')));
+  hp *= Math.pow(P.rw.deepPursuitHp, sim.opt.disableReward === 'deepPursuit' ? 0 : (sim.run.perks.deepPursuit || 0));
+  hp *= bakeEV(sim).hp;
+  return Math.floor(hp);
+}
+function monsterStayMs(sim) {
+  const r = sim.run;
+  const rewardLv = sim.opt.disableReward === 'monsterStay' ? 0 : Math.max(0, r.perks.monsterStay || 0);
+  const mult = Math.exp(rewardLv * P.monster.stayPerLv + Math.max(0, skillEffect(sim, 'monsterStay')) * 0.12
+    + (policyIs(sim, 'hunt') ? 0.10 : 0) + rewardCategoryBonus(sim, 'hunt'))
+    * (r.nextMonsterStayMultiplier || 1) * bakeEV(sim).stay;
+  r.nextMonsterStayMultiplier = 1;
+  return Math.max(4000, P.monster.stayBase * mult);
+}
+function goldenAmountMultiplier(sim) {
+  const r = sim.run;
+  const lv = satLv(sim.opt.disableReward === 'goldenAmount' ? 0 : r.perks.goldenAmount, P.golden.amountLvHalf);
+  return 1 + lv * P.golden.amountPerLv + skillEffect(sim, 'goldenAmount')
+    + rewardCategoryBonus(sim, 'golden') + (policyIs(sim, 'golden') ? 0.10 : 0);
+}
+function goldenMultiplierVal(sim) {
+  const r = sim.run;
+  const lv = satLv(sim.opt.disableReward === 'goldenPower' ? 0 : r.perks.goldenPower, P.golden.powerLvHalf);
+  return P.golden.multBase + lv * P.golden.powerPerLv + skillEffect(sim, 'goldenPower')
+    + rewardCategoryBonus(sim, 'golden') + (policyIs(sim, 'golden') ? 0.18 : 0);
+}
+function goldenBoostDurationMs(sim) {
+  const r = sim.run;
+  const gp = sim.opt.disableReward === 'goldenPower' ? 0 : r.perks.goldenPower;
+  const ga = sim.opt.disableReward === 'goldenAmount' ? 0 : r.perks.goldenAmount;
+  const perkRaw = Math.max(0, gp) * 260 + Math.max(0, ga) * 65;
+  const skillRaw = Math.max(0, skillEffect(sim, 'goldenPower') * 900 + skillEffect(sim, 'goldenRate') * 1800 + skillEffect(sim, 'goldenAmount') * 700);
+  const runRaw = 900 * (1 - Math.exp(-elapsed(sim) / 420));
+  const policyRaw = policyIs(sim, 'golden') ? 900 : 0;
+  const categoryRaw = rewardCategoryBonus(sim, 'golden') * 2400;
+  const rawExtra = perkRaw + skillRaw + runRaw + policyRaw + categoryRaw;
+  // 逓減式: rawExtraが伸びても追加時間はboostExtraCapに漸近する
+  return P.golden.boostBase + P.golden.boostExtraCap * rawExtra / (rawExtra + P.golden.boostExtraHalf);
+}
+
+function upgradeCost(sim, u) {
+  const owned = sim.run.upgrades[u.id];
+  const disc = Math.exp(-Math.max(0, skillEffect(sim, 'upgradeDiscount')));
+  // 所有数指数: knee以降は急勾配(大量買い占め抑制)
+  const knee = P.upCost.knee || Infinity;
+  const e = owned <= knee ? owned * P.upCost.ownPow : knee * P.upCost.ownPow + (owned - knee) * (P.upCost.ownPow2 || P.upCost.ownPow);
+  return Math.max(1, Math.floor(P.upCost.coef * Math.pow(u.base, P.upCost.basePow) * Math.pow(u.growth, e) * disc));
+}
+function researchCostOf(sim, id) {
+  const disc = Math.exp(-Math.max(0, skillEffect(sim, 'researchDiscount')));
+  return Math.floor(P.resCost[id] * disc);
+}
+// 研究の段階 (1=購入 / 2,3=対応スキル取得後に購入欄へカード追加→クッキーで購入して有効化)
+// disableStage='研究id:2' 等で単体効果ゼロ化(購入行動は同一。条件⑨用)
+function resStage2(sim, id) { return !!sim.run.research2[id] && sim.opt.disableStage !== id + ':2'; }
+function resStage3(sim, id) { return !!sim.run.research3[id] && sim.opt.disableStage !== id + ':3'; }
+// 段階カードの表示条件: 前段階を購入済み かつ 対応スキルを取得済み
+function researchStageUnlocked(sim, id, stage) {
+  const r = sim.run;
+  if (!r.research[id]) return false;
+  if (stage === 2) return !!sim.skills[RES_STAGE2[id]];
+  return !!r.research2[id] && !!sim.skills[RES_STAGE3[id]];
+}
+// 段階コスト: 段1コスト×倍率(確定: 段2=×1,500 / 段3=×2,250,000)。researchDiscountは段1と同様に効く
+function researchStageCostOf(sim, id, stage) {
+  const disc = Math.exp(-Math.max(0, skillEffect(sim, 'researchDiscount')));
+  const mult = stage === 2 ? P.resStageCost.s2 : P.resStageCost.s3;
+  return Math.floor(P.resCost[id] * mult * disc);
+}
+function capv(v, cap) { return Math.min(Math.max(0, v), cap); }
+
+function prestigeGainOf(runCookies) {
+  const t = Math.max(0, Math.floor(runCookies));
+  const pp = P.prestige;
+  if (t < pp.pMin) return 0;
+  return Math.max(1, Math.floor(pp.pA * (1 - Math.exp(-t / pp.pD1)) + pp.pB * Math.pow(t / pp.pD2, pp.pG)));
+}
+function prestigeUnlockedFn(sim) {
+  return sim.totalCookies >= 1000000 || sim.prestigeTotal > 0 || sim.prestigeRuns > 0;
+}
+
+// 可視アップグレード(店に並ぶもの)
+function visibleUpgrades(sim) {
+  let hi = -1;
+  UPGRADES.forEach((u, i) => { if (sim.run.upgrades[u.id] > 0) hi = Math.max(hi, i); });
+  const limit = Math.min(UPGRADES.length - 1, Math.max(1, hi + 1));
+  return UPGRADES.filter((u, i) => i <= limit && upgradeUnlocked(sim, u));
+}
+
+// ================= イベント処理 =================
+function earn(sim, amount) {
+  if (!(amount > 0)) return 0;
+  sim.run.cookies += amount;
+  sim.run.runCookies += amount;
+  sim.totalCookies += amount;
+  return amount;
+}
+
+function collectGolden(sim, prod) {
+  const r = sim.run;
+  r.goldenTaken++;
+  // 香料調合 段階2: 風味の熟成(前回の金からの経過秒で、全生産の短時間バーストが決まる)
+  if (resActive(sim, 'spiceBlend') && resStage2(sim, 'spiceBlend')) {
+    const mature = capv(sim.t - (r.lastGoldenT || r.startT), P.res2.matureCap);
+    // タイミング(条件⑬): 完全放置は爆発窓に行動を寄せられないため係数を減衰
+    const matureEff = sim.opt.idleTiming === 'mature' ? P.timing.matureIdleMul : 1;
+    let burst = 1 + P.res2.matureRate * mature * matureEff;
+    if (resStage3(sim, 'spiceBlend')) burst *= 1 + P.res2.spiceStageCoef * capv(r.maxStage, P.res2.spiceStageCap);
+    r.spiceBurstM = burst;
+    r.spiceAromaUntil = sim.t + P.res2.aromaDur;
+  }
+  r.lastGoldenT = sim.t;
+  if ((r.perks.goldenChain || 0) > 0 && sim.opt.disableReward !== 'goldenChain') r.goldenChainReady = true;
+  if ((r.perks.goldenFirstHit || 0) > 0 && sim.opt.disableReward !== 'goldenFirstHit') r.goldenFirstHitReady = true;
+  if (resActive(sim, 'spiceBlend')) r.spiceBoostUntil = sim.t + (P.res.spiceGoldDur + Math.log1p(r.upgrades.spiceRack || 0) * 1800) / 1000;
+  if (resActive(sim, 'portalNetwork')) r.portalHuntUntil = sim.t + (P.res.portalHuntDur * lg(r.upgrades.portal || 0, P.res.portalHuntGrow)) / 1000;
+
+  // 期待値: 交互に即時獲得/ブースト
+  sim.goldenAlt ^= 1;
+  if (sim.goldenAlt === 1) {
+    earn(sim, Math.max(100, prod.cps * P.golden.instantCoef, prod.clickEV * P.golden.instantCoef) * goldenAmountMultiplier(sim));
+  } else {
+    const mult = goldenMultiplierVal(sim);
+    const dur = goldenBoostDurationMs(sim) / 1000;
+    r.boosts.push({ mult, until: sim.t + dur });
+    const timeOven = r.upgrades.timeOven || 0;
+    if (timeOven > 0) {
+      r.afterheats.push({
+        mult: 1 + Math.sqrt(timeOven) * 0.018,
+        from: sim.t + dur,
+        until: sim.t + dur + (3000 + Math.log1p(timeOven) * 1400) / 1000
+      });
+    }
+  }
+}
+
+function buildRewardOffer(sim, level) {
+  const r = sim.run;
+  const baseCount = 1 + Math.floor(level / P.reward.lvPerCount);
+  const deepBonus = Math.pow(P.rw.deepPursuitReward, sim.opt.disableReward === 'deepPursuit' ? 0 : (r.perks.deepPursuit || 0));
+  const penalty = Math.max(0, r.huntFocusRewardPenalty || 0);
+  const count = Math.max(1,
+    Math.floor(baseCount * (1 + skillEffect(sim, 'rewardBonus')) * deepBonus)
+    + Math.max(0, Math.floor(r.nextRewardCountBonus || 0)) - penalty);
+  r.huntFocusRewardPenalty = 0;
+  const choiceLimit = P.reward.choiceBase + Math.max(0, Math.floor(skillEffect(sim, 'rewardChoices')));
+
+  const unlockedPerks = REWARD_POOL.filter(x => rewardUnlockedFn(sim, x));
+  const ownedUps = UPGRADES.filter(u => r.upgrades[u.id] > 0 && upgradeUnlocked(sim, u));
+  const offer = [];
+  if (ownedUps.length > 0) {
+    const u = ownedUps[sim.upRotIdx % ownedUps.length]; sim.upRotIdx++;
+    offer.push({ kind: 'upgrade', id: u.id, count });
+  }
+  // 残りは決定的ローテーションで選ぶ(期待値近似)
+  const pool = unlockedPerks.map(x => ({ kind: 'perk', id: x.id, category: x.category, count }));
+  for (let k = 0; k < pool.length && offer.length < choiceLimit; k++) {
+    const c = pool[(sim.rotIdx + k) % pool.length];
+    if (!offer.some(o => o.kind === c.kind && o.id === c.id)) offer.push(c);
+  }
+  sim.rotIdx = (sim.rotIdx + 3) % Math.max(1, pool.length);
+  return offer;
+}
+
+function applyReward(sim, choice) {
+  const r = sim.run;
+  const cat = choice.kind === 'perk'
+    ? (REWARD_POOL.find(x => x.id === choice.id) || {}).category || 'equipment'
+    : 'equipment';
+  if (choice.kind === 'perk') {
+    if (sim.firstPerk[choice.id] === undefined) sim.firstPerk[choice.id] = sim.t;
+    r.perks[choice.id] += choice.count;
+    if (choice.id === 'huntFocus') r.huntFocusLv = (r.huntFocusLv || 0) + choice.count;
+  } else {
+    r.upgradePerks[choice.id] += choice.count;
+  }
+  r.rewardCategoryCounts[cat] = (r.rewardCategoryCounts[cat] || 0) + choice.count;
+}
+
+function defeatMonster(sim, mon) {
+  const r = sim.run;
+  r.kills++;
+  // 異世界接続網 段階2: 狩り窓中の討伐で窓を延長(完全放置は窓中に討伐を寄せられず延長なし: 条件⑬)
+  if (resActive(sim, 'portalNetwork') && resStage2(sim, 'portalNetwork') && sim.t < r.portalHuntUntil
+    && sim.opt.idleTiming !== 'huntExtend') {
+    r.portalHuntUntil += P.res2.huntExtendSec;
+  }
+  if (!r.quotaFailed) r.quotaMonsterKills++;
+  const chainPrepLv = sim.opt.disableReward === 'chainPrep' ? 0 : (r.perks.chainPrep || 0);
+  if (chainPrepLv > 0) {
+    r.nextMonsterSpawnMultiplier *= Math.exp(-chainPrepLv * P.rw.chainPrepSpawn);
+    r.nextMonsterHpMultiplier *= Math.pow(P.rw.chainPrepHp, chainPrepLv);
+  }
+  const beastScentLv = sim.opt.disableReward === 'beastScent' ? 0 : (r.perks.beastScent || 0);
+  if (beastScentLv > 0) r.nextGoldenSpawnMultiplier *= Math.exp(-beastScentLv * P.rw.beastScent);
+
+  const focusLv = r.huntFocusLv || 0;
+  let bonus = 0;
+  if (focusLv > 0) { bonus += 1; r.huntFocusLv = 0; }
+  const mutationLv = sim.opt.disableReward === 'goldenBeastMutation' ? 0 : (r.perks.goldenBeastMutation || 0);
+  if (mutationLv > 0 && goldenBoostActive(sim)) {
+    // 期待値: 確率を蓄積して1超えで+1
+    const chance = 1 - Math.exp(-(P.rw.mutationBase + mutationLv * P.rw.mutationPerLv));
+    r.nextRewardCountBonus += chance;
+  }
+  r.nextRewardCountBonus += bonus;
+
+  const offer = buildRewardOffer(sim, mon.level);
+  r.nextRewardCountBonus = 0;
+  const pick = sim.strat.pickReward(sim, offer);
+  if (pick) applyReward(sim, pick);
+}
+
+// ================= 転生処理 =================
+function doPrestige(sim) {
+  const r = sim.run;
+  // 転生には所持クッキー100万の消費が必要
+  if (r.cookies < 1000000) return false;
+  const gain = prestigeGainOf(r.runCookies);
+  if (gain <= 0) return false;
+  r.cookies -= 1000000;
+  sim.prestige += gain;
+  sim.prestigeTotal += gain;
+  sim.prestigeRuns++;
+
+  // 周回記録
+  sim.runs.push({
+    idx: sim.runs.length,
+    startT: r.startT, endT: sim.t,
+    duration: sim.t - r.startT,
+    runCookies: r.runCookies,
+    quotaHold: r.quotaHoldSeconds,
+    maxStage: r.maxStage,
+    kills: r.kills, golden: r.goldenTaken,
+    gain,
+    researchBought: Object.keys(r.research).filter(k => r.research[k]),
+    stages2: Object.keys(r.research2).filter(k => r.research2[k]),
+    stages3: Object.keys(r.research3).filter(k => r.research3[k]),
+    quotaFailAt: r.quotaFailAt,
+    gainSeries: (sim.opt.trackGain && r.quotaFailAt != null) ? r.gainSeries : undefined,
+    perks: Object.assign({}, r.perks),
+    upgradePerkTotal: Object.values(r.upgradePerks).reduce((a, b) => a + b, 0),
+    upCounts: Object.assign({}, r.upgrades)
+  });
+
+  // スキル購入(戦略の優先順で、買えるだけ)
+  const bought = [];
+  let progress = true;
+  while (progress) {
+    progress = false;
+    const order = sim.strat.skillOrder(sim);
+    for (const id of order) {
+      const node = SKILL_BY_ID[id];
+      if (!node || sim.skills[id]) continue;
+      if (!node.prereqs.every(q => sim.skills[q])) continue;
+      const cost = skillCostOf(node);
+      if (sim.prestige >= cost) {
+        sim.prestige -= cost;
+        sim.skills[id] = true;
+        bought.push(id);
+        progress = true;
+        break;
+      }
+    }
+  }
+  if (bought.length > 0) sim.unlockEvents.push({ t: sim.t, kind: 'skill', id: bought.join('+'), n: bought.length });
+  sim.runs[sim.runs.length - 1].skillsBought = bought.length;
+  sim.runs[sim.runs.length - 1].skillIds = bought;
+  sim._fx = {}; sim._fxHas = {}; sim._stT = -1; sim._bkT = -1;
+
+  // 新周回
+  sim.run = newRun(sim);
+  sim.run.policy = sim.strat.pickPolicy(sim);
+  const sc = Math.floor(skillEffect(sim, 'startCookies'));
+  if (sc > 0) earn(sim, sc);
+  scheduleGolden(sim);
+  scheduleMonster(sim);
+  return true;
+}
+
+function scheduleGolden(sim) {
+  const r = sim.run;
+  const mean = (P.golden.spawnMin + P.golden.spawnMax) / 2;
+  const raw = mean * goldenSpawnFactor(sim) * (r.nextGoldenSpawnMultiplier || 1);
+  r.nextGoldenSpawnMultiplier = 1;
+  r.goldenTimer = (1000 + raw) / 1000; // protectedWait floor 1000ms
+}
+function scheduleMonster(sim) {
+  const r = sim.run;
+  const level = monsterLevel(sim);
+  const levelFactor = 1 - 0.10 * (1 - Math.exp(-level / 8));
+  const mean = (P.monster.spawnMin + P.monster.spawnMax) / 2;
+  const raw = mean * levelFactor * monsterSpawnFactor(sim) * (r.nextMonsterSpawnMultiplier || 1);
+  r.nextMonsterSpawnMultiplier = 1;
+  r.monsterTimer = (1000 + raw) / 1000;
+}
+
+// ================= メインループ =================
+function simulate(strategy, opts) {
+  const sim = newSim(strategy, opts);
+  sim.run = newRun(sim);
+  sim.run.policy = strategy.pickPolicy(sim);
+  scheduleGolden(sim);
+  scheduleMonster(sim);
+  const horizon = sim.opt.hours * 3600;
+  const dt = 1;
+
+  sim.hourly = [];
+  if (sim.opt.debugRunIdx != null) sim.debugTrace = [];
+  while (sim.t < horizon) {
+    sim.t += dt;
+    if (sim.t % 60 === 0) sim.hourly.push(sim.totalCookies);
+    if (sim.debugTrace && sim.runs.length === sim.opt.debugRunIdx) {
+      const rr = sim.run;
+      sim.debugTrace.push({ t: sim.t, el: sim.t - rr.startT, c: rr.runCookies, boosts: rr.boosts.length, bm: goldenBoostMultiplier(sim), mon: !!rr.monster, kills: rr.kills, gold: rr.goldenTaken });
+    }
+    const r = sim.run;
+    purgeBoosts(sim);
+    // afterheat 有効化(fromを過ぎたものだけ乗せる)
+    r.afterheats = r.afterheats.filter(a => a.until > sim.t);
+    const prod = computeProd(sim);
+    let ahM = 1;
+    for (const a of r.afterheats) if (sim.t >= a.from) ahM *= a.mult;
+
+    const cpsNow = prod.cps * ahM;
+    const clickNow = prod.clickEV * ahM;
+
+    // タップとモンスター
+    const tapRate = strategy.tapRate;
+    let tapsForCookies = tapRate;
+    if (r.monster) {
+      const dmg = monsterDamage(sim, prod);
+      let firstBonus = 0;
+      if (r.monster.goldenFirstHitReady && !r.monster.firstHitUsed) {
+        firstBonus = dmg * ((r.perks.goldenFirstHit || 0) * effRw(sim, 'goldenFirstHit'));
+        r.monster.firstHitUsed = true;
+      }
+      let hits = tapRate * dt;
+      let dealt = hits * dmg * (1 + (r.huntFocusLv || 0)) + firstBonus;
+      // 甘噛み回収
+      const biteLv = sim.opt.disableReward === 'biteRecovery' ? 0 : (r.perks.biteRecovery || 0);
+      if (biteLv > 0) {
+        const rawRec = dmg * clickNow * P.rw.biteRecovery * biteLv * hits;
+        const softLine = Math.max(1, cpsNow * 2);
+        earn(sim, rawRec / (1 + rawRec / softLine) + Math.log1p(rawRec / softLine) * softLine * 0.08);
+      }
+      r.monster.hp -= dealt;
+      tapsForCookies = 0;
+      if (r.monster.hp <= 0) {
+        defeatMonster(sim, r.monster);
+        r.monster = null;
+        scheduleMonster(sim);
+      } else {
+        r.monster.stayLeft -= dt;
+        if (r.monster.stayLeft <= 0) {
+          // 逃した
+          if ((r.huntFocusLv || 0) > 0) {
+            r.nextMonsterHpMultiplier *= 0.75;
+            r.huntFocusRewardPenalty = Math.max(r.huntFocusRewardPenalty || 0, 1);
+            r.huntFocusLv = 0;
+          }
+          r.monster = null;
+          scheduleMonster(sim);
+        }
+      }
+    }
+
+    // 収入
+    earn(sim, cpsNow * dt + clickNow * tapsForCookies * dt);
+
+    // 銀行クリック配当 段階2: 複利利息(所持クッキーに毎秒、上限は毎秒生産比)
+    if (resActive(sim, 'bankClickDividend') && resStage2(sim, 'bankClickDividend')) {
+      const bank = r.upgrades.bank || 0;
+      if (bank > 0 && r.cookies > 0) {
+        let cap = cpsNow * P.res2.bankIntCapCps;
+        if (resStage3(sim, 'bankClickDividend')) cap *= 1 + P.res2.bankCapStageCoef * capv(r.maxStage, P.res2.bankCapStageCap);
+        earn(sim, Math.min(r.cookies * P.res2.bankIntRate * Math.log10(1 + bank), cap) * dt);
+      }
+    }
+
+    // 指先の型 段階3: 会心の余熱(会心のたびに毎秒生産×最高層比の追加獲得)
+    if (tapsForCookies > 0 && resActive(sim, 'fingerTechnique') && resStage3(sim, 'fingerTechnique') && prod.critChance > 0) {
+      earn(sim, tapsForCookies * prod.critChance * cpsNow * P.res2.critCpsCoef * (capv(r.maxStage, P.res2.critStageCap) / P.res2.critStageCap) * dt);
+    }
+
+    // 重力圧縮 段階2: 圧縮チャージ(満タンで発動、期待値=即時発動)
+    if (resActive(sim, 'blackHoleCompression') && resStage2(sim, 'blackHoleCompression')) {
+      const bh = r.upgrades.blackHoleMixer || 0;
+      r.bhCharge += Math.sqrt(bh) * dt;
+      const maxUses = resStage3(sim, 'blackHoleCompression') ? 3 : 2;
+      if (r.bhCharge >= P.res2.bhChargeFull && r.bhUses < maxUses && sim.t >= r.bhBoostUntil) {
+        // タイミング(条件⑬): 最適操作は満タンで即発動 / 完全放置は気づくまで遅延
+        if (r.bhReadyAt == null) r.bhReadyAt = sim.t + (sim.opt.idleTiming === 'bhCharge' ? P.timing.bhIdleDelay : 0);
+        if (sim.t >= r.bhReadyAt) {
+          let mult = 1 + P.res2.bhBoostCoef * Math.sqrt(bh) / 10;
+          if (resStage3(sim, 'blackHoleCompression')) mult *= 1 + P.res2.bhBoostStageCoef * capv(r.maxStage, P.res2.bhBoostStageCap);
+          r.bhBoostMult = mult;
+          r.bhBoostUntil = sim.t + P.res2.bhBoostDur;
+          r.bhCharge = 0;
+          r.bhUses++;
+          r.bhReadyAt = null;
+        }
+      }
+    }
+
+    // 金クッキー
+    r.goldenTimer -= dt;
+    if (r.goldenTimer <= 0) {
+      if (strategy.goldenTake >= 1 || (sim.t % Math.ceil(1 / Math.max(0.01, strategy.goldenTake))) < 1) {
+        collectGolden(sim, prod);
+      }
+      scheduleGolden(sim);
+    }
+
+    // モンスター出現
+    if (!r.monster) {
+      r.monsterTimer -= dt;
+      if (r.monsterTimer <= 0) {
+        const quota = monsterQuotaRequired(sim);
+        const met = quota !== null && r.runCookies >= quota;
+        if (met && !r.quotaFailed) {
+          const level = monsterLevel(sim);
+          const maxHp = Math.max(40, Math.floor(monsterHpValue(sim, level) * (r.nextMonsterHpMultiplier || 1)));
+          r.nextMonsterHpMultiplier = 1;
+          r.monster = {
+            level, hp: maxHp, maxHp,
+            stayLeft: monsterStayMs(sim) / 1000,
+            goldenChainMultiplier: r.goldenChainReady ? 1 + (r.perks.goldenChain || 0) * effRw(sim, 'goldenChain') : 1,
+            goldenFirstHitReady: r.goldenFirstHitReady,
+            firstHitUsed: !r.goldenFirstHitReady
+          };
+          r.goldenChainReady = false;
+          r.goldenFirstHitReady = false;
+        }
+        scheduleMonster(sim);
+      }
+    }
+
+    // ノルマ判定
+    if (!r.quotaFailed) {
+      const quota = monsterQuotaRequired(sim);
+      const el = elapsed(sim);
+      if (quota !== null && quota > 0 && r.runCookies < quota) {
+        r.quotaFailed = true;
+        r.quotaFailAt = el; // 未達に転じた経過秒(条件⑧用)
+        if (r.monster) { r.monster = null; }
+      } else {
+        r.quotaHoldSeconds = Math.max(r.quotaHoldSeconds, el);
+      }
+    }
+    const st = currentStage(sim);
+    if (st > r.maxStage) r.maxStage = st;
+
+    // 条件⑧用: 「いま転生した場合の獲得PT」の毎秒系列を記録
+    if (sim.opt.trackGain) {
+      if (!r.gainSeries) r.gainSeries = [];
+      r.gainSeries.push(prestigeGainOf(r.runCookies));
+    }
+
+    // 購入(戦略)
+    strategy.buy(sim, prod);
+
+    // 転生判断
+    if (prestigeUnlockedFn(sim) && strategy.shouldPrestige(sim)) {
+      doPrestige(sim);
+    }
+  }
+
+  // 終了時の進行中周回も記録
+  const r = sim.run;
+  sim.runs.push({
+    idx: sim.runs.length, startT: r.startT, endT: sim.t,
+    duration: sim.t - r.startT, runCookies: r.runCookies,
+    quotaHold: r.quotaHoldSeconds, maxStage: r.maxStage,
+    kills: r.kills, golden: r.goldenTaken,
+    gain: prestigeGainOf(r.runCookies), partial: true,
+    researchBought: Object.keys(r.research).filter(k => r.research[k]),
+    stages2: Object.keys(r.research2).filter(k => r.research2[k]),
+    stages3: Object.keys(r.research3).filter(k => r.research3[k]),
+    quotaFailAt: r.quotaFailAt,
+    gainSeries: (sim.opt.trackGain && r.quotaFailAt != null) ? r.gainSeries : undefined,
+    perks: Object.assign({}, r.perks),
+    upgradePerkTotal: Object.values(r.upgradePerks).reduce((a, b) => a + b, 0),
+    skillsBought: 0, skillIds: []
+  });
+  return sim;
+}
+
+// 購入ヘルパー(unlockイベント記録込み)
+function tryBuyUpgrade(sim, u, budgetRatio) {
+  const cost = upgradeCost(sim, u);
+  if (cost > sim.run.cookies * budgetRatio) return false;
+  if (cost > sim.run.cookies) return false;
+  sim.run.cookies -= cost;
+  sim.run.upgrades[u.id]++;
+  if (!sim.everUpgrade[u.id]) {
+    sim.everUpgrade[u.id] = true;
+    sim.unlockEvents.push({ t: sim.t, kind: 'upgrade', id: u.id });
+  }
+  return true;
+}
+function tryBuyResearch(sim, id, budgetRatio) {
+  const r = sim.run;
+  if (r.research[id]) return false;
+  // 無効化(disableResearch)でも購入行動は同じ: 効果だけがゼロになる
+  const def = RESEARCH.find(x => x.id === id);
+  if (!def || !researchUnlocked(sim, def)) return false;
+  const cost = researchCostOf(sim, id);
+  if (cost > r.cookies * budgetRatio) return false;
+  r.cookies -= cost;
+  r.research[id] = true;
+  if (sim.firstResearchBuy[id] === undefined) sim.firstResearchBuy[id] = sim.t;
+  if (!sim.everResearch[id]) {
+    sim.everResearch[id] = true;
+    sim.unlockEvents.push({ t: sim.t, kind: 'research', id });
+  }
+  return true;
+}
+// 研究段階(段2/段3)の購入。研究購入枠の延長として同じ予算基準で買う
+function tryBuyResearchStage(sim, id, stage, budgetRatio) {
+  const r = sim.run;
+  if (stage === 2 ? r.research2[id] : r.research3[id]) return false;
+  // 無効化(disableStage)でも購入行動は同じ: 効果だけがゼロになる
+  if (!researchStageUnlocked(sim, id, stage)) return false;
+  const cost = researchStageCostOf(sim, id, stage);
+  if (cost > r.cookies * budgetRatio) return false;
+  r.cookies -= cost;
+  if (stage === 2) r.research2[id] = true; else r.research3[id] = true;
+  const key = id + ':' + stage;
+  if (sim.firstStageBuy[key] === undefined) sim.firstStageBuy[key] = sim.t;
+  if (!sim.everStage[key]) {
+    sim.everStage[key] = true;
+    // 段階購入も「解放イベント」として記録(帯域判定⑥の対象)
+    sim.unlockEvents.push({ t: sim.t, kind: 'stage', id: key });
+  }
+  return true;
+}
+// 1個あたりの研究・支援・個別強化込み倍率(ショップの「次 +N」相当)
+function upgradeUnitMult(sim, u) {
+  const r = sim.run;
+  const R = P.res;
+  const i = UPIDX[u.id];
+  const owned = r.upgrades[u.id];
+  const upPerkPower = 1 + skillEffect(sim, 'upgradePerkPower')
+    + (r.perks.crushedMill * (sim.opt.disableReward === 'crushedMill' ? 0 : P.rw.crushedMill))
+    + rewardCategoryBonus(sim, 'equipment');
+  const boostRate = Math.max(P.upPerk.floor, P.upPerk.base - i * P.upPerk.slope) * upPerkPower;
+  const personal = 1 + (r.upgradePerks[u.id] || 0) * boostRate;
+  let resM = 1;
+  const stage = currentStage(sim);
+  if (u.id === 'grandma' && resActive(sim, 'grandmaCrowd')) resM *= R.grandmaSelf;
+  if (u.id === 'oven' && resActive(sim, 'ovenBatch')) resM *= R.ovenSelf * lg(owned, R.ovenOwn) * lg(Math.max(0, stage - 1), R.ovenStage);
+  if (u.id === 'factory' && resActive(sim, 'factoryNetwork')) {
+    const low = (r.upgrades.finger || 0) + (r.upgrades.grandma || 0) + (r.upgrades.oven || 0);
+    resM *= R.factorySelf * lg(low, R.factoryLow) * lg(owned, R.factoryOwn);
+  }
+  if (u.id === 'spiceRack' && resActive(sim, 'spiceBlend')) resM *= lg(owned, R.spiceOwn);
+  if (u.id === 'portal' && resActive(sim, 'portalNetwork')) resM *= R.portalSelf;
+  if (u.id === 'galaxyFactory' && resActive(sim, 'galaxyAssembly')) {
+    const types = UPGRADES.filter(x => (r.upgrades[x.id] || 0) > 0).length;
+    resM *= lg(types, R.galaxyTypes) * lg(owned, R.galaxyOwn);
+  }
+  if (u.id === 'quantumBakery' && resActive(sim, 'quantumProofing')) {
+    const rc = RESEARCH.filter(x => r.research[x.id]).length;
+    resM *= lg(rc, R.quantumRes) * lg(owned, R.quantumOwn);
+  }
+  let supM = 1;
+  if (resActive(sim, 'grandmaCrowd')) {
+    const g = r.upgrades.grandma || 0;
+    if (u.id === 'finger') supM *= lg(g, R.grandmaSup[0]);
+    if (u.id === 'oven') supM *= lg(g, R.grandmaSup[1]);
+    if (u.id === 'factory') supM *= lg(g, R.grandmaSup[2]);
+  }
+  return personal * resM * supM;
+}
+
+// 効率最良アップグレード(次の1個の増分/コスト、ショップ表示と同じ情報)
+function bestEfficiency(sim, prod, typeFilter) {
+  let best = null, bestVal = 0;
+  for (const u of visibleUpgrades(sim)) {
+    if (typeFilter && u.type !== typeFilter) continue;
+    const cost = upgradeCost(sim, u);
+    const val = (u.value * upgradeUnitMult(sim, u)) / cost;
+    if (val > bestVal) { bestVal = val; best = u; }
+  }
+  return best;
+}
+
+module.exports = {
+  P, UPGRADES, RESEARCH, REWARD_POOL, SKILL_NODES, SKILL_BY_ID,
+  simulate, prestigeGainOf, skillCostOf, upgradeCost, researchCostOf,
+  tryBuyUpgrade, tryBuyResearch, bestEfficiency, visibleUpgrades, quotaAtElapsed,
+  isUtilitySkill, buildSkillValues, skillRank,
+  tryBuyResearchStage, researchStageCostOf, researchStageUnlocked
+};
