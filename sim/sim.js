@@ -287,8 +287,8 @@ function buildSkillValues() {
   return SKILL_VALUES;
 }
 function lg(level, rate) { return Math.pow(1 + Math.max(0, rate), Math.max(0, level)); }
-// 所有数指数の逓減上限(計算式調整): capを超えた分は効果に乗らない
-function capOwn(n) { return Math.min(Math.max(0, n), (P.res.ownCap || Infinity)); }
+// 2026-07-05 キャップ全撤廃: 所有数上限(ownCap)は撤廃(負値ガードのみ)
+function capOwn(n) { return Math.max(0, n); }
 function ir(level, rate) { return Math.pow(1 - Math.min(0.95, Math.max(0, rate)), Math.max(0, level)); }
 // 報酬Lvの逓減: lvが大きいほど1Lvあたりの寄与が下がる(halfで半減)
 function satLv(lv, half) { lv = Math.max(0, lv); return lv / (1 + lv / Math.max(1, half)); }
@@ -428,7 +428,8 @@ function monsterQuotaRequired(sim) {
   if (!r.blackHoleCompressionUsed && resActive(sim, 'blackHoleCompression')) {
     const bh = r.upgrades.blackHoleMixer || 0;
     let compression = bh > 0 ? ir(bh, P.res.bhCompress) : 1;
-    if (resStage3(sim, 'blackHoleCompression')) compression *= 1 - Math.min(P.res2.bhCompStageMax, P.res2.bhCompStageCoef * r.maxStage);
+    // キャップ撤廃: 1-min(0.35, 0.001×最高層) → e^(-0.001×最高層) (負値防止の逓減式・上限なし)
+    if (resStage3(sim, 'blackHoleCompression')) compression *= Math.exp(-P.res2.bhCompStageCoef * r.maxStage);
     const ratio = r.runCookies / baseQuota;
     if (compression < 1 && ratio < 1.03 && ratio >= compression) {
       r.blackHoleCompressionUsed = true;
@@ -538,9 +539,10 @@ function computeProd(sim) {
     let moonM = R.moonBase * layer;
     if (resStage2(sim, 'moonGlobalYeast')) {
       // 段階2: ノルマ余裕率(今回クッキー/必要ノルマ)で発酵が進む
+      // キャップ撤廃: min(1,余裕率/10) → log10(1+余裕率)/10 (上限なし・暴走防止の逓減式)
       const q = monsterQuotaRequired(sim);
       const margin = (q && q > 0) ? r.runCookies / q : 1;
-      moonM *= 1 + Math.min(1, margin / P.res2.moonMarginDiv);
+      moonM *= 1 + Math.log10(1 + Math.max(0, margin)) / P.res2.moonMarginDiv;
     }
     if (resStage3(sim, 'moonGlobalYeast')) {
       const rc0 = RESEARCH.filter(x => r.research[x.id]).length;
@@ -553,8 +555,8 @@ function computeProd(sim) {
     const mcount = r.monster ? 1 : 0;
     const goldM = goldenBoostActive(sim) ? R.foldGold : 1;
     let foldM = lg(capOwn(portal), R.foldPortal) * lg(mcount, R.foldMonster) * goldM;
-    if (resStage2(sim, 'portalGlobalFold')) foldM *= 1 + P.res2.foldKillCoef * capv(r.quotaMonsterKills, P.res2.foldKillCap);
-    if (resStage3(sim, 'portalGlobalFold')) foldM *= 1 + P.res2.foldStageCoef * capv(r.maxStage, P.res2.foldStageCap);
+    if (resStage2(sim, 'portalGlobalFold')) foldM *= 1 + P.res2.foldKillCoef * Math.max(0, r.quotaMonsterKills);
+    if (resStage3(sim, 'portalGlobalFold')) foldM *= 1 + P.res2.foldStageCoef * r.maxStage;
     globalRes *= foldM;
   }
   // 香料調合 段階2: 熟成の香り(金取得から12秒間、全生産バースト)
@@ -569,8 +571,8 @@ function computeProd(sim) {
     const anti = r.upgrades.antimatterOven || 0;
     const skillCount = Object.keys(sim.skills).filter(k => sim.skills[k]).length;
     let antiM = lg(capOwn(anti), R.antimatterOwn) * lg(skillCount, R.antimatterSkill);
-    if (resStage2(sim, 'antimatterRecipe')) antiM *= 1 + P.res2.antiStageCoef * capv(r.maxStage, P.res2.antiStageCap);
-    if (resStage3(sim, 'antimatterRecipe')) antiM *= 1 + P.res2.antiPrestigeCoef * capv(sim.prestigeRuns, P.res2.antiPrestigeCap);
+    if (resStage2(sim, 'antimatterRecipe')) antiM *= 1 + P.res2.antiStageCoef * r.maxStage;
+    if (resStage3(sim, 'antimatterRecipe')) antiM *= 1 + P.res2.antiPrestigeCoef * sim.prestigeRuns;
     globalRes *= antiM;
   }
 
@@ -584,7 +586,7 @@ function computeProd(sim) {
       const balance = Math.exp(logSum / counts.length) / (sum / counts.length);
       const gal = r.upgrades.galaxyFactory || 0;
       let bonus = P.res2.galaxyBonusCoef * counts.length * balance * (1 - Math.exp(-gal / P.res2.galaxySat));
-      if (resStage3(sim, 'galaxyAssembly')) bonus *= 1 + P.res2.galaxyStageCoef * capv(r.maxStage, P.res2.galaxyStageCap);
+      if (resStage3(sim, 'galaxyAssembly')) bonus *= 1 + P.res2.galaxyStageCoef * r.maxStage;
       globalRes *= 1 + bonus;
     }
   }
@@ -627,7 +629,7 @@ function computeProd(sim) {
         resM *= 1 + P.res2.factoryHiKind * hi;
       }
       // 段階3: 最高到達ノルマ層
-      if (resStage3(sim, 'factoryNetwork')) resM *= 1 + P.res2.factoryStageCoef * capv(r.maxStage, P.res2.factoryStageCap);
+      if (resStage3(sim, 'factoryNetwork')) resM *= 1 + P.res2.factoryStageCoef * r.maxStage;
     }
     if (u.id === 'spiceRack' && resActive(sim, 'spiceBlend')) {
       let m = lg(capOwn(owned), R.spiceOwn) * (policyIs(sim, 'golden') ? 1.08 : 1);
@@ -647,8 +649,7 @@ function computeProd(sim) {
       // 段階2: 観測ゆらぎ(90秒周期の波。山でのみ増幅、谷は×1)
       if (resStage2(sim, 'quantumProofing')) {
         let amp = P.res2.waveAmpBase + P.res2.waveAmpPerRes * rc;
-        if (resStage3(sim, 'quantumProofing')) amp *= 1 + P.res2.waveStageCoef * capv(r.maxStage, P.res2.waveStageCap);
-        amp = Math.min(P.res2.waveAmpCap, amp);
+        if (resStage3(sim, 'quantumProofing')) amp *= 1 + P.res2.waveStageCoef * r.maxStage;
         // タイミング(条件⑬): 最適操作=山に活動を寄せる(正相平均2/π) / 完全放置=全周期平均(1/π)
         const wf = sim.opt.idleTiming === 'wave' ? P.timing.waveIdle : P.timing.waveOpt;
         resM *= 1 + amp * wf;
@@ -662,7 +663,7 @@ function computeProd(sim) {
       // 段階2: 支援先に銀行・香料棚を追加
       if (resStage2(sim, 'grandmaCrowd') && (u.id === 'bank' || u.id === 'spiceRack')) supM *= lg(capOwn(grandma), P.res2.supExtra);
       // 段階3: 最高到達ノルマ層で全支援が伸びる
-      if (supM > 1 && resStage3(sim, 'grandmaCrowd')) supM *= 1 + P.res2.supStageCoef * capv(r.maxStage, P.res2.supStageCap);
+      if (supM > 1 && resStage3(sim, 'grandmaCrowd')) supM *= 1 + P.res2.supStageCoef * r.maxStage;
     }
     const contrib = owned * u.value * personal * resM * supM;
     if (u.type === 'click') clickRaw += contrib; else cpsRaw += contrib;
@@ -695,9 +696,9 @@ function computeProd(sim) {
     const chance = 1 - Math.exp(-score);
     critChanceOut = chance;
     let critMul = R.fingerCritBase + score * R.fingerCritGrow;
-    // 段階2: 会心コンボ(期待値: 直近30秒の会心回数、上限あり)
+    // 段階2: 会心コンボ(期待値: 直近30秒の会心回数。キャップ撤廃済み)
     if (resStage2(sim, 'fingerTechnique')) {
-      const combo = Math.min(P.res2.comboCap, chance * sim.strat.tapRate * P.res2.comboWindow);
+      const combo = chance * sim.strat.tapRate * P.res2.comboWindow;
       critMul *= 1 + P.res2.comboRate * combo;
     }
     critEV = 1 + chance * (critMul - 1);
@@ -752,7 +753,7 @@ function monsterSpawnFactor(sim) {
   let portalHunt = 1;
   if (resActive(sim, 'portalNetwork') && sim.t < r.portalHuntUntil) {
     portalHunt = ir(r.upgrades.portal || 0, P.res.portalHuntSpawn);
-    if (resStage3(sim, 'portalNetwork')) portalHunt *= Math.exp(-P.res2.huntStageCoef * capv(r.maxStage, P.res2.huntStageCap));
+    if (resStage3(sim, 'portalNetwork')) portalHunt *= Math.exp(-P.res2.huntStageCoef * r.maxStage);
   }
   return Math.exp(
     -Math.max(0, rateLv) * P.monster.ratePerLv
@@ -841,7 +842,7 @@ function researchStageCostOf(sim, id, stage) {
   const mult = stage === 2 ? P.resStageCost.s2 : P.resStageCost.s3;
   return Math.floor(P.resCost[id] * mult * disc);
 }
-function capv(v, cap) { return Math.min(Math.max(0, v), cap); }
+// capv(効果キャップ)は2026-07-05のキャップ全撤廃で削除済み
 
 function prestigeGainOf(runCookies) {
   const t = Math.max(0, Math.floor(runCookies));
@@ -875,11 +876,11 @@ function collectGolden(sim, prod) {
   r.goldenTaken++;
   // 香料調合 段階2: 風味の熟成(前回の金からの経過秒で、全生産の短時間バーストが決まる)
   if (resActive(sim, 'spiceBlend') && resStage2(sim, 'spiceBlend')) {
-    const mature = capv(sim.t - (r.lastGoldenT || r.startT), P.res2.matureCap);
+    const mature = Math.max(0, sim.t - (r.lastGoldenT || r.startT)); // キャップ撤廃(旧min 240s)
     // タイミング(条件⑬): 完全放置は爆発窓に行動を寄せられないため係数を減衰
     const matureEff = sim.opt.idleTiming === 'mature' ? P.timing.matureIdleMul : 1;
     let burst = 1 + P.res2.matureRate * mature * matureEff;
-    if (resStage3(sim, 'spiceBlend')) burst *= 1 + P.res2.spiceStageCoef * capv(r.maxStage, P.res2.spiceStageCap);
+    if (resStage3(sim, 'spiceBlend')) burst *= 1 + P.res2.spiceStageCoef * r.maxStage;
     r.spiceBurstM = burst;
     r.spiceAromaUntil = sim.t + P.res2.aromaDur;
   }
@@ -1142,19 +1143,21 @@ function simulate(strategy, opts) {
     // 収入
     earn(sim, cpsNow * dt + clickNow * tapsForCookies * dt);
 
-    // 銀行クリック配当 段階2: 複利利息(所持クッキーに毎秒、上限は毎秒生産比)
+    // 銀行クリック配当 段階2: 複利利息。キャップ撤廃: 硬い min(利息, 毎秒生産×2) を
+    // 漸近逓減式 raw/(1+raw/soft) に置換(暴走防止。softは段3で最高層に応じ無限に伸びる)
     if (resActive(sim, 'bankClickDividend') && resStage2(sim, 'bankClickDividend')) {
       const bank = r.upgrades.bank || 0;
       if (bank > 0 && r.cookies > 0) {
-        let cap = cpsNow * P.res2.bankIntCapCps;
-        if (resStage3(sim, 'bankClickDividend')) cap *= 1 + P.res2.bankCapStageCoef * capv(r.maxStage, P.res2.bankCapStageCap);
-        earn(sim, Math.min(r.cookies * P.res2.bankIntRate * Math.log10(1 + bank), cap) * dt);
+        let soft = cpsNow * P.res2.bankIntCapCps;
+        if (resStage3(sim, 'bankClickDividend')) soft *= 1 + P.res2.bankCapStageCoef * r.maxStage;
+        const raw = r.cookies * P.res2.bankIntRate * Math.log10(1 + bank);
+        if (soft > 0 && raw > 0) earn(sim, raw / (1 + raw / soft) * dt);
       }
     }
 
-    // 指先の型 段階3: 会心の余熱(会心のたびに毎秒生産×最高層比の追加獲得)
+    // 指先の型 段階3: 会心の余熱(会心のたびに毎秒生産×0.00025×最高層の追加獲得。キャップ撤廃)
     if (tapsForCookies > 0 && resActive(sim, 'fingerTechnique') && resStage3(sim, 'fingerTechnique') && prod.critChance > 0) {
-      earn(sim, tapsForCookies * prod.critChance * cpsNow * P.res2.critCpsCoef * (capv(r.maxStage, P.res2.critStageCap) / P.res2.critStageCap) * dt);
+      earn(sim, tapsForCookies * prod.critChance * cpsNow * P.res2.critCpsCoef * r.maxStage * dt);
     }
 
     // 重力圧縮 段階2: 圧縮チャージ(満タンで発動、期待値=即時発動)
@@ -1167,7 +1170,7 @@ function simulate(strategy, opts) {
         if (r.bhReadyAt == null) r.bhReadyAt = sim.t + (sim.opt.idleTiming === 'bhCharge' ? P.timing.bhIdleDelay : 0);
         if (sim.t >= r.bhReadyAt) {
           let mult = 1 + P.res2.bhBoostCoef * Math.sqrt(bh) / 10;
-          if (resStage3(sim, 'blackHoleCompression')) mult *= 1 + P.res2.bhBoostStageCoef * capv(r.maxStage, P.res2.bhBoostStageCap);
+          if (resStage3(sim, 'blackHoleCompression')) mult *= 1 + P.res2.bhBoostStageCoef * r.maxStage;
           r.bhBoostMult = mult;
           r.bhBoostUntil = sim.t + P.res2.bhBoostDur;
           r.bhCharge = 0;

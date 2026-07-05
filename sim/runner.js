@@ -29,22 +29,16 @@ function fullUnlockTime(sim) {
   return Infinity;
 }
 
-// 同一周回内の解放はまとめて1解放と見なす(1回の転生で同時に取得した解放=1つ)。
-// スキル取得と、それにより解放された研究/設備の初購入は同じ回に属するため統合される。
+// 条件⑥の「解放」(2026-07-05 ユーザー再定義): 設備・研究(段階含む)・スキルの
+// すべての新規解放を個別にカウントする。同一秒に発生した解放のみ1件に統合する。
+// (旧「同一周回内は1解放に統合」は廃止。スキルは転生時に同時取得されるため自然に1件になる)
 function mergeEventsByRun(sim) {
   const ev = sim.unlockEvents.slice().sort((a, b) => a.t - b.t);
-  const starts = sim.runs.map(r => r.startT).sort((a, b) => a - b);
-  const runIdxOf = t => {
-    let k = 0;
-    while (k + 1 < starts.length && starts[k + 1] <= t) k++;
-    return k;
-  };
   const merged = [];
   for (const e of ev) {
-    const k = runIdxOf(e.t);
     const last = merged[merged.length - 1];
-    if (last && last.runIdx === k) { last.id += ',' + e.id; continue; }
-    merged.push({ t: e.t, kind: e.kind, id: String(e.id), runIdx: k });
+    if (last && last.t === e.t) { last.id += ',' + e.id; last.kind += '+' + e.kind; continue; }
+    merged.push({ t: e.t, kind: String(e.kind), id: String(e.id) });
   }
   return merged;
 }
@@ -122,7 +116,7 @@ function printDetail(sim, maxRows) {
 
 function printPacing(sim) {
   const ev = mergeEventsByRun(sim);
-  console.log('解放イベント (同一周回内は1解放に統合 / t, 種別, 内容, 次までy, 目標Y=120+8√x, 判定)');
+  console.log('解放イベント (全解放を個別カウント・同一秒のみ統合 / t, 種別, 内容, 次までy, 目標Y=120+8√x, 判定)');
   for (let i = 0; i < ev.length; i++) {
     const next = ev[i + 1];
     const y = next ? next.t - ev[i].t : null;

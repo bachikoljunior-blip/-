@@ -86,17 +86,24 @@ function buyResearchLine(sim, id, ratio) {
   G.tryBuyResearchStage(sim, id, 3, ratio);
 }
 
-// 標準買い物: 研究(段階含む)→効率良アップグレード
+// 研究一括パス: 全研究ラインを予算比で購入試行
+function buyAllResearch(sim, ratio) {
+  for (const r of G.RESEARCH) buyResearchLine(sim, r.id, ratio);
+}
+
+// 標準買い物: 研究(段階含む)→効率良アップグレード→(設備購入で解放された研究の即時購入)
+// 最後の研究パスは「設備を買った直後に出現した研究カードをその場で買う」プレイヤー動作の再現
 function standardBuy(researchRatio, upgradeRatio) {
   return function (sim, prod) {
     // 研究: 安い順に、コストが所持のresearchRatio以下なら買う(段2/段3カードも同枠)
-    for (const r of G.RESEARCH) buyResearchLine(sim, r.id, researchRatio);
+    buyAllResearch(sim, researchRatio);
     // アップグレード: 効率最良を、コストが所持のupgradeRatio以下の間買い続ける(最大30回/秒)
     for (let i = 0; i < 30; i++) {
       const u = G.bestEfficiency(sim, prod, null);
       if (!u) break;
       if (!G.tryBuyUpgrade(sim, u, upgradeRatio)) break;
     }
+    buyAllResearch(sim, researchRatio);
   };
 }
 
@@ -142,6 +149,9 @@ const STRATEGIES = [
           if (!u || !G.tryBuyUpgrade(sim, u, 0.10)) break;
         }
       }
+      buyResearchLine(sim, 'fingerTechnique', 0.50);
+      buyResearchLine(sim, 'bankClickDividend', 0.50);
+      buyAllResearch(sim, 0.20);
     },
     pickReward: pickRewardByPriority(['monsterDamage', 'crackedFang', 'goldenAmount', 'goldenTarget', 'brandHunt', 'goldenRate', 'beastHeatFerment']),
     shouldPrestige: prestigeWhen(120, 1.0),
@@ -165,6 +175,8 @@ const STRATEGIES = [
           if (!u || !G.tryBuyUpgrade(sim, u, 0.20)) break;
         }
       }
+      buyResearchLine(sim, 'spiceBlend', 0.60);
+      buyAllResearch(sim, 0.25);
     },
     pickReward: pickRewardByPriority(['goldenRate', 'goldenPower', 'goldenAmount', 'beastScent', 'goldenChain', 'goldenTarget', 'goldenFirstHit', 'beastHeatFerment']),
     shouldPrestige: prestigeWhen(120, 1.2),
@@ -184,6 +196,7 @@ const STRATEGIES = [
         const u = G.bestEfficiency(sim, prod, null);
         if (!u || !G.tryBuyUpgrade(sim, u, budget)) break;
       }
+      buyAllResearch(sim, 0.30);
     },
     pickReward: pickRewardByPriority(['monsterRate', 'monsterDamage', 'beastHeatFerment', 'huntingCore', 'crackedFang', 'monsterStay', 'chainPrep', 'biteRecovery']),
     shouldPrestige: prestigeWhen(120, 1.2),
@@ -200,6 +213,7 @@ const STRATEGIES = [
         const u = G.bestEfficiency(sim, prod, null);
         if (!u || !G.tryBuyUpgrade(sim, u, 0.08)) break;
       }
+      buyAllResearch(sim, 0.80);
     },
     pickReward: pickRewardUpgradeFirst(['beastHeatFerment', 'goldenAmount', 'monsterDamage', 'goldenRate']),
     shouldPrestige: prestigeWhen(180, 2.0),
@@ -243,6 +257,7 @@ const STRATEGIES = [
           if (!u || !G.tryBuyUpgrade(sim, u, 0.05)) break;
         }
       }
+      buyAllResearch(sim, 0.20);
     },
     pickReward: pickRewardUpgradeFirst(['monsterDamage', 'beastHeatFerment', 'goldenAmount']),
     shouldPrestige: prestigeWhen(150, 1.5),
@@ -262,6 +277,7 @@ const STRATEGIES = [
         const u = G.bestEfficiency(sim, prod, null);
         if (!u || !G.tryBuyUpgrade(sim, u, budget)) break;
       }
+      buyAllResearch(sim, 0.30);
     },
     pickReward: pickRewardByPriority(['monsterRate', 'beastHeatFerment', 'monsterDamage', 'huntingCore', 'monsterStay', 'goldenAmount']),
     // ノルマ失敗後は目標達成し次第すぐ転生、ノルマ維持中は1.5倍まで粘る。
@@ -288,6 +304,7 @@ const STRATEGIES = [
         const u = G.bestEfficiency(sim, prod, null);
         if (!u || !G.tryBuyUpgrade(sim, u, 0.50)) break;
       }
+      buyAllResearch(sim, 0.50);
     },
     pickReward: pickRewardByPriority(['goldenAmount', 'huntingCore', 'beastHeatFerment', 'goldenRate', 'monsterDamage']),
     shouldPrestige: prestigeWhen(600, 1.2),
