@@ -1,0 +1,15 @@
+[iter 0] runs=55 band 25/54 (46%) x100 51/53 pt2 53/53 total=3.65e+173 FAIL:35->36(x38) 40->41(x72)
+[iter 1] runs=57 band 25/56 (45%) x100 52/55 pt2 55/55 total=1.14e+173 FAIL:38->39(x55) 44->45(x19) 47->48(x47)
+[iter 2] runs=57 band 26/56 (46%) x100 53/55 pt2 55/55 total=2.93e+174 FAIL:38->39(x94) 42->43(x83)
+[iter 3] runs=57 band 27/56 (48%) x100 53/55 pt2 55/55 total=2.80e+177 FAIL:28->29(x52) 32->33(x83)
+[iter 4] runs=57 band 28/56 (50%) x100 54/55 pt2 55/55 total=7.98e+179 FAIL:33->34(x36)
+[iter 5] runs=57 band 29/56 (52%) x100 55/55 pt2 55/55 total=7.22e+181 
+[iter 6] runs=57 band 29/56 (52%) x100 53/55 pt2 55/55 total=6.36e+183 FAIL:36->37(x43) 44->45(x33)
+[iter 7] runs=57 band 30/56 (54%) x100 54/55 pt2 55/55 total=8.11e+185 FAIL:41->42(x48)
+[iter 8] runs=57 band 31/56 (55%) x100 55/55 pt2 55/55 total=6.74e+187 
+[iter 9] runs=57 band 28/56 (50%) x100 53/55 pt2 55/55 total=2.09e+190 FAIL:27->28(x80) 40->41(x44)
+[iter 10] runs=57 band 28/56 (50%) x100 55/55 pt2 55/55 total=3.58e+192 
+[iter 11] runs=57 band 26/56 (46%) x100 55/55 pt2 55/55 total=4.32e+194 
+[iter 12] runs=57 band 23/56 (41%) x100 53/55 pt2 55/55 total=5.84e+196 FAIL:37->38(x51) 40->41(x63)
+[iter 13] runs=57 band 22/56 (39%) x100 54/55 pt2 55/55 total=1.06e+200 FAIL:39->40(x62)
+saved rung_costs.json (best: band=31, x100=55/55)

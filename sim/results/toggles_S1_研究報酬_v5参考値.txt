@@ -1,0 +1,37 @@
+戦略: S1 バランス効率型
+種別      ID                         各回の獲得効率比(有効/無効, 幾何平均)   必要   判定(初取得t)
+research  fingerTechnique                    1.05 (t=0h)  x1.2  NG
+research  grandmaCrowd                       2.00 (t=0h)  x1.2  OK
+research  ovenBatch                          9.38 (t=0h)  x1.2  OK
+research  factoryNetwork                     3.50 (t=11h)  x1.2  OK
+research  spiceBlend                         1.10 (t=12h)  x1.2  NG
+research  portalNetwork                      1.73 (t=12h)  x1.2  OK
+research  bankClickDividend                  1.15 (t=13h)  x1.2  NG
+research  moonGlobalYeast                    1.77 (t=13h)  x1.2  OK
+research  portalGlobalFold                   0.84 (t=14h)  x1.2  NG
+research  galaxyAssembly                     0.93 (t=13h)  x1.2  NG
+research  blackHoleCompression               1.14 (t=15h)  x1.2  NG
+research  quantumProofing                    1.08 (t=16h)  x1.2  NG
+research  antimatterRecipe                   1.07 (t=17h)  x1.2  NG
+reward    goldenRate                         1.18 (t=0h)  x1.1  OK
+reward    goldenPower                       (未使用)   x1.1  -
+reward    goldenAmount                       1.30 (t=0h)  x1.1  OK
+reward    monsterDamage                      1.03 (t=0h)  x1.1  NG
+reward    monsterRate                        1.14 (t=14h)  x1.1  OK
+reward    monsterStay                       (未使用)   x1.1  -
+reward    goldenChain                       (未使用)   x1.1  -
+reward    crackedFang                        1.00 (t=14h)  x1.1  NG
+reward    chainPrep                         (未使用)   x1.1  -
+reward    huntFocus                         (未使用)   x1.1  -
+reward    goldenTarget                      (未使用)   x1.1  -
+reward    goldenFirstHit                    (未使用)   x1.1  -
+reward    beastScent                        (未使用)   x1.1  -
+reward    beastHeatFerment                   1.95 (t=16h)  x1.1  OK
+reward    biteRecovery                      (未使用)   x1.1  -
+reward    crushedMill                       (未使用)   x1.1  -
+reward    huntingCore                        0.65 (t=17h)  x1.1  NG
+reward    brandHunt                         (未使用)   x1.1  -
+reward    deepPursuit                       (未使用)   x1.1  -
+reward    goldenBeastMutation               (未使用)   x1.1  -
+研究の有効/無効比 平均: 2.06 / 許容帯 [0.21, 20.56] / 実測 [0.84, 9.38] → 全て平均±10倍以内 OK
+報酬の有効/無効比 平均: 1.18 / 許容帯 [0.12, 11.79] / 実測 [0.65, 1.95] → 全て平均±10倍以内 OK
