@@ -65,7 +65,13 @@ module.exports = {
     w2: 2.20, w2T: 600, w2D: 240, w2P: 2.25,
     w3: 9.00, w3T: 840, w3D: 300, w3P: 2.65,
     ctrlMul: 3.0, ctrlDiv: 1.8,
-    gaugeR: 1.9,
+    // ノルマ層ゲージ(2026-07-06 ユーザー確定仕様・第9次): ゲージは「現時点のその回の総クッキーが
+    // 何秒先のノルマまで達成できるか」の先行秒数 L のみを変数として貯まる。
+    // 層kの必要ゲージ秒 = gaugeSec × gaugeGrow^(k-1)(層進行式。gaugeSec/gaugeGrow は調整項目)
+    gaugeSec: 45, gaugeGrow: 1.45,
+    // 層の上限(オーバーフロー防止・第9次): 通常の転生周回は最大でも約190層で到達しないため
+    // 遊びには一切影響しない。ツリー完成後の超長時間放置(総クッキーが浮動小数上限に近づく)でのみ作用。
+    gaugeMaxLayer: 400,
     // 追跡ノルマ(⑧): chase=runCookies×10^-m を下限に毎秒10^θ倍で追い上げ。θ=m/(c×(120+8√総経過秒))
     chase: { m: 1.0, c: 0.02, act: 0.5 } // 発動遅延型: 経過>act×(120+8√総経過)で作動、θ=m/(c×同)。維持=帯域中盤で未達→押し込み→転生(⑦⑧)
   },
@@ -75,7 +81,9 @@ module.exports = {
   //  spiceGoldOwn .010→.014(.020はS3金特化が⑤上限超えで暴走: e218/周回16に崩壊) / bankOwn .028→.040, bankSaved 8→10 / galaxyOwn .019→.032 /
   //  quantumRes .30→.38, quantumOwn .019→.032 / antimatterOwn .002→.012, antimatterSkill .032→.045
   res: {
-    fingerBase: 0.30, fingerSqrt: 0.09, fingerCritBase: 2.0, fingerCritGrow: 10.0,
+    // 会心1%開始(2026-07-06 ユーザー承認・第9次): score = 0.01 + 0.045×√強い指 + 0.002×最高到達層。
+    // 取得直後(指0個・層0)でちょうど会心率1.0%。層項は周回内で会心が育つ動的項(①対策も兼ねる)
+    fingerBase: 0.01, fingerSqrt: 0.045, fingerStage: 0.002, fingerCritBase: 2.0, fingerCritGrow: 10.0,
     grandmaSelf: 30, grandmaSup: [0.007, 0.008, 0.009],
     // 2026-07-06 第8次: ⑫(設備の文脈依存性)用に所持数指数を再配分。
     // factory一強(全方針の最効率=工場固定)を解消: oven 0.060→0.067 / spice 0.062→0.071 / factory 0.060→0.057
@@ -134,6 +142,30 @@ module.exports = {
     deepPursuitSpawn: 0.045, deepPursuitHp: 1.035, deepPursuitReward: 1.6,
     mutationBase: 0.5, mutationPerLv: 0.1,
     categoryBonusRate: 0.003, categoryHalf: 400
+  },
+
+  // ---- モンスター種類×報酬相性(2026-07-06 ユーザー承認・第9次) ----
+  // 討伐した種類が報酬Lvの増分を決める: 増分 = max(1, floor(基本量 × 相性倍率))。
+  // 出現はゲームと同じ重み(標準50/こつぶ22/鉄焼き14/はやて14)を決定的ローテーションで期待値化。
+  // 黄金獣=金ブースト中に出現枠の35%を置換 / ボス=討伐25体ごと(+選択肢+1)。数値はすべて調整対象。
+  mtype: {
+    weights: { normal: 50, swarm: 22, tank: 14, speedy: 14 },
+    hpMul: { normal: 1, swarm: 0.66, tank: 6, speedy: 0.45, goldenBeast: 2.5, boss: 12 }, // swarm=3体×0.22
+    stayMul: { normal: 1, swarm: 1, tank: 1.5, speedy: 0.55, goldenBeast: 1, boss: 3.75 },
+    rewardEvents: { normal: 1, swarm: 3, tank: 1, speedy: 1, goldenBeast: 1, boss: 1 }, // こつぶは3体分の報酬
+    rewardLvAdd: { tank: 18 },
+    goldenBeastShare: 0.35,
+    bossCycle: 25,
+    speedyGoldenCut: 0.5, // はやて撃破で次の金クッキー間隔×0.5
+    bossChoiceBonus: 1,
+    affinity: {
+      normal: { golden: 1.0, hunt: 1.0, equipment: 1.0, risk: 1.0 },
+      swarm: { golden: 0.5, hunt: 0.5, equipment: 0.5, risk: 0.5 }, // 1体あたり(3体で計1.5)
+      tank: { golden: 0.5, hunt: 2.0, equipment: 3.5, risk: 1.0 },
+      speedy: { golden: 3.0, hunt: 0.5, equipment: 0.5, risk: 1.5 },
+      goldenBeast: { golden: 3.5, hunt: 1.0, equipment: 0.5, risk: 2.0 },
+      boss: { golden: 4.0, hunt: 4.0, equipment: 4.0, risk: 4.0 }
+    }
   },
 
   // ---- アップグレードコスト式 ----  cost = coef * base^basePow * growth^(owned*ownPow)

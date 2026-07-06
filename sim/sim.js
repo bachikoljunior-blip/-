@@ -102,22 +102,22 @@ const SKILL_NODES = [
   { id: 'click_1', cost: 40, prereqs: ['core'], effects: [['click', null, 0.06]] },
   { id: 'click_2', cost: 41, prereqs: ['click_1'], effects: [['click', null, 0.10]] },
   { id: 'click_3', cost: 43, prereqs: ['click_2', 'golden_2'], effects: [['click', null, 0.14], ['goldenAmount', null, 0.06]] },
-  { id: 'click_4', cost: 58, prereqs: ['golden_3', 'research_remodel'], effects: [['click', null, 0.24], ['all', null, 0.02]] },
+  { id: 'click_4', cost: 58, prereqs: ['click_3', 'auto_4'], effects: [['click', null, 0.24], ['all', null, 0.02]] },
   { id: 'golden_1', cost: 41, prereqs: ['click_1'], effects: [['goldenRate', null, 0.04]] },
   { id: 'golden_2', cost: 43, prereqs: ['golden_1'], effects: [['goldenAmount', null, 0.15]] },
-  { id: 'golden_3', cost: 47, prereqs: ['click_3'], effects: [['goldenPower', null, 0.35]] },
+  { id: 'golden_3', cost: 47, prereqs: ['golden_2'], effects: [['goldenPower', null, 0.35]] },
   { id: 'golden_analysis', cost: 66, prereqs: ['golden_3'], effects: [['unlockSystem', 'goldenAnalysis']] },
-  { id: 'golden_4', cost: 78, prereqs: ['click_4'], effects: [['goldenRate', null, 0.08], ['goldenAmount', null, 0.25]] },
+  { id: 'golden_4', cost: 78, prereqs: ['golden_3'], effects: [['goldenRate', null, 0.08], ['goldenAmount', null, 0.25]] },
   { id: 'auto_1', cost: 40, prereqs: ['monster_1'], effects: [['cps', null, 0.06]] },
-  { id: 'auto_2', cost: 41, prereqs: ['auto_1'], effects: [['cps', null, 0.10]] },
+  { id: 'auto_2', cost: 41, prereqs: ['auto_1', 'monster_2'], effects: [['cps', null, 0.10]] },
   { id: 'auto_3', cost: 43, prereqs: ['auto_2', 'monster_2'], effects: [['cps', null, 0.14], ['monsterDamageSkill', null, 0.06]] },
-  { id: 'auto_4', cost: 58, prereqs: ['monster_3'], effects: [['cps', null, 0.24], ['all', null, 0.02]] },
-  { id: 'bake_temperature', cost: 69, prereqs: ['auto_3', 'research_remodel'], effects: [['unlockSystem', 'bakeTemperature']] },
+  { id: 'auto_4', cost: 58, prereqs: ['auto_3'], effects: [['cps', null, 0.24], ['all', null, 0.02]] },
+  { id: 'bake_temperature', cost: 69, prereqs: ['auto_3'], effects: [['unlockSystem', 'bakeTemperature']] },
   { id: 'monster_1', cost: 41, prereqs: ['golden_1'], effects: [['monsterRate', null, 0.04]] },
-  { id: 'monster_2', cost: 43, prereqs: ['monster_1'], effects: [['monsterDamageSkill', null, 0.16]] },
-  { id: 'monster_3', cost: 47, prereqs: ['auto_3'], effects: [['monsterHpDown', null, 0.07]] },
+  { id: 'monster_2', cost: 43, prereqs: ['monster_1', 'golden_2'], effects: [['monsterDamageSkill', null, 0.16]] },
+  { id: 'monster_3', cost: 47, prereqs: ['monster_2'], effects: [['monsterHpDown', null, 0.07]] },
   { id: 'hunt_analysis', cost: 69, prereqs: ['monster_3'], effects: [['unlockSystem', 'huntAnalysis']] },
-  { id: 'monster_4', cost: 83, prereqs: ['auto_4'], effects: [['monsterStay', null, 0.10]] },
+  { id: 'monster_4', cost: 83, prereqs: ['monster_3', 'click_4'], effects: [['monsterStay', null, 0.10]] },
   { id: 'economy_1', cost: 41, prereqs: ['auto_1'], effects: [['upgradeDiscount', null, 0.02], ['researchDiscount', null, 0.02]] },
   { id: 'research_1', cost: 41, prereqs: ['economy_2'], effects: [['researchDiscount', null, 0.04]] },
   { id: 'research_remodel', cost: 44, prereqs: ['research_1'], effects: [['researchDiscount', null, 0.03], ['unlockSystem', 'researchRemodel']] },
@@ -125,28 +125,28 @@ const SKILL_NODES = [
   { id: 'economy_analysis', cost: 62, prereqs: ['economy_2'], effects: [['unlockSystem', 'economyAnalysis']] },
   { id: 'order_board', cost: 86, prereqs: ['economy_analysis'], effects: [['unlockSystem', 'orderBoard']] },
   { id: 'upgrade_moon', cost: 52, prereqs: ['economy_2'], effects: [['unlockUpgrade', 'moonBakery']] },
-  { id: 'upgrade_time', cost: 62, prereqs: ['upgrade_moon'], effects: [['unlockUpgrade', 'timeOven']] },
+  { id: 'upgrade_time', cost: 62, prereqs: ['upgrade_moon', 'research_remodel'], effects: [['unlockUpgrade', 'timeOven']] },
   { id: 'upgrade_galaxy', cost: 98, prereqs: ['upgrade_time', 'auto_4'], effects: [['unlockUpgrade', 'galaxyFactory']] },
   { id: 'upgrade_blackhole', cost: 187, prereqs: ['upgrade_galaxy'], effects: [['unlockUpgrade', 'blackHoleMixer']] },
-  { id: 'research_analysis', cost: 222, prereqs: ['upgrade_time'], effects: [['unlockSystem', 'researchAnalysis']] },
+  { id: 'research_analysis', cost: 222, prereqs: ['research_remodel'], effects: [['unlockSystem', 'researchAnalysis']] },
   { id: 'reward_1', cost: 159, prereqs: ['monster_4'], effects: [['rewardChoices', null, 1]] },
   { id: 'reward_synergy', cost: 213, prereqs: ['reward_1'], effects: [['unlockSystem', 'rewardSynergy']] },
   { id: 'reward_choice_2', cost: 357, prereqs: ['reward_synergy'], effects: [['rewardChoices', null, 1]] },
-  { id: 'reward_2', cost: 238, prereqs: ['unlock_reward_beastScent', 'upgrade_singularity'], effects: [['upgradePerkPower', null, 0.15]] },
+  { id: 'reward_2', cost: 238, prereqs: ['upgrade_singularity'], effects: [['upgradePerkPower', null, 0.15]] },
   { id: 'unlock_reward_crackedFang', cost: 107, prereqs: ['monster_4'], effects: [['unlockReward', 'crackedFang']] },
   { id: 'unlock_reward_chainPrep', cost: 141, prereqs: ['unlock_reward_crackedFang'], effects: [['unlockReward', 'chainPrep']] },
   { id: 'unlock_reward_huntFocus', cost: 189, prereqs: ['unlock_reward_crackedFang'], effects: [['unlockReward', 'huntFocus']] },
-  { id: 'unlock_reward_biteRecovery', cost: 304, prereqs: ['reward_2'], effects: [['unlockReward', 'biteRecovery']] },
-  { id: 'unlock_reward_beastHeatFerment', cost: 275, prereqs: ['reward_2'], effects: [['unlockReward', 'beastHeatFerment']] },
+  { id: 'unlock_reward_biteRecovery', cost: 304, prereqs: ['unlock_reward_huntFocus'], effects: [['unlockReward', 'biteRecovery']] },
+  { id: 'unlock_reward_beastHeatFerment', cost: 275, prereqs: ['unlock_reward_biteRecovery'], effects: [['unlockReward', 'beastHeatFerment']] },
   { id: 'unlock_reward_huntingCore', cost: 412, prereqs: ['unlock_reward_beastHeatFerment'], effects: [['unlockReward', 'huntingCore']] },
   { id: 'unlock_reward_brandHunt', cost: 472, prereqs: ['unlock_reward_biteRecovery'], effects: [['unlockReward', 'brandHunt']] },
   { id: 'unlock_reward_deepPursuit', cost: 808, prereqs: ['unlock_reward_huntingCore'], effects: [['unlockReward', 'deepPursuit']] },
-  { id: 'unlock_reward_goldenChain', cost: 102, prereqs: ['monster_4', 'golden_4'], effects: [['unlockReward', 'goldenChain']] },
+  { id: 'unlock_reward_goldenChain', cost: 102, prereqs: ['golden_4'], effects: [['unlockReward', 'goldenChain']] },
   { id: 'unlock_reward_goldenTarget', cost: 122, prereqs: ['unlock_reward_goldenChain'], effects: [['unlockReward', 'goldenTarget']] },
   { id: 'unlock_reward_goldenFirstHit', cost: 165, prereqs: ['unlock_reward_goldenTarget'], effects: [['unlockReward', 'goldenFirstHit']] },
   { id: 'unlock_reward_beastScent', cost: 174, prereqs: ['unlock_reward_goldenTarget'], effects: [['unlockReward', 'beastScent']] },
   { id: 'unlock_reward_goldenBeastMutation', cost: 1096, prereqs: ['unlock_reward_deepPursuit'], effects: [['unlockReward', 'goldenBeastMutation']] },
-  { id: 'unlock_reward_crushedMill', cost: 357, prereqs: ['unlock_reward_huntingCore'], effects: [['unlockReward', 'crushedMill']] },
+  { id: 'unlock_reward_crushedMill', cost: 357, prereqs: ['reward_2', 'unlock_reward_huntingCore'], effects: [['unlockReward', 'crushedMill']] },
   { id: 'start_1', cost: 139, prereqs: ['golden_4'], effects: [['startCookies', null, 50000]] },
   { id: 'offline_1', cost: 139, prereqs: ['auto_4'], effects: [['offlineHours', null, 4]] },
   { id: 'start_2', cost: 359, prereqs: ['start_1', 'offline_1'], effects: [['startCookies', null, 950000], ['offlineHours', null, 4]] },
@@ -175,7 +175,7 @@ const SKILL_HAND_ORDER = [
   'click_2', 'golden_2', 'monster_2', 'auto_2', 'economy_2',
   'click_3', 'upgrade_moon', 'auto_3', 'research_1', 'research_remodel', 'economy_analysis', 'order_board',
   'golden_3', 'golden_analysis', 'upgrade_time', 'research_analysis', 'monster_3', 'hunt_analysis', 'bake_temperature',
-  'click_4', 'auto_4', 'offline_1',
+  'auto_4', 'click_4', 'offline_1',
   'upgrade_galaxy', 'golden_4', 'start_1', 'monster_4', 'reward_1', 'reward_synergy', 'reward_choice_2', 'start_2',
   'upgrade_blackhole', 'unlock_reward_crackedFang', 'unlock_reward_goldenChain',
   'upgrade_universe', 'unlock_reward_chainPrep', 'unlock_reward_huntFocus',
@@ -226,7 +226,6 @@ function buildSkillCosts() {
   if (SKILL_HAND_ORDER.length !== SKILL_NODES.length) throw new Error('order length mismatch');
   let rank = 0, rung = 0;
   let lastRungCost = P.skillCost.C0;
-  const edgeCap = P.skillCost.edgeCap || 100;
   for (const id of SKILL_HAND_ORDER) {
     const n = SKILL_BY_ID[id];
     if (!n) throw new Error('unknown node ' + id);
@@ -245,14 +244,12 @@ function buildSkillCosts() {
       } else {
         tentative = lastRungCost * (P.skillCost.rho || 4);
       }
-      const capByEdges = n.prereqs.length
-        ? Math.min(...n.prereqs.map(q => SKILL_COST_MAP[q])) * edgeCap
-        : Infinity;
-      const val = Math.min(tentative, capByEdges);
-      if (val < tentative * 0.99) SKILL_RIDERS.add(id);
-      lastRungCost = tentative; // はしごはクランプに関係なく進む
+      // ⑲改(2026-07-06 ユーザー承認・第9次): 「各ノードは少なくとも1本、コスト比10倍以内の辺で
+      // 結ばれていればよい」へ変更。辺ごとのクランプは廃止(はしごコストがそのまま立つ・ライダーなし)。
+      // 検証は runner.js の check19(⑲改判定)。関連効果どうしを結ぶ遠距離辺は距離自由。
+      lastRungCost = tentative;
       rung++;
-      SKILL_COST_MAP[id] = q5cost(val); // 丸め規則(有効数字3桁=5の倍数)を内部値にも適用
+      SKILL_COST_MAP[id] = q5cost(tentative); // 丸め規則(有効数字3桁=5の倍数)を内部値にも適用
     }
     have[id] = true;
   }
@@ -328,7 +325,7 @@ function satLv(lv, half) { lv = Math.max(0, lv); return lv / (1 + lv / Math.max(
 function newSim(strategy, opts) {
   return {
     strat: strategy,
-    opt: Object.assign({ disableResearch: null, disableReward: null, disableStage: null, disableUpgrade: null, idleTiming: null, trackGain: false, hours: 100 }, opts || {}),
+    opt: Object.assign({ disableResearch: null, disableReward: null, disableStage: null, disableUpgrade: null, disableAffinity: false, idleTiming: null, trackGain: false, hours: 100 }, opts || {}),
     t: 0,                       // 総経過秒
     // 永続
     prestige: 0, prestigeTotal: 0, prestigeRuns: 0, totalCookies: 0,
@@ -373,10 +370,45 @@ function newRun(sim) {
     nextMonsterSpawnMultiplier: 1, nextMonsterHpMultiplier: 1, nextGoldenSpawnMultiplier: 1,
     nextRewardCountBonus: 0, huntFocusLv: 0, huntFocusRewardPenalty: 0,
     nextMonsterStayMultiplier: 1,
-    monster: null,             // {level,hp,maxHp,stayLeft,goldenChainMultiplier,firstHit}
+    monster: null,             // {typeId,level,hp,maxHp,stayLeft,goldenChainMultiplier,firstHit}
     policy: 'balanced',
-    kills: 0, goldenTaken: 0
+    kills: 0, goldenTaken: 0,
+    // モンスター種類(第9次): 決定的ローテーションの蓄積器と種類別集計
+    mtAcc: {}, gbAcc: 0, killsSinceBoss: 0,
+    killsByType: {}, rewardByType: {},
+    critAtBuy: undefined, critNow: 0, critMax: 0
   };
+}
+
+// ==== モンスター種類の決定的抽選(期待値化・第9次) ====
+// 重み比例の決定的ローテーション: 各種類の蓄積器に weight/総weight を足し、最大の種類を出す。
+// 黄金獣: 金ブースト中は出現枠の goldenBeastShare 分を置換(確率を蓄積し1超えで発生)。
+// ボス: 討伐 bossCycle 体ごとに次の出現がボス化(ゲームと同じ周期規則の期待値版)。
+function pickMonsterType(sim) {
+  const r = sim.run;
+  const M = P.mtype;
+  if (!M) return 'normal';
+  if (r.killsSinceBoss >= M.bossCycle) return 'boss';
+  if (goldenBoostActive(sim)) {
+    r.gbAcc += M.goldenBeastShare;
+    if (r.gbAcc >= 1) { r.gbAcc -= 1; return 'goldenBeast'; }
+  }
+  const ids = Object.keys(M.weights);
+  let totalW = 0; for (const id of ids) totalW += M.weights[id];
+  let best = ids[0], bestV = -Infinity;
+  for (const id of ids) {
+    r.mtAcc[id] = (r.mtAcc[id] || 0) + M.weights[id] / totalW;
+    if (r.mtAcc[id] > bestV) { bestV = r.mtAcc[id]; best = id; }
+  }
+  r.mtAcc[best] -= 1;
+  return best;
+}
+// 種類×報酬カテゴリの相性倍率(条件㉔の「その回だけ無効」= すべて×1.0)
+function affinityOf(sim, typeId, category) {
+  if (sim.opt.disableAffinity) return 1;
+  const M = P.mtype;
+  const row = M && M.affinity && M.affinity[typeId];
+  return (row && row[category] != null) ? row[category] : 1;
 }
 
 // ================= 効果計算(ゲーム式の移植) =================
@@ -470,16 +502,45 @@ function monsterQuotaRequired(sim) {
   }
   return Math.max(1, Math.floor(baseQuota * (r.blackHoleQuotaMultiplier || 1)));
 }
-function quotaGaugeProgressRatio(run, quota) {
-  const base = Math.max(1, quota || 1);
-  const r = P.quota.gaugeR;
-  const total = Math.max(0, run);
-  if (total <= 0) return 0;
-  const fullStages = Math.max(0, Math.floor(Math.log(total * (r - 1) / base + 1) / Math.log(r)));
-  const used = base * (Math.pow(r, fullStages) - 1) / (r - 1);
-  const remaining = Math.max(0, total - used);
-  const nextNeed = base * Math.pow(r, fullStages);
-  return fullStages + remaining / nextNeed;
+// ==== ノルマ層ゲージ(2026-07-06 ユーザー確定仕様・第9次) ====
+// ゲージは「現時点のその回の総クッキー数が、何秒先のノルマまで達成できるか」の先行秒数 L で貯まる。
+// L = (ノルマ曲線が今の総クッキーに達する将来時刻 s*) − 現在の経過秒。
+// 層進行の式は秒数のみを変数とする: 層kの必要ゲージ秒 = gaugeSec × gaugeGrow^(k-1)(調整項目)。
+function quotaLeadSeconds(sim) {
+  const r = sim.run;
+  const el = elapsed(sim);
+  const total = r.runCookies;
+  if (!(total > 0)) return 0;
+  // s* をギャロップ+二分探索(quotaAtElapsed は s について単調非減少、runCookies も単調増加なので
+  // 前回の s* から前進のみで探索できる。研究購入等でノルマ係数が下がった場合も s* は増える方向)
+  let lo = Math.max(el, r._leadS || 0);
+  if (quotaAtElapsed(sim, lo) > total) lo = el;
+  if (quotaAtElapsed(sim, lo) > total) return 0;
+  let hi = Math.max(lo * 2, lo + 64), guard = 0;
+  while (hi < 1e62 && quotaAtElapsed(sim, hi) <= total && guard++ < 250) { lo = hi; hi *= 2; }
+  while (hi - lo > Math.max(1, lo * 1e-6)) {
+    const mid = lo + (hi - lo) / 2;
+    if (quotaAtElapsed(sim, mid) <= total) lo = mid; else hi = mid;
+  }
+  r._leadS = lo;
+  return Math.max(0, lo - el);
+}
+// 先行秒数 L → 層進行(小数)。満たした層数+現在層の端数。
+// 層は「秒数のみの関数」。ただし総クッキーが浮動小数上限(~1e308)に近づく放置周回では
+// 先行秒数が天文学的(~1e300)になり層が青天井に伸びるため、層の上限 gaugeMaxLayer で頭打ちにする
+// (=先行秒数の実効上限。通常の転生周回は最大でも約190層で、上限には決して届かない=遊びに影響なし)。
+function quotaLayerProgress(leadSec) {
+  const g = Math.max(1, P.quota.gaugeSec), r = P.quota.gaugeGrow;
+  const cap = P.quota.gaugeMaxLayer || Infinity;
+  if (!(leadSec > 0)) return 0;
+  let pr;
+  if (r <= 1.0001) pr = leadSec / g;
+  else {
+    const k = Math.max(0, Math.floor(Math.log(leadSec * (r - 1) / g + 1) / Math.log(r)));
+    const used = g * (Math.pow(r, k) - 1) / (r - 1);
+    pr = k + Math.max(0, leadSec - used) / (g * Math.pow(r, k));
+  }
+  return Math.min(cap, pr);
 }
 function currentStage(sim) {
   if (sim._stT === sim.t) return sim._stV;
@@ -489,12 +550,14 @@ function currentStage(sim) {
 }
 function currentStageRaw(sim) {
   const quota = monsterQuotaRequired(sim);
-  if (!quota || quota <= 0) return 1;
-  const pr = quotaGaugeProgressRatio(sim.run.runCookies, quota);
+  if (quota === null || quota <= 0) return Math.max(1, sim.run._stFrozen || 1);
+  const pr = quotaLayerProgress(quotaLeadSeconds(sim));
   if (pr <= 0) return 1;
   const whole = Math.floor(pr);
   const frac = pr - whole;
-  return (frac <= 0.0001 && whole > 0) ? whole : whole + 1;
+  const v = (frac <= 0.0001 && whole > 0) ? whole : whole + 1;
+  sim.run._stFrozen = v; // 未達後(quota=null)は最後の層で凍結(層1へ落とさない)
+  return v;
 }
 
 function runTempoRamp(sim) {
@@ -724,7 +787,8 @@ function computeProd(sim) {
   if (resActive(sim, 'fingerTechnique')) {
     const f = r.upgrades.finger || 0;
     const policyC = policyIs(sim, 'click') ? 0.010 : 0;
-    const score = R.fingerBase + Math.sqrt(f) * R.fingerSqrt + policyC;
+    // 会心1%開始(第9次): 開始値0.01(=会心率1.0%)+設備√+最高到達層(周回内で育つ動的項)
+    const score = R.fingerBase + Math.sqrt(f) * R.fingerSqrt + (R.fingerStage || 0) * r.maxStage + policyC;
     const chance = 1 - Math.exp(-score);
     critChanceOut = chance;
     let critMul = R.fingerCritBase + score * R.fingerCritGrow;
@@ -896,6 +960,9 @@ function visibleUpgrades(sim) {
 }
 
 // ================= イベント処理 =================
+// クッキー数の上限: 2026-07-06 ユーザー許可「上限は超えてもよい」。クランプはしない。
+// ツリー完成後の超長時間放置では浮動小数の上限(~1.8e308)を超えて Infinity 表示になり得るが許容。
+// 有限性の判定は「転生する周回」のみを対象とする(転生周回の最大は ~e155 で十分収まる)。
 function earn(sim, amount) {
   if (!(amount > 0)) return 0;
   sim.run.cookies += amount;
@@ -942,16 +1009,20 @@ function collectGolden(sim, prod) {
   }
 }
 
-function buildRewardOffer(sim, level) {
+function buildRewardOffer(sim, level, typeId) {
   const r = sim.run;
-  const baseCount = 1 + Math.floor(level / P.reward.lvPerCount);
+  // 鉄焼きガード等: 種類による報酬レベル加算(ゲームの rewardLvAdd と同じ)
+  const lvAdd = (P.mtype && P.mtype.rewardLvAdd && P.mtype.rewardLvAdd[typeId]) || 0;
+  const baseCount = 1 + Math.floor((level + lvAdd) / P.reward.lvPerCount);
   const deepBonus = Math.pow(P.rw.deepPursuitReward, sim.opt.disableReward === 'deepPursuit' ? 0 : (r.perks.deepPursuit || 0));
   const penalty = Math.max(0, r.huntFocusRewardPenalty || 0);
   const count = Math.max(1,
     Math.floor(baseCount * (1 + skillEffect(sim, 'rewardBonus')) * deepBonus)
     + Math.max(0, Math.floor(r.nextRewardCountBonus || 0)) - penalty);
   r.huntFocusRewardPenalty = 0;
-  const choiceLimit = P.reward.choiceBase + Math.max(0, Math.floor(skillEffect(sim, 'rewardChoices')));
+  // ステージボス: 選択肢+1(種類仕様・第9次)
+  const bossBonus = typeId === 'boss' ? ((P.mtype && P.mtype.bossChoiceBonus) || 0) : 0;
+  const choiceLimit = P.reward.choiceBase + bossBonus + Math.max(0, Math.floor(skillEffect(sim, 'rewardChoices')));
 
   const unlockedPerks = REWARD_POOL.filter(x => rewardUnlockedFn(sim, x));
   const ownedUps = UPGRADES.filter(u => r.upgrades[u.id] > 0 && upgradeUnlocked(sim, u));
@@ -970,30 +1041,42 @@ function buildRewardOffer(sim, level) {
   return offer;
 }
 
-function applyReward(sim, choice) {
+function applyReward(sim, choice, typeId) {
   const r = sim.run;
   const cat = choice.kind === 'perk'
     ? (REWARD_POOL.find(x => x.id === choice.id) || {}).category || 'equipment'
     : 'equipment';
+  // モンスター種類×報酬相性(第9次): 増分 = max(1, floor(基本量 × 相性倍率))
+  const aff = affinityOf(sim, typeId || 'normal', cat);
+  const count = Math.max(1, Math.floor(choice.count * aff));
   if (choice.kind === 'perk') {
     if (sim.firstPerk[choice.id] === undefined) sim.firstPerk[choice.id] = sim.t;
-    r.perks[choice.id] += choice.count;
-    if (choice.id === 'huntFocus') r.huntFocusLv = (r.huntFocusLv || 0) + choice.count;
+    r.perks[choice.id] += count;
+    if (choice.id === 'huntFocus') r.huntFocusLv = (r.huntFocusLv || 0) + count;
   } else {
-    r.upgradePerks[choice.id] += choice.count;
+    r.upgradePerks[choice.id] += count;
   }
-  r.rewardCategoryCounts[cat] = (r.rewardCategoryCounts[cat] || 0) + choice.count;
+  r.rewardCategoryCounts[cat] = (r.rewardCategoryCounts[cat] || 0) + count;
+  r.rewardByType[typeId || 'normal'] = (r.rewardByType[typeId || 'normal'] || 0) + count;
 }
 
 function defeatMonster(sim, mon) {
   const r = sim.run;
-  r.kills++;
+  const typeId = mon.typeId || 'normal';
+  const M = P.mtype;
+  // こつぶ群れ=3体分(討伐数・報酬イベントとも)。ボスは討伐周期をリセット
+  const units = (M && M.rewardEvents && M.rewardEvents[typeId]) || 1;
+  r.kills += units;
+  r.killsByType[typeId] = (r.killsByType[typeId] || 0) + units;
+  if (typeId === 'boss') r.killsSinceBoss = 0; else r.killsSinceBoss += units;
+  // はやての運び屋: 撃破すると次の金クッキーが早く来る
+  if (typeId === 'speedy' && M) r.nextGoldenSpawnMultiplier *= M.speedyGoldenCut;
   // 異世界接続網 段階2: 狩り窓中の討伐で窓を延長(完全放置は窓中に討伐を寄せられず延長なし: 条件⑬)
   if (resActive(sim, 'portalNetwork') && resStage2(sim, 'portalNetwork') && sim.t < r.portalHuntUntil
     && sim.opt.idleTiming !== 'huntExtend') {
     r.portalHuntUntil += P.res2.huntExtendSec;
   }
-  if (!r.quotaFailed) r.quotaMonsterKills++;
+  if (!r.quotaFailed) r.quotaMonsterKills += units;
   const chainPrepLv = sim.opt.disableReward === 'chainPrep' ? 0 : (r.perks.chainPrep || 0);
   if (chainPrepLv > 0) {
     r.nextMonsterSpawnMultiplier *= Math.exp(-chainPrepLv * P.rw.chainPrepSpawn);
@@ -1013,10 +1096,14 @@ function defeatMonster(sim, mon) {
   }
   r.nextRewardCountBonus += bonus;
 
-  const offer = buildRewardOffer(sim, mon.level);
-  r.nextRewardCountBonus = 0;
-  const pick = sim.strat.pickReward(sim, offer);
-  if (pick) applyReward(sim, pick);
+  // 種類ごとの報酬イベント(こつぶ群れは1体ずつ×3回。相性は1体あたりで適用)
+  r.lastKillType = typeId; // 報酬選択画面に「種類と相性倍率」が表示される(方針はこれを見て選べる)
+  for (let ev = 0; ev < units; ev++) {
+    const offer = buildRewardOffer(sim, mon.level, typeId);
+    if (ev === 0) r.nextRewardCountBonus = 0;
+    const pick = sim.strat.pickReward(sim, offer);
+    if (pick) applyReward(sim, pick, typeId);
+  }
 }
 
 // ================= 転生処理 =================
@@ -1064,7 +1151,9 @@ function doPrestige(sim) {
     perks: Object.assign({}, r.perks),
     upgradePerkTotal: Object.values(r.upgradePerks).reduce((a, b) => a + b, 0),
     upCounts: Object.assign({}, r.upgrades),
-    nextSkillCost: nextCostAt, gainToNext: nextCostAt ? gain / nextCostAt : null
+    nextSkillCost: nextCostAt, gainToNext: nextCostAt ? gain / nextCostAt : null,
+    critAtBuy: r.critAtBuy, critEnd: r.critNow, critMax: r.critMax,
+    killsByType: Object.assign({}, r.killsByType), rewardByType: Object.assign({}, r.rewardByType)
   });
 
   // スキル購入(戦略の優先順で、買えるだけ)
@@ -1136,6 +1225,12 @@ function advanceTick(sim, strategy) {
     r.afterheats = r.afterheats.filter(a => a.until > sim.t);
     const prod = computeProd(sim);
     sim._lastProd = prod; // ㉑判定用: 直近の生産値
+    // ㉓(会心1%開始)用: 研究取得直後/転生時点/周回最大の会心率を記録
+    if (prod.critChance > 0) {
+      if (r.critAtBuy === undefined) r.critAtBuy = prod.critChance;
+      r.critNow = prod.critChance;
+      if (prod.critChance > r.critMax) r.critMax = prod.critChance;
+    }
     let ahM = 1;
     for (const a of r.afterheats) if (sim.t >= a.from) ahM *= a.mult;
 
@@ -1239,11 +1334,14 @@ function advanceTick(sim, strategy) {
         const met = quota !== null && r.runCookies >= quota;
         if (met && !r.quotaFailed) {
           const level = monsterLevel(sim);
-          const maxHp = Math.max(40, Math.floor(monsterHpValue(sim, level) * (r.nextMonsterHpMultiplier || 1)));
+          const typeId = pickMonsterType(sim);
+          const tHp = (P.mtype && P.mtype.hpMul && P.mtype.hpMul[typeId]) || 1;
+          const tStay = (P.mtype && P.mtype.stayMul && P.mtype.stayMul[typeId]) || 1;
+          const maxHp = Math.max(40, Math.floor(monsterHpValue(sim, level) * tHp * (r.nextMonsterHpMultiplier || 1)));
           r.nextMonsterHpMultiplier = 1;
           r.monster = {
-            level, hp: maxHp, maxHp,
-            stayLeft: monsterStayMs(sim) / 1000,
+            typeId, level, hp: maxHp, maxHp,
+            stayLeft: monsterStayMs(sim) * tStay / 1000,
             goldenChainMultiplier: r.goldenChainReady ? 1 + (r.perks.goldenChain || 0) * effRw(sim, 'goldenChain') : 1,
             goldenFirstHitReady: r.goldenFirstHitReady,
             firstHitUsed: !r.goldenFirstHitReady
@@ -1368,6 +1466,8 @@ function simulate(strategy, opts) {
     gainSeries: (sim.opt.trackGain && r.quotaFailAt != null) ? r.gainSeries : undefined,
     perks: Object.assign({}, r.perks),
     upgradePerkTotal: Object.values(r.upgradePerks).reduce((a, b) => a + b, 0),
+    critAtBuy: r.critAtBuy, critEnd: r.critNow, critMax: r.critMax,
+    killsByType: Object.assign({}, r.killsByType), rewardByType: Object.assign({}, r.rewardByType),
     skillsBought: 0, skillIds: []
   });
   return sim;

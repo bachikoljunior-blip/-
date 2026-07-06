@@ -191,14 +191,16 @@ function activeRunsOf(base, kind, id) {
   return out;
 }
 function toggleRow(strategy, base, kind, id, need) {
-  const optKey = { research: 'disableResearch', reward: 'disableReward', stage: 'disableStage', upgrade: 'disableUpgrade' }[kind];
+  const optKey = { research: 'disableResearch', reward: 'disableReward', stage: 'disableStage', upgrade: 'disableUpgrade', affinity: 'disableAffinity' }[kind];
   const hours = base.opt.hours;
-  const runIdxs = activeRunsOf(base, kind, id);
+  const runIdxs = kind === 'affinity'
+    ? base.runs.filter(r => !r.partial && r.kills > 0).map(r => r.idx)
+    : activeRunsOf(base, kind, id);
   if (!runIdxs.length) return { kind, id, need, used: false, ratio: 1 };
   const logs = [];
   const usedIdxs = [];
   for (const k of runIdxs) {
-    const lg = replayRatio(strategy, base, k, { hours, [optKey]: id });
+    const lg = replayRatio(strategy, base, k, { hours, [optKey]: kind === 'affinity' ? true : id });
     if (lg !== null) { logs.push(lg); usedIdxs.push(k); }
   }
   if (!logs.length) return { kind, id, need, used: false, ratio: 1 };
@@ -495,18 +497,139 @@ if (mode === 'baseline') {
   console.log('');
   console.log('①②③⑨⑩は toggles で: node runner.js toggles S1 30 all');
 } else if (mode === 'check19') {
-  // ⑲(2026-07-06 確定): ツリー全辺のコスト比≤10倍 + 丸め規則(有効数字3桁=5の倍数)検証
+  // ⑲改(2026-07-06 ユーザー承認・第9次): どのスキルも、辺のうち少なくとも1本は
+  // 「コスト比10倍以内の相手」と結ばれていること(関連効果を結ぶ遠距離辺は距離自由)。
+  // +丸め規則(有効数字3桁=5の倍数)の検証。
   const cap = G.P.skillCost.edgeCap || 10;
+  const cost = id => G.skillCostOf(G.SKILL_BY_ID[id]);
+  const adj = {};
+  for (const n of G.SKILL_NODES) { adj[n.id] = adj[n.id] || []; for (const q of n.prereqs) { adj[n.id].push(q); (adj[q] = adj[q] || []).push(n.id); } }
   let bad = 0;
   for (const n of G.SKILL_NODES) {
-    for (const q of n.prereqs) {
-      const r = G.skillCostOf(n) / G.skillCostOf(G.SKILL_BY_ID[q]);
-      if (r > cap * 1.0001) { bad++; console.log(`NG ${q}(${fmtN(G.skillCostOf(G.SKILL_BY_ID[q]))}) -> ${n.id}(${fmtN(G.skillCostOf(n))}) x${r.toExponential(1)}`); }
+    if (n.id !== 'core' || adj[n.id].length) {
+      const near = adj[n.id].filter(o => { const r = cost(n.id) / cost(o); return r <= cap * 1.0001 && r >= 1 / (cap * 1.0001); });
+      if (!near.length) { bad++; console.log(`NG ⑲改 ${n.id}(${fmtN(cost(n.id))}): 10倍以内の辺なし。隣接=${adj[n.id].map(o => o + '(' + fmtN(cost(o)) + ')').join(',')}`); }
     }
     const c = G.skillCostOf(n);
     if (c !== G.q5cost(c)) { bad++; console.log(`NG 丸め違反 ${n.id}=${c}`); }
   }
-  console.log(`⑲: 辺コスト比≤${cap}倍+丸め規則 → ${bad === 0 ? '全edge OK' : bad + '件NG'} (ライダー: ${[...G.skillRiders()].join(',') || 'なし'})`);
+  console.log(`⑲改: 各ノード最低1本は比≤${cap}倍の辺+丸め規則 → ${bad === 0 ? '全ノード OK' : bad + '件NG'} (ライダー: ${[...G.skillRiders()].join(',') || 'なし'})`);
+} else if (mode === 'check27') {
+  // ㉗(第9次【仮】): 関連接続率 — 全ツリー辺のうち「同系統 / 相乗り橋 / 解放対象カテゴリ一致 /
+  // 入口の鎖 / 便利系の葉 / 設備解放の鎖 / 終端集約」で説明できる辺が95%以上。辺ごとに分類を出力。
+  const CAT = {}; G.REWARD_POOL.forEach(r => CAT[r.id] = r.category);
+  const laneOf = id => {
+    if (id === 'core') return 'core';
+    if (id.startsWith('click_')) return 'click';
+    if (id.startsWith('golden_')) return 'golden';
+    if (id.startsWith('monster_') || id === 'hunt_analysis') return 'monster';
+    if (id.startsWith('auto_') || id === 'bake_temperature') return 'auto';
+    if (id.startsWith('economy_') || id === 'order_board' || id.startsWith('research_')) return 'economy';
+    if (id.startsWith('upgrade_')) return 'unlock';
+    if (id.startsWith('unlock_reward_')) { const c = CAT[id.slice(14)]; return c === 'golden' ? 'golden' : c === 'equipment' ? 'reward' : 'monster'; } // hunt/risk=狩り系
+    if (id.startsWith('reward_')) return 'reward';
+    if (id.startsWith('start_') || id === 'offline_1') return 'util';
+    return 'master';
+  };
+  const ENTRANCE = new Set(['core>click_1', 'click_1>golden_1', 'golden_1>monster_1', 'monster_1>auto_1', 'auto_1>economy_1',
+    // 第2輪も同じ物語順の鎖(タップ→金→狩り→自動→経済)
+    'golden_2>monster_2', 'monster_2>auto_2']);
+  const BRIDGES = { // 相乗り橋(両系統の効果や仕組み上の依存を持つ辺)
+    'golden_2>click_3': 'click_3は金獲得効果を併せ持つ',
+    'monster_2>auto_3': 'auto_3は討伐ダメージ効果を併せ持つ',
+    'click_4>monster_4': '討伐ダメージはタップ力から計算される',
+    'auto_4>click_4': 'クリック力は毎秒生産から計算される(指先連動)',
+    'auto_4>upgrade_galaxy': '銀河工場=自動化の合流',
+    'research_remodel>upgrade_time': '設備解放は経済・研究系の鎖(R4)',
+    'unlock_reward_huntingCore>unlock_reward_crushedMill': '素材加工×狩りの合流'
+  };
+  let total = 0, okE = 0;
+  for (const n of G.SKILL_NODES) {
+    for (const q of n.prereqs) {
+      total++;
+      const key = q + '>' + n.id;
+      const lp = laneOf(q), lc = laneOf(n.id);
+      let label = null;
+      if (ENTRANCE.has(key)) label = '入口の鎖';
+      else if (G.isUtilitySkill(n.id)) label = '便利系の葉(R5)';
+      else if (BRIDGES[key]) label = '相乗り橋: ' + BRIDGES[key];
+      else if (lp === lc) label = '同系統(' + lc + ')';
+      else if (lc === 'unlock' && (lp === 'economy' || lp === 'unlock')) label = '設備解放の鎖(経済系)';
+      else if (lc === 'golden' && lp === 'golden') label = '同系統(金)';
+      else if (lc === 'monster' && lp === 'monster') label = '同系統(狩り)';
+      else if (lc === 'reward' && lp === 'unlock') label = 'カテゴリ一致(設備強化←設備解放枝)';
+      else if (lc === 'monster' && lp === 'reward') label = 'カテゴリ一致(狩り報酬←強化系)';
+      else if ((lc === 'golden' || lc === 'monster' || lc === 'reward') && lp === lc) label = 'カテゴリ一致';
+      else if (lc === 'master') label = '終端(全系統の集約)';
+      if (label) okE++;
+      console.log(`${label ? 'OK' : 'NG'}  ${key.padEnd(52)} ${label || '未分類(' + lp + '→' + lc + ')'}`);
+    }
+  }
+  console.log(`㉗: 関連で説明できる辺 ${okE}/${total} = ${(okE / total * 100).toFixed(1)}% (必要95%)`);
+} else if (mode === 'crit23') {
+  // ㉓(第9次【仮】): 会心1%開始。㉓-1 式の開始値=1%(内部値) / ㉓-2 転生時点で5%以上の周回が80%以上 /
+  // ㉓-3 100時間中に50%超の局面が少なくとも1方針にあり、100%には到達しない
+  console.log(`㉓-1 式の開始値: score開始 ${G.P.res.fingerBase} → 会心率 ${((1 - Math.exp(-G.P.res.fingerBase)) * 100).toFixed(3)}% ${Math.abs(1 - Math.exp(-G.P.res.fingerBase) - 0.01) < 0.0005 ? 'OK(=1.0%)' : 'NG'}`);
+  let over50 = 0, reach100 = 0;
+  for (const s of STRATEGIES) {
+    if (arg && s.id !== arg) continue;
+    const sim = G.simulate(s, { hours });
+    const runs = sim.runs.filter(r => !r.partial && r.critAtBuy != null);
+    const ge5 = runs.filter(r => (r.critEnd || 0) >= 0.05).length;
+    const mx = Math.max(0, ...sim.runs.map(r => r.critMax || 0));
+    if (mx >= 0.5) over50++;
+    if (mx >= 0.9999) reach100++;
+    const buyMin = runs.length ? Math.min(...runs.map(r => r.critAtBuy)) : null;
+    const buyMax = runs.length ? Math.max(...runs.map(r => r.critAtBuy)) : null;
+    console.log(`${s.id}: 研究取得周回=${runs.length} 取得直後率=[${buyMin === null ? '-' : (buyMin * 100).toFixed(1)}%..${buyMax === null ? '-' : (buyMax * 100).toFixed(1)}%] ㉓-2 転生時5%以上=${ge5}/${runs.length}(${runs.length ? Math.round(ge5 / runs.length * 100) : 0}%) 周回内最大=${(mx * 100).toFixed(1)}%`);
+  }
+  console.log(`㉓-3: 50%超の方針=${over50}(≥1で OK) / 100%到達=${reach100}(0で OK)`);
+} else if (mode === 'affinity') {
+  // ㉔㉕㉖(第9次【仮】): モンスター種類×報酬相性
+  // ㉔ 有効性: 「その回だけ相性を全部×1.0」との獲得効率比(幾何平均≥1.1)+各回minも表示
+  // ㉕ 文脈依存性: カテゴリ別の最効率種類が2種以上 / 方針の討伐配分(報酬寄与の1位種類)が2種以上
+  // ㉖ 一強禁止: 各周回で種類ごとの「討伐1体あたり報酬量」が平均±3倍以内(ボスは周期出現のため対象外)
+  const aff = G.P.mtype.affinity;
+  const cats = ['golden', 'hunt', 'equipment', 'risk'];
+  const bestByCat = {};
+  for (const c of cats) {
+    let best = null, bv = -1;
+    for (const t of Object.keys(aff)) { if (t === 'boss') continue; if (aff[t][c] > bv) { bv = aff[t][c]; best = t; } }
+    bestByCat[c] = best;
+  }
+  console.log('㉕(機械判定) カテゴリ別最効率種類: ' + cats.map(c => c + '=' + bestByCat[c]).join(' ') + ` → ${new Set(Object.values(bestByCat)).size}種 (≥2で OK)`);
+  const domByStrat = {};
+  let ok26 = 0, all26 = 0;
+  for (const s of STRATEGIES) {
+    if (arg && s.id !== arg) continue;
+    const sim = G.simulate(s, { hours, snapshots: true });
+    // ㉖
+    for (const r of sim.runs.filter(x => !x.partial)) {
+      const vals = [];
+      for (const t of Object.keys(r.killsByType || {})) {
+        if (t === 'boss') continue;
+        if ((r.killsByType[t] || 0) > 0) vals.push((r.rewardByType[t] || 0) / r.killsByType[t]);
+      }
+      if (vals.length < 2) continue;
+      all26++;
+      const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+      if (vals.every(v => v >= mean / 3 && v <= mean * 3)) ok26++;
+    }
+    // ㉕ 実測: 報酬寄与の1位種類(標準以外)
+    const agg = {};
+    for (const r of sim.runs) for (const [t, v] of Object.entries(r.rewardByType || {})) { if (t !== 'normal') agg[t] = (agg[t] || 0) + v; }
+    domByStrat[s.id] = Object.entries(agg).sort((a, b) => b[1] - a[1]).map(x => x[0])[0] || '-';
+    // ㉔
+    const row = toggleRow(s, sim, 'affinity', 'affinity', 1.1);
+    if (row.used) {
+      const ratios = row.logs.map(v => Math.exp(v));
+      console.log(`${s.id}: ㉔ 相性有効/無効比 幾何平均=${row.ratio.toFixed(3)} [min ${Math.min(...ratios).toFixed(2)} .. max ${Math.max(...ratios).toFixed(2)}] x${row.runs}周回 ${row.ratio >= 1.1 ? 'OK' : 'NG(<1.1)'} / 報酬寄与1位(標準以外)=${domByStrat[s.id]}`);
+    } else {
+      console.log(`${s.id}: ㉔ 未使用(討伐なし) NG`);
+    }
+  }
+  console.log(`㉕(実測) 方針の報酬寄与1位種類: ${Object.entries(domByStrat).map(([k, v]) => k + '=' + v).join(' ')} → ${new Set(Object.values(domByStrat)).size}種 (≥2で OK)`);
+  console.log(`㉖: 種類別の1体あたり報酬量 ±3倍以内 ${ok26}/${all26}周回`);
 } else if (mode === 'skillsum') {
   let sum = 0;
   for (const n of G.SKILL_NODES) sum += G.skillCostOf(n);

@@ -67,6 +67,31 @@ function pickRewardByPriority(priority) {
     return offer[0] || null;
   };
 }
+// 相性優先(2026-07-06 第9次): 報酬選択画面には「倒した種類と相性倍率」が表示される。
+// 直前に倒した種類の相性が2倍以上のカテゴリに「自分が欲しい札」があれば、それを先に拾う。
+// 「同じ1枠でも実入りが2倍以上になる瞬間はそれを拾うのが得。ただし欲しくない札(反動つきの
+// リスク札など)は相性が良くても取らない」というプレイヤー判断。
+function pickRewardAffinityAware(priority) {
+  const base = pickRewardByPriority(priority);
+  const catOf = {}; G.REWARD_POOL.forEach(r => catOf[r.id] = r.category);
+  return function (sim, offer) {
+    const t = sim.run.lastKillType;
+    const aff = (G.P.mtype && G.P.mtype.affinity && G.P.mtype.affinity[t]) || null;
+    if (aff) {
+      // 自分の優先リストの中で、相性2倍以上のカテゴリに入っている札を優先
+      for (const want of priority) {
+        const c = offer.find(o => o.kind === 'perk' && o.id === want && (aff[catOf[o.id]] || 1) >= 2.0);
+        if (c) return c;
+      }
+      // 設備強化カード(equipment)も相性2倍以上なら拾う(個別強化は反動なし)
+      if ((aff.equipment || 1) >= 2.0) {
+        const up = offer.find(o => o.kind === 'upgrade');
+        if (up) return up;
+      }
+    }
+    return base(sim, offer);
+  };
+}
 // 個別強化優先(最上位設備の強化を選ぶ)
 function pickRewardUpgradeFirst(fallback) {
   return function (sim, offer) {
@@ -127,7 +152,7 @@ const STRATEGIES = [
     tapRate: 4, goldenTake: 1,
     pickPolicy: sim => 'bake',
     buy: standardBuy(0.30, 0.25),
-    pickReward: pickRewardByPriority(['beastHeatFerment', 'goldenAmount', 'monsterDamage', 'huntingCore', 'goldenRate', 'monsterRate', 'goldenPower', 'crackedFang', 'monsterStay']),
+    pickReward: pickRewardAffinityAware(['beastHeatFerment', 'goldenAmount', 'monsterDamage', 'huntingCore', 'goldenRate', 'monsterRate', 'goldenPower', 'crackedFang', 'monsterStay']),
     shouldPrestige: prestigeWhen(120, 1.2),
     skillOrder: cheapestFirst
   },
@@ -225,7 +250,7 @@ const STRATEGIES = [
     tapRate: 5, goldenTake: 1,
     pickPolicy: sim => 'balanced',
     buy: standardBuy(0.30, 0.30),
-    pickReward: pickRewardByPriority(['goldenAmount', 'monsterDamage', 'beastHeatFerment', 'goldenRate', 'monsterRate']),
+    pickReward: pickRewardAffinityAware(['goldenAmount', 'monsterDamage', 'beastHeatFerment', 'goldenRate', 'monsterRate']),
     shouldPrestige: prestigeWhen(120, 1.0),
     skillOrder: cheapestFirst
   },
@@ -235,7 +260,7 @@ const STRATEGIES = [
     tapRate: 4, goldenTake: 1,
     pickPolicy: sim => 'bake',
     buy: standardBuy(0.35, 0.25),
-    pickReward: pickRewardByPriority(['huntingCore', 'beastHeatFerment', 'goldenAmount', 'monsterDamage', 'goldenPower', 'goldenRate']),
+    pickReward: pickRewardAffinityAware(['huntingCore', 'beastHeatFerment', 'goldenAmount', 'monsterDamage', 'goldenPower', 'goldenRate']),
     // 転生は「次スキルコストの4倍」を貯めてから(まとめ買い派)。最短600秒。
     shouldPrestige: prestigeWhen(180, 4.0),
     skillOrder: cheapestFirst
@@ -306,7 +331,7 @@ const STRATEGIES = [
       }
       buyAllResearch(sim, 0.50);
     },
-    pickReward: pickRewardByPriority(['goldenAmount', 'huntingCore', 'beastHeatFerment', 'goldenRate', 'monsterDamage']),
+    pickReward: pickRewardAffinityAware(['goldenAmount', 'huntingCore', 'beastHeatFerment', 'goldenRate', 'monsterDamage']),
     shouldPrestige: prestigeWhen(600, 1.2),
     skillOrder: cheapestFirst
   }
