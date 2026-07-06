@@ -254,12 +254,19 @@ function runToggles(strategy, hours, kind, baseSim) {
   return { base, rows };
 }
 
+// 中央値(倍率の対数空間で中間2つの平均=偶数個でも安定)
+function medianRatio(logs) {
+  const a = logs.slice().sort((x, y) => x - y);
+  const n = a.length;
+  const m = n % 2 ? a[(n - 1) / 2] : (a[n / 2 - 1] + a[n / 2]) / 2;
+  return Math.exp(m);
+}
 function printToggles(res) {
-  // 2026-07-06 新判定:
-  //  ①研究≥1.2 / ③報酬≥1.1 / ⑨段階≥1.05 / ⑩設備≥1.2 — 取得済みの「各回」で比≥閾値(幾何平均条件は廃止)
-  //  ②③⑨⑩の一強禁止: 各回において、その回で有効な同種機能の比が「その回の平均±3倍」以内
+  // 2026-07-06 ユーザー採用(案1-A): ①③⑨⑩の下限判定は「取得済み周回の比の中央値 ≥ 閾値」。
+  //  まぐれ勝ち・まぐれ負け(周回内タイミングの分岐が終盤の急成長で増幅されるもの)に左右されず、
+  //  「ふつうの周回で効いているか」を見る。min/max/幾何平均は参考表示として残す。
   //  未使用(どの方針も取得しない)機能は比=1.0=不合格として扱う(スキップしない)
-  console.log('種別      ID                        各回比[min..max](幾何平均)   必要   下限判定(全回)   ±3倍判定(全回)');
+  console.log('種別      ID                        各回比[min..max] 中央値(幾何平均)   必要   中央値判定   ±3倍判定(全回)');
   const KINDS = [['research', '研究', 1.2], ['reward', '報酬', 1.1], ['stage', '段階', 1.05], ['upgrade', '設備', 1.2]];
   const out = { lowOk: 0, lowAll: 0, bandOk: 0, bandAll: 0 };
   for (const [kind, label, need] of KINDS) {
@@ -272,10 +279,11 @@ function printToggles(res) {
       const ratios = r.logs.map(v => Math.exp(v));
       const mn = Math.min(...ratios), mx = Math.max(...ratios);
       const gm = Math.exp(r.logs.reduce((a, b) => a + b, 0) / r.logs.length);
-      const lowOk = mn >= need;
+      const med = medianRatio(r.logs);
+      const lowOk = med >= need;
       if (lowOk) out.lowOk++;
-      r._ratios = ratios; r._low = lowOk;
-      console.log(`${kind.padEnd(9)} ${r.id.padEnd(26)} [${mn.toFixed(2)}..${mx.toFixed(2)}] (${gm.toFixed(2)}) x${r.logs.length}回  x${need}  ${lowOk ? 'OK' : 'NG(min<' + need + ')'}`);
+      r._ratios = ratios; r._low = lowOk; r._med = med;
+      console.log(`${kind.padEnd(9)} ${r.id.padEnd(26)} [${mn.toFixed(2)}..${mx.toFixed(2)}] 中央値${med.toFixed(2)} (${gm.toFixed(2)}) x${r.logs.length}回  x${need}  ${lowOk ? 'OK' : 'NG(中央値<' + need + ')'}`);
     }
     // ±3倍(各回): 同一周回内で有効な機能同士。runIdx単位で照合
     const used = rows.filter(r => r.used && r.runIdxs);
@@ -294,7 +302,7 @@ function printToggles(res) {
       if (arr.every(v => v >= mean / 3 && v <= mean * 3)) bOk++;
     }
     out.bandOk += bOk; out.bandAll += bAll;
-    console.log(`${label}: 下限(各回)OK ${rows.filter(r => r._low).length}/${rows.length} / ±3倍(各回) ${bOk}/${bAll}周回`);
+    console.log(`${label}: 中央値OK ${rows.filter(r => r._low).length}/${rows.length} / ±3倍(各回) ${bOk}/${bAll}周回`);
   }
   return out;
 }
@@ -623,7 +631,8 @@ if (mode === 'baseline') {
     const row = toggleRow(s, sim, 'affinity', 'affinity', 1.1);
     if (row.used) {
       const ratios = row.logs.map(v => Math.exp(v));
-      console.log(`${s.id}: ㉔ 相性有効/無効比 幾何平均=${row.ratio.toFixed(3)} [min ${Math.min(...ratios).toFixed(2)} .. max ${Math.max(...ratios).toFixed(2)}] x${row.runs}周回 ${row.ratio >= 1.1 ? 'OK' : 'NG(<1.1)'} / 報酬寄与1位(標準以外)=${domByStrat[s.id]}`);
+      const med = medianRatio(row.logs);
+      console.log(`${s.id}: ㉔ 相性有効/無効比 中央値=${med.toFixed(3)} (幾何平均=${row.ratio.toFixed(3)}) [min ${Math.min(...ratios).toFixed(2)} .. max ${Math.max(...ratios).toFixed(2)}] x${row.runs}周回 ${med >= 1.1 ? 'OK' : 'NG(<1.1)'} / 報酬寄与1位(標準以外)=${domByStrat[s.id]}`);
     } else {
       console.log(`${s.id}: ㉔ 未使用(討伐なし) NG`);
     }
