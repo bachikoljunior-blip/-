@@ -4644,12 +4644,10 @@
     </div>
 
     <div id="quotaBox" class="quotaBox"></div>
-    <div id="bakeBox" class="bakeBox"></div>
 
     <div id="stageBar" class="stageBar">
       <span id="stageName">第1ステージ バター草原</span>
     </div>
-    <div id="dishBuffBar" class="dishBuffBar"></div>
 
     <div class="cookieWrap">
       <button id="cookie" aria-label="クッキー">
@@ -4666,12 +4664,6 @@
         <div id="monsterHpFill"></div>
       </div>
       <div id="monsterHpText">HP</div>
-    </div>
-
-    <div class="stats">
-      <div>タップ <b id="power">1</b></div>
-      <div>毎秒 <b id="cps">0</b></div>
-      <div>ランク <b id="rank">初心者</b></div>
     </div>
 
     <div id="message"></div>
@@ -4969,7 +4961,7 @@ const RESEARCH = [
   // 段階2/3は「対応スキル取得後、研究タブに購入カードが出現し、クッキーで購入して有効化」する。
   { id: "fingerTechnique", name: "指先の型", cost: 2500, skill: "click_1", detail: "式：会心率=1-e^-score、倍率=2+score×10(score=0.30+√強い指×0.09)。段階2(スキル「連打の呼吸」で購入可):会心コンボ=会心ごとに+1(上限なし、30秒途切れでリセット)、会心倍率×(1+0.03×コンボ)。段階3(スキル「神経直結」で購入可):会心の余熱=会心のたびに毎秒生産×0.025%×最高到達層を追加獲得。", desc: "タップ会心を解放する。段階購入でコンボと会心の余熱が追加" },
   { id: "grandmaCrowd", name: "おばあちゃん連携", cost: 12000, skill: "auto_1", detail: "式：支援=1.002〜1.003^おばあちゃん(強い指・オーブン・工場)。段階2(スキル「炉の列」で購入可):支援先に銀行・香料棚を追加(×1.008^おばあちゃん)。段階3(スキル「無人ライン」で購入可):全支援×(1+0.001×最高到達層)。", desc: "おばあちゃんが下位設備を支援する。段階購入で支援先と層効果が追加" },
-  { id: "ovenBatch", name: "オーブン大量焼成", cost: 30000, skill: "auto_1", detail: "式：9×1.008^オーブン×1.004^(最高到達層-1)。段階2(スキル「同期炉」で購入可):焼き加減が香ばしいの間×1.5(それ以外×1.2)。段階3(スキル「焼き加減管理」で購入可):オーブン個別強化Lv×(1+0.05×Lv)。", desc: "最高到達層とオーブン数でオーブンを強化する。段階購入で焼き加減連動と個別強化連動が追加" },
+  { id: "ovenBatch", name: "オーブン大量焼成", cost: 30000, skill: "auto_1", detail: "式：9×1.008^オーブン×1.004^(最高到達層-1)。段階2(スキル「同期炉」で購入可):オーブン強化倍率×1.35。段階3(スキル「研究改造室」で購入可):オーブン個別強化Lv×(1+0.05×Lv)。", desc: "最高到達層とオーブン数でオーブンを強化する。段階購入で強化倍率と個別強化連動が追加" },
   { id: "factoryNetwork", name: "工場ネットワーク", cost: 150000, advanced: true, skill: "research_factory", detail: "式：9×1.002^(指+婆+炉)×1.008^工場。段階2(スキル「無人ライン」で購入可):銀行以上の所持設備種類×(1+0.15×種類数)。段階3(スキル「まとめ買い」で購入可):×(1+0.0012×最高到達層)。", desc: "下位設備と工場数で工場を強化する。段階購入で上位設備種類と層効果が追加" },
   { id: "spiceBlend", name: "香料調合", cost: 400000, advanced: true, skill: "research_spice", detail: "式：金取得後30秒 香料棚×8×1.006^棚。段階2(スキル「金色の匂い」で購入可):風味の熟成=金取得から12秒間、全生産×(1+0.6%×前回の金からの経過秒)。段階3(スキル「輝き増幅」で購入可):熟成×(1+0.0015×最高到達層)。", desc: "金クッキー取得後に香料棚を強化する。段階購入で熟成バーストが追加" },
   { id: "portalNetwork", name: "異世界接続網", cost: 1200000, advanced: true, skill: "research_portal", detail: "式：金取得後の狩り窓=20秒×1.0042^異世界炉、窓中の出現間隔×0.990^異世界炉。段階2(スキル「砕ける皮」で購入可):窓中の討伐1体ごとに窓+2秒。段階3(スキル「群れ読み」で購入可):窓中の出現×e^(-0.0008×最高到達層)。", desc: "金クッキー取得後にモンスターの狩り窓を開く。段階購入で窓延長と層効果が追加" },
@@ -5057,7 +5049,6 @@ const SKILL_NODES = [
   { id: "auto_2", name: "炉の列", branchId: "auto", cost: 41964180, x: 1380, y: 860, icon: "◇", prereqs: ["auto_1"], desc: "毎秒生産 x183。", effects: [{ type: "cps", value: 182 }] },
   { id: "auto_3", name: "同期炉", branchId: "auto", cost: 333333333333, x: 1560, y: 740, icon: "◇", prereqs: ["auto_2", "monster_2"], desc: "毎秒生産 x2549、モンスターダメージ +60%。", effects: [{ type: "cps", value: 2548 }, { type: "monsterDamageSkill", value: 0.6 }] },
   { id: "auto_4", name: "無人ライン", branchId: "auto", cost: 5.28297730820379e+16, x: 1740, y: 620, icon: "◇", prereqs: ["monster_3", "research_factory"], desc: "毎秒生産 +24%、全生産 x35676.1。工場理論の増幅先。", effects: [{ type: "cps", value: 0.24 }, { type: "all", value: 35675.12 }] },
-  { id: "bake_temperature", name: "焼き加減管理", branchId: "auto", cost: 1330174876646, x: 1740, y: 500, icon: "♨", prereqs: ["auto_3", "research_remodel"], desc: "通常画面に焼き加減を追加する。焼き加減によって、金クッキー・毎秒生産・狩猟の有利時間が切り替わる。", effects: [{ type: "unlockSystem", target: "bakeTemperature" }] },
 
   // 右下：怪物狩り型
   { id: "monster_1", name: "狩りの合図", branchId: "monster", cost: 105409, x: 1200, y: 1260, icon: "◉", prereqs: ["core"], desc: "モンスター出現間隔を短縮。", effects: [{ type: "monsterRate", value: 0.24 }] },
@@ -5192,7 +5183,7 @@ const MAX_ACTIVE_DISHES = 3;
 // 作成: 永続装備(Lv制、転生持ち越し)。コスト=基本×2.2^Lv(切り上げ)、Lv上限10。
 const EQUIPMENT = [
   { id: "goldenWhisk", name: "黄金の泡立て器", cost: { butter: 10, flour: 8 }, effect: lv => `クリックの生産連動係数 ×${(1 + 0.15 * lv).toFixed(2)}` },
-  { id: "ovenMitt", name: "断熱オーブン手袋", cost: { cacao: 12, ironShard: 2 }, effect: lv => `焼き加減「香ばしい」の狩猟倍率 +${(0.05 * lv).toFixed(2)}` },
+  { id: "ovenMitt", name: "断熱オーブン手袋", cost: { cacao: 12, ironShard: 2 }, effect: lv => `モンスターダメージ +${(0.05 * lv).toFixed(2)}` },
   { id: "pressExtractor", name: "香料圧搾機", cost: { spice: 14, goldDust: 2 }, effect: lv => `金ブースト倍率 ×${(1 + 0.04 * lv).toFixed(2)}` },
   { id: "monsterAlmanac", name: "モンスター図鑑", cost: { ironShard: 4, silentCore: 2 }, effect: lv => `素材ドロップ +${Math.floor(lv / 2)}個、モンスターダメージ ×${(1 + 0.06 * lv).toFixed(2)}` },
   { id: "stillFlask", name: "蒸留フラスコ", cost: { mint: 10, lavaSugar: 6 }, effect: lv => `料理の効果時間 ×${(1 + 0.10 * lv).toFixed(2)}` },
@@ -5956,7 +5947,7 @@ const RES_STAGE2 = {
   quantumProofing: "upgrade_antimatter", antimatterRecipe: "research_analysis"
 };
 const RES_STAGE3 = {
-  fingerTechnique: "click_4", grandmaCrowd: "auto_4", ovenBatch: "bake_temperature",
+  fingerTechnique: "click_4", grandmaCrowd: "auto_4", ovenBatch: "research_remodel",
   factoryNetwork: "economy_2", spiceBlend: "golden_3", portalNetwork: "monster_4",
   bankClickDividend: "economy_analysis", moonGlobalYeast: "research_analysis", portalGlobalFold: "master_final",
   galaxyAssembly: "upgrade_singularity", blackHoleCompression: "upgrade_quantum",
@@ -7581,8 +7572,8 @@ function ovenStageMultiplier() {
   const policyBonus = runPolicyIs("bake") ? 1.10 : 1;
 
   let m = levelGrowth(owned, 0.008) * levelGrowth(Math.max(0, stage - 1), 0.004) * policyBonus;
-  // 段階2: 焼き加減連動(「香ばしい」の間x1.5、その他x1.2)
-  if (resStage2("ovenBatch")) m *= state.bakeStateId === "crispy" ? 1.5 : 1.2;
+  // 段階2: オーブン強化倍率 x1.35
+  if (resStage2("ovenBatch")) m *= 1.35;
   // 段階3: オーブンの個別強化Lvが研究倍率にも乗る
   if (resStage3("ovenBatch")) m *= 1 + 0.05 * ((state.upgradePerks || {}).oven || 0);
   return m;
@@ -7794,6 +7785,7 @@ function monsterDamageMultiplier(mon) {
   const brandHuntBonus = Math.sqrt(clickUpgradeOwnedCount()) * (state.perks.brandHunt || 0) * 0.45;
   const categoryBonus = rewardCategoryBonus("hunt");
   const policyBonus = runPolicyIs("hunt") ? 0.14 : 0;
+  const ovenMittBonus = 0.05 * equipLv("ovenMitt"); // 断熱オーブン手袋: モンスターダメージ加算
 
   return (
     1
@@ -7805,6 +7797,7 @@ function monsterDamageMultiplier(mon) {
     + brandHuntBonus
     + categoryBonus
     + policyBonus
+    + ovenMittBonus
   ) * bakeMonsterDamageMultiplier()
     * (dishActive("hunterStew") ? 1.5 : 1)         // 狩人のシチュー
     * (1 + 0.06 * equipLv("monsterAlmanac"))       // モンスター図鑑
@@ -8701,9 +8694,6 @@ function checkQuotaStageTransition() {
 
 function updateTopOnly() {
   $("cookies").textContent = fmt(state.cookies);
-  $("power").textContent = fmt(currentClickPower());
-  $("cps").textContent = pausedForSkillChoice() ? "準備中" : fmt(currentCps());
-  $("rank").textContent = rankName();
 
   $("cookie").classList.toggle("boost-all", goldenBoostActive());
 
@@ -8711,9 +8701,7 @@ function updateTopOnly() {
   checkPrestigeUnlockNotice();
   renderQuota();
   checkQuotaStageTransition();
-  renderBakeBox();
   renderStageBar();
-  renderDishBuffBar();
   updateWorkshopTabVisibility();
 
   if (monsterVisible) renderMonsterHp();
@@ -10080,6 +10068,12 @@ function renderInfo() {
   `;
 
   box.innerHTML = `
+    <div class="infoBox">
+      <h3>生産の実数値</h3>
+      <div class="infoRow">クリック（タップ1回の生産）：${fmt(currentClickPower())}</div>
+      <div class="infoRow">毎秒（CPS・自動生産）：${pausedForSkillChoice() ? "準備中" : fmt(currentCps())}</div>
+    </div>
+
     ${stageWorkshopBox}
 
     <div class="infoBox">
