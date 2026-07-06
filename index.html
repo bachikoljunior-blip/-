@@ -4794,9 +4794,10 @@
 </section>
 
 <script>
-const saveKey = "cookie_game_compact";
+const saveKey = "cookie_game_compact_exist";
 
 const oldSaveKeys = [
+  "cookie_game_compact", // 旧: 2ゲーム共通だったキー(同一オリジンで衝突)。初回のみ引き継ぐ
   "cookie_game_compact_v11",
   "cookie_game_compact_v10",
   "cookie_game_compact_v9",
@@ -8235,7 +8236,7 @@ function renderQuota() {
 }
 
 // ===== 設定(音量・演出・画像・省略表示) =====
-const SETTINGS_KEY = "cookie_game_settings_v1";
+const SETTINGS_KEY = "cookie_game_settings_v1_exist";
 const settings = {
   seVolume: 100,
   bgmVolume: 35,
@@ -11593,7 +11594,7 @@ function installDebugPanel() {
 
   if (mini && panel) {
     const saved = (() => {
-      try { return JSON.parse(localStorage.getItem("cookie_game_debug_panel_pos") || "null"); } catch (_) { return null; }
+      try { return JSON.parse(localStorage.getItem("cookie_game_debug_panel_pos_exist") || "null"); } catch (_) { return null; }
     })();
 
     function clampPanelPosition(left, top) {
@@ -11615,7 +11616,7 @@ function installDebugPanel() {
       panel.style.setProperty("--debug-right", "auto");
       panel.style.setProperty("--debug-bottom", "auto");
       if (persist) {
-        try { localStorage.setItem("cookie_game_debug_panel_pos", JSON.stringify(pos)); } catch (_) {}
+        try { localStorage.setItem("cookie_game_debug_panel_pos_exist", JSON.stringify(pos)); } catch (_) {}
       }
     }
 
