@@ -14,7 +14,9 @@ module.exports = {
   // ツリー再配線(sim.js)で全辺のラング差≤5 → 最大辺比 1.57^5=9.53 ≤ 10(クランプ非発動=ライダーなし)。
   // rungCosts はチューナ(tune.js)が焼き込む。空なら C0×rho^k を使う。
   // C0=13: coreの子ノード群(≤10×core=130)がチューナの序盤閾値(dec≈21-26)を収容できる水準
-  skillCost: { mode: 'ladder', C0: 13, rho: 1.57, edgeCap: 10, utilRatio: 0.35, segments: [], rungCosts: [] },
+  // rungCosts: tune.js の出力(rung_costs.json)を自動読込(なければ C0×rho^k)
+  skillCost: { mode: 'ladder', C0: 13, rho: 1.57, edgeCap: 10, utilRatio: 0.35, segments: [],
+    rungCosts: (function () { try { return require('./rung_costs.json'); } catch (e) { return []; } })() },
 
   // ---- 生産系数値ノードの1ノードあたり目標倍率 ----
   nodeM: { all: 4, cps: 4, click: 3 }, // 14/14/9->4/4/3 (2026-07-06: 安価⑲ラダー下で周回時間を帯域スケールへ減速)
@@ -69,20 +71,26 @@ module.exports = {
   },
 
   // ---- 研究効果 ----
+  // 2026-07-06 第8次: ①(各研究の有効性)で弱かった5研究の「所持数指数」(垂直吸収されない動的項)を強化:
+  //  spiceGoldOwn .010→.014(.020はS3金特化が⑤上限超えで暴走: e218/周回16に崩壊) / bankOwn .028→.040, bankSaved 8→10 / galaxyOwn .019→.032 /
+  //  quantumRes .30→.38, quantumOwn .019→.032 / antimatterOwn .002→.012, antimatterSkill .032→.045
   res: {
     fingerBase: 0.30, fingerSqrt: 0.09, fingerCritBase: 2.0, fingerCritGrow: 10.0,
     grandmaSelf: 30, grandmaSup: [0.007, 0.008, 0.009],
-    ovenSelf: 30, ovenOwn: 0.060, ovenStage: 0.012,
-    factorySelf: 30, factoryLow: 0.006, factoryOwn: 0.060,
-    spiceOwn: 0.062, spiceGold: 15, spiceGoldOwn: 0.010, spiceGoldDur: 30000,
+    // 2026-07-06 第8次: ⑫(設備の文脈依存性)用に所持数指数を再配分。
+    // factory一強(全方針の最効率=工場固定)を解消: oven 0.060→0.067 / spice 0.062→0.071 / factory 0.060→0.057
+    // → 12h実測で最効率設備が factory 7方針 / oven 3方針 に分岐
+    ovenSelf: 30, ovenOwn: 0.067, ovenStage: 0.012,
+    factorySelf: 30, factoryLow: 0.006, factoryOwn: 0.057,
+    spiceOwn: 0.071, spiceGold: 15, spiceGoldOwn: 0.014, spiceGoldDur: 30000,
     portalSelf: 25, portalHuntDur: 20000, portalHuntGrow: 0.0042, portalHuntSpawn: 0.010,
-    bankOwn: 0.028, bankSaved: 8.0,
+    bankOwn: 0.040, bankSaved: 10.0,
     moonBase: 25, moonStage: 0.003, moonOwn: 0.001,
     foldPortal: 0.002, foldMonster: 2.5, foldGold: 8,
-    galaxyTypes: 0.5, galaxyOwn: 0.019,
+    galaxyTypes: 0.5, galaxyOwn: 0.032,
     bhGlobal: 5, bhCompress: 0.0018,
-    quantumRes: 0.30, quantumOwn: 0.019,
-    antimatterOwn: 0.002, antimatterSkill: 0.032,
+    quantumRes: 0.38, quantumOwn: 0.032,
+    antimatterOwn: 0.012, antimatterSkill: 0.045,
     ctrlOven: 0.05, ctrlMoon: 0.07, ctrlBh: 0.10
   },
 
@@ -131,7 +139,7 @@ module.exports = {
   // ---- アップグレードコスト式 ----  cost = coef * base^basePow * growth^(owned*ownPow)
   // 2026-07-06 第8次: 新帯域(周回25〜90分)へ向けownPow 0.25→0.27(再登坂・開拓の全体減速)、
   // 膝4300/1.0→900/0.55(深部の周回短縮を抑制。㉒単調増加と⑦後半帯域用)
-  upCost: { coef: 1100, basePow: 0.60, ownPow: 0.27, knee: 900, ownPow2: 0.55 },
+  upCost: { coef: 1100, basePow: 0.60, ownPow: 0.27, knee: 2600, ownPow2: 0.72 },
 
   // ---- 個別強化(報酬) ----
   upPerk: { base: 0.22, slope: 0.010, floor: 0.055 },

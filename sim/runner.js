@@ -330,14 +330,18 @@ function printContext(sims) {
   }
   const rwSet = new Set(Object.values(topCat));
   console.log(' 報酬(ピック1位カテゴリ): ' + Object.keys(topCat).map(k => k + '=' + topCat[k]).join(' '));
-  // 研究: 各方針の最優先研究(初回購入が最も早い研究)
+  // 研究(⑫仕様): 「有効無効差が最大の研究」= その回だけ無効トグルの幾何平均比が最大の研究
+  // 計測コスト削減のため各方針12hで13研究をスナップショット方式判定
   const topRes = {};
   for (const id of Object.keys(sims)) {
-    const fr = Object.entries(sims[id].firstResearchBuy).sort((a, b) => a[1] - b[1]);
-    topRes[id] = fr.length ? fr[0][0] : '-';
+    const s = STRATEGIES.find(x => x.id === id);
+    const res = runToggles(s, 12, 'research');
+    let best = '-', bestR = 0;
+    for (const row of res.rows) if (row.used && row.ratio > bestR) { bestR = row.ratio; best = row.id; }
+    topRes[id] = best;
   }
   const resSet = new Set(Object.values(topRes));
-  console.log(' 研究(最優先): ' + Object.keys(topRes).map(k => k + '=' + topRes[k]).join(' '));
+  console.log(' 研究(有効無効差が最大): ' + Object.keys(topRes).map(k => k + '=' + topRes[k]).join(' '));
   const ok2 = x => x.size >= 2;
   console.log(` → 設備${eqSet.size}種 / 報酬${rwSet.size}種 / 研究${resSet.size}種 (各2種以上で OK): ${ok2(eqSet) && ok2(rwSet) ? '設備報酬OK' : 'NG'}${ok2(resSet) ? '' : ' (研究は方針の買い順が同型)'}`);
   return { eq: eqSet.size, rw: rwSet.size, res: resSet.size };
@@ -379,7 +383,7 @@ const TIMING_FEATURES = [
 ];
 function runTimingChecks(strategy, hours, base) {
   // ⑬もスナップショット方式: 段2を取得した各回を「その回だけ完全放置」で再実行して効率比較
-  base = base || G.simulate(strategy, { hours, snapshots: true });
+  if (!base || !base.snapshots) base = G.simulate(strategy, { hours, snapshots: true });
   const rows = [];
   for (const f of TIMING_FEATURES) {
     const [rid, st] = f.stage.split(':');

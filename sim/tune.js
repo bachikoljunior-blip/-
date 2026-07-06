@@ -9,7 +9,7 @@ const RESUME = process.argv.includes('--resume');
 // 押し込み上限: ⑤上限(PT比100倍 ⇔ pG=0.5で4.0桁)内に収める(rung13の初回キャッチアップのみ例外)
 function decMaxStep(k) { return 8; } // ⑤上限: コスト比100倍 ⇔ 15.4桁。周回を伸ばす余地を残して8桁
 const TARGET_FRAC = 0.80;       // 周回時間の狙い(帯域上限Yの内側。維持=チェイス失敗は0.5Y〜0.75Yに来る)
-const HOURS = Number(process.argv[4] || 30); // 探索は30hで十分(全解放~15h+免除)
+const HOURS = Number((process.argv[4] && process.argv[4] !== '--resume') ? process.argv[4] : 30); // 探索は30hで十分。'--resume'がargv[4]でもNaNにしない
 const ITERS = Number(process.argv[2] || 8);
 const STRAT_ID = process.argv[3] || 'S1';
 
@@ -30,7 +30,7 @@ function runDecFromCost(c) { return Math.log10(PP.pD2) + INV_PG * (Math.log10(c)
 
 function freshSim(rungCosts) {
   for (const k of Object.keys(require.cache)) {
-    if (/params\.js|sim\.js|strategies\.js/.test(k)) delete require.cache[k];
+    if (/params\.js|sim\.js|strategies\.js|rung_costs\.json/.test(k)) delete require.cache[k];
   }
   const P = require('./params.js');
   if (rungCosts) P.skillCost.rungCosts = rungCosts;

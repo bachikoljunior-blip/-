@@ -1,0 +1,23 @@
+戦略: S4 狩猟特化型
+種別      ID                        各回比[min..max](幾何平均)   必要   下限判定(全回)   ±3倍判定(全回)
+reward    goldenRate                 [0.96..1.00] (0.99) x3回  x1.1  NG(min<1.1)
+reward    goldenPower                (未使用: 比=1.0)  x1.1  NG  -
+reward    goldenAmount               (未使用: 比=1.0)  x1.1  NG  -
+reward    monsterDamage              [1.00..1.00] (1.00) x17回  x1.1  NG(min<1.1)
+reward    monsterRate                [0.01..1.72] (0.88) x45回  x1.1  NG(min<1.1)
+reward    monsterStay                (未使用: 比=1.0)  x1.1  NG  -
+reward    goldenChain                (未使用: 比=1.0)  x1.1  NG  -
+reward    crackedFang                [1.00..1.00] (1.00) x20回  x1.1  NG(min<1.1)
+reward    chainPrep                  [0.32..1.67] (0.78) x17回  x1.1  NG(min<1.1)
+reward    huntFocus                  (未使用: 比=1.0)  x1.1  NG  -
+reward    goldenTarget               (未使用: 比=1.0)  x1.1  NG  -
+reward    goldenFirstHit             (未使用: 比=1.0)  x1.1  NG  -
+reward    beastScent                 (未使用: 比=1.0)  x1.1  NG  -
+reward    beastHeatFerment           [0.01..10.19] (0.71) x7回  x1.1  NG(min<1.1)
+reward    biteRecovery               [1.00..1.00] (1.00) x3回  x1.1  NG(min<1.1)
+reward    crushedMill                (未使用: 比=1.0)  x1.1  NG  -
+reward    huntingCore                [0.02..4.88] (0.64) x6回  x1.1  NG(min<1.1)
+reward    brandHunt                  (未使用: 比=1.0)  x1.1  NG  -
+reward    deepPursuit                (未使用: 比=1.0)  x1.1  NG  -
+reward    goldenBeastMutation        (未使用: 比=1.0)  x1.1  NG  -
+報酬: 下限(各回)OK 0/20 / ±3倍(各回) 21/24周回
