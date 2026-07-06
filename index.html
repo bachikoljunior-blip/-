@@ -4700,10 +4700,6 @@
 
     <div id="quotaBox" class="quotaBox"></div>
 
-    <div id="stageBar" class="stageBar">
-      <span id="stageName">第1ステージ バター草原</span>
-    </div>
-
     <div class="cookieWrap">
       <button id="cookie" aria-label="クッキー">
         <span class="sparkle"></span>
@@ -6849,13 +6845,14 @@ function applyStageTheme() {
 // v3: ステージは転生時のステージ選択画面で決まり、周回中は固定(切替UI・クールダウン廃止)。
 // ステージバーは現在地の表示のみ
 function renderStageBar() {
+  // ステージ表記はクッキー画面には出さない(一覧タブで確認)。
+  // ステージ連動の背景テーマだけは常に適用する。
   const nameEl = $("stageName");
-  if (!nameEl) return;
-
-  const cur = currentStageNo();
-  const text = `第${cur}ステージ ${stageInfo(cur).name}(この周回中は固定)`;
-
-  if (nameEl.textContent !== text) nameEl.textContent = text;
+  if (nameEl) {
+    const cur = currentStageNo();
+    const text = `第${cur}ステージ ${stageInfo(cur).name}(この周回中は固定)`;
+    if (nameEl.textContent !== text) nameEl.textContent = text;
+  }
 
   applyStageTheme();
 }
