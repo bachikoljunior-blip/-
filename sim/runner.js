@@ -14,7 +14,16 @@ function fmtT(s) {
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
   return (h > 0 ? h + 'h' : '') + m + 'm' + sec + 's';
 }
-// 帯域式(ユーザー承認済み・√型): Y(x) = 120 + 8×√x (x=経過秒)
+// 帯域式(2026-07-06 確定・2段階): 初転生まで Y=120+8√x / 初転生後 Y=1440+8√x (x=経過秒)
+function firstPrestigeT(sim) {
+  const r0 = sim.runs[0];
+  return (r0 && !r0.partial) ? r0.endT : Infinity;
+}
+function makeY(sim) {
+  const fp = firstPrestigeT(sim);
+  return x => (x >= fp ? 1440 : 120) + 8 * Math.sqrt(Math.max(0, x));
+}
+// 旧単段式(参考・tune互換用)
 function yCurve(x) { return 120 + 8 * Math.sqrt(x); }
 
 // 全スキル解放時刻 (未達なら Infinity)。以降はペース/ノルマ維持条件を無視してよい
@@ -46,34 +55,34 @@ function mergeEventsByRun(sim) {
 function summarize(sim) {
   const total = sim.runs.reduce((a, r) => a + r.runCookies, 0);
   const fullT = fullUnlockTime(sim);
-  // 条件: 転生後の各周回(回=転生から転生まで)が前回の100倍以上 / 獲得PTが前回の2倍〜100倍に収まる(途中周回は除く)
+  const yC = makeY(sim);
   const full = sim.runs.filter(r => !r.partial);
+  // ④ 各回の総クッキーが前回の100倍以上 / ⑤ 転生PTが前回の1倍以上100倍以内(2026-07-06 確定)
   let doubleOk = 0, doubleAll = 0, gainOk = 0;
   for (let i = 1; i < full.length; i++) {
     doubleAll++;
     if (full[i].runCookies >= 100 * full[i - 1].runCookies) doubleOk++;
-    if (full[i].gain >= 2 * full[i - 1].gain && full[i].gain <= 100 * full[i - 1].gain) gainOk++;
+    if (full[i].gain >= 1 * full[i - 1].gain && full[i].gain <= 100 * full[i - 1].gain) gainOk++;
   }
-  // 条件4: 解放ペース (全スキル解放後は無視、同一周回内の解放は1つに統合)
+  // ⑥ 解放ペース: 2段階帯域・厳密判定 (全スキル解放後は対象外)
   const ev = mergeEventsByRun(sim);
   let paceOk = 0, paceAll = 0;
   for (let i = 0; i + 1 < ev.length; i++) {
     if (ev[i].t >= fullT) continue;
     const y = ev[i + 1].t - ev[i].t;
-    const Y = yCurve(ev[i + 1].t);
+    const Y = yC(ev[i + 1].t);
     paceAll++;
     if (y >= 0.5 * Y && y <= Y) paceOk++;
   }
-  // 条件5: ノルマ維持時間も同じ帯域 [0.5Y, Y] (Y は維持終了時点 x=開始+維持時間で評価。全スキル解放後の周回は無視)
+  // ⑦ ノルマ維持時間の帯域 [0.5Y, Y]: Y は転生した時点の経過時間 x=endT で評価(2026-07-06 確定)
   let holdOk = 0, holdAll = 0;
   for (const r of full) {
     if (r.startT >= fullT) continue;
-    const y = r.quotaHold;
-    const Y = yCurve(r.startT + y);
+    const Y = yC(r.endT);
     holdAll++;
-    if (y >= 0.5 * Y && y <= Y) holdOk++;
+    if (r.quotaHold >= 0.5 * Y && r.quotaHold <= Y) holdOk++;
   }
-  // 条件⑧(2026-07-06 新): 全ての転生がノルマ未達の後に起きる
+  // 条件⑧: 全ての転生がノルマ未達の後に起きる
   let failOk = 0;
   for (const r of full) if (r.quotaFailAt != null && r.quotaFailAt < r.duration) failOk++;
   // 条件⑭: 各周回の獲得PT ÷ 次の未取得スキル最安コスト(転生時点・購入前) ∈ [1.0, 3.0]
@@ -83,7 +92,18 @@ function summarize(sim) {
     pwAll++;
     if (r.gainToNext >= 1.0 && r.gainToNext <= 3.0) pwOk++;
   }
-  return { total, runs: sim.runs.length, doubleOk, doubleAll, gainOk, paceOk, paceAll, holdOk, holdAll, events: ev.length, fullT, failOk, failAll: full.length, pwOk, pwAll };
+  // 条件㉒(新): 各回の周回時間が前回より長い(全ペア・厳密)
+  let durOk = 0, durAll = 0;
+  for (let i = 1; i < full.length; i++) { durAll++; if (full[i].duration > full[i - 1].duration) durOk++; }
+  // 条件㉑(新): 各設備の周回内初購入時に「1個の基礎毎秒生産」≥「実CPS」×1/5
+  let prOk = 0, prAll = 0, prWorst = null;
+  for (const c of (sim.presenceChecks || [])) {
+    prAll++;
+    const ratio = c.ref > 0 ? (c.base * 5) / c.ref : Infinity;
+    if (ratio >= 1) prOk++;
+    if (!prWorst || ratio < prWorst.ratio) prWorst = { id: c.id, runIdx: c.runIdx, ratio };
+  }
+  return { total, runs: sim.runs.length, doubleOk, doubleAll, gainOk, paceOk, paceAll, holdOk, holdAll, events: ev.length, fullT, failOk, failAll: full.length, pwOk, pwAll, durOk, durAll, prOk, prAll, prWorst };
 }
 
 function runBaseline(hours, only) {
@@ -99,24 +119,26 @@ function runBaseline(hours, only) {
 }
 
 function printBaseline(results) {
-  console.log('ID  名称              周回数 総クッキー   ④x100    ⑤PT2-100  ⑥ペース   ⑦帯域   ⑧未達後転生 ⑭購買力[1,3] 全解放');
+  console.log('ID  名称              周回数 総クッキー   ④x100   ⑤PT1-100  ⑥ペース   ⑦帯域   ⑧未達後転生 ⑭購買力 ㉑存在感 ㉒単調増 全解放');
   for (const r of results) {
     const fullT = r.sum.fullT === Infinity ? '未' : fmtT(r.sum.fullT);
     console.log(
-      `${r.s.id.padEnd(3)} ${r.s.name.padEnd(14)} ${String(r.sum.runs).padStart(4)}  ${fmtN(r.sum.total).padStart(10)}  ${r.sum.doubleOk}/${r.sum.doubleAll}   ${r.sum.gainOk}/${r.sum.doubleAll}   ${r.sum.paceOk}/${r.sum.paceAll}  ${r.sum.holdOk}/${r.sum.holdAll}  ${r.sum.failOk}/${r.sum.failAll}  ${r.sum.pwOk}/${r.sum.pwAll}  ${fullT}  (${r.ms}ms)`
+      `${r.s.id.padEnd(3)} ${r.s.name.padEnd(14)} ${String(r.sum.runs).padStart(4)}  ${fmtN(r.sum.total).padStart(10)}  ${r.sum.doubleOk}/${r.sum.doubleAll}   ${r.sum.gainOk}/${r.sum.doubleAll}   ${r.sum.paceOk}/${r.sum.paceAll}  ${r.sum.holdOk}/${r.sum.holdAll}  ${r.sum.failOk}/${r.sum.failAll}  ${r.sum.pwOk}/${r.sum.pwAll}  ${r.sum.prOk}/${r.sum.prAll}  ${r.sum.durOk}/${r.sum.durAll}  ${fullT}  (${r.ms}ms)` +
+      (r.sum.prWorst && r.sum.prWorst.ratio < 1 ? `  ㉑最悪: ${r.sum.prWorst.id}@run${r.sum.prWorst.runIdx} x${r.sum.prWorst.ratio.toFixed(2)}` : '')
     );
   }
 }
 
 function printDetail(sim, maxRows) {
   const fullT = fullUnlockTime(sim);
+  const yC = makeY(sim);
   console.log('run  開始      周回時間   ノルマ維持  帯域Y      維持判定 最高層 討伐 金  総クッキー     PT  スキル数  前周比');
   const rows = sim.runs.slice(0, maxRows || 200);
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
     const prev = i > 0 ? sim.runs[i - 1].runCookies : null;
     const ratio = prev ? (r.runCookies / prev).toFixed(2) : '-';
-    const Y = yCurve(r.startT + r.quotaHold);
+    const Y = yC(r.endT);
     const holdJ = r.partial ? '-' : (r.startT >= fullT ? '免除' : (r.quotaHold >= 0.5 * Y && r.quotaHold <= Y ? 'OK' : (r.quotaHold > Y ? '長い' : '短い')));
     console.log(
       `${String(r.idx).padStart(3)}  ${fmtT(r.startT).padStart(8)}  ${fmtT(r.duration).padStart(8)}  ${fmtT(r.quotaHold).padStart(8)}  ${fmtT(Y).padStart(8)}  ${holdJ.padEnd(4)} ${String(r.maxStage).padStart(4)} ${String(r.kills).padStart(4)} ${String(r.golden).padStart(3)}  ${fmtN(r.runCookies).padStart(12)}  ${String(r.gain).padStart(5)}  ${String(r.skillsBought == null ? '-' : r.skillsBought).padStart(3)}   ${ratio}${r.partial ? ' (途中)' : ''}  ${(r.skillIds || []).join(',')}`
@@ -126,67 +148,65 @@ function printDetail(sim, maxRows) {
 
 function printPacing(sim) {
   const ev = mergeEventsByRun(sim);
-  console.log('解放イベント (全解放を個別カウント・同一秒のみ統合 / t, 種別, 内容, 次までy, 目標Y=120+8√x, 判定)');
+  const yC = makeY(sim);
+  console.log('解放イベント (全解放を個別カウント・同一秒のみ統合 / t, 種別, 内容, 次までy, 目標Y=2段階帯域, 判定)');
   for (let i = 0; i < ev.length; i++) {
     const next = ev[i + 1];
     const y = next ? next.t - ev[i].t : null;
-    const Y = next ? yCurve(next.t) : null;
+    const Y = next ? yC(next.t) : null;
     const ok = y === null ? '-' : (y >= 0.5 * Y && y <= Y ? 'OK' : (y > Y ? '遅い' : '早い'));
     console.log(`${fmtT(ev[i].t).padStart(9)}  ${ev[i].kind.padEnd(8)} ${String(ev[i].id).slice(0, 44).padEnd(44)} y=${y === null ? '-' : fmtT(y)} Y=${Y === null ? '-' : fmtT(Y)} ${ok}`);
   }
 }
 
-// 条件1/2: 研究・報酬トグル比較
-// 閾値転生では各周回の総クッキーはスキルコストに固定されるため、効果は
-// 「各周回の生産速度(総クッキー/周回時間)」と「100時間の累計生産」に現れる。
-// 指標: 有効側でその研究/報酬を初めて取得した時点から2時間後の総クッキー比(有効/無効)
-// 指標: 各回(回=転生から転生まで)の総クッキー獲得を同じ回同士で比較する。
-// 閾値転生では回ごとの到達クッキー量は両者で一致するため、差は「その量を稼ぐのに要した時間」に現れる。
-// 比 = 各回の単位時間あたり総クッキー(総クッキー/周回時間)の有効/無効比 = 無効時周回時間/有効時周回時間。
-// 全該当回の幾何平均を採る(初取得以降の回のみ対象)。
-function skillSignatures(runs) {
-  // 各周回「開始時点」の所持スキル集合の署名
-  const sigs = [];
-  let cur = [];
-  for (const r of runs) {
-    sigs.push(cur.slice().sort().join(','));
-    cur = cur.concat(r.skillIds || []);
-  }
-  return sigs;
+// ==== 条件①②③⑨⑩: 「その回だけ無効」トグル判定(2026-07-06 確定方式) ====
+// 判定したい周回kの開始スナップショットから、その機能をその回だけ効果ゼロにして周回kを再実行し、
+// 有効時の周回kと獲得効率(周回総クッキー÷周回時間)を比較する。他の回は無効化しない。
+function replayRatio(strategy, base, runIdx, disOpts) {
+  const orig = base.runs[runIdx];
+  const snap = base.snapshots[runIdx];
+  if (!snap || orig.partial) return null;
+  // 打ち切り: 元周回の6倍または+2時間(遅い側の効率も打ち切り時点の効率で比較できる)
+  const cap = Math.max(orig.duration * 6, orig.duration + 7200);
+  const rep = G.replayRun(strategy, snap, disOpts, cap);
+  const re = orig.runCookies / Math.max(1, orig.duration);
+  const rd = rep.runCookies / Math.max(1, rep.duration);
+  if (!(re > 0) || !(rd > 0) || !Number.isFinite(re) || !Number.isFinite(rd)) return null;
+  return Math.log(re / rd);
 }
-function toggleCompare(base, dis, firstT) {
-  if (firstT === undefined) return { used: false, ratio: 1 };
-  const eR = base.runs.filter(r => !r.partial);
-  const dR = dis.runs.filter(r => !r.partial);
-  const eS = skillSignatures(eR), dS = skillSignatures(dR);
-  // 同じスキル状態(=同じ目標)の回同士のみ比較する
-  const dIdx = new Map();
-  for (let i = 0; i < dR.length; i++) if (!dIdx.has(dS[i])) dIdx.set(dS[i], i);
-  let sumLog = 0, cnt = 0;
-  const logs = []; // 各比較対象周回のlog比
-  const runIdxs = []; // 対応する周回idx(②③⑨⑩の「各回±3倍」照合用)
-  for (let k = 0; k < eR.length; k++) {
-    if (eR[k].endT < firstT) continue; // 取得前の回は同一
-    const j = dIdx.get(eS[k]);
-    if (j === undefined) continue;
-    const re = eR[k].runCookies / Math.max(1, eR[k].duration);
-    const rd = dR[j].runCookies / Math.max(1, dR[j].duration);
-    if (re > 0 && rd > 0 && Number.isFinite(re) && Number.isFinite(rd)) { sumLog += Math.log(re / rd); cnt++; logs.push(Math.log(re / rd)); runIdxs.push(eR[k].idx); }
+// 機能がその周回で「使用された」判定(取得済みの回のみトグル対象)
+function activeRunsOf(base, kind, id) {
+  const out = [];
+  const full = base.runs.filter(r => !r.partial);
+  for (const r of full) {
+    let a = false;
+    if (kind === 'research') a = (r.researchBought || []).includes(id);
+    else if (kind === 'stage') {
+      const [rid, st] = id.split(':');
+      a = ((st === '2' ? r.stages2 : r.stages3) || []).includes(rid);
+    } else if (kind === 'reward') a = (r.perks && r.perks[id] > 0);
+    else if (kind === 'upgrade') a = (r.upCounts && r.upCounts[id] > 0);
+    if (a) out.push(r.idx);
   }
-  if (cnt === 0) return { used: false, ratio: 1 };
-  return { used: true, ratio: Math.exp(sumLog / cnt), atT: firstT, runs: cnt, logs, runIdxs };
+  return out;
+}
+function toggleRow(strategy, base, kind, id, need) {
+  const optKey = { research: 'disableResearch', reward: 'disableReward', stage: 'disableStage', upgrade: 'disableUpgrade' }[kind];
+  const hours = base.opt.hours;
+  const runIdxs = activeRunsOf(base, kind, id);
+  if (!runIdxs.length) return { kind, id, need, used: false, ratio: 1 };
+  const logs = [];
+  const usedIdxs = [];
+  for (const k of runIdxs) {
+    const lg = replayRatio(strategy, base, k, { hours, [optKey]: id });
+    if (lg !== null) { logs.push(lg); usedIdxs.push(k); }
+  }
+  if (!logs.length) return { kind, id, need, used: false, ratio: 1 };
+  return { kind, id, need, used: true, ratio: Math.exp(logs.reduce((a, b) => a + b, 0) / logs.length), runs: logs.length, logs, runIdxs: usedIdxs };
 }
 
-// 条件⑪: 取得済み周回を序盤/中盤/終盤に三等分し、各区間の幾何平均比を返す(3周回未満は判定不能)
-function phaseGeo(logs) {
-  if (!logs || logs.length < 3) return null;
-  const n = logs.length, a = Math.floor(n / 3), b = Math.floor(2 * n / 3);
-  const gm = arr => Math.exp(arr.reduce((s, v) => s + v, 0) / arr.length);
-  return [gm(logs.slice(0, a)), gm(logs.slice(a, b)), gm(logs.slice(b))];
-}
-
-function runToggles(strategy, hours, kind) {
-  const base = G.simulate(strategy, { hours });
+function runToggles(strategy, hours, kind, baseSim) {
+  const base = baseSim || G.simulate(strategy, { hours, snapshots: true });
   const rows = [];
   // kind 例: 'all' | 'research' | 'reward' | 'stage' | 'upgrade'
   //         | 'research:spiceBlend,galaxyAssembly' | 'reward:monsterDamage'
@@ -203,17 +223,13 @@ function runToggles(strategy, hours, kind) {
   if (doRes) {
     for (const r of G.RESEARCH) {
       if (resFilter && !resFilter.has(r.id)) continue;
-      const dis = G.simulate(strategy, { hours, disableResearch: r.id });
-      const c = toggleCompare(base, dis, base.firstResearchBuy[r.id]);
-      rows.push(Object.assign({ kind: 'research', id: r.id, need: 1.2 }, c));
+      rows.push(toggleRow(strategy, base, 'research', r.id, 1.2));
     }
   }
   if (doRw) {
     for (const rw of G.REWARD_POOL) {
       if (rwFilter && !rwFilter.has(rw.id)) continue;
-      const dis = G.simulate(strategy, { hours, disableReward: rw.id });
-      const c = toggleCompare(base, dis, base.firstPerk[rw.id]);
-      rows.push(Object.assign({ kind: 'reward', id: rw.id, need: 1.1 }, c));
+      rows.push(toggleRow(strategy, base, 'reward', rw.id, 1.1));
     }
   }
   // 条件⑨: 研究「段階」(段2/段3の26種)を単体で効果ゼロ化(購入行動は同一)
@@ -222,21 +238,15 @@ function runToggles(strategy, hours, kind) {
       for (const st of [2, 3]) {
         const key = r.id + ':' + st;
         if (stFilter && !stFilter.has(key) && !stFilter.has(r.id)) continue;
-        const dis = G.simulate(strategy, { hours, disableStage: key });
-        const c = toggleCompare(base, dis, base.firstStageBuy[key]);
-        rows.push(Object.assign({ kind: 'stage', id: key, need: 1.05 }, c));
+        rows.push(toggleRow(strategy, base, 'stage', key, 1.05));
       }
     }
   }
   // 条件⑩: 設備1種の生産だけをゼロ(所持数は各計算式に残す・購入行動同一)
   if (doUp) {
-    const firstUp = {};
-    for (const e of base.unlockEvents) if (e.kind === 'upgrade' && firstUp[e.id] === undefined) firstUp[e.id] = e.t;
     for (const u of G.UPGRADES) {
       if (upFilter && !upFilter.has(u.id)) continue;
-      const dis = G.simulate(strategy, { hours, disableUpgrade: u.id });
-      const c = toggleCompare(base, dis, firstUp[u.id]);
-      rows.push(Object.assign({ kind: 'upgrade', id: u.id, need: 1.2 }, c));
+      rows.push(toggleRow(strategy, base, 'upgrade', u.id, 1.2));
     }
   }
   return { base, rows };
@@ -320,14 +330,18 @@ function printContext(sims) {
   }
   const rwSet = new Set(Object.values(topCat));
   console.log(' 報酬(ピック1位カテゴリ): ' + Object.keys(topCat).map(k => k + '=' + topCat[k]).join(' '));
-  // 研究: 各方針の最優先研究(初回購入が最も早い研究)
+  // 研究(⑫仕様): 「有効無効差が最大の研究」= その回だけ無効トグルの幾何平均比が最大の研究
+  // 計測コスト削減のため各方針12hで13研究をスナップショット方式判定
   const topRes = {};
   for (const id of Object.keys(sims)) {
-    const fr = Object.entries(sims[id].firstResearchBuy).sort((a, b) => a[1] - b[1]);
-    topRes[id] = fr.length ? fr[0][0] : '-';
+    const s = STRATEGIES.find(x => x.id === id);
+    const res = runToggles(s, 12, 'research');
+    let best = '-', bestR = 0;
+    for (const row of res.rows) if (row.used && row.ratio > bestR) { bestR = row.ratio; best = row.id; }
+    topRes[id] = best;
   }
   const resSet = new Set(Object.values(topRes));
-  console.log(' 研究(最優先): ' + Object.keys(topRes).map(k => k + '=' + topRes[k]).join(' '));
+  console.log(' 研究(有効無効差が最大): ' + Object.keys(topRes).map(k => k + '=' + topRes[k]).join(' '));
   const ok2 = x => x.size >= 2;
   console.log(` → 設備${eqSet.size}種 / 報酬${rwSet.size}種 / 研究${resSet.size}種 (各2種以上で OK): ${ok2(eqSet) && ok2(rwSet) ? '設備報酬OK' : 'NG'}${ok2(resSet) ? '' : ' (研究は方針の買い順が同型)'}`);
   return { eq: eqSet.size, rw: rwSet.size, res: resSet.size };
@@ -368,12 +382,20 @@ const TIMING_FEATURES = [
   { key: 'huntExtend', label: '延長狩り(異世界接続網 段2)', stage: 'portalNetwork:2' }
 ];
 function runTimingChecks(strategy, hours, base) {
-  base = base || G.simulate(strategy, { hours });
+  // ⑬もスナップショット方式: 段2を取得した各回を「その回だけ完全放置」で再実行して効率比較
+  if (!base || !base.snapshots) base = G.simulate(strategy, { hours, snapshots: true });
   const rows = [];
   for (const f of TIMING_FEATURES) {
-    const idle = G.simulate(strategy, { hours, idleTiming: f.key });
-    const c = toggleCompare(base, idle, base.firstStageBuy[f.stage]);
-    rows.push(Object.assign({ f }, c));
+    const [rid, st] = f.stage.split(':');
+    const runIdxs = activeRunsOf(base, 'stage', f.stage);
+    if (!runIdxs.length || !base.snapshots) { rows.push({ f, used: false, ratio: 1 }); continue; }
+    const logs = [];
+    for (const k of runIdxs) {
+      const lg = replayRatio(strategy, base, k, { hours: base.opt.hours, idleTiming: f.key });
+      if (lg !== null) logs.push(lg);
+    }
+    if (!logs.length) { rows.push({ f, used: false, ratio: 1 }); continue; }
+    rows.push({ f, used: true, ratio: Math.exp(logs.reduce((a, b) => a + b, 0) / logs.length), runs: logs.length, atT: base.firstStageBuy[f.stage] });
   }
   return rows;
 }
@@ -473,17 +495,18 @@ if (mode === 'baseline') {
   console.log('');
   console.log('①②③⑨⑩は toggles で: node runner.js toggles S1 30 all');
 } else if (mode === 'check19') {
-  // ⑲: ツリー全辺のコスト比≤100 + 上2桁切り捨て検証
+  // ⑲(2026-07-06 確定): ツリー全辺のコスト比≤10倍 + 丸め規則(有効数字3桁=5の倍数)検証
+  const cap = G.P.skillCost.edgeCap || 10;
   let bad = 0;
   for (const n of G.SKILL_NODES) {
     for (const q of n.prereqs) {
       const r = G.skillCostOf(n) / G.skillCostOf(G.SKILL_BY_ID[q]);
-      if (r > 100.0001) { bad++; console.log(`NG ${q}(${fmtN(G.skillCostOf(G.SKILL_BY_ID[q]))}) -> ${n.id}(${fmtN(G.skillCostOf(n))}) x${r.toExponential(1)}`); }
+      if (r > cap * 1.0001) { bad++; console.log(`NG ${q}(${fmtN(G.skillCostOf(G.SKILL_BY_ID[q]))}) -> ${n.id}(${fmtN(G.skillCostOf(n))}) x${r.toExponential(1)}`); }
     }
     const c = G.skillCostOf(n);
-    if (c !== G.trunc2sig(c)) { bad++; console.log(`NG 丸め違反 ${n.id}=${c}`); }
+    if (c !== G.q5cost(c)) { bad++; console.log(`NG 丸め違反 ${n.id}=${c}`); }
   }
-  console.log(`⑲: 辺コスト比≤100倍+上2桁切捨て → ${bad === 0 ? '全edge OK' : bad + '件NG'} (ライダー: ${[...G.skillRiders()].join(',') || 'なし'})`);
+  console.log(`⑲: 辺コスト比≤${cap}倍+丸め規則 → ${bad === 0 ? '全edge OK' : bad + '件NG'} (ライダー: ${[...G.skillRiders()].join(',') || 'なし'})`);
 } else if (mode === 'skillsum') {
   let sum = 0;
   for (const n of G.SKILL_NODES) sum += G.skillCostOf(n);

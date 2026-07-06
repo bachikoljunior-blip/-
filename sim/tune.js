@@ -9,12 +9,16 @@ const RESUME = process.argv.includes('--resume');
 // 押し込み上限: ⑤上限(PT比100倍 ⇔ pG=0.5で4.0桁)内に収める(rung13の初回キャッチアップのみ例外)
 function decMaxStep(k) { return 8; } // ⑤上限: コスト比100倍 ⇔ 15.4桁。周回を伸ばす余地を残して8桁
 const TARGET_FRAC = 0.80;       // 周回時間の狙い(帯域上限Yの内側。維持=チェイス失敗は0.5Y〜0.75Yに来る)
-const HOURS = Number(process.argv[4] || 30); // 探索は30hで十分(全解放~15h+免除)
+const HOURS = Number((process.argv[4] && process.argv[4] !== '--resume') ? process.argv[4] : 30); // 探索は30hで十分。'--resume'がargv[4]でもNaNにしない
 const ITERS = Number(process.argv[2] || 8);
 const STRAT_ID = process.argv[3] || 'S1';
 
-// 帯域式(ユーザー承認済み・√型): Y(x) = 120 + 8×√x (x=経過秒)。runner.js と必ず一致させること
-function yCurve(x) { return 120 + 8 * Math.sqrt(x); }
+// 帯域式(2026-07-06 確定・2段階): 初転生まで 120+8√x / 初転生後 1440+8√x。runner.js と必ず一致させること
+function makeY(sim) {
+  const r0 = sim.runs[0];
+  const fp = (r0 && !r0.partial) ? r0.endT : Infinity;
+  return x => (x >= fp ? 1440 : 120) + 8 * Math.sqrt(Math.max(0, x));
+}
 function dec(v) { return Math.log10(Math.max(1, v)); }
 // 転生PT式は params.js から読む(pG=0.50 対応):
 // gain = pB*(run/pD2)^pG >= cost*1.2  →  run = pD2*(1.2*cost/pB)^(1/pG)
@@ -26,7 +30,7 @@ function runDecFromCost(c) { return Math.log10(PP.pD2) + INV_PG * (Math.log10(c)
 
 function freshSim(rungCosts) {
   for (const k of Object.keys(require.cache)) {
-    if (/params\.js|sim\.js|strategies\.js/.test(k)) delete require.cache[k];
+    if (/params\.js|sim\.js|strategies\.js|rung_costs\.json/.test(k)) delete require.cache[k];
   }
   const P = require('./params.js');
   if (rungCosts) P.skillCost.rungCosts = rungCosts;
@@ -63,11 +67,12 @@ function paceCount(sim, G) {
     ts.push(e.t);
   }
   const fullT = fullUnlockTimeOf(sim, G);
+  const yC = makeY(sim);
   let ok = 0, all = 0;
   for (let i = 0; i + 1 < ts.length; i++) {
     if (ts[i] >= fullT) continue;
     const y = ts[i + 1] - ts[i];
-    const Y = yCurve(ts[i + 1]);
+    const Y = yC(ts[i + 1]);
     all++;
     if (y >= 0.5 * Y && y <= Y) ok++;
   }
@@ -102,13 +107,14 @@ let prevState = null; // {decT:[], D:[]}
 for (let it = 0; it < ITERS; it++) {
   const { runs, sim, G } = evalRun(rungCosts, STRAT_ID);
   const pace = paceCount(sim, G);
+  const yC = makeY(sim);
   const full = runs.filter(r => !r.partial);
-  // 帯域判定+表示
+  // 帯域判定+表示(⑦: Yは転生した時点 x=startT+dur で評価)
   let ok = 0, all = 0;
   const rows = [];
   for (const r of full) {
-    const x = r.startT + r.hold;
-    const Y = yCurve(x);
+    const x = r.startT + r.dur;
+    const Y = yC(x);
     const inBand = r.hold >= 0.5 * Y && r.hold <= Y;
     all++; if (inBand) ok++;
     rows.push({ r, x, Y, inBand });
@@ -124,11 +130,9 @@ for (let it = 0; it < ITERS; it++) {
     if (!r.mains.length) continue;
     const rung = Math.min(...r.mains);
     if (rung === 0) continue; // core は run0 (帯域対象外扱い: 序盤)
-    const x = r.startT + r.hold;
-    const Y = yCurve(x);
     obsD[rung] = r.dur; // 2026-07-06: 狙いは「周回時間」。維持時間はチェイスノルマ側で帯域に合わせる
     obsDec[rung] = dec(r.cookies);
-    const target = TARGET_FRAC * yCurve(r.startT + r.dur);
+    const target = TARGET_FRAC * yC(r.startT + r.dur);
     const err = target - r.dur; // 正: 伸ばす必要
     if (rung <= 0) continue;
     let B = Bhat[rung];
@@ -164,7 +168,7 @@ for (let it = 0; it < ITERS; it++) {
   const holdOkPct = (100 * ok / all).toFixed(0);
   const total = full.reduce((a, r) => a + r.cookies, 0);
   let x100 = 0, x100all = 0, pt2 = 0; const fails = [];
-  for (let i = 1; i < full.length; i++) { x100all++; if (full[i].cookies >= 100 * full[i - 1].cookies) x100++; else fails.push(`${full[i-1].idx}->${full[i].idx}(x${(full[i].cookies/full[i-1].cookies).toFixed(0)})`); if (full[i].gain >= 2 * full[i - 1].gain && full[i].gain <= 100 * full[i - 1].gain) pt2++; }
+  for (let i = 1; i < full.length; i++) { x100all++; if (full[i].cookies >= 100 * full[i - 1].cookies) x100++; else fails.push(`${full[i-1].idx}->${full[i].idx}(x${(full[i].cookies/full[i-1].cookies).toFixed(0)})`); if (full[i].gain >= 1 * full[i - 1].gain && full[i].gain <= 100 * full[i - 1].gain) pt2++; }
   console.log(`[iter ${it}] runs=${runs.length} band ${ok}/${all} (${holdOkPct}%) x100 ${x100}/${x100all} pt2-100 ${pt2}/${x100all} pace ${pace.ok}/${pace.all} total=${total.toExponential(2)} ${fails.length?'FAIL:'+fails.join(' '):''}`);
   const score = (x100 === x100all ? 1000 : 0) + ok + pace.ok * 0.5 + pt2 * 0.5 - fails.length * 2;
   if (!globalThis.__best || score > globalThis.__best.score) globalThis.__best = { score, costs: rungCosts.slice(), ok, x100, x100all };
