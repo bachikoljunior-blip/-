@@ -311,8 +311,9 @@ function buildSkillValues() {
   }
   return SKILL_VALUES;
 }
-// ==== 2段階帯域(⑥⑦ 確定・2026-07-06): 初転生まで Y=120+8√x、初転生後 Y=1440+8√x (x=総経過秒) ====
-function bandY(prestiged, x) { return (prestiged ? 1440 : 120) + 8 * Math.sqrt(Math.max(0, x)); }
+// ==== 2段階帯域(⑥⑦ 2026-07-06 ユーザー承認で更新): 初転生まで Y=120+8√x、初転生後 Y=1440+3√x ====
+// (第10次: 初転生後の伸びの係数 8→3。24分スタートは維持)
+function bandY(prestiged, x) { return prestiged ? 1440 + 3 * Math.sqrt(Math.max(0, x)) : 120 + 8 * Math.sqrt(Math.max(0, x)); }
 
 function lg(level, rate) { return Math.pow(1 + Math.max(0, rate), Math.max(0, level)); }
 // 2026-07-05 キャップ全撤廃: 所有数上限(ownCap)は撤廃(負値ガードのみ)
@@ -375,6 +376,7 @@ function newRun(sim) {
     kills: 0, goldenTaken: 0,
     // モンスター種類(第9次): 決定的ローテーションの蓄積器と種類別集計
     mtAcc: {}, gbAcc: 0, killsSinceBoss: 0,
+    surge: {},                 // まとめ買い割増: 設備idごとの熱量 {h, t}(購入+1、halfSecで半減)
     killsByType: {}, rewardByType: {},
     critAtBuy: undefined, critNow: 0, critMax: 0
   };
@@ -909,14 +911,22 @@ function goldenBoostDurationMs(sim) {
   return P.golden.boostBase + P.golden.boostExtraCap * rawExtra / (rawExtra + P.golden.boostExtraHalf);
 }
 
+// まとめ買い割増(2026-07-06 ユーザー採用): 現在の熱量(時間減衰込み)
+function surgeHeat(sim, id) {
+  const sg = sim.run.surge && sim.run.surge[id];
+  if (!sg || !(sg.h > 0)) return 0;
+  return sg.h * Math.pow(0.5, (sim.t - sg.t) / Math.max(1, P.upSurge.halfSec));
+}
 function upgradeCost(sim, u) {
   const owned = sim.run.upgrades[u.id];
   const disc = Math.exp(-Math.max(0, skillEffect(sim, 'upgradeDiscount')));
   // 所有数指数: knee以降は急勾配(大量買い占め抑制)
   const knee = P.upCost.knee || Infinity;
   const e = owned <= knee ? owned * P.upCost.ownPow : knee * P.upCost.ownPow + (owned - knee) * (P.upCost.ownPow2 || P.upCost.ownPow);
+  // まとめ買い割増: (1+perBuy)^熱量。時間経過で元に戻る(=壁ができない)
+  const surge = Math.pow(1 + (P.upSurge ? P.upSurge.perBuy : 0), surgeHeat(sim, u.id));
   // 丸め規則: 設備コストは有効数字3桁=5の倍数+小数切り捨て(表示も内部値もこの値)
-  return q5cost(P.upCost.coef * Math.pow(u.base, P.upCost.basePow) * Math.pow(u.growth, e) * disc);
+  return q5cost(P.upCost.coef * Math.pow(u.base, P.upCost.basePow) * Math.pow(u.growth, e) * surge * disc);
 }
 function researchCostOf(sim, id) {
   const disc = Math.exp(-Math.max(0, skillEffect(sim, 'researchDiscount')));
@@ -1480,6 +1490,13 @@ function tryBuyUpgrade(sim, u, budgetRatio) {
   if (cost > sim.run.cookies) return false;
   sim.run.cookies -= cost;
   sim.run.upgrades[u.id]++;
+  // まとめ買い割増: 熱量を減衰させてから+1
+  {
+    const r2 = sim.run;
+    const sg = r2.surge[u.id] || (r2.surge[u.id] = { h: 0, t: sim.t });
+    sg.h = sg.h * Math.pow(0.5, (sim.t - sg.t) / Math.max(1, P.upSurge.halfSec)) + 1;
+    sg.t = sim.t;
+  }
   if (!sim.everUpgrade[u.id]) {
     sim.everUpgrade[u.id] = true;
     sim.unlockEvents.push({ t: sim.t, kind: 'upgrade', id: u.id });

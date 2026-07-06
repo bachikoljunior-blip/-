@@ -14,14 +14,14 @@ function fmtT(s) {
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
   return (h > 0 ? h + 'h' : '') + m + 'm' + sec + 's';
 }
-// 帯域式(2026-07-06 確定・2段階): 初転生まで Y=120+8√x / 初転生後 Y=1440+8√x (x=経過秒)
+// 帯域式(2026-07-06 ユーザー承認・第10次): 初転生まで Y=120+8√x / 初転生後 Y=1440+3√x (係数8→3)
 function firstPrestigeT(sim) {
   const r0 = sim.runs[0];
   return (r0 && !r0.partial) ? r0.endT : Infinity;
 }
 function makeY(sim) {
   const fp = firstPrestigeT(sim);
-  return x => (x >= fp ? 1440 : 120) + 8 * Math.sqrt(Math.max(0, x));
+  return x => x >= fp ? 1440 + 3 * Math.sqrt(Math.max(0, x)) : 120 + 8 * Math.sqrt(Math.max(0, x));
 }
 // 旧単段式(参考・tune互換用)
 function yCurve(x) { return 120 + 8 * Math.sqrt(x); }
@@ -285,7 +285,17 @@ function printToggles(res) {
       r._ratios = ratios; r._low = lowOk; r._med = med;
       console.log(`${kind.padEnd(9)} ${r.id.padEnd(26)} [${mn.toFixed(2)}..${mx.toFixed(2)}] 中央値${med.toFixed(2)} (${gm.toFixed(2)}) x${r.logs.length}回  x${need}  ${lowOk ? 'OK' : 'NG(中央値<' + need + ')'}`);
     }
-    // ±3倍(各回): 同一周回内で有効な機能同士。runIdx単位で照合
+    // ②(研究のみ・2026-07-06 ユーザー採用): 一強禁止は「研究ごとの中央値」同士で±3倍
+    if (kind === 'research') {
+      const meds = rows.filter(r => r.used && r._med != null).map(r => ({ id: r.id, med: r._med }));
+      if (meds.length >= 2) {
+        const gmean = Math.exp(meds.reduce((a, b) => a + Math.log(b.med), 0) / meds.length);
+        const ok2 = meds.filter(m => m.med >= gmean / 3 && m.med <= gmean * 3);
+        const ng2 = meds.filter(m => !(m.med >= gmean / 3 && m.med <= gmean * 3));
+        console.log(`②(中央値同士の±3倍・平均${gmean.toFixed(2)}): ${ok2.length}/${meds.length}${ng2.length ? ' NG: ' + ng2.map(m => m.id + '=' + m.med.toFixed(2)).join(',') : ' 全研究OK'}`);
+      }
+    }
+    // ±3倍(各回・③⑨⑩は従来どおり): 同一周回内で有効な機能同士。runIdx単位で照合
     const used = rows.filter(r => r.used && r.runIdxs);
     const byRun = new Map();
     for (const r of used) {

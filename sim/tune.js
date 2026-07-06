@@ -13,11 +13,11 @@ const HOURS = Number((process.argv[4] && process.argv[4] !== '--resume') ? proce
 const ITERS = Number(process.argv[2] || 8);
 const STRAT_ID = process.argv[3] || 'S1';
 
-// 帯域式(2026-07-06 確定・2段階): 初転生まで 120+8√x / 初転生後 1440+8√x。runner.js と必ず一致させること
+// 帯域式(2026-07-06 ユーザー承認・第10次): 初転生まで 120+8√x / 初転生後 1440+3√x。runner.js と必ず一致させること
 function makeY(sim) {
   const r0 = sim.runs[0];
   const fp = (r0 && !r0.partial) ? r0.endT : Infinity;
-  return x => (x >= fp ? 1440 : 120) + 8 * Math.sqrt(Math.max(0, x));
+  return x => x >= fp ? 1440 + 3 * Math.sqrt(Math.max(0, x)) : 120 + 8 * Math.sqrt(Math.max(0, x));
 }
 function dec(v) { return Math.log10(Math.max(1, v)); }
 // 転生PT式は params.js から読む(pG=0.50 対応):
