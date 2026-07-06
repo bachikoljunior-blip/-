@@ -144,7 +144,7 @@ const SKILL_NODES = [
   { id: 'unlock_reward_huntingCore', cost: 412, prereqs: ['unlock_reward_beastHeatFerment'], effects: [['unlockReward', 'huntingCore']] },
   { id: 'unlock_reward_brandHunt', cost: 472, prereqs: ['unlock_reward_biteRecovery'], effects: [['unlockReward', 'brandHunt']] },
   { id: 'unlock_reward_deepPursuit', cost: 808, prereqs: ['unlock_reward_huntingCore'], effects: [['unlockReward', 'deepPursuit']] },
-  { id: 'unlock_reward_goldenChain', cost: 102, prereqs: ['golden_4'], effects: [['unlockReward', 'goldenChain']] },
+  { id: 'unlock_reward_goldenChain', cost: 102, prereqs: ['golden_4', 'unlock_reward_crackedFang'], effects: [['unlockReward', 'goldenChain']] },
   { id: 'unlock_reward_goldenTarget', cost: 122, prereqs: ['unlock_reward_goldenChain'], effects: [['unlockReward', 'goldenTarget']] },
   { id: 'unlock_reward_goldenFirstHit', cost: 165, prereqs: ['unlock_reward_goldenTarget'], effects: [['unlockReward', 'goldenFirstHit']] },
   { id: 'unlock_reward_beastScent', cost: 174, prereqs: ['unlock_reward_goldenTarget'], effects: [['unlockReward', 'beastScent']] },
@@ -974,10 +974,12 @@ function researchStageUnlocked(sim, id, stage) {
   if (stage === 2) return !!sim.skills[RES_STAGE2[id]];
   return !!r.research2[id] && !!sim.skills[RES_STAGE3[id]];
 }
-// 段階コスト: 段1コスト×倍率(確定: 段2=×1,500 / 段3=×2,250,000)。researchDiscountは段1と同様に効く
+// 段階コスト: 段1コスト×倍率。研究ごとの個別倍率(resStageCostEach: 値段割りD'用)があれば優先、
+// なければ共通倍率(resStageCost)。researchDiscountは段1と同様に効く
 function researchStageCostOf(sim, id, stage) {
   const disc = Math.exp(-Math.max(0, skillEffect(sim, 'researchDiscount')));
-  const mult = stage === 2 ? P.resStageCost.s2 : P.resStageCost.s3;
+  const each = P.resStageCostEach && P.resStageCostEach[id];
+  const mult = stage === 2 ? ((each && each.s2) || P.resStageCost.s2) : ((each && each.s3) || P.resStageCost.s3);
   return q5cost(P.resCost[id] * mult * disc);
 }
 // capv(効果キャップ)は2026-07-05のキャップ全撤廃で削除済み

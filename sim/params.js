@@ -116,14 +116,16 @@ module.exports = {
   timing: { waveOpt: 0.6366, waveIdle: 0.3183, bhIdleDelay: 240, matureIdleMul: 0.5 },
 
   // ---- 研究コスト ----
-  resCost: {
+  // 第11次(値段割り・D'): weave.js が「1周回に中間目標1件」になるよう再配置した値を
+  // weave_costs.json に保存し、ここで上書き読込する(研究コスト=調整項目・ユーザー確認済み)
+  resCost: Object.assign({
     fingerTechnique: 2500, grandmaCrowd: 12000, ovenBatch: 30000,
     factoryNetwork: 150000, spiceBlend: 400000, portalNetwork: 1200000,
     bankClickDividend: 4000000, moonGlobalYeast: 40000000,
     portalGlobalFold: 400000000, galaxyAssembly: 6000000000,
     blackHoleCompression: 160000000000, quantumProofing: 3200000000000,
     antimatterRecipe: 64000000000000
-  },
+  }, (function () { try { return require('./weave_costs.json').resCost || {}; } catch (e) { return {}; } })()),
 
   // ---- モンスター報酬効果 ----
   rw: {
@@ -182,7 +184,7 @@ module.exports = {
 
   // ---- 段階コストの研究別倍率(第11次・値段割り用) ----
   // 研究ごとに {s2, s3} を指定(なければ resStageCost の共通倍率)。研究コスト=調整項目(ユーザー確認済み)
-  resStageCostEach: {},
+  resStageCostEach: (function () { try { return require('./weave_costs.json').resStageCostEach || {}; } catch (e) { return {}; } })(),
 
   // ---- まとめ買い割増(2026-07-06 ユーザー採用・第10次) ----
   // 同じ設備を短時間に連続購入するほど値段に割増がつき、時間で元に戻る。

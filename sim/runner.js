@@ -95,11 +95,11 @@ function summarize(sim) {
   // 条件㉒(新): 各回の周回時間が前回より長い(全ペア・厳密)
   let durOk = 0, durAll = 0;
   for (let i = 1; i < full.length; i++) { durAll++; if (full[i].duration > full[i - 1].duration) durOk++; }
-  // 条件㉑(新): 各設備の周回内初購入時に「1個の基礎毎秒生産」≥「実CPS」×1/5
+  // 条件㉑(Δ生産方式・2026-07-06): 初購入によるΔ生産(系列ボーナス等の固有能力込み)≥購入直前CPS×1/5
   let prOk = 0, prAll = 0, prWorst = null;
   for (const c of (sim.presenceChecks || [])) {
     prAll++;
-    const ratio = c.ref > 0 ? (c.base * 5) / c.ref : Infinity;
+    const ratio = c.ref > 0 ? (c.delta * 5) / c.ref : Infinity;
     if (ratio >= 1) prOk++;
     if (!prWorst || ratio < prWorst.ratio) prWorst = { id: c.id, runIdx: c.runIdx, ratio };
   }
@@ -559,6 +559,7 @@ if (mode === 'baseline') {
     'auto_4>click_4': 'クリック力は毎秒生産から計算される(指先連動)',
     'auto_4>upgrade_galaxy': '銀河工場=自動化の合流',
     'research_remodel>upgrade_time': '設備解放は経済・研究系の鎖(R4)',
+    'unlock_reward_crackedFang>unlock_reward_goldenChain': '黄金連鎖は金→討伐ダメージの相乗り札',
     'unlock_reward_huntingCore>unlock_reward_crushedMill': '素材加工×狩りの合流'
   };
   let total = 0, okE = 0;
