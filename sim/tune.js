@@ -4,12 +4,12 @@
 // モデル: D_k = A(深さ) + B_k×(しきい値dec - 自然フロンティアdec)。B_k は反復間の割線で推定。
 const fs = require('fs');
 
-function decMinStep(k) { return k >= 46 ? 2.3 : 2.6; } // 末尾(dec200+のB急騰帯)は2.3桁で周回長を抑える
+function decMinStep(k) { return 2.6; } // ⑤下限: コスト比2倍 ⇔ pG=0.13で2.32桁。余裕をみて2.6
 const RESUME = process.argv.includes('--resume');
 // 押し込み上限: ⑤上限(PT比100倍 ⇔ pG=0.5で4.0桁)内に収める(rung13の初回キャッチアップのみ例外)
-function decMaxStep(k) { return k === 13 ? 46 : 3.4; } // 3.7->3.4: 実測間隔=しきい値+オーバーシュート(~0.3桁)が⑤上限4.0桁を超えないように
-const TARGET_FRAC = 0.62;       // 帯域内の狙い位置 (0.5Y寄り: 非スキル解放イベントの分割ペア被害と長周回を抑える)
-const HOURS = 100;
+function decMaxStep(k) { return 8; } // ⑤上限: コスト比100倍 ⇔ 15.4桁。周回を伸ばす余地を残して8桁
+const TARGET_FRAC = 0.80;       // 周回時間の狙い(帯域上限Yの内側。維持=チェイス失敗は0.5Y〜0.75Yに来る)
+const HOURS = Number(process.argv[4] || 30); // 探索は30hで十分(全解放~15h+免除)
 const ITERS = Number(process.argv[2] || 8);
 const STRAT_ID = process.argv[3] || 'S1';
 
@@ -126,12 +126,11 @@ for (let it = 0; it < ITERS; it++) {
     if (rung === 0) continue; // core は run0 (帯域対象外扱い: 序盤)
     const x = r.startT + r.hold;
     const Y = yCurve(x);
-    obsD[rung] = r.hold;
+    obsD[rung] = r.dur; // 2026-07-06: 狙いは「周回時間」。維持時間はチェイスノルマ側で帯域に合わせる
     obsDec[rung] = dec(r.cookies);
-    const target = TARGET_FRAC * Y;
-    const err = target - r.hold; // 正: 伸ばす必要
-    // 序盤アセント(rung<=12)はそのまま(構造的に帯域不可)
-    if (rung <= 12) continue;
+    const target = TARGET_FRAC * yCurve(r.startT + r.dur);
+    const err = target - r.dur; // 正: 伸ばす必要
+    if (rung <= 0) continue;
     let B = Bhat[rung];
     // 割線更新
     if (prevState && prevState.obsD[rung] != null && obsD[rung] != null) {
