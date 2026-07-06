@@ -4725,8 +4725,8 @@
     <button class="tab" data-tab="researchTab">研究</button>
     <button class="tab" data-tab="prestigeTab">?</button>
     <button class="tab" data-tab="orderTab">?</button>
-    <button class="tab" data-tab="infoTab">一覧</button>
     <button class="tab" data-tab="workshopTab">?</button>
+    <button class="tab" data-tab="infoTab">一覧</button>
   </nav>
 
   <div class="tabPages">
@@ -6303,7 +6303,7 @@ function rewardModalOpen() {
 }
 
 function quotaClockPaused() {
-  return pausedForSkillChoice() || rewardModalOpen();
+  return pausedForSkillChoice() || rewardModalOpen() || titleScreenActive();
 }
 
 function startQuotaPause() {
@@ -6630,8 +6630,8 @@ function renderOrder() {
   if (!orderBoardUnlocked()) {
     box.innerHTML = `
       <div class="infoBox orderBoardBox">
-        <h3>注文ボード</h3>
-        <div class="desc">経済分析の先にある「注文ボード」スキルで解放されます。解放後は、短期の依頼が時々届き、達成すると今の状態に見合った報酬が手に入ります。</div>
+        <h3>？？？</h3>
+        <div class="desc">まだ解放されていない機能です。ゲームを進めると解放されます。</div>
       </div>
     `;
     return;
@@ -8541,13 +8541,26 @@ function startBgm() {
   } catch (e) {}
 }
 
+// suspendされたAudioContextを復帰させる(バックグラウンド復帰・画面転移対策)
+function resumeAudioIfNeeded() {
+  try { if (audioCtx && audioCtx.state === "suspended") audioCtx.resume(); } catch (e) {}
+}
+
 // 自動再生制限のため、最初の操作(タップ)でBGMを開始する
 document.addEventListener("pointerdown", () => { try { startBgm(); } catch (e) {} }, { once: true });
+// 一度中断した音を以降の操作・再表示で必ず復帰させる
+document.addEventListener("pointerdown", resumeAudioIfNeeded);
+document.addEventListener("touchstart", resumeAudioIfNeeded, { passive: true });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) resumeAudioIfNeeded(); });
+window.addEventListener("focus", resumeAudioIfNeeded);
+window.addEventListener("pageshow", resumeAudioIfNeeded);
 
 function playSound(kind) {
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!audioCtx) audioCtx = new AudioContext();
+    // 再開後・画面転移でContextがsuspendedになると音が出なくなるため必ず復帰させる
+    if (audioCtx.state === "suspended") audioCtx.resume();
     if ((settings.seVolume || 0) <= 0) return;
 
     if (kind === "cookie" || kind === "monster") {
@@ -12058,9 +12071,9 @@ $("titleAboutOverlay").addEventListener("click", e => {
 });
 
 setInterval(() => {
+  updateQuotaPauseState(); // タイトル画面中もノルマ時計を止めるため先に評価する
   if (titleScreenActive()) return;
 
-  updateQuotaPauseState();
   updateSpawnTimerPauseState();
   if (!pausedForSkillChoice()) {
     state.totalPlaySec = (state.totalPlaySec || 0) + 0.05; // v4: 総プレイ秒(転生持ち越し)
