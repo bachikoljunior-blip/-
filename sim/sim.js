@@ -122,6 +122,9 @@ const SKILL_NODES = [
   { id: 'research_1', cost: 41, prereqs: ['economy_2'], effects: [['researchDiscount', null, 0.04]] },
   { id: 'research_remodel', cost: 44, prereqs: ['research_1'], effects: [['researchDiscount', null, 0.03], ['unlockSystem', 'researchRemodel']] },
   { id: 'economy_2', cost: 47, prereqs: ['economy_1'], effects: [['upgradeDiscount', null, 0.05]] },
+  // 熟練(2026-07-06 ユーザー採用・第11次): スキルで解放。同じ設備を買うほど1台あたり生産が複利で伸びる
+  { id: 'mastery_low', cost: 52, prereqs: ['economy_2'], effects: [['unlockSystem', 'masteryLow']] },
+  { id: 'mastery_high', cost: 210, prereqs: ['mastery_low', 'upgrade_galaxy'], effects: [['unlockSystem', 'masteryHigh']] },
   { id: 'economy_analysis', cost: 62, prereqs: ['economy_2'], effects: [['unlockSystem', 'economyAnalysis']] },
   { id: 'order_board', cost: 86, prereqs: ['economy_analysis'], effects: [['unlockSystem', 'orderBoard']] },
   { id: 'upgrade_moon', cost: 52, prereqs: ['economy_2'], effects: [['unlockUpgrade', 'moonBakery']] },
@@ -173,10 +176,11 @@ const SKILL_HAND_ORDER = [
   // 設備解放: 月面=r12(7種設備の壁dec40を跨ぐ前)、時空=r17、以降約3ラングごとに第16種(r40)まで。
   'core', 'click_1', 'golden_1', 'monster_1', 'auto_1', 'economy_1',
   'click_2', 'golden_2', 'monster_2', 'auto_2', 'economy_2',
+  'mastery_low',
   'click_3', 'upgrade_moon', 'auto_3', 'research_1', 'research_remodel', 'economy_analysis', 'order_board',
   'golden_3', 'golden_analysis', 'upgrade_time', 'research_analysis', 'monster_3', 'hunt_analysis', 'bake_temperature',
   'auto_4', 'click_4', 'offline_1',
-  'upgrade_galaxy', 'golden_4', 'start_1', 'monster_4', 'reward_1', 'reward_synergy', 'reward_choice_2', 'start_2',
+  'upgrade_galaxy', 'mastery_high', 'golden_4', 'start_1', 'monster_4', 'reward_1', 'reward_synergy', 'reward_choice_2', 'start_2',
   'upgrade_blackhole', 'unlock_reward_crackedFang', 'unlock_reward_goldenChain',
   'upgrade_universe', 'unlock_reward_chainPrep', 'unlock_reward_huntFocus',
   'upgrade_godfinger', 'unlock_reward_goldenTarget', 'upgrade_singularity',
@@ -699,6 +703,7 @@ function computeProd(sim) {
 
   let clickRaw = 1;
   let cpsRaw = 0;
+  const directContrib = [];
   for (let i = 0; i < UPGRADES.length; i++) {
     const u = UPGRADES[i];
     const owned = r.upgrades[u.id];
@@ -762,8 +767,32 @@ function computeProd(sim) {
       // 段階3: 最高到達ノルマ層で全支援が伸びる
       if (supM > 1 && resStage3(sim, 'grandmaCrowd')) supM *= 1 + P.res2.supStageCoef * r.maxStage;
     }
-    const contrib = owned * u.value * personal * resM * supM;
+    // 熟練(スキル解放・研究不要): 下位7種=職人の手 / 上位9種=工程の極み。×(1+rate)^所持数
+    let mastMul = 1;
+    if (i <= UPIDX.portal) {
+      if (hasSkillEffect(sim, 'unlockSystem', 'masteryLow')) mastMul = Math.pow(1 + P.mastery.low, owned);
+    } else if (hasSkillEffect(sim, 'unlockSystem', 'masteryHigh')) {
+      mastMul = Math.pow(1 + P.mastery.high, owned);
+    }
+    const contrib = owned * u.value * personal * resM * supM * mastMul;
+    directContrib[i] = contrib; // 系列ボーナスの参照元(この設備の直接生産。系列ぶんは含まない)
     if (u.type === 'click') clickRaw += contrib; else cpsRaw += contrib;
+  }
+  // 系列ボーナス(2026-07-06 ユーザー採用・第11次): スキル解放の上位設備の固有能力(研究不要)。
+  // 1台につき「自分より下位の設備の直接生産(毎秒)の合計×coef」を追加生産。直接生産のみを参照する
+  // ため掛け算の連鎖(又取り)にはならない。神の指はクリック型なので、クリック力×(1+coef×台数)の線形倍率。
+  let godFingerLineageMul = 1;
+  if (P.lineage && P.lineage.coef > 0) {
+    let lowerCps = 0;
+    for (let i = 0; i < UPGRADES.length; i++) {
+      const u = UPGRADES[i];
+      const owned = r.upgrades[u.id];
+      if (owned > 0 && UPGRADE_UNLOCK_SKILLS[u.id] && sim.opt.disableUpgrade !== u.id) {
+        if (u.id === 'godFinger') godFingerLineageMul = 1 + P.lineage.coef * owned;
+        else cpsRaw += owned * P.lineage.coef * lowerCps;
+      }
+      if (u.type === 'cps' && sim.opt.disableUpgrade !== u.id) lowerCps += directContrib[i] || 0;
+    }
   }
 
   // 銀行クリック配当
@@ -782,6 +811,8 @@ function computeProd(sim) {
   click += cps * CL.cpsCoef * (1 + CL.fingerSqrt * Math.sqrt(r.upgrades.finger || 0)) * clickSkillMul;
   // クリック変更 案C(神の指=クリックの上位段): 1個ごとにクリック×godFingerExp(指数)
   click *= Math.pow(CL.godFingerExp, r.upgrades.godFinger || 0);
+  // 系列ボーナス(神の指): クリック力×(1+coef×台数)
+  click *= godFingerLineageMul;
 
   // 会心(期待値)
   let critEV = 1;
@@ -1500,13 +1531,15 @@ function tryBuyUpgrade(sim, u, budgetRatio) {
   if (!sim.everUpgrade[u.id]) {
     sim.everUpgrade[u.id] = true;
     sim.unlockEvents.push({ t: sim.t, kind: 'upgrade', id: u.id });
-    // 条件㉑(新設備の存在感): その方針で初めて買った瞬間(全プレイ通しの初回)の
-    // 「1個の基礎毎秒生産」対「その時点の実CPS(研究・スキル込み)」を記録
-    // 【仮】クリック設備はタップ1回の基礎値 vs 実クリック力で比較 / 金ブースト等の一時倍率は除く(baseCps)
+    // 条件㉑(新設備の存在感): 初めて買った瞬間の「その1台の実生産(系列・熟練など固有能力込み、
+    // 研究・スキル倍率も自然に通る)」を、購入直前の実CPSと比較する。Δ生産方式(2026-07-06 解釈更新):
+    // Δ = 購入後の生産 − 購入直前の生産。判定は Δ ≥ 購入直前CPS × 1/5(runner側)
     if (sim._lastProd) {
       if (!sim.presenceChecks) sim.presenceChecks = [];
-      const ref = u.type === 'click' ? sim._lastProd.baseClick : sim._lastProd.baseCps;
-      sim.presenceChecks.push({ runIdx: sim.runs.length, t: sim.t, id: u.id, base: u.value, ref });
+      const before = u.type === 'click' ? sim._lastProd.baseClick : sim._lastProd.baseCps;
+      const after = computeProd(sim);
+      const av = u.type === 'click' ? after.baseClick : after.baseCps;
+      sim.presenceChecks.push({ runIdx: sim.runs.length, t: sim.t, id: u.id, delta: Math.max(0, av - before), ref: before });
     }
   }
   return true;
