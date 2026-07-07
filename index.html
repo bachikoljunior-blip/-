@@ -9173,14 +9173,26 @@ function bgmSceneState() {
 
   let event = "none";
   let quota = "met";
+  let stageNo = 1;
+  let deep = false;
+  let deepK = 0;
   if (screen === "main") {
     if (Array.isArray(monsters) && monsters.some(m => m && m.typeId === "boss")) event = "boss";
     else if (Array.isArray(monsters) && monsters.length > 0) event = "monster";
     else if (typeof goldenBoostActive === "function" && goldenBoostActive()) event = "golden";
     // ノルマ未達後は復帰が無いので、失敗フラグが立ったら以降ずっと未達トーンにする
     quota = state.quotaFailed ? "failed" : "met";
+    // ステージ(草原/火山/氷河/砂丘/銀河/深層領域)ごとにBGMの調・音色を変える
+    if (typeof currentStageInfo === "function") {
+      try {
+        const info = currentStageInfo();
+        stageNo = info.no || 1;
+        deep = Boolean(info.deep);
+        deepK = deep ? (info.deepK || 1) : 0;
+      } catch (e) {}
+    }
   }
-  return { screen, event, quota };
+  return { screen, event, quota, stageNo, deep, deepK };
 }
 
 function startBgm() {
@@ -9234,6 +9246,18 @@ function startBgm() {
     const MEL_MAJOR = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25]; // Cメジャー・ペンタ(維持時)
     const MEL_MINOR = [220.00, 261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33]; // Aマイナー・ペンタ(未達後)
     const BELL = [329.63, 392.00, 493.88, 587.33, 659.25, 783.99, 987.77]; // スキルツリー用の広めのベル
+
+    // ステージごとの調(移調率)・基準の明るさ・音色・固有の彩り。
+    // shiftは全ての音程に掛ける倍率(半音数から算出)で、同じコード進行/ペンタを保ったまま
+    // ステージが変わるたびに"違う場所"に聞こえるようにする。
+    const STAGE_THEMES = {
+      1: { shift: 1,                    cutoff: 900,  melType: "triangle", flavor: "grass"   }, // バター草原: 素の土台
+      2: { shift: Math.pow(2, 2 / 12),  cutoff: 940,  melType: "square",   flavor: "volcano" }, // チョコレート火山: 一段上げて熱く鋭く
+      3: { shift: Math.pow(2, 7 / 12),  cutoff: 1080, melType: "sine",     flavor: "glacier" }, // ミントの氷河: 5度上げて澄んだ高音に
+      4: { shift: Math.pow(2, -2 / 12), cutoff: 780,  melType: "triangle", flavor: "desert"  }, // 香料の砂丘: 一段下げて乾いた響きに
+      5: { shift: Math.pow(2, 4 / 12),  cutoff: 1000, melType: "sine",     flavor: "galaxy"  }, // 星屑の銀河: 長3度上げて浮遊感を
+      6: { shift: Math.pow(2, -5 / 12), cutoff: 560,  melType: "sine",     flavor: "deep"    }  // 深層領域: 4度下げて低く沈める
+    };
     let hatNoiseBuffer = null;
     let melIndex = 3;
     let lastMelDir = 0;
@@ -9390,17 +9414,27 @@ function startBgm() {
           return;
         }
 
-        // ---- メイン: メジャー・ペンタで弾む。ノルマ状態とイベントで変調 ----
+        // ---- メイン: メジャー・ペンタで弾む。ステージの調・色、ノルマ状態とイベントで変調 ----
         const failed = scene.quota === "failed";
         const isBoss = scene.event === "boss";
         const isMonster = scene.event === "monster";
         const isGolden = scene.event === "golden";
+        const deepK = scene.deepK || 0;
+
+        // ステージ(草原/火山/氷河/砂丘/銀河/深層領域)ごとに移調・基準の明るさ・音色を差し替える。
+        // 同じコード進行/ペンタをshift倍することで、進行やロジックはそのまま"違う場所"に聞こえさせる
+        const stageTheme = STAGE_THEMES[Math.min(6, Math.max(1, scene.stageNo || 1))] || STAGE_THEMES[1];
+        const stageShift = stageTheme.shift;
+        const chordRoots = CHORD_ROOTS.map(f => f * stageShift);
+        const chordTriads = CHORD_TRIADS.map(tri => tri.map(f => f * stageShift));
+        const majorShifted = MEL_MAJOR.map(f => f * stageShift);
+
         // ボスは維持/未達に関わらず強制的に暗い旋法・鋭い音色へ切り替え、戦闘だと一発で分かるようにする
-        const scale = (isBoss || failed) ? MEL_MINOR : MEL_MAJOR;
-        // 明るさ(cutoff): 未達後は大きく沈める / 金クッキー中は開ける / ボスは高域を削って重く
-        let cutoff = failed ? 460 : 900;
+        const scale = ((isBoss || failed) ? MEL_MINOR : MEL_MAJOR).map(f => f * stageShift);
+        // 明るさ(cutoff): ステージ基準値を土台に、未達後は大きく沈める / 金クッキー中は開ける / ボスは高域を削って重く
+        let cutoff = failed ? Math.max(200, stageTheme.cutoff - 440) : stageTheme.cutoff;
         if (isGolden) cutoff += 260;
-        if (isBoss) cutoff = 620;
+        if (isBoss) cutoff = Math.max(520, stageTheme.cutoff - 320);
         glideCutoff(cutoff);
 
         // 場面の音圧感。ボス=張り出す/金クッキー=輝く/モンスター=前のめり/未達後=沈む
@@ -9411,32 +9445,34 @@ function startBgm() {
         else if (failed) dynGain = 0.68;
         glideDynGain(dynGain);
 
-        const melType = isBoss ? "sawtooth" : (failed ? "sine" : "triangle");
-        const bright = !failed && !isBoss; // パッド・ハモリ・キラ・グルーヴ(未達後とボスは専用の重い/暗いレイヤーに差し替え)
-        const chordIdx = Math.floor(bgmStep / 8) % CHORD_ROOTS.length;
+        // メロディの音色は「維持中(平常)」の時だけステージごとに変える。
+        // 危機的な状態(ボス・未達後)はどのステージでも共通の緊張感/沈鬱さで統一する
+        const melType = isBoss ? "sawtooth" : (failed ? "sine" : stageTheme.melType);
+        const bright = !failed && !isBoss; // パッド・ハモリ・キラ・グルーヴ・ステージ固有の彩り(未達後とボスは専用レイヤーに差し替え)
+        const chordIdx = Math.floor(bgmStep / 8) % chordRoots.length;
 
         // ベース: ボスは全拍で刻む重いオスティナート、通常は拍1・拍3(4分)のみ
         if (isBoss) {
-          const root = CHORD_ROOTS[chordIdx] / 2;
+          const root = chordRoots[chordIdx] / 2;
           playBgmNote(bgmStep % 2 === 0 ? root : root * 1.5, 0.55, 0.01, 0.20, "sawtooth");
         } else if (inBar === 0 || inBar === 4) {
-          const root = CHORD_ROOTS[chordIdx];
+          const root = chordRoots[chordIdx];
           const bf = inBar === 0 ? root : root * 1.5;
           playBgmNote(bf, 1.6, 0.02, 0.18, "triangle");
         }
         // パッド: 小節頭に和音を持続音で重ねて土台を厚くする(維持時のみ)
         if (bright && inBar === 0) {
-          playBgmPad(CHORD_TRIADS[chordIdx], 3.2, 0.045, "sine", -0.15);
+          playBgmPad(chordTriads[chordIdx], 3.2, 0.045, "sine", -0.15);
         }
         // ボス出現中: 毎拍キック+低いドローン+半音の不穏なスタブで戦闘の重さを強調
         if (isBoss) {
           if (bgmStep % 2 === 0) playBgmKick();
-          if (inBar === 0) playBgmNote(CHORD_ROOTS[chordIdx] / 4, 3.0, 0.15, 0.11, "sine");
-          if (inBar === 6) playBgmNote(CHORD_ROOTS[chordIdx] * 1.06, 0.4, 0.01, 0.08, "square");
+          if (inBar === 0) playBgmNote(chordRoots[chordIdx] / 4, 3.0, 0.15, 0.11, "sine");
+          if (inBar === 6) playBgmNote(chordRoots[chordIdx] * 1.06, 0.4, 0.01, 0.08, "square");
         }
         // 未達後: 低いドローンをルート+半音上の不協和で重ね、沈んだ空気を出す(戻りはない)
         if (failed && inBar === 0) {
-          const root = CHORD_ROOTS[chordIdx] / 2;
+          const root = chordRoots[chordIdx] / 2;
           playBgmNote(root, 3.4, 0.5, 0.09, "sine");
           playBgmNote(root * 1.06, 3.4, 0.6, 0.05, "sine");
         }
@@ -9470,17 +9506,41 @@ function startBgm() {
 
         // 上物のキラ: 維持時のみ小節頭に。金クッキー中は毎拍煌めきを重ね絶え間なく輝かせる
         if (bright && inBar === 0) {
-          playBgmNote(MEL_MAJOR[MEL_MAJOR.length - 1] * 2, 2.4, 0.03, 0.05, "sine");
+          playBgmNote(majorShifted[majorShifted.length - 1] * 2, 2.4, 0.03, 0.05, "sine");
         }
         if (isGolden) {
           if (bgmStep % 2 === 0) {
-            const g = MEL_MAJOR[Math.floor(bgmStep / 2 * 3) % MEL_MAJOR.length];
+            const g = majorShifted[Math.floor(bgmStep / 2 * 3) % majorShifted.length];
             playBgmNote(g * 2, 0.7, 0.01, 0.08, "sine", barPan);
           }
           if (inBar === 4) {
-            MEL_MAJOR.slice(-3).forEach((f, i) => {
+            majorShifted.slice(-3).forEach((f, i) => {
               playBgmNote(f * 2, 0.9, 0.01 + i * 0.02, 0.08, "sine", -0.3 + i * 0.3);
             });
+          }
+        }
+
+        // ステージ固有の彩り: 維持時のみ、拍3(inBar===2)で一度だけ鳴らす
+        if (bright && inBar === 2) {
+          switch (stageTheme.flavor) {
+            case "volcano": // チョコレート火山: マグマの低い唸り
+              playBgmNote(chordRoots[chordIdx] / 2, 2.6, 0.6, 0.06, "sine");
+              break;
+            case "glacier": // ミントの氷河: 高く澄んだチャイム
+              playBgmNote(majorShifted[majorShifted.length - 1] * 2, 2.2, 0.05, 0.05, "sine", -barPan);
+              break;
+            case "desert": // 香料の砂丘: 乾いたシェイカーの質感
+              playBgmHat(0.017);
+              break;
+            case "galaxy": // 星屑の銀河: 広いパッドを左右に伸ばして浮遊感を
+              playBgmPad(chordTriads[(chordIdx + 1) % chordTriads.length], 5.5, 0.04, "sine", 0.22);
+              break;
+            case "deep": { // 深層領域: 層(deepK)が進むほどわずかにデチューンし異質さが増す
+              const detune = 1 + Math.min(0.05, deepK * 0.004);
+              playBgmNote(chordRoots[chordIdx] * detune, 3.0, 0.4, 0.05, "sine");
+              break;
+            }
+            default: break; // バター草原: 素の土台のまま
           }
         }
 
