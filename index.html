@@ -6083,8 +6083,9 @@ function injectImageAssetStyle() {
     .policyChoiceBtn .choiceIcon{flex:0 0 auto}
     .titleLogoImg{max-width:88%;max-height:150px;object-fit:contain;display:block;margin:0 auto;filter:drop-shadow(0 6px 14px rgba(0,0,0,.5))}
     body.hasTitleLogoImg .titleLogoMain,body.hasTitleLogoImg .titleLogoSub{display:none}
-    .nodeMark .nodeMarkImg{width:100%;height:100%;object-fit:contain;display:block;border-radius:50%}
-    .selectedSkillIcon{width:26px;height:26px;object-fit:contain;vertical-align:middle;margin-right:4px}
+    .selectedSkillDescRow{display:flex;align-items:flex-start;gap:12px}
+    .selectedSkillArt{width:72px;height:72px;flex:0 0 auto;object-fit:contain;border-radius:12px;background:rgba(0,0,0,.18)}
+    .selectedSkillDescRow .selectedSkillDesc{flex:1 1 auto;margin:0}
   `;
   document.head.appendChild(st);
 }
@@ -9973,11 +9974,14 @@ function renderSkillChoiceScreen() {
 
   $("selectedSkillPanel").innerHTML = selected ? `
     <div class="selectedSkillHead">
-      <div class="selectedSkillName">${ASSETS.skills && ASSETS.skills[selected.id] ? `<img class="selectedSkillIcon" src="${assetUrl(ASSETS.skills[selected.id])}" alt="" aria-hidden="true">` : selected.icon} ${selected.name}</div>
+      <div class="selectedSkillName">${selected.icon} ${selected.name}</div>
       <div class="selectedSkillStatus">${statusText}</div>
     </div>
     <div class="selectedSkillCost">消費PT：${fmt(selected.cost)} / 系統：${selected.branchName}</div>
-    <div class="selectedSkillDesc">${selected.desc}</div>
+    <div class="selectedSkillDescRow">
+      ${ASSETS.skills && ASSETS.skills[selected.id] ? `<img class="selectedSkillArt" src="${assetUrl(ASSETS.skills[selected.id])}" alt="" aria-hidden="true" loading="lazy">` : ""}
+      <div class="selectedSkillDesc">${selected.desc}</div>
+    </div>
     <div class="selectedSkillDesc">前提：${selected.prereqs.length ? selected.prereqs.map(id => getSkill(id)?.name || id).join("、") : "なし"}</div>
   ` : `
     <div class="selectedSkillName">スキルを選択</div>
@@ -10026,7 +10030,7 @@ function renderSkillChoiceScreen() {
         data-skill-node="${skill.id}"
         aria-label="${skill.name}"
       >
-        <span class="nodeMark">${ASSETS.skills && ASSETS.skills[skill.id] ? `<img class="nodeMarkImg" src="${assetUrl(ASSETS.skills[skill.id])}" alt="" aria-hidden="true" loading="lazy">` : skill.icon}</span>
+        <span class="nodeMark">${skill.icon}</span>
         <span class="nodeName">${skill.name}</span>
         <span class="nodeCost">${done ? "済" : "PT " + fmt(skill.cost)}</span>
       </button>
