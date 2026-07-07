@@ -4964,6 +4964,7 @@
       <button id="debugGoldenBtn" type="button">金クキ出す</button>
       <button id="debugMonsterBtn" type="button">クキモン出す</button>
       <button id="debugQuotaBtn" type="button">ノルマ復帰</button>
+      <button id="debugQuotaFailBtn" type="button">ノルマ即失敗</button>
       <button id="debugMaterialsBtn" type="button">素材+100</button>
       <button id="debugStageBtn" type="button">次ステージ解放</button>
       <button id="debugLayerBtn" type="button">深層の層+1</button>
@@ -9233,14 +9234,26 @@ function bgmSceneState() {
 
   let event = "none";
   let quota = "met";
+  let stageNo = 1;
+  let deep = false;
+  let deepK = 0;
   if (screen === "main") {
     if (Array.isArray(monsters) && monsters.some(m => m && m.typeId === "boss")) event = "boss";
     else if (Array.isArray(monsters) && monsters.length > 0) event = "monster";
     else if (typeof goldenBoostActive === "function" && goldenBoostActive()) event = "golden";
     // ノルマ未達後は復帰が無いので、失敗フラグが立ったら以降ずっと未達トーンにする
     quota = state.quotaFailed ? "failed" : "met";
+    // ステージ(草原/火山/氷河/砂丘/銀河/深層領域)ごとにBGMの調・音色を変える
+    if (typeof currentStageInfo === "function") {
+      try {
+        const info = currentStageInfo();
+        stageNo = info.no || 1;
+        deep = Boolean(info.deep);
+        deepK = deep ? (info.deepK || 1) : 0;
+      } catch (e) {}
+    }
   }
-  return { screen, event, quota };
+  return { screen, event, quota, stageNo, deep, deepK };
 }
 
 function startBgm() {
@@ -9256,16 +9269,99 @@ function startBgm() {
     bgmFilter = audioCtx.createBiquadFilter();
     bgmFilter.type = "lowpass";
     bgmFilter.frequency.value = 680;
-    bgmFilter.connect(bgmGainNode);
+
+    // 場面ごとの"音圧感"(ボス=張り出す/未達後=沈む等)を司るダイナミックゲイン。
+    // ユーザーのBGM音量設定(bgmGainNode)とは別段に挟み、シーンで滑らかに増減させる。
+    const bgmDynGain = audioCtx.createGain();
+    bgmDynGain.gain.value = 1;
+    bgmFilter.connect(bgmDynGain);
+    bgmDynGain.connect(bgmGainNode);
     bgmGainNode.connect(audioCtx.destination);
+
+    // 簡易アンビエンス(フィードバックディレイ)。dry(bgmFilter→bgmDynGain)と並行して
+    // 薄く尾を引かせ、生成音でも"空間の広がり"を感じられるようにする。
+    const bgmDelay = audioCtx.createDelay(1.0);
+    bgmDelay.delayTime.value = 0.27;
+    const bgmDelayFeedback = audioCtx.createGain();
+    bgmDelayFeedback.gain.value = 0.30;
+    const bgmDelayWet = audioCtx.createGain();
+    bgmDelayWet.gain.value = 0.30;
+    bgmFilter.connect(bgmDelay);
+    bgmDelay.connect(bgmDelayFeedback);
+    bgmDelayFeedback.connect(bgmDelay);
+    bgmDelay.connect(bgmDelayWet);
+    bgmDelayWet.connect(bgmDynGain);
+
     bgmStarted = true;
 
     // ポップな土台。画面ごとに差し替え、メイン中はノルマ状態とイベントで変調する。
     // 全て同じ生成エンジンのパラメータ切替(音階・テンポ・音色・音域・上物)で表現する。
-    const CHORD_ROOTS = [130.81, 98.00, 110.00, 87.31]; // C3 G2 A2 F2 (I-V-vi-IV のポップ進行)
-    const MEL_MAJOR = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25]; // Cメジャー・ペンタ(維持時)
-    const MEL_MINOR = [220.00, 261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33]; // Aマイナー・ペンタ(未達後)
+    const CHORD_ROOTS = [130.81, 98.00, 110.00, 87.31]; // C3 G2 A2 F2 (I-V-vi-IV のポップ進行)。危機状態(ボス/未達後)の共通ベースに使う
+    const MEL_MINOR = [220.00, 261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33]; // Aマイナー・ペンタ。危機状態の共通旋律に使う
     const BELL = [329.63, 392.00, 493.88, 587.33, 659.25, 783.99, 987.77]; // スキルツリー用の広めのベル
+
+    // 半音数からステージ固有の周波数を出すヘルパー。C4を基準に、旋法(scaleSemis)や
+    // 和声進行(bassSemis)を"移調"ではなく"別の音階そのもの"として定義できるようにする。
+    const STAGE_BASE_HZ = 261.63; // C4
+    function noteFreq(semis) {
+      return STAGE_BASE_HZ * Math.pow(2, semis / 12);
+    }
+
+    // ステージごとの調・旋法・和声進行・リズムパターン・固有テクスチャ。
+    // rootOffset: そのステージの主音(C4からの半音数)。scaleSemis: rootOffset相対の音階(旋法そのものを変える)。
+    // bassSemis: 4小節ループのベース(root相対、I-V-vi-IV等の進行そのものを変える)。
+    // bassPattern/melPattern: 小節内どこで鳴らすか(拍の置き方そのものを変える)。flavor: 持続する固有テクスチャ。
+    const STAGE_THEMES = {
+      1: { // バター草原: 基準となる明るいメジャー・ペンタ、素直な拍運び
+        rootOffset: 0,
+        scaleSemis: [0, 2, 4, 7, 9, 12, 14, 16], // メジャー・ペンタ
+        bassSemis: [-12, -17, -15, -19],          // I-V-vi-IV
+        bassPattern: [0, 4],
+        melPattern: [0, 1, 0, 1, 0, 1, 0, 1],
+        melType: "triangle", cutoff: 900, flavor: "grass"
+      },
+      2: { // チョコレート火山: マイナー・ペンタ+ブルーノートで熱く、密度も倍で前のめり
+        rootOffset: 2,
+        scaleSemis: [0, 3, 5, 6, 7, 10, 12, 15],
+        bassSemis: [-12, -17, -14, -19],
+        bassPattern: [0, 3, 4, 6],
+        melPattern: [1, 1, 0, 1, 1, 0, 1, 1],
+        melType: "square", cutoff: 940, flavor: "volcano"
+      },
+      3: { // ミントの氷河: リディアン風の澄んだ音階、拍数を絞って空間を広く
+        rootOffset: 7,
+        scaleSemis: [0, 2, 4, 6, 7, 11, 12, 14],
+        bassSemis: [-12, -17, -15, -12],
+        bassPattern: [0],
+        melPattern: [0, 0, 1, 0, 0, 0, 1, 0],
+        melType: "sine", cutoff: 1080, flavor: "glacier"
+      },
+      4: { // 香料の砂丘: フリジアン・ドミナントで異国風、シンコペーションの効いた拍運び
+        rootOffset: -2,
+        scaleSemis: [0, 1, 4, 5, 7, 8, 11, 12],
+        bassSemis: [-12, -13, -17, -8],
+        bassPattern: [0, 2, 5],
+        melPattern: [0, 1, 0, 1, 1, 0, 1, 0],
+        melType: "triangle", cutoff: 780, flavor: "desert"
+      },
+      5: { // 星屑の銀河: 2オクターブ近く広がる音階で浮遊感、拍はまばらに長く伸ばす
+        rootOffset: 4,
+        scaleSemis: [0, 4, 7, 11, 14, 19, 23, 26],
+        bassSemis: [-12, -17, -15, -19],
+        bassPattern: [0],
+        melPattern: [0, 0, 0, 1, 0, 0, 0, 0],
+        melType: "sine", cutoff: 1000, flavor: "galaxy"
+      },
+      6: { // 深層領域: ロクリアン風の不協和音階、拍を不規則に間引いて不穏さを出す
+        rootOffset: -5,
+        scaleSemis: [0, 1, 3, 6, 7, 10, 12, 13],
+        bassSemis: [-12, -18, -13, -19],
+        bassPattern: [0, 4],
+        melPattern: [1, 0, 0, 0, 0, 1, 0, 0],
+        melType: "sine", cutoff: 560, flavor: "deep"
+      }
+    };
+    let hatNoiseBuffer = null;
     let melIndex = 3;
     let lastMelDir = 0;
     let lastMelIndex = -1;
@@ -9279,7 +9375,8 @@ function startBgm() {
     ];
     const titlePattern = [0, 2, 1, 3, 2, 3, 1, 2];
 
-    function playBgmNote(freq, len, attack, peak, type) {
+    // pan(-1〜1)を指定すると定位を振る(豪華さ=ステレオの広がり用)。省略時は中央
+    function playBgmNote(freq, len, attack, peak, type, pan) {
       const osc = audioCtx.createOscillator();
       const g = audioCtx.createGain();
       osc.type = type || "sine";
@@ -9288,9 +9385,45 @@ function startBgm() {
       g.gain.linearRampToValueAtTime(peak, audioCtx.currentTime + attack);
       g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + len);
       osc.connect(g);
-      g.connect(bgmFilter);
+      if (pan && audioCtx.createStereoPanner) {
+        const p = audioCtx.createStereoPanner();
+        p.pan.value = Math.max(-1, Math.min(1, pan));
+        g.connect(p);
+        p.connect(bgmFilter);
+      } else {
+        g.connect(bgmFilter);
+      }
       osc.start(audioCtx.currentTime);
       osc.stop(audioCtx.currentTime + len);
+    }
+
+    // 和音を持続音(パッド)として重ねる。減衰の遅いエンベロープで背景の厚みを作る
+    function playBgmPad(freqs, len, peak, type, pan) {
+      freqs.forEach(freq => playBgmNote(freq, len, len * 0.4, peak, type || "sine", pan));
+    }
+
+    // 軽いハイハット風のノイズtick。lowpass(bgmFilter)を経由すると高域が削れてしまうため、
+    // bgmGainNodeへ直結して常にシャリッとした質感を保つ
+    function playBgmHat(peak) {
+      if (!hatNoiseBuffer) {
+        const size = Math.floor(audioCtx.sampleRate * 0.035);
+        hatNoiseBuffer = audioCtx.createBuffer(1, size, audioCtx.sampleRate);
+        const data = hatNoiseBuffer.getChannelData(0);
+        for (let i = 0; i < size; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / size, 4);
+        }
+      }
+      const src = audioCtx.createBufferSource();
+      src.buffer = hatNoiseBuffer;
+      const hp = audioCtx.createBiquadFilter();
+      hp.type = "highpass";
+      hp.frequency.value = 7000;
+      const g = audioCtx.createGain();
+      g.gain.value = peak || 0.016;
+      src.connect(hp);
+      hp.connect(g);
+      g.connect(bgmDynGain);
+      src.start(audioCtx.currentTime);
     }
 
     // ボス戦の低い鼓動(キック)。lowpassを通しても低域は残るので同じ経路で鳴らす
@@ -9315,6 +9448,11 @@ function startBgm() {
       try { bgmFilter.frequency.setTargetAtTime(target, audioCtx.currentTime, 0.28); } catch (e) {}
     }
 
+    // 場面の"音圧感"(ボスは張り出す、未達後は沈む等)をなめらかに切り替える
+    function glideDynGain(target) {
+      try { bgmDynGain.gain.setTargetAtTime(target, audioCtx.currentTime, 0.35); } catch (e) {}
+    }
+
     // メロディをペンタ内で「歩かせる」。停滞と単純往復を避けて自然に流す
     function walkMel(scale) {
       let dir = (lastMelDir !== 0 && Math.random() < 0.6) ? lastMelDir : (Math.random() < 0.5 ? -1 : 1);
@@ -9335,6 +9473,7 @@ function startBgm() {
       try {
         bgmStep += 1;
         const inBar = bgmStep % 8; // 8分音符×8 = 1小節(約1.9秒)
+        const barPan = (bgmStep % 4 < 2) ? -0.22 : 0.22; // 拍ごとに定位を軽く振ってステレオを広げる
         const scene = bgmSceneState();
 
         // ---- タイトル: 明るいアルペジオを裏拍の弾みつきでポップに ----
@@ -9344,14 +9483,19 @@ function startBgm() {
           if (bgmStep % 2 === 0) {
             const pos = titlePattern[(bgmStep >> 1) % titlePattern.length];
             const freq = chord[pos % chord.length];
-            playBgmNote(freq, 2.6, 0.05, pos === 0 ? 0.85 : 0.5, "triangle");
-            playBgmNote(freq * 2, 2.6, 0.05, 0.09, "sine");
+            playBgmNote(freq, 2.6, 0.05, pos === 0 ? 0.85 : 0.5, "triangle", barPan);
+            playBgmNote(freq * 2, 2.6, 0.05, 0.09, "sine", barPan);
           } else {
             // 裏拍: 高いオクターブを小さく重ねて弾ませる
             const freq = chord[(bgmStep >> 1) % chord.length];
-            playBgmNote(freq * 2, 0.9, 0.02, 0.06, "triangle");
+            playBgmNote(freq * 2, 0.9, 0.02, 0.06, "triangle", -barPan);
           }
-          if (inBar === 0) playBgmNote(chord[chord.length - 1] * 2, 3.2, 0.04, 0.05, "sine");
+          if (inBar === 0) {
+            playBgmNote(chord[chord.length - 1] * 2, 3.2, 0.04, 0.05, "sine");
+            // パッド: 和音を1オクターブ下げて持続させ、背景の厚みを担当
+            playBgmPad(chord.slice(0, 3).map(f => f / 2), 3.6, 0.045, "sine", -0.18);
+            playBgmHat(0.014);
+          }
           return;
         }
 
@@ -9360,52 +9504,165 @@ function startBgm() {
           glideCutoff(1050);
           if (bgmStep % 2 === 0) {
             const freq = walkMel(BELL);
-            playBgmNote(freq, 3.4, 0.03, 0.14, "sine");
-            playBgmNote(freq * 2, 3.4, 0.03, 0.05, "sine");
+            playBgmNote(freq, 3.4, 0.03, 0.14, "sine", barPan);
+            playBgmNote(freq * 2, 3.4, 0.03, 0.05, "sine", barPan);
+            // ハモリ: 1オクターブ下を薄く添えて豊かな響きに
+            playBgmNote(freq / 2, 3.4, 0.05, 0.05, "sine", -barPan);
           }
           if (inBar === 0) playBgmNote(BELL[BELL.length - 1] * 1.5, 4.0, 0.05, 0.06, "sine");
+          // パッド: 2小節ごとに和音を長く伸ばして背景を満たす
+          if (bgmStep % 16 === 0) {
+            playBgmPad([BELL[0] / 2, BELL[2] / 2, BELL[4] / 2], 6.0, 0.035, "sine", 0.15);
+          }
           return;
         }
 
-        // ---- メイン: メジャー・ペンタで弾む。ノルマ状態とイベントで変調 ----
+        // ---- メイン: ステージの旋法・和声・拍運びで弾み、ノルマ状態とイベントで変調 ----
         const failed = scene.quota === "failed";
-        const scale = failed ? MEL_MINOR : MEL_MAJOR;
-        // 明るさ(cutoff): 未達後は一段落とす / 金クッキー中は開ける / ボスは少し上げる
-        let cutoff = failed ? 540 : 900;
-        if (scene.event === "golden") cutoff += 250;
-        if (scene.event === "boss") cutoff += 120;
+        const isBoss = scene.event === "boss";
+        const isMonster = scene.event === "monster";
+        const isGolden = scene.event === "golden";
+        const isCrisis = isBoss || failed; // 危機的な状態はどのステージでも共通の緊張感/沈鬱さに統一する
+        const deepK = scene.deepK || 0;
+
+        // ステージ(草原/火山/氷河/砂丘/銀河/深層領域)ごとに主音・旋法・和声進行・拍運びをまるごと差し替える。
+        // 同じ仕組み(音階/ベース進行/拍パターン)の"中身"をステージごとに変えることで、はっきり別の場所に聞こえさせる
+        const stageTheme = STAGE_THEMES[Math.min(6, Math.max(1, scene.stageNo || 1))] || STAGE_THEMES[1];
+        const stageScale = stageTheme.scaleSemis.map(s => noteFreq(stageTheme.rootOffset + s));
+        const stageChordRoots = stageTheme.bassSemis.map(s => noteFreq(stageTheme.rootOffset + s));
+        const stageChordTriad = [0, 2, 4].map(i => noteFreq(stageTheme.rootOffset + stageTheme.scaleSemis[i]));
+        // 危機状態は旋法そのものは統一(MEL_MINOR/CHORD_ROOTS)し、主音(register)だけステージに合わせる
+        const crisisShift = Math.pow(2, stageTheme.rootOffset / 12);
+        const crisisScale = MEL_MINOR.map(f => f * crisisShift);
+        const crisisChordRoots = CHORD_ROOTS.map(f => f * crisisShift);
+
+        const scale = isCrisis ? crisisScale : stageScale;
+        const chordRootsArr = isCrisis ? crisisChordRoots : stageChordRoots;
+        const bassPattern = isCrisis ? [0, 4] : stageTheme.bassPattern; // 危機時は拍運びも共通の単純なI-Vに統一
+
+        // 明るさ(cutoff): ステージ基準値を土台に、未達後は大きく沈める / 金クッキー中は開ける / ボスは高域を削って重く
+        let cutoff = failed ? Math.max(200, stageTheme.cutoff - 440) : stageTheme.cutoff;
+        if (isGolden) cutoff += 260;
+        if (isBoss) cutoff = Math.max(520, stageTheme.cutoff - 320);
         glideCutoff(cutoff);
-        const melType = failed ? "sine" : "triangle";
-        const bright = !failed; // 上物のキラ(未達後はOFF)
 
-        // ベース: 拍1・拍3(step 0,4)で4小節ループのコード根音・5度
-        if (inBar === 0 || inBar === 4) {
-          const root = CHORD_ROOTS[Math.floor(bgmStep / 8) % CHORD_ROOTS.length];
-          const bf = inBar === 0 ? root : root * 1.5;
-          playBgmNote(bf, 1.6, 0.02, 0.18, "triangle");
+        // 場面の音圧感。ボス=張り出す/金クッキー=輝く/モンスター=前のめり/未達後=沈む
+        let dynGain = 1.0;
+        if (isBoss) dynGain = 1.32;
+        else if (isGolden) dynGain = 1.18;
+        else if (isMonster) dynGain = 1.10;
+        else if (failed) dynGain = 0.68;
+        glideDynGain(dynGain);
+
+        // メロディの音色は「維持中(平常)・モンスター・金クッキー」の時だけステージごとに変える。
+        // 危機的な状態(ボス・未達後)はどのステージでも共通の音色で統一する
+        const melType = isBoss ? "sawtooth" : (failed ? "sine" : stageTheme.melType);
+        const bright = !isCrisis; // パッド・ハモリ・キラ・グルーヴ・ステージ固有の彩り(危機時は専用レイヤーに差し替え)
+        const chordIdx = Math.floor(bgmStep / 8) % chordRootsArr.length;
+
+        // ベース: ボスは全拍で刻む重いオスティナート。それ以外はステージ固有(未達後は共通)の拍パターンで刻む
+        if (isBoss) {
+          const root = chordRootsArr[chordIdx] / 2;
+          playBgmNote(bgmStep % 2 === 0 ? root : root * 1.5, 0.55, 0.01, 0.20, "sawtooth");
+        } else {
+          const hitPos = bassPattern.indexOf(inBar);
+          if (hitPos !== -1) {
+            const root = chordRootsArr[chordIdx];
+            const bf = hitPos === 0 ? root : root * Math.pow(2, 7 / 12);
+            playBgmNote(bf, 1.6, 0.02, 0.18, "triangle");
+          }
         }
-        // ボス出現中: 拍頭に低い鼓動を重ねて重量感を出す
-        if (scene.event === "boss" && (inBar === 0 || inBar === 4)) playBgmKick();
-
-        // メロディ: 裏拍(奇数step)でペンタを歩く
-        if (bgmStep % 2 === 1) {
-          const freq = walkMel(scale);
-          playBgmNote(freq, 1.3, 0.02, 0.15, melType);
-          if (!failed) playBgmNote(freq * 2, 1.3, 0.02, 0.05, "sine");
-        }
-
-        // モンスター(通常)戦闘中: 裏拍に軽いハイのブリップを足してアップテンポなドライブ感
-        if (scene.event === "monster" && bgmStep % 2 === 1) {
-          playBgmNote(1320, 0.12, 0.01, 0.05, "square");
-        }
-
-        // 上物のキラ: 維持時のみ小節頭に。金クッキー中は小節中央にも増量してキラッと
+        // パッド: 小節頭に和音を持続音で重ねて土台を厚くする(維持時のみ、ステージ固有の三和音)
         if (bright && inBar === 0) {
-          playBgmNote(MEL_MAJOR[MEL_MAJOR.length - 1] * 2, 2.4, 0.03, 0.05, "sine");
+          playBgmPad(stageChordTriad, 3.2, 0.045, "sine", -0.15);
         }
-        if (scene.event === "golden" && inBar === 4) {
-          playBgmNote(MEL_MAJOR[MEL_MAJOR.length - 1] * 2, 1.6, 0.02, 0.07, "sine");
+        // ボス出現中: 毎拍キック+低いドローン+半音の不穏なスタブで戦闘の重さを強調
+        if (isBoss) {
+          if (bgmStep % 2 === 0) playBgmKick();
+          if (inBar === 0) playBgmNote(chordRootsArr[chordIdx] / 4, 3.0, 0.15, 0.11, "sine");
+          if (inBar === 6) playBgmNote(chordRootsArr[chordIdx] * 1.06, 0.4, 0.01, 0.08, "square");
         }
+        // 未達後: 低いドローンをルート+半音上の不協和で重ね、沈んだ空気を出す(戻りはない)
+        if (failed && inBar === 0) {
+          const root = chordRootsArr[chordIdx] / 2;
+          playBgmNote(root, 3.4, 0.5, 0.09, "sine");
+          playBgmNote(root * 1.06, 3.4, 0.6, 0.05, "sine");
+        }
+
+        // メロディ: 場面ごとにテンポ感を変える(ボス・モンスターは倍速で前のめり、未達後は半分で足取り重く、
+        // 平常/金クッキーはステージ固有の拍パターンで鳴らす)
+        if (isBoss) {
+          const freq = walkMel(scale);
+          playBgmNote(freq, 0.9, 0.01, 0.17, melType);
+        } else if (isMonster) {
+          const freq = walkMel(scale);
+          playBgmNote(freq, 1.0, 0.01, 0.15, melType, barPan);
+          playBgmNote(freq * 2, 1.0, 0.01, 0.05, "sine", barPan);
+        } else if (failed) {
+          if (bgmStep % 4 === 1) {
+            const freq = walkMel(scale);
+            playBgmNote(freq, 2.6, 0.05, 0.13, melType);
+          }
+        } else if (stageTheme.melPattern[inBar] === 1) {
+          const freq = walkMel(scale);
+          playBgmNote(freq, 1.3, 0.02, 0.15, melType, barPan);
+          playBgmNote(freq * 2, 1.3, 0.02, 0.05, "sine", barPan);
+          const harmIdx = Math.max(0, melIndex - 2);
+          playBgmNote(scale[harmIdx], 1.3, 0.03, 0.06, "sine", -barPan);
+        }
+
+        // モンスター(通常)戦闘中: 全裏拍にハイのブリップ+ハットを足して駆け足のドライブ感を強調
+        if (isMonster) {
+          if (bgmStep % 2 === 0) playBgmNote(1320, 0.10, 0.005, 0.05, "square");
+          playBgmHat(0.020);
+        }
+
+        // 上物のキラ: 維持時のみ小節頭に(ステージ固有の音階の最上音)。金クッキー中は毎拍煌めきを重ね絶え間なく輝かせる
+        if (bright && inBar === 0) {
+          playBgmNote(stageScale[stageScale.length - 1] * 2, 2.4, 0.03, 0.05, "sine");
+        }
+        if (isGolden) {
+          if (bgmStep % 2 === 0) {
+            const g = stageScale[Math.floor(bgmStep / 2 * 3) % stageScale.length];
+            playBgmNote(g * 2, 0.7, 0.01, 0.08, "sine", barPan);
+          }
+          if (inBar === 4) {
+            stageScale.slice(-3).forEach((f, i) => {
+              playBgmNote(f * 2, 0.9, 0.01 + i * 0.02, 0.08, "sine", -0.3 + i * 0.3);
+            });
+          }
+        }
+
+        // ステージ固有の持続テクスチャ: 維持時のみ、1小節に複数回鳴らして"その場所らしさ"を絶やさない
+        if (bright) {
+          switch (stageTheme.flavor) {
+            case "volcano": // チョコレート火山: マグマの低い唸りを1小節に2回
+              if (inBar === 2 || inBar === 6) playBgmNote(stageChordRoots[chordIdx] / 2, 1.8, 0.4, 0.06, "sine");
+              break;
+            case "glacier": // ミントの氷河: 高く澄んだチャイムを1小節に2回
+              if (inBar === 2 || inBar === 6) {
+                playBgmNote(stageScale[stageScale.length - 1] * 2, 2.2, 0.05, 0.05, "sine", inBar === 2 ? -barPan : barPan);
+              }
+              break;
+            case "desert": // 香料の砂丘: 全裏拍で乾いたシェイカーを刻み続ける
+              if (bgmStep % 2 === 1) playBgmHat(0.015);
+              break;
+            case "galaxy": // 星屑の銀河: 広いパッドを小節頭で伸ばし、裏で高いきらめきが漂う
+              if (inBar === 0) playBgmPad([stageChordRoots[(chordIdx + 1) % stageChordRoots.length]], 5.5, 0.04, "sine", 0.22);
+              if (inBar === 6) playBgmNote(stageScale[1] * 2, 3.0, 0.3, 0.045, "sine", -0.25);
+              break;
+            case "deep": { // 深層領域: 低いドローンを1小節に2回。層(deepK)が進むほどわずかにデチューンし異質さが増す
+              const detune = 1 + Math.min(0.05, deepK * 0.004);
+              if (inBar === 2 || inBar === 6) playBgmNote(stageChordRoots[chordIdx] * detune, 1.8, 0.35, 0.05, "sine");
+              if (inBar === 0 && chordIdx === 0) playBgmNote(stageChordRoots[chordIdx] * 2.02, 1.2, 0.1, 0.035, "square"); // 遠い金属質の鐘
+              break;
+            }
+            default: break; // バター草原: 素の土台のまま
+          }
+        }
+
+        // 軽いハイハット風のtickでグルーヴに厚みを。未達後・ボス中は専用の重さに専念するため鳴らさない
+        if (bright && bgmStep % 2 === 0) playBgmHat(0.013);
       } catch (e) {}
     }
 
@@ -13090,6 +13347,12 @@ function installDebugPanel() {
     state.quotaPausedMs = 0;
     state.quotaPauseStartedAt = 0;
     state.runCookies = Decimal.max(state.runCookies, D(monsterQuotaRequiredAtElapsed(60)));
+    updateTopOnly();
+    renderAllTabs();
+  });
+
+  addTap($("debugQuotaFailBtn"), () => {
+    failQuota("デバッグ：ノルマ強制失敗");
     updateTopOnly();
     renderAllTabs();
   });
