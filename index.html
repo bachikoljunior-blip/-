@@ -5715,9 +5715,6 @@ function freshState() {
     stageUnlocked: 1,
     deepLayer: 1,
     totalPlaySec: 0,
-    chase: D(0),
-    chaseTheta: 0,
-    runStartPlaySec: 0,
     portalChainKills: 0,
     nextOrderAt: 0,
     stageKills: {},
@@ -5857,11 +5854,8 @@ function ensureState() {
   Object.keys(state.stageKills).forEach(no => state.stageKills[no] = Math.max(0, Math.floor(Number(state.stageKills[no]) || 0)));
   Object.keys(state.bossKills).forEach(no => state.bossKills[no] = Math.max(0, Math.floor(Number(state.bossKills[no]) || 0)));
   state.stageChangedAt = Math.max(0, Number(state.stageChangedAt) || 0);
-  // v4: 総プレイ秒(転生持ち越し)・追跡ノルマ・条件ドロップ・注文間隔の正規化
+  // v4: 総プレイ秒(転生持ち越し)・条件ドロップ・注文間隔の正規化(追跡ノルマは廃止=2026-07-06)
   state.totalPlaySec = Math.max(0, Number(state.totalPlaySec) || 0);
-  state.chase = Decimal.max(0, D(state.chase));
-  state.runStartPlaySec = Math.max(0, Number(state.runStartPlaySec) || 0);
-  state.chaseTheta = Math.max(0, Number(state.chaseTheta) || 0) || (1.0 / (0.02 * ((state.prestigeRuns > 0 ? 1440 : 120) + 8 * Math.sqrt(state.runStartPlaySec))));
   state.portalChainKills = Math.max(0, Math.floor(Number(state.portalChainKills) || 0));
   state.nextOrderAt = Math.max(0, Number(state.nextOrderAt) || 0);
 
@@ -7124,11 +7118,6 @@ function resetRunLimitedEffects() {
   state.parfaitUnits = {};
   state.stage = 1;
   state.stageChangedAt = 0;
-  // v4: 追跡ノルマは周回開始時に初期化(θは周回開始時点の総プレイ秒で固定)
-  state.chase = D(0);
-  state.chaseLastT = 0;
-  state.runStartPlaySec = Math.max(0, Number(state.totalPlaySec) || 0);
-  state.chaseTheta = 1.0 / (0.02 * ((state.prestigeRuns > 0 ? 1440 : 120) + 8 * Math.sqrt(state.runStartPlaySec)));
   state.portalChainKills = 0;
   lastSeenQuotaStage = null;
 }
@@ -8618,16 +8607,6 @@ function failQuota(message) {
   showMessage(message);
 }
 
-// v4: 追跡ノルマの作動時刻(秒)。経過 > 0.5×(120+8√総プレイ秒) で追い上げ開始
-function chaseActivationSec() {
-  // 2段階帯域(2026-07-06確定): 初転生まで 120+8√x / 初転生後 1440+8√x
-  return 0.5 * ((state.prestigeRuns > 0 ? 1440 : 120) + 8 * Math.sqrt(Math.max(0, state.runStartPlaySec || 0)));
-}
-
-function chaseQuotaActive() {
-  return !state.quotaFailed && quotaElapsedSeconds() > chaseActivationSec() && D(state.chase).gt(0);
-}
-
 function checkQuotaState() {
   if (pausedForSkillChoice() || rewardModalOpen() || state.quotaFailed) return;
 
@@ -8637,21 +8616,6 @@ function checkQuotaState() {
   if (quota !== null && quota > 0 && state.runCookies.lt(quota)) {
     failQuota("ノルマ終了：この周回のモンスターチャンス終了");
     return;
-  }
-
-  // 追跡ノルマ: 作動後は「今回クッキー×1/10」を下限に毎秒10^θ倍で追い上げ、
-  // 今回クッキーが追いつかれたら未達(θ=1/(0.02×(120+8√総プレイ秒))、周回開始時に固定)
-  if (elapsed > chaseActivationSec()) {
-    const now = Date.now();
-    const dt = state.chaseLastT ? Math.min(5, Math.max(0, (now - state.chaseLastT) / 1000)) : 0;
-    state.chaseLastT = now;
-    state.chase = Decimal.max(D(state.chase).mul(Math.pow(10, (state.chaseTheta || 0) * dt)), state.runCookies.mul(0.1));
-    if (state.runCookies.lt(state.chase)) {
-      failQuota("追跡ノルマに追いつかれた：この周回のモンスターチャンス終了");
-      return;
-    }
-  } else {
-    state.chaseLastT = Date.now();
   }
 
   state.quotaHoldSeconds = Math.max(state.quotaHoldSeconds || 0, elapsed);
@@ -8805,8 +8769,7 @@ function renderQuota() {
     return;
   }
 
-  // 表記は最小限に。1行の要約＋ゲージのみ(クッキー画像を大きく見せるため)。
-  // 層はゲージ上のバッジで示す。追跡ノルマ(exist独自システム)の表示は残す。
+  // 表記は最小限に。1行の要約＋ゲージのみ(クッキー画像を大きく見せるため)。層はゲージ上のバッジで示す。
   box.innerHTML = `
     <div class="quotaFutureLine">
       <span>ノルマ ${fmt(run)} / ${fmt(quota)}</span>
@@ -8820,7 +8783,6 @@ function renderQuota() {
       <span>先行 ${fmtTime(Math.floor(leadSec))}</span>
       <span>ゲージは「何秒先のノルマまで達成済みか」で貯まる(先へ行くほど1層が重い)</span>
     </div>
-    ${chaseQuotaActive() ? `<div class="quotaMeta"><span>追跡ノルマ ${fmt(state.chase)}</span></div>` : ""}
   `;
 }
 

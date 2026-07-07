@@ -361,9 +361,6 @@ function newRun(sim) {
     rewardCategoryCounts: { golden: 0, hunt: 0, equipment: 0, risk: 0 },
     quotaFailed: false, quotaHoldSeconds: 0, quotaMonsterKills: 0,
     quotaFailAt: null, gainSeries: null,
-    // 追跡ノルマ(2026-07-06 ⑧): chase は runCookies×10^-m を下限に毎秒 10^θ 倍で追い上げる。
-    // runCookies < chase になったら未達。θ は周回開始時の総経過時間ベース(ゲームは総プレイ時間で実装)
-    chase: 0, chaseTheta: (P.quota.chase ? P.quota.chase.m / (P.quota.chase.c * bandY(sim.prestigeRuns > 0, sim.t)) : 0),
     lastGoldenT: sim.t, spiceBurstM: 1, spiceAromaUntil: 0, bhCharge: 0, bhUses: 0, bhBoostUntil: 0, bhBoostMult: 1, bhReadyAt: null,
     blackHoleCompressionUsed: false, blackHoleQuotaMultiplier: 1,
     maxStage: 1,
@@ -1513,20 +1510,11 @@ function advanceTick(sim, strategy) {
       }
     }
 
-    // ノルマ判定(時間ノルマ+追跡ノルマ)
+    // ノルマ判定(本来のノルマのみ。追跡ノルマは廃止=2026-07-06 ユーザー決定、T3a/T3bはノルマ係数で作る)
     if (!r.quotaFailed) {
       const quota = monsterQuotaRequired(sim);
       const el = elapsed(sim);
-      // 追跡ノルマ: 成長が停滞すると chase が追いつき未達になる(⑧)
-      let chaseFail = false;
-      // act: チェイス発動遅延(周回前半は追わない。ゲームは総プレイ時間スケールの「維持フェーズ」タイマーで実装)
-      // 2段階帯域: 初転生後は Y=1440+8√x スケールで発動(⑦の維持時間帯域と揃える)
-      const chaseAct = P.quota.chase && P.quota.chase.act ? P.quota.chase.act * bandY(sim.prestigeRuns > 0, r.startT) : 0;
-      if (P.quota.chase && el > Math.max(P.quota.graceSec, chaseAct)) {
-        r.chase = Math.max(r.chase * Math.pow(10, r.chaseTheta * dt), r.runCookies * Math.pow(10, -P.quota.chase.m));
-        if (r.runCookies < r.chase) chaseFail = true;
-      }
-      if ((quota !== null && quota > 0 && r.runCookies < quota) || chaseFail) {
+      if (quota !== null && quota > 0 && r.runCookies < quota) {
         r.quotaFailed = true;
         r.quotaFailAt = el; // 未達に転じた経過秒(条件⑧用)
         if (r.monster) { r.monster = null; }
