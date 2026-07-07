@@ -4494,26 +4494,23 @@
     }
 
     /* モンスター種類ごとの見た目：既存画像+CSSフィルタ(hue-rotate/scale/明度)で差をつける */
+    /* 種類差は大きさ・光り方で表現し、色(hue)は通常クッキーモンスターのまま変えない */
     .monsterInstance.mtype-swarm .cookieMonsterButton {
       width: 76px;
       height: 76px;
-      filter: hue-rotate(70deg) saturate(1.15);
     }
 
     .monsterInstance.mtype-tank .cookieMonsterButton {
       width: 126px;
       height: 126px;
-      filter: hue-rotate(210deg) saturate(1.25) brightness(0.92);
     }
 
     .monsterInstance.mtype-speedy .cookieMonsterButton {
       width: 96px;
       height: 96px;
-      filter: hue-rotate(130deg) brightness(1.18);
     }
 
     .monsterInstance.mtype-goldenBeast .cookieMonsterButton {
-      filter: hue-rotate(-30deg) saturate(1.7) brightness(1.3);
       box-shadow:
         0 0 26px rgba(255, 214, 90, 0.75),
         0 11px 24px rgba(0, 0, 0, 0.40);
@@ -4522,7 +4519,6 @@
     .monsterInstance.mtype-boss .cookieMonsterButton {
       width: 132px;
       height: 132px;
-      filter: hue-rotate(-95deg) saturate(1.5) brightness(0.88);
       box-shadow:
         0 0 30px rgba(255, 64, 64, 0.72),
         0 11px 24px rgba(0, 0, 0, 0.45);
@@ -7328,6 +7324,7 @@ function renderOrder() {
         <div class="desc">まだ解放されていない機能です。ゲームを進めると解放されます。</div>
       </div>
     `;
+    box.dataset.sig = orderStructSig();
     return;
   }
 
@@ -7340,12 +7337,13 @@ function renderOrder() {
         <h3>注文ボード</h3>
         <div class="desc">達成か期限切れのあと、次の注文まで少し間隔がある(転生で短縮)。</div>
         <div class="orderCard">
-          <div class="orderHead"><span>次の注文まで</span><span>${fmtTime(Math.ceil(waitMs / 1000))}</span></div>
+          <div class="orderHead"><span>次の注文まで</span><span class="orderWaitVal">${fmtTime(Math.ceil(waitMs / 1000))}</span></div>
           <div class="desc">間隔 = 1800×0.85^転生回数 秒(現在 ${fmtTime(Math.round(orderSpawnIntervalMs() / 1000))})</div>
         </div>
         <div class="desc">達成済み注文：${fmt(state.completedOrders || 0)}${(state.expiredOrders ? ` ／ 期限切れ：${fmt(state.expiredOrders)}` : "")}</div>
       </div>
     `;
+    box.dataset.sig = orderStructSig();
     return;
   }
 
@@ -7365,7 +7363,7 @@ function renderOrder() {
       <h3>注文ボード</h3>
       <div class="desc">短期の依頼が1件ずつ届く。要求・報酬は今の生産に合わせて決まる。制限時間内に達成で報酬、時間切れは次の注文へ。選び直しは不可。</div>
       <div class="orderCard">
-        <div class="orderHead"><span><img class="orderIcon" src="${assetUrl(ASSETS.orders[def.id])}" alt="" aria-hidden="true" loading="lazy">${def.name}</span><span>${progressText} / ${needText}${def.unit}</span></div>
+        <div class="orderHead"><span><img class="orderIcon" src="${assetUrl(ASSETS.orders[def.id])}" alt="" aria-hidden="true">${def.name}</span><span class="orderProgressVal">${progressText} / ${needText}${def.unit}</span></div>
         <div class="desc">条件：${def.desc}</div>
         <div class="orderProgressBar"><div class="orderProgressFill" style="width:${(ratio * 100).toFixed(1)}%"></div></div>
         <div class="orderTimeRow">
@@ -7379,6 +7377,46 @@ function renderOrder() {
       <div class="desc">達成済み注文：${fmt(state.completedOrders || 0)}${(state.expiredOrders ? ` ／ 期限切れ：${fmt(state.expiredOrders)}` : "")}</div>
     </div>
   `;
+  box.dataset.sig = orderStructSig();
+}
+
+// 注文タブは1秒ごとの全描画をやめ、タイマー表示だけをその場で更新する(画像のちらつき防止)。
+// 構造が変わったとき(注文の切り替え・待機↔出現・解放状態)だけ全描画する。
+function orderStructSig() {
+  if (!orderBoardUnlocked()) return "locked";
+  const o = state.activeOrder;
+  return o ? `o:${o.id}:${o.expiresAt || 0}` : "wait";
+}
+
+function refreshOrderTab() {
+  const box = $("orderPanel");
+  if (!box) return;
+  if (box.dataset.sig !== orderStructSig()) { renderOrder(); return; }
+
+  const order = state.activeOrder;
+  if (!order) {
+    const waitMs = Math.max(0, (state.nextOrderAt || 0) - Date.now());
+    const el = box.querySelector(".orderWaitVal");
+    if (el) el.textContent = fmtTime(Math.ceil(waitMs / 1000));
+    return;
+  }
+
+  const def = orderDef(order.id);
+  const ratio = orderProgressRatio(order);
+  const progressText = def.target === "quotaHold" ? fmtTime(order.progress || 0) : fmt(order.progress || 0);
+  const needText = def.target === "quotaHold" ? fmtTime(order.need || 0) : fmt(order.need || 0);
+  const remainMs = orderTimeRemainingMs(order);
+  const limitMs = Math.max(1, Number(order.limitMs) || orderTimeLimitMs());
+  const timeRatio = Math.min(1, Math.max(0, remainMs / limitMs));
+
+  const pf = box.querySelector(".orderProgressFill");
+  if (pf) pf.style.width = `${(ratio * 100).toFixed(1)}%`;
+  const pv = box.querySelector(".orderProgressVal");
+  if (pv) pv.textContent = `${progressText} / ${needText}${def.unit}`;
+  const tf = box.querySelector(".orderTimeFill");
+  if (tf) { tf.style.width = `${(timeRatio * 100).toFixed(1)}%`; tf.classList.toggle("orderTimeFill--low", remainMs <= 30000); }
+  const tv = box.querySelector(".orderTimeVal");
+  if (tv) tv.textContent = fmtTime(Math.ceil(remainMs / 1000));
 }
 
 function ownedUpgradeTypeCount() {
@@ -8025,6 +8063,7 @@ function renderWorkshop() {
 
   if (!workshopTabUnlocked()) {
     box.innerHTML = `<div class="desc">スキル「素材の嗅覚」を取得すると解放される</div>`;
+    box.dataset.sig = workshopStructSig();
     return;
   }
 
@@ -8038,7 +8077,7 @@ function renderWorkshop() {
 
     return `
       <button class="item artCard workshopCard hasArtImage ${can ? "canBuy" : ""}" data-dish="${d.id}" style="--art-img:url('${assetUrl(ASSETS.dishes[d.id])}')">
-        <b>${d.name}${act ? `(効果中 残り${Math.max(0, Math.ceil((act.until - now) / 1000))}秒)` : ""}</b>
+        <b>${d.name}${act ? `<span data-dish-timer="${d.id}">(効果中 残り${Math.max(0, Math.ceil((act.until - now) / 1000))}秒)</span>` : ""}</b>
         <div class="price">${materialCostText(d.cost)}</div>
         <div class="desc">${d.desc} / 効果時間 ${Math.round(dishDurationMs() / 1000)}秒</div>
       </button>`;
@@ -8076,7 +8115,7 @@ function renderWorkshop() {
 
   const matRows = MATERIALS
     .filter(m => materialSeen(m.id))
-    .map(m => `<div class="infoRow"><img class="matIcon" src="${assetUrl(ASSETS.materials[m.id])}" alt="" aria-hidden="true" loading="lazy"><b>${m.name}</b> ×${fmt(materialCount(m.id))}${m.tier === "r" ? "(レア)" : m.tier === "b" ? "(ボス核)" : ""}</div>`)
+    .map(m => `<div class="infoRow"><img class="matIcon" src="${assetUrl(ASSETS.materials[m.id])}" alt="" aria-hidden="true"><b>${m.name}</b> ×${fmt(materialCount(m.id))}${m.tier === "r" ? "(レア)" : m.tier === "b" ? "(ボス核)" : ""}</div>`)
     .join("") || `<div class="desc">まだ素材がない</div>`;
 
   // v2: 討伐記録セクション(種ごとの累計/次のマイルストーン/現在ボーナス)
@@ -8124,6 +8163,26 @@ function renderWorkshop() {
   box.querySelectorAll("[data-dish]").forEach(btn => addTap(btn, () => cookDish(btn.dataset.dish)));
   box.querySelectorAll("[data-equip]").forEach(btn => addTap(btn, () => craftEquipment(btn.dataset.equip)));
   box.querySelectorAll("[data-ascend]").forEach(btn => addTap(btn, () => ascendEquipment(btn.dataset.ascend)));
+  box.dataset.sig = workshopStructSig();
+}
+
+// 工房タブも1秒ごとの全描画をやめ、料理の残り時間だけをその場で更新する(画像のちらつき防止)。
+// 料理の増減・期限切れなど構造が変わったときだけ全描画する。
+function workshopStructSig() {
+  if (!workshopTabUnlocked()) return "locked";
+  return "ws:" + activeDishList().map(d => d.id).sort().join(",");
+}
+
+function refreshWorkshopTab() {
+  const box = $("workshopPanel");
+  if (!box) return;
+  if (box.dataset.sig !== workshopStructSig()) { renderWorkshop(); return; }
+
+  const now = Date.now();
+  activeDishList().forEach(a => {
+    const el = box.querySelector(`[data-dish-timer="${a.id}"]`);
+    if (el) el.textContent = `(効果中 残り${Math.max(0, Math.ceil((a.until - now) / 1000))}秒)`;
+  });
 }
 
 
@@ -13235,7 +13294,12 @@ function fireBhBoost() {
 }
 
 setInterval(() => {
-  if (activeTab !== "infoTab" && document.activeElement.tagName !== "INPUT") {
+  // 注文・工房タブは全描画すると画像がちらつくので、タイマー表示だけをその場で更新する
+  if (activeTab === "orderTab") {
+    refreshOrderTab();
+  } else if (activeTab === "workshopTab") {
+    refreshWorkshopTab();
+  } else if (activeTab !== "infoTab" && document.activeElement.tagName !== "INPUT") {
     renderActiveTab();
   }
 
