@@ -1996,6 +1996,9 @@
     #researchTab { background-image: linear-gradient(180deg, rgba(12,7,3,0.80), rgba(8,4,2,0.40) 28%, rgba(8,4,2,0.58)), var(--screen-research) !important; }
     #prestigeTab { background-image: linear-gradient(180deg, rgba(12,7,3,0.80), rgba(8,4,2,0.42) 28%, rgba(8,4,2,0.60)), var(--screen-prestige) !important; }
     #infoTab { background-image: linear-gradient(180deg, rgba(12,7,3,0.80), rgba(8,4,2,0.42) 28%, rgba(8,4,2,0.60)), var(--screen-info) !important; }
+    /* 注文ボード・工房は専用背景。上端だけ暗くして見出しを読みやすくし、絵は活かす */
+    #orderTab { background-image: linear-gradient(180deg, rgba(10,6,3,0.80), rgba(10,6,3,0.30) 15%, rgba(8,4,2,0) 32%), var(--screen-order) !important; }
+    #workshopTab { background-image: linear-gradient(180deg, rgba(10,6,3,0.80), rgba(10,6,3,0.30) 15%, rgba(8,4,2,0) 32%), var(--screen-workshop) !important; }
 
     #rewardModal {
       background: rgba(0,0,0,0.24) !important;
@@ -3995,12 +3998,23 @@
       z-index: 40;
       width: 34px;
       height: 34px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       border-radius: 50%;
       border: 1px solid rgba(255,213,138,0.4);
       background: linear-gradient(180deg, rgba(64,40,24,0.92), rgba(30,18,10,0.95));
       color: #ffd88a;
       font-size: 17px;
+      line-height: 1;
       touch-action: manipulation;
+    }
+
+    /* アイコン画像を注入したら絵文字フォールバックは隠し、画像だけを中央表示する */
+    #settingsBtn .settingsIcon {
+      display: block;
+      margin: 0;
     }
 
     .settingsOverlay {
@@ -5225,6 +5239,8 @@ const ASSETS = {
     research: "images/screen_research.webp",
     prestige: "images/screen_prestige.webp",
     info: "images/screen_info.webp",
+    order: "images/screen_order.webp",
+    workshop: "images/screen_workshop.webp",
     rewardModal: "images/screen_reward_modal.webp",
     skillTreeUnused: "images/07_screen_skill_tree_unused.jpg"
   },
@@ -6106,6 +6122,8 @@ function applyVisualAssets() {
   root.style.setProperty("--screen-research", `url("${assetUrl(ASSETS.screens.research)}")`);
   root.style.setProperty("--screen-prestige", `url("${assetUrl(ASSETS.screens.prestige)}")`);
   root.style.setProperty("--screen-info", `url("${assetUrl(ASSETS.screens.info)}")`);
+  root.style.setProperty("--screen-order", `url("${assetUrl(ASSETS.screens.order)}")`);
+  root.style.setProperty("--screen-workshop", `url("${assetUrl(ASSETS.screens.workshop)}")`);
   root.style.setProperty("--screen-reward-modal", `url("${assetUrl(ASSETS.screens.rewardModal)}")`);
   root.style.setProperty("--cookie-art", `url("${assetUrl(ASSETS.objects.cookie)}")`);
   root.style.setProperty("--golden-cookie-art", `url("${assetUrl(ASSETS.objects.goldenCookie)}")`);
@@ -6208,6 +6226,8 @@ function applyUiIcons() {
       const img = document.createElement("img");
       img.className = "settingsIcon"; img.alt = ""; img.style.width = "20px"; img.style.height = "20px"; img.style.objectFit = "contain";
       img.src = assetUrl(ASSETS.settings);
+      // 絵文字(⚙)のフォールバック文字を除去し、アイコン画像だけを中央に表示する
+      [...settingsBtn.childNodes].forEach(n => { if (n.nodeType === 3) n.remove(); });
       settingsBtn.insertBefore(img, settingsBtn.firstChild);
     }
   } catch (e) { /* アイコン注入失敗はゲーム進行に影響させない */ }
