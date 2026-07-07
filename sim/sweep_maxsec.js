@@ -15,11 +15,14 @@ for (const mx of vals){
   for (const s of STRATEGIES){
     const sim = G.simulate(s, { hours });
     const full = sim.runs.filter(r=>!r.partial);
-    let ok=0; const pos=[];
-    for (const r of full){ if(r.quotaFailAt!=null && r.quotaFailAt<r.duration){ ok++; const p=r.quotaFailAt/r.duration; pos.push(p); allPos.push(p);} }
+    let ok=0, t3b=0; const pos=[];
+    for (const r of full){
+      if(r.quotaFailAt!=null && r.quotaFailAt<r.duration){ ok++; const p=r.quotaFailAt/r.duration; pos.push(p); allPos.push(p);}
+      if(r.quotaHold >= 0.5*r.duration) t3b++;
+    }
     totFail+=ok; totRun+=full.length;
     const mp=med(pos);
-    parts.push(`${s.id}=${ok}/${full.length}${mp==null?'':'@'+(mp*100).toFixed(0)+'%'}`);
+    parts.push(`${s.id}=T3a${ok}/${full.length}${mp==null?'':'@'+(mp*100).toFixed(0)+'%'}/T3b${t3b}`);
   }
   const gmp=med(allPos);
   emit(`maxSec=${String(mx).padStart(5)} | 全体 ${totFail}/${totRun}(${(100*totFail/totRun).toFixed(0)}%) 位置中央${gmp==null?'-':(gmp*100).toFixed(0)+'%'}`);
