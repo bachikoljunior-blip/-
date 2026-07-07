@@ -71,10 +71,20 @@ module.exports = {
     gaugeSec: 45, gaugeGrow: 1.45,
     // 層の上限(オーバーフロー防止・第9次): 通常の転生周回は最大でも約190層で到達しないため
     // 遊びには一切影響しない。ツリー完成後の超長時間放置(総クッキーが浮動小数上限に近づく)でのみ作用。
-    gaugeMaxLayer: 400
+    gaugeMaxLayer: 400,
     // 追跡ノルマ(旧⑧)は廃止(2026-07-06 ユーザー決定)。未達(T3a/T3b)は本来のノルマ係数
     // (baseCoef/basePow/base2Coef/base2Pow/w1〜w3P/ctrlMul/ctrlDiv)+後半成長の減速で作る。
+    // 層の試練(2026-07-07 ユーザー採用・0-2提案4): 必要ノルマ×(1+trialCoef)^max(0, 最高層-trialStartLayer)。
+    // 層はその周回の実際の進行に比例するので、未達の位置が周回の深さに追随する(T3a/T3b用)。
+    trialCoef: 0.08, trialStartLayer: 10
   },
+
+  // ---- 討伐連鎖(2026-07-07 ユーザー採用・0-2提案1) ----
+  // 最後の討伐から breakSec 以内に次を倒すと連鎖+1(こつぶ群れは3体分)。過ぎたら0、転生でも0。上限なし。
+  // 効果はすべて連鎖数Nに線形(共鳴のような雪だるまにならない):
+  //  prodCoef=全生産×(1+prodCoef×N) / dropCoef=素材ドロップ量×(1+dropCoef×N)(素材は現状ゲームのみ) /
+  //  rewardCoef=報酬レベル+floor(rewardCoef×N)
+  chain: { prodCoef: 0.02, dropCoef: 0.02, rewardCoef: 0.05, breakSec: 90 },
 
   // ---- 研究効果 ----
   // 2026-07-06 第8次: ①(各研究の有効性)で弱かった5研究の「所持数指数」(垂直吸収されない動的項)を強化:

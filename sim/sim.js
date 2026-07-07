@@ -379,7 +379,8 @@ function newRun(sim) {
     mtAcc: {}, gbAcc: 0, killsSinceBoss: 0,
     surge: {},                 // まとめ買い割増: 設備idごとの熱量 {h, t}(購入+1、halfSecで半減)
     killsByType: {}, rewardByType: {},
-    critAtBuy: undefined, critNow: 0, critMax: 0
+    critAtBuy: undefined, critNow: 0, critMax: 0,
+    chainN: 0, chainLastT: -1e15, chainMax: 0 // 討伐連鎖(第12次D): 周回内変数。転生で0
   };
 }
 
@@ -487,7 +488,12 @@ function quotaAtElapsed(sim, s) {
     + q.w1 * Math.pow(Math.max(0, (s - q.w1T) / q.w1D), q.w1P)
     + q.w2 * Math.pow(Math.max(0, (s - q.w2T) / q.w2D), q.w2P)
     + q.w3 * Math.pow(Math.max(0, (s - q.w3T) / q.w3D), q.w3P);
-  return Math.max(1, Math.floor((base * wall) / quotaControlMultiplier(sim)));
+  // 層の試練(第12次D・提案4採用): 層が深いほどノルマが重い。最高層はその周回の進行に比例するので、
+  // 未達の位置が周回の深さに追随する(時間だけの式では深い周回で未達が原理的に出ない問題の解)。
+  const trial = q.trialCoef
+    ? Math.pow(1 + q.trialCoef, Math.max(0, sim.run.maxStage - (q.trialStartLayer || 0)))
+    : 1;
+  return Math.max(1, Math.floor((base * wall * trial) / quotaControlMultiplier(sim)));
 }
 function monsterQuotaRequired(sim) {
   const r = sim.run;
@@ -813,6 +819,11 @@ function computeProd(sim) {
   // 系列ボーナス(神の指): クリック力×(1+coef×台数)
   click *= godFingerLineageMul;
 
+  // 討伐連鎖(第12次D・提案1採用): 倒し続けている間だけ全生産×(1+prodCoef×連鎖数)。
+  // 連鎖数は討伐数に線形でしか増えない(共鳴型の雪だるまにならない)。途切れ・転生で0。
+  const chainM = 1 + (P.chain ? P.chain.prodCoef * chainCount(sim) : 0);
+  click *= chainM; cps *= chainM;
+
   // 会心(期待値)
   let critEV = 1;
   let critChanceOut = 0;
@@ -841,6 +852,14 @@ function computeProd(sim) {
 
 // 報酬の無効化判定(恒久 disableReward + 期待値測定の一時 _md + ㉘一括無効 _mdSet の対応)
 function rwOff(sim, id) { return sim.opt.disableReward === id || sim._md === 'rw:' + id || (sim._mdSet ? sim._mdSet.has('rw:' + id) : false); }
+// 討伐連鎖(第12次D・提案1採用): 最後の討伐から breakSec 以内なら連鎖が生きている。
+// 討伐系機能として一時無効(_md/_mdSet 'chain')に対応=期待値方式・㉘討伐由来分解の対象
+function chainOff(sim) { return sim.opt.disableChain || sim._md === 'chain' || (sim._mdSet ? sim._mdSet.has('chain') : false); }
+function chainCount(sim) {
+  if (!P.chain || chainOff(sim)) return 0;
+  const r = sim.run;
+  return (sim.t - r.chainLastT) <= P.chain.breakSec ? r.chainN : 0;
+}
 // 報酬効果値(無効化対応)
 function effRw(sim, id) {
   if (rwOff(sim, id)) return 0;
@@ -992,6 +1011,7 @@ function measureFeatureKeys(sim) {
   for (const rr of RESEARCH) if (sim.run.research[rr.id]) keys.push('res:' + rr.id);
   for (const rw of REWARD_POOL) if (sim.run.perks[rw.id] > 0) keys.push('rw:' + rw.id);
   for (const rr of RESEARCH) { if (sim.run.research2[rr.id]) keys.push('stage:' + rr.id + ':2'); if (sim.run.research3[rr.id]) keys.push('stage:' + rr.id + ':3'); }
+  if (P.chain && sim.run.kills > 0) keys.push('chain'); // 討伐連鎖(参考計測。合否は③②⑫㉘経由)
   return keys;
 }
 const MEASURE_POLICIES = ['balanced', 'click', 'golden', 'hunt', 'bake'];
@@ -1004,7 +1024,8 @@ const MEASURE_POLICIES = ['balanced', 'click', 'golden', 'hunt', 'bake'];
 const HUNT_FEATURE_SET = new Set([
   ...REWARD_POOL.filter(r => r.category === 'hunt' || r.category === 'risk' || r.id === 'crushedMill').map(r => 'rw:' + r.id),
   'res:portalNetwork', 'res:portalGlobalFold',
-  'stage:portalNetwork:2', 'stage:portalNetwork:3', 'stage:portalGlobalFold:2', 'stage:portalGlobalFold:3'
+  'stage:portalNetwork:2', 'stage:portalNetwork:3', 'stage:portalGlobalFold:2', 'stage:portalGlobalFold:3',
+  'chain' // 討伐連鎖(第12次D): 討伐系機能=㉘の討伐由来に計上
 ]);
 const GOLDEN_FEATURE_SET = new Set([
   ...REWARD_POOL.filter(r => r.category === 'golden').map(r => 'rw:' + r.id),
@@ -1225,7 +1246,9 @@ function buildRewardOffer(sim, level, typeId) {
   const r = sim.run;
   // 鉄焼きガード等: 種類による報酬レベル加算(ゲームの rewardLvAdd と同じ)
   const lvAdd = (P.mtype && P.mtype.rewardLvAdd && P.mtype.rewardLvAdd[typeId]) || 0;
-  const baseCount = 1 + Math.floor((level + lvAdd) / P.reward.lvPerCount);
+  // 討伐連鎖(第12次D): 報酬レベル +floor(rewardCoef×連鎖数)
+  const chainLv = P.chain ? Math.floor(P.chain.rewardCoef * chainCount(sim)) : 0;
+  const baseCount = 1 + Math.floor((level + lvAdd + chainLv) / P.reward.lvPerCount);
   const deepBonus = Math.pow(P.rw.deepPursuitReward, rwOff(sim, 'deepPursuit') ? 0 : (r.perks.deepPursuit || 0));
   const penalty = Math.max(0, r.huntFocusRewardPenalty || 0);
   const count = Math.max(1,
@@ -1289,6 +1312,12 @@ function defeatMonster(sim, mon) {
     r.portalHuntUntil += P.res2.huntExtendSec;
   }
   if (!r.quotaFailed) r.quotaMonsterKills += units;
+  // 討伐連鎖(第12次D): breakSec以内の連続討伐で+units(こつぶ群れ=3体分)、途切れたら振出し
+  if (P.chain) {
+    r.chainN = (sim.t - r.chainLastT) <= P.chain.breakSec ? r.chainN + units : units;
+    r.chainLastT = sim.t;
+    if (r.chainN > r.chainMax) r.chainMax = r.chainN;
+  }
   const chainPrepLv = rwOff(sim, 'chainPrep') ? 0 : (r.perks.chainPrep || 0);
   if (chainPrepLv > 0) {
     r.nextMonsterSpawnMultiplier *= Math.exp(-chainPrepLv * P.rw.chainPrepSpawn);
@@ -1353,7 +1382,7 @@ function doPrestige(sim) {
     runCookies: r.runCookies,
     quotaHold: r.quotaHoldSeconds,
     maxStage: r.maxStage,
-    kills: r.kills, golden: r.goldenTaken,
+    kills: r.kills, golden: r.goldenTaken, chainMax: r.chainMax,
     gain,
     researchBought: Object.keys(r.research).filter(k => r.research[k]),
     stages2: Object.keys(r.research2).filter(k => r.research2[k]),

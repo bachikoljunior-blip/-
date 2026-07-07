@@ -746,6 +746,15 @@ if (mode === 'baseline') {
     }
     console.log(`⑬ タイミング ${ok}/${all}`);
   }
+  // 参考: 討伐連鎖(第12次D採用)の期待値lift(合否条件ではない。③②⑫㉘の押し上げ係数の目安)
+  {
+    const byPol = (collect('chain'))['chain'] || {};
+    const rows = Object.entries(byPol).map(([pol, arr]) => {
+      const gm = Math.exp(arr.reduce((a, b) => a + Math.log(b), 0) / arr.length);
+      return `${pol} 幾何平均${gm.toFixed(2)} [${Math.min(...arr).toFixed(2)}..${Math.max(...arr).toFixed(2)}]`;
+    });
+    console.log(`参考 討伐連鎖lift: ${rows.length ? rows.join(' / ') : '(討伐なし)'}`);
+  }
   // ② 研究の一強禁止: 各方針で、その方針が取得した研究の「周回幾何平均lift」が幾何平均±3倍
   {
     let ok = 0, all = 0;

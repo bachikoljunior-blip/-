@@ -5791,6 +5791,9 @@ function ensureState() {
 
   // ==== 第7次 新要素の正規化(旧セーブはデフォルト補完) ====
   state.maxQuotaStage = Math.max(1, Math.floor(Number(state.maxQuotaStage) || 1));
+  // 討伐連鎖(第12次D)
+  state.chainN = Math.max(0, Math.floor(Number(state.chainN) || 0));
+  state.chainLastKillEl = Number.isFinite(Number(state.chainLastKillEl)) ? Number(state.chainLastKillEl) : null;
   state.researchStages = state.researchStages && typeof state.researchStages === "object" ? state.researchStages : {};
   RESEARCH.forEach(r => {
     const v = Math.floor(Number(state.researchStages[r.id]) || 0);
@@ -7085,6 +7088,8 @@ function blackHoleQuotaCompressionMultiplier() {
 
 function resetRunLimitedEffects() {
   state.maxQuotaStage = 1;
+  state.chainN = 0;            // 討伐連鎖は周回内変数(転生で0)
+  state.chainLastKillEl = null;
   state.critCombo = 0;
   state.lastCritAt = 0;
   state.lastGoldenAt = Date.now();
@@ -7586,10 +7591,11 @@ function grantMonsterDrops(typeId, level, overkill) {
     state.stageKills[stageNo] = Math.floor(Number(state.stageKills[stageNo]) || 0) + 1;
 
     if (dropsEnabled) {
-      // v4 §18 条件ドロップ制。倍率: ステージ補正×虚空タルト×次元コンパス(1+0.05×Lv)
+      // v4 §18 条件ドロップ制。倍率: ステージ補正×虚空タルト×次元コンパス(1+0.05×Lv)×討伐連鎖(1+0.02×N)
       const mult = (stage.dropMul || 1)
         * (dishActive("voidTart") ? 2 : 1)
-        * (1 + 0.05 * equipLv("dimensionCompass"));
+        * (1 + 0.05 * equipLv("dimensionCompass"))
+        * (1 + CHAIN_DROP_COEF * chainCount());
       const qty = base => Math.max(1, Math.round(base * mult));
       const gain = (id, n) => {
         const got = gainMaterial(id, n);
@@ -8481,7 +8487,9 @@ function baseClickPower() {
 }
 
 function currentClickPower() {
-  return baseClickPower() * goldenBoostMultiplier() * goldenAfterheatMultiplier() * challengeMultiplier();
+  // 討伐連鎖: 倒し続けている間だけ全生産×(1+0.02×連鎖数)。基礎値(baseClickPower)には掛けない
+  // (案Aの生産連動項が baseCps 経由で二重に受けないよう、最終段で一度だけ適用)
+  return baseClickPower() * goldenBoostMultiplier() * goldenAfterheatMultiplier() * challengeMultiplier() * chainProductionMultiplier();
 }
 
 function baseCps() {
@@ -8507,7 +8515,8 @@ function baseCps() {
 }
 
 function currentCps() {
-  return baseCps() * goldenBoostMultiplier() * goldenAfterheatMultiplier() * challengeMultiplier();
+  // 討伐連鎖: 全生産倍率は最終段で一度だけ適用
+  return baseCps() * goldenBoostMultiplier() * goldenAfterheatMultiplier() * challengeMultiplier() * chainProductionMultiplier();
 }
 
 function earn(amount) {
@@ -8554,6 +8563,32 @@ function quotaControlMultiplier() {
 }
 
 
+// ==== 討伐連鎖(第12次D・2026-07-07 ユーザー採用) ====
+// モンスターを1体倒すたびに連鎖+1。最後の討伐からCHAIN_BREAK_SEC以内に次を倒せば継続、
+// 過ぎたら0、転生でも0。上限なし。効果は連鎖数Nに線形(雪だるま式にならない):
+// 全生産×(1+CHAIN_PROD_COEF×N) / 素材ドロップ量×(1+CHAIN_DROP_COEF×N) / 報酬レベル+floor(CHAIN_REWARD_COEF×N)
+const CHAIN_PROD_COEF = 0.02;
+const CHAIN_DROP_COEF = 0.02;
+const CHAIN_REWARD_COEF = 0.05;
+const CHAIN_BREAK_SEC = 90;
+function chainCount() {
+  const last = Number(state.chainLastKillEl);
+  if (!Number.isFinite(last) || quotaElapsedSeconds() - last > CHAIN_BREAK_SEC) return 0;
+  return Math.max(0, Math.floor(Number(state.chainN) || 0));
+}
+function chainProductionMultiplier() {
+  return 1 + CHAIN_PROD_COEF * chainCount();
+}
+
+// ==== 層の試練(第12次D・2026-07-07 ユーザー採用) ====
+// 層が深いほどノルマが重い: 必要ノルマ×(1+係数)^(最高到達層-開始層)。
+// 層はその周回の進行に比例して上がるため、周回後半で必要量が稼ぎを追い越す=自然な未達を作る。
+const QUOTA_TRIAL_COEF = 0.08;
+const QUOTA_TRIAL_START_LAYER = 10;
+function quotaTrialMultiplier() {
+  return Math.pow(1 + QUOTA_TRIAL_COEF, Math.max(0, maxQuotaStage() - QUOTA_TRIAL_START_LAYER));
+}
+
 function monsterQuotaRequiredAtElapsed(seconds) {
   const s = Math.max(0, Number(seconds) || 0);
 
@@ -8571,7 +8606,7 @@ function monsterQuotaRequiredAtElapsed(seconds) {
     + 2.20 * Math.pow(Math.max(0, (s - 600) / 240), 2.25)
     + 9.00 * Math.pow(Math.max(0, (s - 840) / 300), 2.65);
 
-  return Math.max(1, Math.floor((base * wall) / quotaControlMultiplier()));
+  return Math.max(1, Math.floor((base * wall * quotaTrialMultiplier()) / quotaControlMultiplier()));
 }
 
 function monsterQuotaRequired() {
@@ -8769,6 +8804,13 @@ function renderQuota() {
     return;
   }
 
+  // 層の試練(第12次D): 深い層に達した周回だけ倍率を表示(未到達の間は情報を出さない)
+  const trialMul = quotaTrialMultiplier();
+  const trialText = trialMul > 1 ? ` 試練 ×${trialMul >= 100 ? fmt(Math.round(trialMul)) : trialMul.toFixed(1)}` : "";
+  // 討伐連鎖: 連鎖中だけ表示
+  const chainNow = chainCount();
+  const chainText = chainNow >= 2 ? `連鎖 ×${chainNow}(全生産+${Math.round(CHAIN_PROD_COEF * chainNow * 100)}%)` : "";
+
   // 表記は最小限に。1行の要約＋ゲージのみ(クッキー画像を大きく見せるため)。層はゲージ上のバッジで示す。
   box.innerHTML = `
     <div class="quotaFutureLine">
@@ -8777,10 +8819,10 @@ function renderQuota() {
     </div>
     <div class="quotaGauge ${underTarget ? "quotaUnderTarget" : "quotaOverTarget"}" aria-label="現在ノルマ ${fmt(run)} / ${fmt(gaugeQuota)}">
       ${layerHtml}
-      <div class="quotaStageBadge">第<span class="quotaStageNumber">${stageDisplay.stage}</span>層</div>
+      <div class="quotaStageBadge" title="層の試練：層が深いほどノルマが重い">第<span class="quotaStageNumber">${stageDisplay.stage}</span>層${trialText}</div>
     </div>
     <div class="quotaMeta">
-      <span>先行 ${fmtTime(Math.floor(leadSec))}</span>
+      <span>先行 ${fmtTime(Math.floor(leadSec))}${chainText ? ` / ${chainText}` : ""}</span>
       <span>ゲージは「何秒先のノルマまで達成済みか」で貯まる(先へ行くほど1層が重い)</span>
     </div>
   `;
@@ -10757,6 +10799,8 @@ function renderInfo() {
       <div class="infoRow">ノルマ：${state.quotaFailed ? "終了" : fmt(state.runCookies) + " / " + fmt(monsterQuotaRequired())}</div>
       <div class="infoRow">今回のノルマ維持記録：${fmtTime(state.quotaHoldSeconds || 0)} / ノルマ中討伐 ${fmt(state.quotaMonsterKills || 0)}体</div>
       <div class="infoRow">モンスター出現：${canMonsterAppear() ? "可能" : "ノルマ未達"}</div>
+      <div class="infoRow">討伐連鎖：×${fmt(chainCount())}(全生産 x${chainProductionMultiplier().toFixed(2)})<div class="desc">連鎖が伸びるほど全生産が上がる。90秒以内に次のモンスターを倒すと連鎖が続き、途切れる・転生すると0に戻る。素材ドロップと報酬レベルも連鎖数に応じて増える</div></div>
+      <div class="infoRow">層の試練：ノルマ必要量 x${quotaTrialMultiplier() >= 100 ? fmt(Math.round(quotaTrialMultiplier())) : quotaTrialMultiplier().toFixed(2)}<div class="desc">層が深いほどノルマが重くなる(第${QUOTA_TRIAL_START_LAYER}層から)。深く潜った周回ほど、後半にノルマが稼ぎを追い越しやすい</div></div>
       <div class="infoRow">モンスター基本ダメージ：${fmt(monsterBaseDamage())}</div>
       <div class="infoRow">モンスター最終ダメージ：${fmt(monsterBaseDamage() * monsterDamageMultiplier())}</div>
     </div>
@@ -12071,6 +12115,10 @@ function defeatMonster(id) {
   if (!state.quotaFailed) state.quotaMonsterKills = Math.floor(Number(state.quotaMonsterKills) || 0) + 1;
   trackOrderProgress("monster", null, 1);
 
+  // 討伐連鎖(第12次D): 90秒以内の連続討伐で+1、途切れたら振出し。以降のドロップ・報酬レベルに効く
+  state.chainN = chainCount() + 1;
+  state.chainLastKillEl = quotaElapsedSeconds();
+
   // 異世界接続網 段階2: 狩り窓中の討伐1体ごとに窓+2秒
   if (state.research.portalNetwork && resStage2("portalNetwork") && Date.now() < (state.portalHuntUntil || 0)) {
     state.portalHuntUntil += 2000;
@@ -12122,13 +12170,17 @@ function defeatMonster(id) {
   const dropText = grantMonsterDrops(defeatedTypeId, defeatedLevel, Boolean(mon.overkill));
   if (dropText) message += ` / ${dropText}`;
 
+  // 討伐連鎖: 2連鎖以上のときだけ表示(全生産に効いていることが分かるように)
+  if (chainCount() >= 2) message += ` / 連鎖 ×${chainCount()}(全生産+${Math.round(CHAIN_PROD_COEF * chainCount() * 100)}%)`;
+
   playSound("golden");
   showMessage(message);
 
-  // 報酬レベル判定: tankは+18層ぶん、香料の砂丘は+8層ぶん扱い
+  // 報酬レベル判定: tankは+18層ぶん、香料の砂丘は+8層ぶん扱い、討伐連鎖は+floor(0.05×連鎖数)
   const rewardLevel = defeatedLevel
     + ((MONSTER_TYPES[defeatedTypeId] || MONSTER_TYPES.normal).rewardLvAdd || 0)
-    + (currentStageInfo().rewardLvAdd || 0);
+    + (currentStageInfo().rewardLvAdd || 0)
+    + Math.floor(CHAIN_REWARD_COEF * chainCount());
 
   state.lastKillType = defeatedTypeId; // 報酬相性: 何を倒したかで各カテゴリの増分が変わる
   pendingRewardChoices = buildMonsterRewardChoices(rewardLevel);
