@@ -772,6 +772,60 @@ if (mode === 'baseline') {
     for (const s of STRATEGIES) for (const r of sims[s.id].runs) if (r.measure && r.measure.bestPol) seen.add(r.measure.bestPol);
     console.log(`⑫ 周回方針の1位が実在: ${[...seen].join(',')} (${seen.size}/5)`);
   }
+} else if (mode === 'income') {
+  // ㉘稼ぎ口比率(3-2): node runner.js income "" [hours]
+  // 収入を4稼ぎ口(設備生産/金/討伐由来/タップ)に分解し、5つの周回方針の代表方針で判定:
+  // (a) 主役の稼ぎ口シェア≥30%(バランス型は4つすべて≥10%) (b) どの稼ぎ口も90%を超えない。
+  // 判定対象=その方針の主役強化の研究が1つ以上解放済みの周回(researchBoughtで判定)。
+  const H = hours;
+  // 周回方針→主役の稼ぎ口
+  const ROLE_CHANNEL = { bake: 'equip', golden: 'golden', hunt: 'hunt', click: 'tap', balanced: null };
+  // 主役強化の研究(ゲート判定用。割り当ての細部は【仮】)
+  const ROLE_RESEARCH = {
+    bake: ['ovenBatch', 'factoryNetwork', 'grandmaCrowd', 'moonGlobalYeast', 'galaxyAssembly', 'blackHoleCompression', 'quantumProofing', 'antimatterRecipe'],
+    golden: ['spiceBlend'],
+    hunt: ['portalNetwork', 'portalGlobalFold'],
+    click: ['fingerTechnique', 'bankClickDividend'],
+    balanced: null // いずれかの主役研究1つ以上
+  };
+  const ALL_ROLE_RES = [...new Set(Object.values(ROLE_RESEARCH).filter(Boolean).flat())];
+  // 各周回方針の代表: その方針を常用する最初の戦略(S1=焼成, S2=会心タップ, S3=金色, S4=狩猟, S6=バランス)
+  const reps = {};
+  for (const s of STRATEGIES) {
+    let pol = null;
+    try { pol = s.pickPolicy({ prestigeRuns: 1, runs: [], t: 0, run: {} }); } catch (e) { /* 状態依存の方針はスキップ */ }
+    if (pol && !reps[pol]) reps[pol] = s;
+  }
+  const CH_NAME = { equip: '設備生産', golden: '金クッキー', hunt: '討伐由来', tap: 'タップ' };
+  console.log(`=== ㉘稼ぎ口比率(${H}h・周回シェア=各tickシェアの周回平均) ===`);
+  let okAll = 0, allAll = 0;
+  for (const pol of ['balanced', 'click', 'golden', 'hunt', 'bake']) {
+    const s = reps[pol];
+    if (!s) { console.log(`${pol}: 代表方針なし NG`); continue; }
+    const sim = G.simulate(s, { hours: H, measure: true });
+    const full = sim.runs.filter(r => !r.partial && r.measure && r.measure.income);
+    let ok = 0, all = 0;
+    const rows = [];
+    for (const r of full) {
+      const gateList = ROLE_RESEARCH[pol] || ALL_ROLE_RES;
+      const gated = (r.researchBought || []).some(id => gateList.includes(id));
+      const inc = r.measure.income;
+      const shares = { equip: inc.equip, golden: inc.golden, hunt: inc.hunt, tap: inc.tap };
+      const maxShare = Math.max(...Object.values(shares));
+      const aPass = pol === 'balanced'
+        ? Object.values(shares).every(v => v >= 0.10)
+        : shares[ROLE_CHANNEL[pol]] >= 0.30;
+      const bPass = maxShare <= 0.90;
+      const pass = aPass && bPass;
+      if (gated) { all++; if (pass) ok++; }
+      rows.push(`  run${String(r.idx).padStart(2)} ${gated ? '対象' : '対象外'} 設備${(shares.equip * 100).toFixed(0)}% 金${(shares.golden * 100).toFixed(0)}% 討伐${(shares.hunt * 100).toFixed(0)}% タップ${(shares.tap * 100).toFixed(0)}%${gated ? ` → (a)${aPass ? 'OK' : 'NG'} (b)${bPass ? 'OK' : 'NG'}` : ''}`);
+    }
+    okAll += ok; allAll += all;
+    const role = ROLE_CHANNEL[pol] ? `主役=${CH_NAME[ROLE_CHANNEL[pol]]}≥30%` : '4つすべて≥10%';
+    console.log(`${pol}(${s.id} ${s.name}) ${role}: ${ok}/${all}周回 合格`);
+    rows.forEach(x => console.log(x));
+  }
+  console.log(`㉘合計: ${okAll}/${allAll}周回`);
 } else if (mode === 'skillsum') {
   let sum = 0;
   for (const n of G.SKILL_NODES) sum += G.skillCostOf(n);

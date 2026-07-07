@@ -459,6 +459,7 @@ function rewardUnlockedFn(sim, r) {
 }
 function resActive(sim, id) {
   if (sim._md === 'res:' + id) return false; // 期待値測定の一時無効(①)
+  if (sim._mdSet && sim._mdSet.has('res:' + id)) return false; // ㉘稼ぎ口分解の一括無効
   return sim.run.research[id] && sim.opt.disableResearch !== id;
 }
 function policyIs(sim, id) {
@@ -838,8 +839,8 @@ function computeProd(sim) {
   };
 }
 
-// 報酬の無効化判定(恒久 disableReward + 期待値測定の一時 _md の両対応)
-function rwOff(sim, id) { return sim.opt.disableReward === id || sim._md === 'rw:' + id; }
+// 報酬の無効化判定(恒久 disableReward + 期待値測定の一時 _md + ㉘一括無効 _mdSet の対応)
+function rwOff(sim, id) { return sim.opt.disableReward === id || sim._md === 'rw:' + id || (sim._mdSet ? sim._mdSet.has('rw:' + id) : false); }
 // 報酬効果値(無効化対応)
 function effRw(sim, id) {
   if (rwOff(sim, id)) return 0;
@@ -963,7 +964,7 @@ function earningPower(sim) {
   const base = prod.cps + prod.clickEV * (r.monster ? 0 : tapRate); // 直接生産(モンスター中はタップは討伐へ)
   let power = base;
   // 金クッキー収入率(期待値/秒): 間隔は spawnFactor、1回の価値は即時+ブーストの平均
-  {
+  if (!(sim._mdChan && sim._mdChan.golden)) {
     const mean = (P.golden.spawnMin + P.golden.spawnMax) / 2;
     const interval = Math.max(1, mean * goldenSpawnFactor(sim) / 1000);
     const instant = Math.max(prod.baseCps, prod.baseClick) * P.golden.instantCoef * goldenAmountMultiplier(sim);
@@ -971,7 +972,7 @@ function earningPower(sim) {
     power += (instant + boostVal) / 2 / interval;
   }
   // 討伐報酬(投資)価値率: 討伐/秒 × 生産KILL_VALUE_SEC秒ぶん。ダメージ・出現・滞在の報酬がここに効く
-  {
+  if (!(sim._mdChan && sim._mdChan.hunt)) {
     const mean = (P.monster.spawnMin + P.monster.spawnMax) / 2;
     const interval = Math.max(1, mean * monsterSpawnFactor(sim) / 1000);
     const level = monsterLevel(sim);
@@ -994,6 +995,45 @@ function measureFeatureKeys(sim) {
   return keys;
 }
 const MEASURE_POLICIES = ['balanced', 'click', 'golden', 'hunt', 'bake'];
+
+// ==== ㉘稼ぎ口比率(2026-07-06 採用・3-2反映済み): 収入の4分解(設備生産/金/討伐由来/タップ) ====
+// 討伐由来=「討伐系の機能(報酬・素材・連鎖・狩り研究)を全部無効にしたとき消える収入」(ユーザー定義)。
+// 金由来=さらに金系機能を無効にしたとき消える収入。残りをタップ(クリック分)と設備生産に分ける。
+// 機能の割り当て(細部は【仮】・3-2-5): hunt=報酬カテゴリhunt/risk+crushedMill(素材系)+狩り研究
+// (portalNetwork・portalGlobalFold)とその段階 / golden=報酬カテゴリgolden+金研究(spiceBlend)とその段階。
+const HUNT_FEATURE_SET = new Set([
+  ...REWARD_POOL.filter(r => r.category === 'hunt' || r.category === 'risk' || r.id === 'crushedMill').map(r => 'rw:' + r.id),
+  'res:portalNetwork', 'res:portalGlobalFold',
+  'stage:portalNetwork:2', 'stage:portalNetwork:3', 'stage:portalGlobalFold:2', 'stage:portalGlobalFold:3'
+]);
+const GOLDEN_FEATURE_SET = new Set([
+  ...REWARD_POOL.filter(r => r.category === 'golden').map(r => 'rw:' + r.id),
+  'res:spiceBlend', 'stage:spiceBlend:2', 'stage:spiceBlend:3'
+]);
+const HUNT_GOLDEN_FEATURE_SET = new Set([...HUNT_FEATURE_SET, ...GOLDEN_FEATURE_SET]);
+function incomeParts(sim, pAll) {
+  const r = sim.run;
+  const clear = () => { sim._bkT = -1; sim._stT = -1; };
+  // 討伐由来: 討伐系機能+討伐チャネルを無効にして消える分
+  sim._mdSet = HUNT_FEATURE_SET; sim._mdChan = { hunt: true };
+  clear();
+  const pNoHunt = earningPowerSafe(sim);
+  // 金由来: さらに金系機能+金チャネルを無効にして消える分
+  sim._mdSet = HUNT_GOLDEN_FEATURE_SET; sim._mdChan = { hunt: true, golden: true };
+  clear();
+  const pCore = earningPowerSafe(sim);
+  const prodCore = computeProd(sim);
+  const tapRaw = prodCore.clickEV * (r.monster ? 0 : sim.strat.tapRate);
+  sim._mdSet = null; sim._mdChan = null; clear();
+  if (!(pAll > 0) || !Number.isFinite(pAll) || !(pCore >= 0) || !Number.isFinite(pCore)) return null;
+  const tap = Math.max(0, Math.min(tapRaw, pCore));
+  return {
+    hunt: Math.max(0, pAll - pNoHunt),
+    golden: Math.max(0, pNoHunt - pCore),
+    tap,
+    equip: Math.max(0, pCore - tap)
+  };
+}
 // 1サンプル: 各機能の「稼ぎ力の持ち上げ幅」を対数で積算。周回内キャッシュは都度クリアして正しく再計算
 function measureTick(sim) {
   const r = sim.run;
@@ -1027,6 +1067,19 @@ function measureTick(sim) {
       m.s += Math.log(pOn / pIdle); m.n++;
     }
   }
+  // ㉘稼ぎ口比率: 各tickの収入シェアを積算し周回平均を取る(絶対量で足すと垂直成長の終盤が
+  // 支配するため、シェアの単純平均=周回を通した「時間平均の稼ぎ口構成」で見る【集計方法は仮】)
+  {
+    const parts = incomeParts(sim, pOn);
+    if (parts) {
+      const tot = parts.equip + parts.golden + parts.hunt + parts.tap;
+      if (tot > 0 && Number.isFinite(tot)) {
+        const inc = r._inc || (r._inc = { equip: 0, golden: 0, hunt: 0, tap: 0, n: 0 });
+        inc.equip += parts.equip / tot; inc.golden += parts.golden / tot;
+        inc.hunt += parts.hunt / tot; inc.tap += parts.tap / tot; inc.n++;
+      }
+    }
+  }
   // ⑫文脈依存性: 5方針それぞれの稼ぎ力(この周回の中身に対して)。argmax を後で集計
   if (!r._polPow) r._polPow = {};
   const savedPol = r.policy;
@@ -1043,7 +1096,12 @@ function finalizeMeasure(run) {
   if (run._meas) for (const [k, m] of Object.entries(run._meas)) if (m.n > 0) lift[k] = Math.exp(m.s / m.n);
   let bestPol = null, bestV = -Infinity;
   if (run._polPow) for (const [pol, v] of Object.entries(run._polPow)) if (v > bestV) { bestV = v; bestPol = pol; }
-  return { lift, bestPol };
+  let income = null;
+  if (run._inc && run._inc.n > 0) {
+    const i = run._inc;
+    income = { equip: i.equip / i.n, golden: i.golden / i.n, hunt: i.hunt / i.n, tap: i.tap / i.n };
+  }
+  return { lift, bestPol, income };
 }
 // タイミング機能(⑬)の測定: idleTiming を _md ではなく opt で切替えるため別扱い
 const TIMING_KEYS = [
@@ -1076,8 +1134,8 @@ function researchCostOf(sim, id) {
 }
 // 研究の段階 (1=購入 / 2,3=対応スキル取得後に購入欄へカード追加→クッキーで購入して有効化)
 // disableStage='研究id:2' 等で単体効果ゼロ化(購入行動は同一。条件⑨用)
-function resStage2(sim, id) { return !!sim.run.research2[id] && sim.opt.disableStage !== id + ':2' && sim._md !== 'stage:' + id + ':2'; }
-function resStage3(sim, id) { return !!sim.run.research3[id] && sim.opt.disableStage !== id + ':3' && sim._md !== 'stage:' + id + ':3'; }
+function resStage2(sim, id) { return !!sim.run.research2[id] && sim.opt.disableStage !== id + ':2' && sim._md !== 'stage:' + id + ':2' && !(sim._mdSet && sim._mdSet.has('stage:' + id + ':2')); }
+function resStage3(sim, id) { return !!sim.run.research3[id] && sim.opt.disableStage !== id + ':3' && sim._md !== 'stage:' + id + ':3' && !(sim._mdSet && sim._mdSet.has('stage:' + id + ':3')); }
 // 段階カードの表示条件: 前段階を購入済み かつ 対応スキルを取得済み
 function researchStageUnlocked(sim, id, stage) {
   const r = sim.run;
