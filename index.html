@@ -4494,20 +4494,21 @@
     }
 
     /* モンスター種類ごとの見た目：既存画像+CSSフィルタ(hue-rotate/scale/明度)で差をつける */
-    /* 種類差は大きさ・光り方で表現し、色(hue)は通常クッキーモンスターのまま変えない */
+    /* 種類差は大きさ・光り方で表現し、色(hue)は通常クッキーモンスターのまま変えない。
+       大きさは通常(200px)基準に、swarm/speedyは少し小さく・tank/bossは少し大きく自然な範囲で */
     .monsterInstance.mtype-swarm .cookieMonsterButton {
-      width: 76px;
-      height: 76px;
+      width: 160px;
+      height: 160px;
     }
 
     .monsterInstance.mtype-tank .cookieMonsterButton {
-      width: 126px;
-      height: 126px;
+      width: 230px;
+      height: 230px;
     }
 
     .monsterInstance.mtype-speedy .cookieMonsterButton {
-      width: 96px;
-      height: 96px;
+      width: 175px;
+      height: 175px;
     }
 
     .monsterInstance.mtype-goldenBeast .cookieMonsterButton {
@@ -4517,8 +4518,8 @@
     }
 
     .monsterInstance.mtype-boss .cookieMonsterButton {
-      width: 132px;
-      height: 132px;
+      width: 250px;
+      height: 250px;
       box-shadow:
         0 0 30px rgba(255, 64, 64, 0.72),
         0 11px 24px rgba(0, 0, 0, 0.45);
