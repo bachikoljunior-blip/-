@@ -6076,13 +6076,18 @@ function injectImageAssetStyle() {
     .orderIcon{width:22px;height:22px;object-fit:contain;vertical-align:middle;margin-right:6px}
     .matIcon{width:22px;height:22px;object-fit:contain;vertical-align:middle;margin-right:6px}
     .bakeBadgeIcon{width:22px;height:22px;object-fit:contain;vertical-align:middle;margin-right:5px}
-    .tabIcon{width:18px;height:18px;object-fit:contain;vertical-align:middle;margin-right:5px}
+    .tab[data-tab]{display:flex;align-items:center;justify-content:center}
+    .tabIcon{width:30px;height:30px;object-fit:contain;display:block}
+    .tab.tabSilhouette .tabIcon{filter:brightness(0) saturate(0);opacity:.5}
     .buyIcon{width:16px;height:16px;object-fit:contain;vertical-align:middle;margin-right:4px}
     .policyChoiceBtn{display:flex;align-items:center;flex-wrap:wrap}
     .policyChoiceBtn b,.policyChoiceBtn span{flex:1 1 100%}
     .policyChoiceBtn .choiceIcon{flex:0 0 auto}
-    .titleLogoImg{max-width:88%;max-height:150px;object-fit:contain;display:block;margin:0 auto;filter:drop-shadow(0 6px 14px rgba(0,0,0,.5))}
+    .titleLogoImg{width:100%;max-width:none;max-height:300px;object-fit:contain;display:block;margin:0 auto;filter:drop-shadow(0 8px 20px rgba(0,0,0,.6))}
     body.hasTitleLogoImg .titleLogoMain,body.hasTitleLogoImg .titleLogoSub{display:none}
+    /* タイトルの枠を消して背景画像を見せる */
+    .titleScreenFrame{background:none!important;border:none!important;box-shadow:none!important;width:min(500px,100%)!important}
+    .titleScreen{background-size:cover!important;background-position:center!important}
     .selectedSkillDescRow{display:flex;align-items:flex-start;gap:12px}
     .selectedSkillArt{width:72px;height:72px;flex:0 0 auto;object-fit:contain;border-radius:12px;background:rgba(0,0,0,.18)}
     .selectedSkillDescRow .selectedSkillDesc{flex:1 1 auto;margin:0}
@@ -6090,18 +6095,40 @@ function injectImageAssetStyle() {
   document.head.appendChild(st);
 }
 
+// タブは画像のみ(文字なし)。解放前のタブはアイコンをシルエット表示する。
+const TAB_META = {
+  shopTab: { name: "強化", locked: () => false },
+  researchTab: { name: "研究", locked: () => false },
+  prestigeTab: { name: "転生", locked: () => (typeof prestigeUnlocked === "function" ? !prestigeUnlocked() : false) },
+  orderTab: { name: "注文", locked: () => (typeof orderBoardUnlocked === "function" ? !orderBoardUnlocked() : false) },
+  workshopTab: { name: "工房", locked: () => (typeof workshopTabUnlocked === "function" ? !workshopTabUnlocked() : false) },
+  infoTab: { name: "一覧", locked: () => false }
+};
+
+function renderTabIcons() {
+  document.querySelectorAll(".tab[data-tab]").forEach(btn => {
+    const id = btn.dataset.tab;
+    const src = ASSETS.tabs && ASSETS.tabs[id];
+    if (!src) return;
+    const meta = TAB_META[id] || { name: "", locked: () => false };
+    let img = btn.querySelector(".tabIcon");
+    if (!img) {
+      img = document.createElement("img");
+      img.className = "tabIcon"; img.alt = ""; img.setAttribute("aria-hidden", "true");
+    }
+    img.src = assetUrl(src);
+    // 文字ノードを消してアイコンのみにする
+    btn.textContent = "";
+    btn.appendChild(img);
+    btn.setAttribute("aria-label", meta.name);
+    btn.classList.toggle("tabSilhouette", Boolean(meta.locked()));
+  });
+}
+
 // タブ・購入モード・設定・タイトルロゴのアイコンを注入(重複防止つき)
 function applyUiIcons() {
   try {
-    document.querySelectorAll(".tab[data-tab]").forEach(btn => {
-      const src = ASSETS.tabs && ASSETS.tabs[btn.dataset.tab];
-      if (src && !btn.querySelector(".tabIcon")) {
-        const img = document.createElement("img");
-        img.className = "tabIcon"; img.alt = ""; img.setAttribute("aria-hidden", "true");
-        img.src = assetUrl(src);
-        btn.insertBefore(img, btn.firstChild);
-      }
-    });
+    renderTabIcons();
     document.querySelectorAll(".buyModeBtn[data-buymode]").forEach(btn => {
       const src = ASSETS.buyModes && ASSETS.buyModes[btn.dataset.buymode];
       if (src && !btn.querySelector(".buyIcon")) {
@@ -7474,10 +7501,8 @@ function workshopCraftUnlocked() {
 function updateWorkshopTabVisibility() {
   // 工房・注文タブは最初から表示し、未解放の間は「?」で機能を隠す
   const wtab = document.querySelector('.tab[data-tab="workshopTab"]');
-  if (wtab) { wtab.classList.remove("hiddenTab"); wtab.textContent = workshopTabUnlocked() ? "工房" : "?"; }
-  const otab = document.querySelector('.tab[data-tab="orderTab"]');
-  if (otab) otab.textContent = orderBoardUnlocked() ? "注文" : "?";
-  applyUiIcons();
+  if (wtab) wtab.classList.remove("hiddenTab");
+  renderTabIcons();
 }
 
 function gainMaterial(id, count) {
@@ -10721,8 +10746,7 @@ function updatePrestigeTabLabel() {
   const tab = document.querySelector('.tab[data-tab="prestigeTab"]');
   if (!tab) return;
 
-  tab.textContent = prestigeUnlocked() ? "転生" : "?";
-  applyUiIcons();
+  renderTabIcons();
 }
 
 function checkPrestigeUnlockNotice() {
