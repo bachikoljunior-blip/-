@@ -338,6 +338,7 @@ function newSim(strategy, opts) {
     // 永続
     prestige: 0, prestigeTotal: 0, prestigeRuns: 0, totalCookies: 0,
     prevMaxStage: 0,            // 提案8: 前回周回の最高到達層(=再登坂の天井)。層の試練を新規開拓層基準へ相対化するのに使う。層数の表示・カウント(run.maxStage)は絶対累積のまま不変更。
+    prevDuration: 0,            // 提案9(到達連動ノルマ): 前回周回の長さ(秒)。未達判定の進行比 ρ=経過秒/前回長 の分母。
     skills: {},
     everUpgrade: {}, everResearch: {}, everStage: {},
     unlockEvents: [],           // {t, kind, id}
@@ -1433,6 +1434,8 @@ function doPrestige(sim) {
 
   // 提案8: 今周回の天井を持ち越す(次周回の層の試練の相対基準)。表示層数は絶対累積のまま。
   sim.prevMaxStage = r.maxStage;
+  // 提案9: 今周回の長さを持ち越す(次周回の到達連動ノルマの進行比の分母)。
+  sim.prevDuration = sim.t - r.startT;
 
   // 新周回
   sim.run = newRun(sim);
@@ -1610,8 +1613,20 @@ function advanceTick(sim, strategy) {
 
     // ノルマ判定(本来のノルマのみ。追跡ノルマは廃止=2026-07-06 ユーザー決定、T3a/T3bはノルマ係数で作る)
     if (!r.quotaFailed) {
-      const quota = monsterQuotaRequired(sim);
+      let quota = monsterQuotaRequired(sim);
       const el = elapsed(sim);
+      // 到達連動ノルマ(提案9): 進行比 ρ=周回内経過秒/max(前回周回長,reachMinSec) が ρ* を越えたら未達。
+      // 層ゲージ(quotaAtElapsed)には触れず、ここでの未達判定にだけ到達項を上乗せする(max)。
+      // runCookies×reachCoef×ρ^reachPow と runCookies を比べる=クッキー桁に依存せず ρ で未達位置が決まる。
+      // 進行を層比でなく時間比にする(未達で層が凍結するため層比は序盤に寄る=第12次H実測)。
+      if (quota !== null && quota > 0 && P.quota.reachCoef) {
+        const denom = Math.max(sim.prevDuration || 0, P.quota.reachMinSec || 0);
+        if (denom > 0) {
+          const rho = el / denom;
+          const reach = r.runCookies * P.quota.reachCoef * Math.pow(rho, P.quota.reachPow);
+          if (reach > quota) quota = reach;
+        }
+      }
       if (quota !== null && quota > 0 && r.runCookies < quota) {
         r.quotaFailed = true;
         r.quotaFailAt = el; // 未達に転じた経過秒(条件⑧用)
@@ -1654,7 +1669,7 @@ function takeSnapshot(sim) {
   return structuredClone({
     t: sim.t, prestige: sim.prestige, prestigeTotal: sim.prestigeTotal,
     prestigeRuns: sim.prestigeRuns, totalCookies: sim.totalCookies,
-    prevMaxStage: sim.prevMaxStage,
+    prevMaxStage: sim.prevMaxStage, prevDuration: sim.prevDuration,
     skills: sim.skills, rotIdx: sim.rotIdx, upRotIdx: sim.upRotIdx, goldenAlt: sim.goldenAlt,
     firstResearchBuy: sim.firstResearchBuy, firstPerk: sim.firstPerk, firstStageBuy: sim.firstStageBuy,
     run: sim.run
@@ -1668,6 +1683,7 @@ function replayRun(strategy, snap, opts, capSec) {
   sim.t = s.t; sim.prestige = s.prestige; sim.prestigeTotal = s.prestigeTotal;
   sim.prestigeRuns = s.prestigeRuns; sim.totalCookies = s.totalCookies;
   sim.prevMaxStage = s.prevMaxStage || 0;
+  sim.prevDuration = s.prevDuration || 0;
   sim.skills = s.skills; sim.rotIdx = s.rotIdx; sim.upRotIdx = s.upRotIdx; sim.goldenAlt = s.goldenAlt;
   sim.firstResearchBuy = s.firstResearchBuy; sim.firstPerk = s.firstPerk; sim.firstStageBuy = s.firstStageBuy;
   sim.run = s.run;

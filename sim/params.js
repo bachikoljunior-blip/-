@@ -74,9 +74,16 @@ module.exports = {
     gaugeMaxLayer: 400,
     // 追跡ノルマ(旧⑧)は廃止(2026-07-06 ユーザー決定)。未達(T3a/T3b)は本来のノルマ係数
     // (baseCoef/basePow/base2Coef/base2Pow/w1〜w3P/ctrlMul/ctrlDiv)+後半成長の減速で作る。
-    // 層の試練(2026-07-07 ユーザー採用・0-2提案4): 必要ノルマ×(1+trialCoef)^max(0, 最高層-trialStartLayer)。
-    // 層はその周回の実際の進行に比例するので、未達の位置が周回の深さに追随する(T3a/T3b用)。
-    trialCoef: 0.08, trialStartLayer: 10
+    // 層の試練(2026-07-07 ユーザー採用・0-2提案4 / 第12次H 提案8で新規開拓層基準へ相対化): 発火せず無害の resting 値。
+    trialCoef: 0.08, trialStartLayer: 10,
+    // ---- 到達連動ノルマ(第12次H・提案9・ユーザー承認) ----
+    // T3a を全周回・後半に置くための機構。層ゲージ(quotaAtElapsed=時間関数)には一切触れず、未達判定にだけ
+    // 「到達項」を足す: 未達 = runCookies < max(従来ノルマ, runCookies×reachCoef×ρ^reachPow)。
+    // ρ = 今回の周回内経過秒 ÷ max(前回周回の長さ prevDuration, reachMinSec)(=各周回の進行を前回長で正規化)。
+    // runCookies が両辺で相殺 → 実質「ρ が ρ*=(1/reachCoef)^(1/reachPow) を越えたら未達」。絶対クッキー桁に非依存。
+    // 層比でなく時間比にした理由: 未達で層が凍結するため層比は序盤に寄る&層が崩壊する(第12次H実測)。
+    // reachCoef=9, reachPow=10 → ρ*≈0.80(前回周回長の約8割の時点で未達)。序盤は runCookies<従来ノルマ側が勝ち従来挙動。
+    reachCoef: 9, reachPow: 10, reachMinSec: 1200
   },
 
   // ---- 討伐連鎖(2026-07-07 ユーザー採用・0-2提案1) ----
