@@ -8606,6 +8606,7 @@ function quotaTrialMultiplier() {
 const REACH_COEF = 20;
 const REACH_POW = 10;
 const REACH_MIN_SEC = 600;
+const REACH_MAX_SEC = 5000; // denom(前回周回長)の上限クランプ(0=無効)。直前が極端に長い→短い周回で reach 未発火を防ぐ。
 
 function monsterQuotaRequiredAtElapsed(seconds) {
   const s = Math.max(0, Number(seconds) || 0);
@@ -8670,7 +8671,8 @@ function checkQuotaState() {
   // 層ゲージ(monsterQuotaRequired)には触れず、ここの未達判定にだけ到達項を max で上乗せする。
   let need = (quota !== null && quota > 0) ? D(quota) : null;
   if (need !== null && REACH_COEF) {
-    const denom = Math.max(state.prevDuration || 0, REACH_MIN_SEC);
+    let denom = Math.max(state.prevDuration || 0, REACH_MIN_SEC);
+    if (REACH_MAX_SEC) denom = Math.min(denom, REACH_MAX_SEC);
     if (denom > 0) {
       const reach = state.runCookies.mul(REACH_COEF * Math.pow(elapsed / denom, REACH_POW));
       if (reach.gt(need)) need = reach;
