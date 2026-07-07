@@ -8830,6 +8830,19 @@ function startBgm() {
           return;
         }
 
+        if (skillTreeScreenActive()) {
+          // スキルツリーBGM: 転生の星図を俯瞰して構成を練る場面。タイトルと
+          // 同じコード進行(F→Am→Dm→B♭)を、ゆっくり長く伸びる和音パッドで
+          // 鳴らす。タブ画面(ゲームBGM)とは別物の、思索的で広がりのある音。
+          bgmFilter.frequency.value = 760;
+          if (bgmStep % 8 !== 0) return; // 約9.2秒に1和音。長い音長で重なりパッド化
+          const chord = titleChords[Math.floor(bgmStep / 8) % titleChords.length];
+          playBgmNote(chord[0] / 2, 11, 3.6, 0.5, "sine");   // 低いルートで土台
+          playBgmNote(chord[1], 10, 3.0, 0.16, "sine");
+          playBgmNote(chord[2], 10, 4.2, 0.12, "triangle");
+          return;
+        }
+
         // ゲームBGM: 4.6秒に1音、隣の音へ歩く環境音。停滞(同音連続)と
         // 2音の往復(反復)を避けるため、必ず動かして進行方向をやや引き継ぐ。
         bgmFilter.frequency.value = 680;
@@ -11367,6 +11380,12 @@ function loadGame() {
 
 function titleScreenActive() {
   return document.body.classList.contains("titleScreenMode");
+}
+
+// スキルツリー(転生スキルツリー)画面が開いているか。転生時の強制選択・
+// 転生タブからの閲覧のどちらも openSkillChoiceScreen() で skillChoiceMode が付く。
+function skillTreeScreenActive() {
+  return document.body.classList.contains("skillChoiceMode");
 }
 
 function normalPlayScreenActive() {
