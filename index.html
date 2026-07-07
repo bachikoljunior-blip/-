@@ -8603,9 +8603,9 @@ function quotaTrialMultiplier() {
 // 未達 = runCookies < max(従来ノルマ, runCookies×REACH_COEF×ρ^REACH_POW)。
 // ρ = 周回内経過秒 ÷ max(前回周回の長さ prevDuration, REACH_MIN_SEC)。runCookies が相殺 → 実質
 // 「ρ が ρ*=(1/REACH_COEF)^(1/REACH_POW)≈0.80 を越えたら未達」。絶対クッキー桁に非依存。sim と同式。
-const REACH_COEF = 9;
+const REACH_COEF = 20;
 const REACH_POW = 10;
-const REACH_MIN_SEC = 1200;
+const REACH_MIN_SEC = 600;
 
 function monsterQuotaRequiredAtElapsed(seconds) {
   const s = Math.max(0, Number(seconds) || 0);

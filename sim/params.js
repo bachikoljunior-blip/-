@@ -82,8 +82,9 @@ module.exports = {
     // ρ = 今回の周回内経過秒 ÷ max(前回周回の長さ prevDuration, reachMinSec)(=各周回の進行を前回長で正規化)。
     // runCookies が両辺で相殺 → 実質「ρ が ρ*=(1/reachCoef)^(1/reachPow) を越えたら未達」。絶対クッキー桁に非依存。
     // 層比でなく時間比にした理由: 未達で層が凍結するため層比は序盤に寄る&層が崩壊する(第12次H実測)。
-    // reachCoef=9, reachPow=10 → ρ*≈0.80(前回周回長の約8割の時点で未達)。序盤は runCookies<従来ノルマ側が勝ち従来挙動。
-    reachCoef: 9, reachPow: 10, reachMinSec: 1200
+    // reachCoef=20, reachPow=10 → ρ*≈0.74(前回周回長の約7.4割の時点で未達)。序盤は runCookies<従来ノルマ側が勝ち従来挙動。
+    // minSec=600 は掃引で確定(1200だと周回の短い方針=S3が ρ* に届かず取りこぼす。600で S3 21→44/47)。第12次H実測。
+    reachCoef: 20, reachPow: 10, reachMinSec: 600
   },
 
   // ---- 討伐連鎖(2026-07-07 ユーザー採用・0-2提案1) ----
