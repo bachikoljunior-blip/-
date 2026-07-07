@@ -467,6 +467,60 @@ function printTiming(stratId, rows) {
   return allOk;
 }
 
+// ⑬(提案5・2026-07-07承認=全体比較): タイミング機能の実効性を「通し比較」で測る。
+// 最適操作の通し(既定)と完全放置の通し(idleTiming)をそれぞれ走らせ、全周回の獲得効率
+// (runCookies/duration)の幾何平均の比を取る。機能ごとに「その機能だけ放置した通し」を1本走らせ、
+// 全機能同時放置('all')の合算も出す。瞬間比較(旧・期待値方式)が構造的に1.000に張り付く問題の解。
+function geomeanEff(sim) {
+  const full = sim.runs.filter(r => !r.partial && r.runCookies > 0 && r.duration > 0 && Number.isFinite(r.runCookies));
+  if (!full.length) return null;
+  const s = full.reduce((a, r) => a + Math.log(r.runCookies / r.duration), 0);
+  return Math.exp(s / full.length);
+}
+function runWholeTiming(strategy, hours, optSim) {
+  const opt = optSim || G.simulate(strategy, { hours });
+  const optEff = geomeanEff(opt);
+  const out = { perFeature: {}, used: {}, allLift: null };
+  if (optEff == null) return out;
+  for (const f of TIMING_FEATURES) {
+    const rid = f.stage.split(':')[0];
+    out.used[f.key] = opt.runs.some(r => !r.partial && (r.stages2 || []).includes(rid));
+    const idle = G.simulate(strategy, { hours, idleTiming: f.key });
+    const e = geomeanEff(idle);
+    out.perFeature[f.key] = (e && e > 0) ? optEff / e : null;
+  }
+  const all = G.simulate(strategy, { hours, idleTiming: 'all' });
+  const ea = geomeanEff(all);
+  out.allLift = (ea && ea > 0) ? optEff / ea : null;
+  return out;
+}
+// 全方針を跨いだ⑬判定: 各機能につき「使用した方針が1つ以上あり、その方針の通し比が[1.05,2.0]」。
+function judgeWholeTiming(hours, sims) {
+  const perStrat = {};
+  for (const s of STRATEGIES) perStrat[s.id] = runWholeTiming(s, hours, sims && sims[s.id]);
+  let ok = 0;
+  console.log(`⑬ タイミング機能(全体比較・最適操作/完全放置の全周回効率幾何平均比, 要求[1.05,2.00])`);
+  for (const f of TIMING_FEATURES) {
+    const rows = [];
+    let feature = false;
+    for (const s of STRATEGIES) {
+      const w = perStrat[s.id];
+      const lift = w.perFeature[f.key];
+      if (!w.used[f.key] || lift == null) continue;
+      const inBand = lift >= 1.05 && lift <= 2.0;
+      if (inBand) feature = true;
+      rows.push(`${s.id}=${lift.toFixed(3)}${inBand ? '✓' : ''}`);
+    }
+    if (feature) ok++;
+    console.log(`  ${feature ? 'OK' : 'NG'} ${f.label.padEnd(26)} ${rows.join(' ') || '(どの方針も未使用)'}`);
+  }
+  // 参考: 全機能同時放置の合算(方針ごと)
+  const allRows = STRATEGIES.map(s => { const a = perStrat[s.id].allLift; return a ? `${s.id}=${a.toFixed(2)}` : null; }).filter(Boolean);
+  console.log(`  参考 全機能同時放置lift: ${allRows.join(' ')}`);
+  console.log(`⑬ タイミング ${ok}/${TIMING_FEATURES.length}`);
+  return ok;
+}
+
 // CLI
 const mode = process.argv[2] || 'baseline';
 const arg = process.argv[3];
@@ -527,9 +581,12 @@ if (mode === 'baseline') {
   printContext(sims);
   printPolicyContext(hours);
 } else if (mode === 'timing') {
-  // ⑬ 単体: node runner.js timing S1 [hours]
+  // ⑬ 単体(旧・瞬間比較。参考): node runner.js timing S1 [hours]
   const s = STRATEGIES.find(x => x.id === arg) || STRATEGIES[0];
   printTiming(s.id, runTimingChecks(s, hours));
+} else if (mode === 'timing2') {
+  // ⑬ 単体(提案5・全体比較): node runner.js timing2 "" [hours]
+  judgeWholeTiming(hours);
 } else if (mode === 'checks') {
   // まとめ実行: node runner.js checks S1 [hours] → ⑧(全方針) / ⑫ / ⑬(指定方針)
   const sims = {};
@@ -729,23 +786,9 @@ if (mode === 'baseline') {
   judge(collect('res:'), 1.2, '① 研究(各回≥1.2)', G.RESEARCH.map(r => 'res:' + r.id));
   judge(collect('rw:'), 1.1, '③ 報酬(各回≥1.1)', G.REWARD_POOL.map(r => 'rw:' + r.id));
   judge(collect('stage:'), 1.05, '⑨ 段階(各回≥1.05)');
-  // ⑬ タイミング: [1.05, 2.00]
-  {
-    const map = collect('timing:');
-    let ok = 0, all = 0;
-    for (const k of Object.keys(map)) {
-      all++;
-      let pass = false, best = 0;
-      for (const arr of Object.values(map[k])) {
-        const gm = Math.exp(arr.reduce((a, b) => a + Math.log(b), 0) / arr.length);
-        if (arr.every(v => v >= 1.05 && v <= 2.0)) pass = true;
-        best = Math.max(best, gm);
-      }
-      if (pass) ok++;
-      console.log(`  ${pass ? 'OK' : 'NG'} ${k} 幾何平均${best.toFixed(3)}`);
-    }
-    console.log(`⑬ タイミング ${ok}/${all}`);
-  }
+  // ⑬ タイミング(提案5・2026-07-07承認=全体比較): 瞬間比較(collect('timing:'))は構造的に1.000
+  // に張り付くため廃止。最適操作/完全放置の通しを走らせ、全周回効率の幾何平均比[1.05,2.0]で判定。
+  judgeWholeTiming(H, sims);
   // 参考: 討伐連鎖(第12次D採用)の期待値lift(合否条件ではない。③②⑫㉘の押し上げ係数の目安)
   {
     const byPol = (collect('chain'))['chain'] || {};

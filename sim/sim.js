@@ -325,6 +325,9 @@ function capOwn(n) { return Math.max(0, n); }
 function ir(level, rate) { return Math.pow(1 - Math.min(0.95, Math.max(0, rate)), Math.max(0, level)); }
 // 報酬Lvの逓減: lvが大きいほど1Lvあたりの寄与が下がる(halfで半減)
 function satLv(lv, half) { lv = Math.max(0, lv); return lv / (1 + lv / Math.max(1, half)); }
+// ⑬タイミング: 完全放置モードの判定。idleTiming が対象キーそのもの、または全機能放置 'all' のとき真。
+// 'all' は提案5(2026-07-07 承認)の全体比較用: 全タイミング機能を1本の放置ランで同時に無効化する。
+function idleOn(sim, key) { const it = sim.opt.idleTiming; return it === key || it === 'all'; }
 
 // ================= シミュレーション状態 =================
 function newSim(strategy, opts) {
@@ -758,7 +761,7 @@ function computeProd(sim) {
         let amp = P.res2.waveAmpBase + P.res2.waveAmpPerRes * rc;
         if (resStage3(sim, 'quantumProofing')) amp *= 1 + P.res2.waveStageCoef * r.maxStage;
         // タイミング(条件⑬): 最適操作=山に活動を寄せる(正相平均2/π) / 完全放置=全周期平均(1/π)
-        const wf = sim.opt.idleTiming === 'wave' ? P.timing.waveIdle : P.timing.waveOpt;
+        const wf = idleOn(sim, 'wave') ? P.timing.waveIdle : P.timing.waveOpt;
         resM *= 1 + amp * wf;
       }
     }
@@ -1211,7 +1214,7 @@ function collectGolden(sim, prod) {
   if (resActive(sim, 'spiceBlend') && resStage2(sim, 'spiceBlend')) {
     const mature = Math.max(0, sim.t - (r.lastGoldenT || r.startT)); // キャップ撤廃(旧min 240s)
     // タイミング(条件⑬): 完全放置は爆発窓に行動を寄せられないため係数を減衰
-    const matureEff = sim.opt.idleTiming === 'mature' ? P.timing.matureIdleMul : 1;
+    const matureEff = idleOn(sim, 'mature') ? P.timing.matureIdleMul : 1;
     let burst = 1 + P.res2.matureRate * mature * matureEff;
     if (resStage3(sim, 'spiceBlend')) burst *= 1 + P.res2.spiceStageCoef * r.maxStage;
     r.spiceBurstM = burst;
@@ -1308,7 +1311,7 @@ function defeatMonster(sim, mon) {
   if (typeId === 'speedy' && M) r.nextGoldenSpawnMultiplier *= M.speedyGoldenCut;
   // 異世界接続網 段階2: 狩り窓中の討伐で窓を延長(完全放置は窓中に討伐を寄せられず延長なし: 条件⑬)
   if (resActive(sim, 'portalNetwork') && resStage2(sim, 'portalNetwork') && sim.t < r.portalHuntUntil
-    && sim.opt.idleTiming !== 'huntExtend') {
+    && !idleOn(sim, 'huntExtend')) {
     r.portalHuntUntil += P.res2.huntExtendSec;
   }
   if (!r.quotaFailed) r.quotaMonsterKills += units;
@@ -1548,7 +1551,7 @@ function advanceTick(sim, strategy) {
       const maxUses = resStage3(sim, 'blackHoleCompression') ? 3 : 2;
       if (r.bhCharge >= P.res2.bhChargeFull && r.bhUses < maxUses && sim.t >= r.bhBoostUntil) {
         // タイミング(条件⑬): 最適操作は満タンで即発動 / 完全放置は気づくまで遅延
-        if (r.bhReadyAt == null) r.bhReadyAt = sim.t + (sim.opt.idleTiming === 'bhCharge' ? P.timing.bhIdleDelay : 0);
+        if (r.bhReadyAt == null) r.bhReadyAt = sim.t + (idleOn(sim, 'bhCharge') ? P.timing.bhIdleDelay : 0);
         if (sim.t >= r.bhReadyAt) {
           let mult = 1 + P.res2.bhBoostCoef * Math.sqrt(bh) / 10;
           if (resStage3(sim, 'blackHoleCompression')) mult *= 1 + P.res2.bhBoostStageCoef * r.maxStage;
