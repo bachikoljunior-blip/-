@@ -6061,6 +6061,87 @@ function applyVisualAssets() {
   root.style.setProperty("--cookie-art", `url("${assetUrl(ASSETS.objects.cookie)}")`);
   root.style.setProperty("--golden-cookie-art", `url("${assetUrl(ASSETS.objects.goldenCookie)}")`);
   root.style.setProperty("--monster-art", `url("${assetUrl(ASSETS.objects.cookieMonster)}")`);
+  injectImageAssetStyle();
+  applyUiIcons();
+  applyScreenBackground();
+}
+
+// 追加画像用の共通スタイルを一度だけ差し込む
+function injectImageAssetStyle() {
+  if (document.getElementById("imgAssetStyle")) return;
+  const st = document.createElement("style");
+  st.id = "imgAssetStyle";
+  st.textContent = `
+    .choiceIcon{width:44px;height:44px;object-fit:contain;border-radius:8px;flex:0 0 auto;margin-right:10px;vertical-align:middle}
+    .orderIcon{width:22px;height:22px;object-fit:contain;vertical-align:middle;margin-right:6px}
+    .matIcon{width:22px;height:22px;object-fit:contain;vertical-align:middle;margin-right:6px}
+    .bakeBadgeIcon{width:22px;height:22px;object-fit:contain;vertical-align:middle;margin-right:5px}
+    .tabIcon{width:18px;height:18px;object-fit:contain;vertical-align:middle;margin-right:5px}
+    .buyIcon{width:16px;height:16px;object-fit:contain;vertical-align:middle;margin-right:4px}
+    .policyChoiceBtn{display:flex;align-items:center;flex-wrap:wrap}
+    .policyChoiceBtn b,.policyChoiceBtn span{flex:1 1 100%}
+    .policyChoiceBtn .choiceIcon{flex:0 0 auto}
+    .titleLogoImg{max-width:88%;max-height:150px;object-fit:contain;display:block;margin:0 auto;filter:drop-shadow(0 6px 14px rgba(0,0,0,.5))}
+    body.hasTitleLogoImg .titleLogoMain,body.hasTitleLogoImg .titleLogoSub{display:none}
+    .nodeMark .nodeMarkImg{width:100%;height:100%;object-fit:contain;display:block;border-radius:50%}
+    .selectedSkillIcon{width:26px;height:26px;object-fit:contain;vertical-align:middle;margin-right:4px}
+  `;
+  document.head.appendChild(st);
+}
+
+// タブ・購入モード・設定・タイトルロゴのアイコンを注入(重複防止つき)
+function applyUiIcons() {
+  try {
+    document.querySelectorAll(".tab[data-tab]").forEach(btn => {
+      const src = ASSETS.tabs && ASSETS.tabs[btn.dataset.tab];
+      if (src && !btn.querySelector(".tabIcon")) {
+        const img = document.createElement("img");
+        img.className = "tabIcon"; img.alt = ""; img.setAttribute("aria-hidden", "true");
+        img.src = assetUrl(src);
+        btn.insertBefore(img, btn.firstChild);
+      }
+    });
+    document.querySelectorAll(".buyModeBtn[data-buymode]").forEach(btn => {
+      const src = ASSETS.buyModes && ASSETS.buyModes[btn.dataset.buymode];
+      if (src && !btn.querySelector(".buyIcon")) {
+        const img = document.createElement("img");
+        img.className = "buyIcon"; img.alt = ""; img.setAttribute("aria-hidden", "true");
+        img.src = assetUrl(src);
+        btn.insertBefore(img, btn.firstChild);
+      }
+    });
+    const logo = document.querySelector(".titleLogo");
+    if (logo && ASSETS.title && ASSETS.title.logo && !logo.querySelector(".titleLogoImg")) {
+      const img = document.createElement("img");
+      img.className = "titleLogoImg"; img.alt = "クッキーストラテジャー";
+      img.src = assetUrl(ASSETS.title.logo);
+      logo.insertBefore(img, logo.firstChild);
+      document.body.classList.add("hasTitleLogoImg");
+    }
+    const settingsBtn = document.getElementById("settingsBtn") || document.querySelector("[data-settings]");
+    if (settingsBtn && ASSETS.settings && !settingsBtn.querySelector(".settingsIcon")) {
+      const img = document.createElement("img");
+      img.className = "settingsIcon"; img.alt = ""; img.style.width = "20px"; img.style.height = "20px"; img.style.objectFit = "contain";
+      img.src = assetUrl(ASSETS.settings);
+      settingsBtn.insertBefore(img, settingsBtn.firstChild);
+    }
+  } catch (e) { /* アイコン注入失敗はゲーム進行に影響させない */ }
+}
+
+// 選択中ステージ(またはタイトル)に応じてメイン背景を切り替える
+function applyScreenBackground() {
+  try {
+    const root = document.documentElement;
+    if (document.body.classList.contains("titleScreenMode") && ASSETS.title && ASSETS.title.bg) {
+      root.style.setProperty("--screen-play", `url("${assetUrl(ASSETS.title.bg)}")`);
+      return;
+    }
+    const no = (typeof currentStageNo === "function") ? currentStageNo() : 1;
+    const info = stageInfo(no);
+    const key = String(info && info.deep ? 6 : no);
+    const src = (ASSETS.stageBg && ASSETS.stageBg[key]) || ASSETS.screens.play;
+    root.style.setProperty("--screen-play", `url("${assetUrl(src)}")`);
+  } catch (e) { /* 背景切替失敗は無視 */ }
 }
 
 
@@ -6726,7 +6807,7 @@ function renderBakeBox() {
   box.classList.add("active");
   box.innerHTML = `
     <div class="bakeHead">
-      <span>焼き加減：<span class="bakeStateName">${stateInfo.name}</span></span>
+      <span><img class="bakeBadgeIcon" src="${assetUrl(ASSETS.bakeStates[stateInfo.id])}" alt="" aria-hidden="true" loading="lazy">焼き加減：<span class="bakeStateName">${stateInfo.name}</span></span>
       <span>残り ${fmtTime(remain)}</span>
     </div>
     <div class="bakeEffectText">${showDetail ? bakeEffectText() : stateInfo.short}</div>
@@ -7089,7 +7170,7 @@ function renderOrderBoard() {
       <h3>注文ボード</h3>
       <div class="desc">1件ずつ届く短期の依頼。要求と報酬は今の状態に相対化される(詳細は注文タブ)。</div>
       <div class="orderCard">
-        <div class="orderHead"><span>${def.name}</span><span>${progressText} / ${needText}${def.unit}</span></div>
+        <div class="orderHead"><span><img class="orderIcon" src="${assetUrl(ASSETS.orders[def.id])}" alt="" aria-hidden="true" loading="lazy">${def.name}</span><span>${progressText} / ${needText}${def.unit}</span></div>
         <div class="desc">条件：${def.desc}</div>
         <div class="orderProgressBar"><div class="orderProgressFill" style="width:${(ratio * 100).toFixed(1)}%"></div></div>
         <div class="desc">報酬：${orderRewardText(order)}</div>
@@ -7152,7 +7233,7 @@ function renderOrder() {
       <h3>注文ボード</h3>
       <div class="desc">短期の依頼が1件ずつ届く。要求量と報酬は今の生産・ペースに合わせて決まり、制限時間内に達成すると報酬、時間切れなら次の注文待ちになる。注文は選び直せない。</div>
       <div class="orderCard">
-        <div class="orderHead"><span>${def.name}</span><span>${progressText} / ${needText}${def.unit}</span></div>
+        <div class="orderHead"><span><img class="orderIcon" src="${assetUrl(ASSETS.orders[def.id])}" alt="" aria-hidden="true" loading="lazy">${def.name}</span><span>${progressText} / ${needText}${def.unit}</span></div>
         <div class="desc">条件：${def.desc}</div>
         <div class="orderProgressBar"><div class="orderProgressFill" style="width:${(ratio * 100).toFixed(1)}%"></div></div>
         <div class="orderTimeRow">
@@ -7321,6 +7402,7 @@ function applyStageTheme() {
   STAGES.forEach(s => document.body.classList.toggle("stageTheme" + s.no, s.no === baseNo));
   document.body.classList.toggle("stageThemeDeep", Boolean(info.deep));
   document.body.style.setProperty("--deepHue", String(info.deep ? (info.deepK * 47) % 360 : 0));
+  applyScreenBackground();
 }
 
 // v3: ステージは転生時のステージ選択画面で決まり、周回中は固定(切替UI・クールダウン廃止)。
@@ -7394,6 +7476,7 @@ function updateWorkshopTabVisibility() {
   if (wtab) { wtab.classList.remove("hiddenTab"); wtab.textContent = workshopTabUnlocked() ? "工房" : "?"; }
   const otab = document.querySelector('.tab[data-tab="orderTab"]');
   if (otab) otab.textContent = orderBoardUnlocked() ? "注文" : "?";
+  applyUiIcons();
 }
 
 function gainMaterial(id, count) {
@@ -7824,7 +7907,7 @@ function renderWorkshop() {
     const can = canAffordMaterials(d.cost) && (act || active.length < MAX_ACTIVE_DISHES) && !pausedForSkillChoice();
 
     return `
-      <button class="item artCard workshopCard ${can ? "canBuy" : ""}" data-dish="${d.id}">
+      <button class="item artCard workshopCard hasArtImage ${can ? "canBuy" : ""}" data-dish="${d.id}" style="--art-img:url('${assetUrl(ASSETS.dishes[d.id])}')">
         <b>${d.name}${act ? `(効果中 残り${Math.max(0, Math.ceil((act.until - now) / 1000))}秒)` : ""}</b>
         <div class="price">${materialCostText(d.cost)}</div>
         <div class="desc">${d.desc} / 効果時間 ${Math.round(dishDurationMs() / 1000)}秒</div>
@@ -7843,7 +7926,7 @@ function renderWorkshop() {
       const canAscend = canAffordMaterials(aCost) && !pausedForSkillChoice();
 
       return `
-        <button class="item artCard workshopCard ${canAscend ? "canBuy" : ""}" data-ascend="${eq.id}">
+        <button class="item artCard workshopCard hasArtImage ${canAscend ? "canBuy" : ""}" data-ascend="${eq.id}" style="--art-img:url('${assetUrl(ASSETS.equipment[eq.id])}')">
           <b>${eq.name} Lv.${lv}(上限${maxLv}${ascendNote})— 限界突破</b>
           <div class="price">${materialCostText(aCost)}</div>
           <div class="desc">現在：${eq.effect(lv)} / 突破するとLv上限が${maxLv + 5}になる</div>
@@ -7854,7 +7937,7 @@ function renderWorkshop() {
     const can = canAffordMaterials(cost) && !pausedForSkillChoice();
 
     return `
-      <button class="item artCard workshopCard ${can ? "canBuy" : ""}" data-equip="${eq.id}">
+      <button class="item artCard workshopCard hasArtImage ${can ? "canBuy" : ""}" data-equip="${eq.id}" style="--art-img:url('${assetUrl(ASSETS.equipment[eq.id])}')">
         <b>${eq.name} Lv.${lv} → Lv.${lv + 1}(上限${maxLv}${ascendNote})</b>
         <div class="price">${materialCostText(cost)}</div>
         <div class="desc">現在：${lv > 0 ? eq.effect(lv) : "未作成"} / 次：${eq.effect(lv + 1)}</div>
@@ -7863,7 +7946,7 @@ function renderWorkshop() {
 
   const matRows = MATERIALS
     .filter(m => materialSeen(m.id))
-    .map(m => `<div class="infoRow"><b>${m.name}</b> ×${fmt(materialCount(m.id))}${m.tier === "r" ? "(レア)" : m.tier === "b" ? "(ボス核)" : ""}</div>`)
+    .map(m => `<div class="infoRow"><img class="matIcon" src="${assetUrl(ASSETS.materials[m.id])}" alt="" aria-hidden="true" loading="lazy"><b>${m.name}</b> ×${fmt(materialCount(m.id))}${m.tier === "r" ? "(レア)" : m.tier === "b" ? "(ボス核)" : ""}</div>`)
     .join("") || `<div class="desc">まだ素材がない</div>`;
 
   // v2: 討伐記録セクション(種ごとの累計/次のマイルストーン/現在ボーナス)
@@ -7875,7 +7958,7 @@ function renderWorkshop() {
     const bonus = m > 0
       ? `ダメージ×${killRecordDamageMultiplier(typeId).toFixed(2)}・ドロップ+${killRecordDropBonus(typeId)}`
       : "ボーナスなし";
-    return `<div class="infoRow"><b>${type.name}</b> 累計${fmt(c)}体 / 次の記録 ${fmt(next)}体 / 記録${m}段：${bonus}</div>`;
+    return `<div class="infoRow"><img class="matIcon" src="${assetUrl(ASSETS.monsters[typeId] || ASSETS.objects.cookieMonster)}" alt="" aria-hidden="true" loading="lazy"><b>${type.name}</b> 累計${fmt(c)}体 / 次の記録 ${fmt(next)}体 / 記録${m}段：${bonus}</div>`;
   }).join("");
 
   // v2: 「作成」(装備)はworkshop_2(工房の拡張)取得で解放
@@ -9779,6 +9862,7 @@ function closePolicyChoiceScreen() {
 function renderPolicyChoiceScreen() {
   $("policyChoiceRow").innerHTML = RUN_POLICIES.map(p => `
     <button type="button" class="policyChoiceBtn" data-runpolicy="${p.id}">
+      <img class="choiceIcon" src="${assetUrl(ASSETS.policies[p.id])}" alt="" aria-hidden="true" loading="lazy">
       <b>${p.name}</b><span>${p.desc}</span><span>${p.bias}</span>
     </button>
   `).join("");
@@ -9848,6 +9932,7 @@ function renderStageChoiceScreen() {
     const s = stageInfo(no);
     rows.push(`
       <button type="button" class="policyChoiceBtn" data-runstage="${no}">
+        <img class="choiceIcon" src="${assetUrl(ASSETS.stageThumbs[String(s.deep ? 6 : no)])}" alt="" aria-hidden="true" loading="lazy">
         <b>第${no}ステージ ${s.name}</b><span>${stageChoiceSummary(no)}</span>
       </button>`);
   }
@@ -9888,7 +9973,7 @@ function renderSkillChoiceScreen() {
 
   $("selectedSkillPanel").innerHTML = selected ? `
     <div class="selectedSkillHead">
-      <div class="selectedSkillName">${selected.icon} ${selected.name}</div>
+      <div class="selectedSkillName">${ASSETS.skills && ASSETS.skills[selected.id] ? `<img class="selectedSkillIcon" src="${assetUrl(ASSETS.skills[selected.id])}" alt="" aria-hidden="true">` : selected.icon} ${selected.name}</div>
       <div class="selectedSkillStatus">${statusText}</div>
     </div>
     <div class="selectedSkillCost">消費PT：${fmt(selected.cost)} / 系統：${selected.branchName}</div>
@@ -9941,7 +10026,7 @@ function renderSkillChoiceScreen() {
         data-skill-node="${skill.id}"
         aria-label="${skill.name}"
       >
-        <span class="nodeMark">${skill.icon}</span>
+        <span class="nodeMark">${ASSETS.skills && ASSETS.skills[skill.id] ? `<img class="nodeMarkImg" src="${assetUrl(ASSETS.skills[skill.id])}" alt="" aria-hidden="true" loading="lazy">` : skill.icon}</span>
         <span class="nodeName">${skill.name}</span>
         <span class="nodeCost">${done ? "済" : "PT " + fmt(skill.cost)}</span>
       </button>
@@ -10633,6 +10718,7 @@ function updatePrestigeTabLabel() {
   if (!tab) return;
 
   tab.textContent = prestigeUnlocked() ? "転生" : "?";
+  applyUiIcons();
 }
 
 function checkPrestigeUnlockNotice() {
@@ -11942,6 +12028,8 @@ function createMonsterElement(mon) {
   const wrap = document.createElement("div");
   wrap.className = "monsterInstance mtype-" + type.id;
   wrap.dataset.monsterId = String(mon.id);
+  const monArt = (ASSETS.monsters && ASSETS.monsters[type.id]) || ASSETS.objects.cookieMonster;
+  wrap.style.setProperty("--monster-art", `url("${assetUrl(monArt)}")`);
   wrap.innerHTML = `
     <div class="monsterTypeLabel">${type.name}</div>
     <button class="cookieMonsterButton" aria-label="${type.name}"></button>
@@ -12803,6 +12891,7 @@ function startGameFromTitle() {
 
   document.body.classList.remove("titleScreenMode");
   $("titleAboutOverlay").classList.remove("active");
+  applyScreenBackground();
   scheduleGoldenCookie();
   scheduleMonster();
   updateTopOnly();
@@ -12813,6 +12902,7 @@ function returnToTitleScreen() {
   if (titleScreenActive() || pausedForSkillChoice()) return;
 
   document.body.classList.add("titleScreenMode");
+  applyScreenBackground();
   clearGoldenSpawnTimer();
   clearMonsterSpawnTimer();
   if (goldenVisible) hideGoldenCookie(false);
