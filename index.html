@@ -1992,9 +1992,10 @@
     }
 
     #shopTab { background-image: var(--screen-shop) !important; }
-    #researchTab { background-image: var(--screen-research) !important; }
-    #prestigeTab { background-image: var(--screen-prestige) !important; }
-    #infoTab { background-image: var(--screen-info) !important; }
+    /* 研究・転生・一覧は見出し文字(上部)が読みやすいよう、背景の枠を濃いめにする(上端を暗く) */
+    #researchTab { background-image: linear-gradient(180deg, rgba(12,7,3,0.80), rgba(8,4,2,0.40) 28%, rgba(8,4,2,0.58)), var(--screen-research) !important; }
+    #prestigeTab { background-image: linear-gradient(180deg, rgba(12,7,3,0.80), rgba(8,4,2,0.42) 28%, rgba(8,4,2,0.60)), var(--screen-prestige) !important; }
+    #infoTab { background-image: linear-gradient(180deg, rgba(12,7,3,0.80), rgba(8,4,2,0.42) 28%, rgba(8,4,2,0.60)), var(--screen-info) !important; }
 
     #rewardModal {
       background: rgba(0,0,0,0.24) !important;
@@ -4240,7 +4241,7 @@
     }
 
     .policyChoiceInner {
-      width: min(460px, 100%);
+      width: min(560px, 100%);
       margin: auto;
     }
 
@@ -4294,6 +4295,53 @@
       font-size: 12px;
       color: rgba(207, 232, 255, 0.72);
       line-height: 1.45;
+    }
+
+    /* 周回方針(5つ)は画像を大きく、上3・下2のバランス配置にする(#policyChoiceRow限定でステージ選択には影響させない) */
+    #policyChoiceRow {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+    }
+    #policyChoiceRow .policyChoiceBtn {
+      grid-column: span 2;              /* 上段は3つ(2+2+2=6) */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      text-align: center;
+      min-height: 190px;
+      padding: 15px 10px;
+    }
+    #policyChoiceRow .policyChoiceBtn:nth-child(4),
+    #policyChoiceRow .policyChoiceBtn:nth-child(5) {
+      grid-column: span 3;              /* 下段は2つ(3+3=6)で中央寄せ */
+    }
+    #policyChoiceRow .choiceIcon {
+      width: 78px;
+      height: 78px;
+      margin: 0 0 9px 0;
+    }
+    #policyChoiceRow .policyChoiceBtn b {
+      flex: 0 0 auto;
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+    #policyChoiceRow .policyChoiceBtn span {
+      flex: 0 0 auto;
+    }
+    #policyChoiceRow .policyBias {
+      margin-top: 5px;
+      font-size: 11px;
+      color: rgba(255, 224, 150, 0.72);
+    }
+    @media (max-width: 380px) {
+      #policyChoiceRow { gap: 8px; }
+      #policyChoiceRow .policyChoiceBtn { min-height: 178px; padding: 12px 6px; }
+      #policyChoiceRow .choiceIcon { width: 66px; height: 66px; }
+      #policyChoiceRow .policyChoiceBtn b { font-size: 14px; }
+      #policyChoiceRow .policyChoiceBtn span { font-size: 11px; }
+      #policyChoiceRow .policyBias { font-size: 10px; }
     }
 
     .policyChoiceBtn.pressed,
@@ -9920,10 +9968,12 @@ function closePolicyChoiceScreen() {
 }
 
 function renderPolicyChoiceScreen() {
+  // 素材(工房)未解放のうちは、素材との相性説明を出さない(スキルツリー以外で未解放要素を伏せる)
+  const showBias = workshopTabUnlocked();
   $("policyChoiceRow").innerHTML = RUN_POLICIES.map(p => `
     <button type="button" class="policyChoiceBtn" data-runpolicy="${p.id}">
       <img class="choiceIcon" src="${assetUrl(ASSETS.policies[p.id])}" alt="" aria-hidden="true" loading="lazy">
-      <b>${p.name}</b><span>${p.desc}</span><span>${p.bias}</span>
+      <b>${p.name}</b><span>${p.desc}</span>${showBias ? `<span class="policyBias">${p.bias}</span>` : ""}
     </button>
   `).join("");
 
