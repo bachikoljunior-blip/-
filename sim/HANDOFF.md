@@ -4,6 +4,13 @@
 新しいセッションでは「リポジトリの sim/HANDOFF.md を読んで、書かれている続きの作業を進めて」と指示すれば続行できます。
 **まず下の「第12次 START HERE」を読むこと。** 6章末尾に第7〜12次の各進捗、3章に確定仕様がある。
 
+> ⚠ **コードの在り処(重要)**: この最新HANDOFFに対応する **sim/ 一式とゲーム(index.html)のコードは
+> 作業ブランチ `claude/exist-debug-handoff-review-kqmpdu` にある**。`main` のコードはまだ第7次のままで、
+> 本HANDOFFが「実装済み」と書く変更(追跡ノルマ削除・T1〜T3b・㉘稼ぎ口比率など)は入っていない。
+> **続きを作業する際は、まずこのブランチを checkout すること**:
+> `git fetch origin claude/exist-debug-handoff-review-kqmpdu && git checkout claude/exist-debug-handoff-review-kqmpdu`
+> (このブランチが並行セッションで進んでいれば、その最新版が正。main は HANDOFF の閲覧用の入口として最新に保つ)
+
 ---
 
 ## 0. 第12次 START HERE(最新の合意状態。確定と未確定を分離)
