@@ -461,6 +461,7 @@ function rewardUnlockedFn(sim, r) {
   return !r.unlockSkill || hasSkill(sim, r.unlockSkill);
 }
 function resActive(sim, id) {
+  if (sim._md === 'res:' + id) return false; // 期待値測定の一時無効(①)
   return sim.run.research[id] && sim.opt.disableResearch !== id;
 }
 function policyIs(sim, id) {
@@ -840,9 +841,11 @@ function computeProd(sim) {
   };
 }
 
+// 報酬の無効化判定(恒久 disableReward + 期待値測定の一時 _md の両対応)
+function rwOff(sim, id) { return sim.opt.disableReward === id || sim._md === 'rw:' + id; }
 // 報酬効果値(無効化対応)
 function effRw(sim, id) {
-  if (sim.opt.disableReward === id) return 0;
+  if (rwOff(sim, id)) return 0;
   return P.rw[id] != null ? P.rw[id] : 0;
 }
 
@@ -854,7 +857,7 @@ function monsterDamage(sim, prod) {
   const chain = r.monster ? ((r.monster.goldenChainMultiplier || 1) - 1) : 0;
   const clickOwned = (r.upgrades.finger || 0) + (r.upgrades.godFinger || 0);
   const mult = (1
-    + (sim.opt.disableReward === 'monsterDamage' ? 0 : r.perks.monsterDamage * P.rw.monsterDamage)
+    + (rwOff(sim, 'monsterDamage') ? 0 : r.perks.monsterDamage * P.rw.monsterDamage)
     + skillEffect(sim, 'monsterDamageSkill')
     + (r.perks.crackedFang || 0) * effRw(sim, 'crackedFang')
     + goldTarget + chain
@@ -867,7 +870,7 @@ function monsterDamage(sim, prod) {
 
 function goldenSpawnFactor(sim) {
   const r = sim.run;
-  const rateLv = satLv(sim.opt.disableReward === 'goldenRate' ? 0 : (r.perks.goldenRate || 0), P.golden.rateLvHalf);
+  const rateLv = satLv(rwOff(sim, 'goldenRate') ? 0 : (r.perks.goldenRate || 0), P.golden.rateLvHalf);
   return Math.exp(
     -Math.max(0, rateLv) * P.golden.ratePerLv
     - Math.max(0, skillEffect(sim, 'goldenRate')) * 1.8
@@ -877,8 +880,8 @@ function goldenSpawnFactor(sim) {
 }
 function monsterSpawnFactor(sim) {
   const r = sim.run;
-  const rateLv = satLv(sim.opt.disableReward === 'monsterRate' ? 0 : (r.perks.monsterRate || 0), P.monster.rateLvHalf);
-  const deep = Math.exp(-(sim.opt.disableReward === 'deepPursuit' ? 0 : (r.perks.deepPursuit || 0)) * P.rw.deepPursuitSpawn);
+  const rateLv = satLv(rwOff(sim, 'monsterRate') ? 0 : (r.perks.monsterRate || 0), P.monster.rateLvHalf);
+  const deep = Math.exp(-(rwOff(sim, 'deepPursuit') ? 0 : (r.perks.deepPursuit || 0)) * P.rw.deepPursuitSpawn);
   let portalHunt = 1;
   if (resActive(sim, 'portalNetwork') && sim.t < r.portalHuntUntil) {
     portalHunt = ir(r.upgrades.portal || 0, P.res.portalHuntSpawn);
@@ -903,13 +906,13 @@ function monsterHpValue(sim, level) {
   const timePressure = 1 + Math.pow(Math.max(0, s - 45) / M.hpPressureDiv, M.hpPressurePow);
   let hp = M.hpBase * Math.pow(M.hpGrowth, Math.max(0, level - 1)) * timePressure;
   hp *= Math.exp(-Math.max(0, skillEffect(sim, 'monsterHpDown')));
-  hp *= Math.pow(P.rw.deepPursuitHp, sim.opt.disableReward === 'deepPursuit' ? 0 : (sim.run.perks.deepPursuit || 0));
+  hp *= Math.pow(P.rw.deepPursuitHp, rwOff(sim, 'deepPursuit') ? 0 : (sim.run.perks.deepPursuit || 0));
   hp *= bakeEV(sim).hp;
   return Math.floor(hp);
 }
 function monsterStayMs(sim) {
   const r = sim.run;
-  const rewardLv = sim.opt.disableReward === 'monsterStay' ? 0 : Math.max(0, r.perks.monsterStay || 0);
+  const rewardLv = rwOff(sim, 'monsterStay') ? 0 : Math.max(0, r.perks.monsterStay || 0);
   const mult = Math.exp(rewardLv * P.monster.stayPerLv + Math.max(0, skillEffect(sim, 'monsterStay')) * 0.12
     + (policyIs(sim, 'hunt') ? 0.10 : 0) + rewardCategoryBonus(sim, 'hunt'))
     * (r.nextMonsterStayMultiplier || 1) * bakeEV(sim).stay;
@@ -918,20 +921,20 @@ function monsterStayMs(sim) {
 }
 function goldenAmountMultiplier(sim) {
   const r = sim.run;
-  const lv = satLv(sim.opt.disableReward === 'goldenAmount' ? 0 : r.perks.goldenAmount, P.golden.amountLvHalf);
+  const lv = satLv(rwOff(sim, 'goldenAmount') ? 0 : r.perks.goldenAmount, P.golden.amountLvHalf);
   return 1 + lv * P.golden.amountPerLv + skillEffect(sim, 'goldenAmount')
     + rewardCategoryBonus(sim, 'golden') + (policyIs(sim, 'golden') ? 0.10 : 0);
 }
 function goldenMultiplierVal(sim) {
   const r = sim.run;
-  const lv = satLv(sim.opt.disableReward === 'goldenPower' ? 0 : r.perks.goldenPower, P.golden.powerLvHalf);
+  const lv = satLv(rwOff(sim, 'goldenPower') ? 0 : r.perks.goldenPower, P.golden.powerLvHalf);
   return P.golden.multBase + lv * P.golden.powerPerLv + skillEffect(sim, 'goldenPower')
     + rewardCategoryBonus(sim, 'golden') + (policyIs(sim, 'golden') ? 0.18 : 0);
 }
 function goldenBoostDurationMs(sim) {
   const r = sim.run;
-  const gp = sim.opt.disableReward === 'goldenPower' ? 0 : r.perks.goldenPower;
-  const ga = sim.opt.disableReward === 'goldenAmount' ? 0 : r.perks.goldenAmount;
+  const gp = rwOff(sim, 'goldenPower') ? 0 : r.perks.goldenPower;
+  const ga = rwOff(sim, 'goldenAmount') ? 0 : r.perks.goldenAmount;
   const perkRaw = Math.max(0, gp) * 260 + Math.max(0, ga) * 65;
   const skillRaw = Math.max(0, skillEffect(sim, 'goldenPower') * 900 + skillEffect(sim, 'goldenRate') * 1800 + skillEffect(sim, 'goldenAmount') * 700);
   const runRaw = 900 * (1 - Math.exp(-elapsed(sim) / 420));
@@ -941,6 +944,117 @@ function goldenBoostDurationMs(sim) {
   // 逓減式: rawExtraが伸びても追加時間はboostExtraCapに漸近する
   return P.golden.boostBase + P.golden.boostExtraCap * rawExtra / (rawExtra + P.golden.boostExtraHalf);
 }
+
+// ==== 各回の期待値方式(第12次・2026-07-06 ユーザー採用): 同一周回内で「稼ぎ力」を測る ====
+// やり直し比較(replay)を廃止し、各tickで「機能込みの瞬間稼ぎ力 ÷ 機能抜きの瞬間稼ぎ力」を測って
+// 周回平均(対数平均)を取る。同じ状態を2通り評価するだけなので、分かれ道のズレが原理的に発生しない。
+// 稼ぎ力 = 直接生産 + 金クッキー収入率 + 討伐報酬(投資)価値率 の合成。すべて現在状態から式で算出。
+const KILL_VALUE_SEC = 6;   // 討伐1体の価値を「生産◯秒ぶん」で近似(投資=将来の報酬・強化。channel重み)
+// earningPower は副作用のある関数(monsterStayMs 等が next*Multiplier をリセット)を呼ぶため、
+// 揮発フィールドを退避・復元して純粋化する(測定が実シミュの状態を壊さないように)
+function earningPowerSafe(sim) {
+  const r = sim.run;
+  const a = r.nextMonsterStayMultiplier, b = r.nextMonsterSpawnMultiplier, c = r.nextGoldenSpawnMultiplier, d = r.nextMonsterHpMultiplier;
+  const v = earningPower(sim);
+  r.nextMonsterStayMultiplier = a; r.nextMonsterSpawnMultiplier = b; r.nextGoldenSpawnMultiplier = c; r.nextMonsterHpMultiplier = d;
+  return v;
+}
+function earningPower(sim) {
+  const r = sim.run;
+  const prod = computeProd(sim);
+  const tapRate = sim.strat.tapRate;
+  const base = prod.cps + prod.clickEV * (r.monster ? 0 : tapRate); // 直接生産(モンスター中はタップは討伐へ)
+  let power = base;
+  // 金クッキー収入率(期待値/秒): 間隔は spawnFactor、1回の価値は即時+ブーストの平均
+  {
+    const mean = (P.golden.spawnMin + P.golden.spawnMax) / 2;
+    const interval = Math.max(1, mean * goldenSpawnFactor(sim) / 1000);
+    const instant = Math.max(prod.baseCps, prod.baseClick) * P.golden.instantCoef * goldenAmountMultiplier(sim);
+    const boostVal = Math.max(0, goldenMultiplierVal(sim) - 1) * prod.cps * (goldenBoostDurationMs(sim) / 1000);
+    power += (instant + boostVal) / 2 / interval;
+  }
+  // 討伐報酬(投資)価値率: 討伐/秒 × 生産KILL_VALUE_SEC秒ぶん。ダメージ・出現・滞在の報酬がここに効く
+  {
+    const mean = (P.monster.spawnMin + P.monster.spawnMax) / 2;
+    const interval = Math.max(1, mean * monsterSpawnFactor(sim) / 1000);
+    const level = monsterLevel(sim);
+    const hp = Math.max(1, monsterHpValue(sim, level));
+    const dmg = Math.max(1, monsterDamage(sim, prod));
+    const ttk = hp / Math.max(1e-9, dmg * tapRate); // 撃破所要秒
+    const stay = monsterStayMs(sim) / 1000;
+    const killable = ttk <= stay ? 1 : 0;             // 滞在内に倒せるか(滞在報酬が効く)
+    const killsPerSec = killable / (interval + ttk);
+    power += killsPerSec * base * KILL_VALUE_SEC;
+  }
+  return power;
+}
+// 測定対象の機能一覧(_md キー)。取得済みのものだけ測る
+function measureFeatureKeys(sim) {
+  const keys = [];
+  for (const rr of RESEARCH) if (sim.run.research[rr.id]) keys.push('res:' + rr.id);
+  for (const rw of REWARD_POOL) if (sim.run.perks[rw.id] > 0) keys.push('rw:' + rw.id);
+  for (const rr of RESEARCH) { if (sim.run.research2[rr.id]) keys.push('stage:' + rr.id + ':2'); if (sim.run.research3[rr.id]) keys.push('stage:' + rr.id + ':3'); }
+  return keys;
+}
+const MEASURE_POLICIES = ['balanced', 'click', 'golden', 'hunt', 'bake'];
+// 1サンプル: 各機能の「稼ぎ力の持ち上げ幅」を対数で積算。周回内キャッシュは都度クリアして正しく再計算
+function measureTick(sim) {
+  const r = sim.run;
+  if (!r._meas) r._meas = {};
+  const clearCaches = () => { sim._bkT = -1; sim._stT = -1; };
+  clearCaches();
+  const pOn = earningPowerSafe(sim);
+  if (!(pOn > 0) || !Number.isFinite(pOn)) return;
+  for (const key of measureFeatureKeys(sim)) {
+    sim._md = key;
+    clearCaches();
+    const pOff = earningPowerSafe(sim);
+    sim._md = null;
+    clearCaches();
+    if (pOff > 0 && Number.isFinite(pOff)) {
+      const m = r._meas[key] || (r._meas[key] = { s: 0, n: 0 });
+      m.s += Math.log(pOn / pOff); m.n++;
+    }
+  }
+  // ⑬タイミング: idleTiming を opt で一時切替(最適操作=既定 / 放置=idle)して稼ぎ力比
+  for (const tf of TIMING_KEYS) {
+    const [rid, st] = tf.stage.split(':');
+    const active = st === '2' ? r.research2[rid] : r.research3[rid];
+    if (!active) continue;
+    const savedIdle = sim.opt.idleTiming;
+    sim.opt.idleTiming = tf.key; clearCaches();
+    const pIdle = earningPowerSafe(sim);
+    sim.opt.idleTiming = savedIdle; clearCaches();
+    if (pIdle > 0 && Number.isFinite(pIdle)) {
+      const m = r._meas['timing:' + tf.key] || (r._meas['timing:' + tf.key] = { s: 0, n: 0 });
+      m.s += Math.log(pOn / pIdle); m.n++;
+    }
+  }
+  // ⑫文脈依存性: 5方針それぞれの稼ぎ力(この周回の中身に対して)。argmax を後で集計
+  if (!r._polPow) r._polPow = {};
+  const savedPol = r.policy;
+  for (const pol of MEASURE_POLICIES) {
+    r.policy = pol; clearCaches();
+    const pp = earningPowerSafe(sim);
+    if (pp > 0 && Number.isFinite(pp)) r._polPow[pol] = (r._polPow[pol] || 0) + Math.log(pp);
+  }
+  r.policy = savedPol; clearCaches();
+}
+// 周回終了時に _meas / _polPow を平均して記録に落とす
+function finalizeMeasure(run) {
+  const lift = {};
+  if (run._meas) for (const [k, m] of Object.entries(run._meas)) if (m.n > 0) lift[k] = Math.exp(m.s / m.n);
+  let bestPol = null, bestV = -Infinity;
+  if (run._polPow) for (const [pol, v] of Object.entries(run._polPow)) if (v > bestV) { bestV = v; bestPol = pol; }
+  return { lift, bestPol };
+}
+// タイミング機能(⑬)の測定: idleTiming を _md ではなく opt で切替えるため別扱い
+const TIMING_KEYS = [
+  { key: 'wave', stage: 'quantumProofing:2' },
+  { key: 'bhCharge', stage: 'blackHoleCompression:2' },
+  { key: 'mature', stage: 'spiceBlend:2' },
+  { key: 'huntExtend', stage: 'portalNetwork:2' }
+];
 
 // まとめ買い割増(2026-07-06 ユーザー採用): 現在の熱量(時間減衰込み)
 function surgeHeat(sim, id) {
@@ -965,8 +1079,8 @@ function researchCostOf(sim, id) {
 }
 // 研究の段階 (1=購入 / 2,3=対応スキル取得後に購入欄へカード追加→クッキーで購入して有効化)
 // disableStage='研究id:2' 等で単体効果ゼロ化(購入行動は同一。条件⑨用)
-function resStage2(sim, id) { return !!sim.run.research2[id] && sim.opt.disableStage !== id + ':2'; }
-function resStage3(sim, id) { return !!sim.run.research3[id] && sim.opt.disableStage !== id + ':3'; }
+function resStage2(sim, id) { return !!sim.run.research2[id] && sim.opt.disableStage !== id + ':2' && sim._md !== 'stage:' + id + ':2'; }
+function resStage3(sim, id) { return !!sim.run.research3[id] && sim.opt.disableStage !== id + ':3' && sim._md !== 'stage:' + id + ':3'; }
 // 段階カードの表示条件: 前段階を購入済み かつ 対応スキルを取得済み
 function researchStageUnlocked(sim, id, stage) {
   const r = sim.run;
@@ -1057,7 +1171,7 @@ function buildRewardOffer(sim, level, typeId) {
   // 鉄焼きガード等: 種類による報酬レベル加算(ゲームの rewardLvAdd と同じ)
   const lvAdd = (P.mtype && P.mtype.rewardLvAdd && P.mtype.rewardLvAdd[typeId]) || 0;
   const baseCount = 1 + Math.floor((level + lvAdd) / P.reward.lvPerCount);
-  const deepBonus = Math.pow(P.rw.deepPursuitReward, sim.opt.disableReward === 'deepPursuit' ? 0 : (r.perks.deepPursuit || 0));
+  const deepBonus = Math.pow(P.rw.deepPursuitReward, rwOff(sim, 'deepPursuit') ? 0 : (r.perks.deepPursuit || 0));
   const penalty = Math.max(0, r.huntFocusRewardPenalty || 0);
   const count = Math.max(1,
     Math.floor(baseCount * (1 + skillEffect(sim, 'rewardBonus')) * deepBonus)
@@ -1120,18 +1234,18 @@ function defeatMonster(sim, mon) {
     r.portalHuntUntil += P.res2.huntExtendSec;
   }
   if (!r.quotaFailed) r.quotaMonsterKills += units;
-  const chainPrepLv = sim.opt.disableReward === 'chainPrep' ? 0 : (r.perks.chainPrep || 0);
+  const chainPrepLv = rwOff(sim, 'chainPrep') ? 0 : (r.perks.chainPrep || 0);
   if (chainPrepLv > 0) {
     r.nextMonsterSpawnMultiplier *= Math.exp(-chainPrepLv * P.rw.chainPrepSpawn);
     r.nextMonsterHpMultiplier *= Math.pow(P.rw.chainPrepHp, chainPrepLv);
   }
-  const beastScentLv = sim.opt.disableReward === 'beastScent' ? 0 : (r.perks.beastScent || 0);
+  const beastScentLv = rwOff(sim, 'beastScent') ? 0 : (r.perks.beastScent || 0);
   if (beastScentLv > 0) r.nextGoldenSpawnMultiplier *= Math.exp(-beastScentLv * P.rw.beastScent);
 
   const focusLv = r.huntFocusLv || 0;
   let bonus = 0;
   if (focusLv > 0) { bonus += 1; r.huntFocusLv = 0; }
-  const mutationLv = sim.opt.disableReward === 'goldenBeastMutation' ? 0 : (r.perks.goldenBeastMutation || 0);
+  const mutationLv = rwOff(sim, 'goldenBeastMutation') ? 0 : (r.perks.goldenBeastMutation || 0);
   if (mutationLv > 0 && goldenBoostActive(sim)) {
     // 期待値: 確率を蓄積して1超えで+1
     const chance = 1 - Math.exp(-(P.rw.mutationBase + mutationLv * P.rw.mutationPerLv));
@@ -1196,7 +1310,8 @@ function doPrestige(sim) {
     upCounts: Object.assign({}, r.upgrades),
     nextSkillCost: nextCostAt, gainToNext: nextCostAt ? gain / nextCostAt : null,
     critAtBuy: r.critAtBuy, critEnd: r.critNow, critMax: r.critMax,
-    killsByType: Object.assign({}, r.killsByType), rewardByType: Object.assign({}, r.rewardByType)
+    killsByType: Object.assign({}, r.killsByType), rewardByType: Object.assign({}, r.rewardByType),
+    measure: finalizeMeasure(r)
   });
 
   // スキル購入(戦略の優先順で、買えるだけ)
@@ -1274,6 +1389,8 @@ function advanceTick(sim, strategy) {
       r.critNow = prod.critChance;
       if (prod.critChance > r.critMax) r.critMax = prod.critChance;
     }
+    // 各回の期待値測定(①②③⑨⑫⑬): 3秒ごとにサンプル。機能込み÷機能抜きの稼ぎ力を対数平均
+    if (sim.opt.measure && sim.t % 3 === 0) measureTick(sim);
     let ahM = 1;
     for (const a of r.afterheats) if (sim.t >= a.from) ahM *= a.mult;
 
@@ -1293,7 +1410,7 @@ function advanceTick(sim, strategy) {
       let hits = tapRate * dt;
       let dealt = hits * dmg * (1 + (r.huntFocusLv || 0)) + firstBonus;
       // 甘噛み回収
-      const biteLv = sim.opt.disableReward === 'biteRecovery' ? 0 : (r.perks.biteRecovery || 0);
+      const biteLv = rwOff(sim, 'biteRecovery') ? 0 : (r.perks.biteRecovery || 0);
       if (biteLv > 0) {
         const rawRec = dmg * clickNow * P.rw.biteRecovery * biteLv * hits;
         const softLine = Math.max(1, cpsNow * 2);
@@ -1589,7 +1706,7 @@ function upgradeUnitMult(sim, u) {
   const i = UPIDX[u.id];
   const owned = r.upgrades[u.id];
   const upPerkPower = 1 + skillEffect(sim, 'upgradePerkPower')
-    + (r.perks.crushedMill * (sim.opt.disableReward === 'crushedMill' ? 0 : P.rw.crushedMill))
+    + (r.perks.crushedMill * (rwOff(sim, 'crushedMill') ? 0 : P.rw.crushedMill))
     + rewardCategoryBonus(sim, 'equipment');
   const boostRate = Math.max(P.upPerk.floor, P.upPerk.base - i * P.upPerk.slope) * upPerkPower;
   const personal = 1 + (r.upgradePerks[u.id] || 0) * boostRate;

@@ -650,6 +650,94 @@ if (mode === 'baseline') {
   }
   console.log(`㉕(実測) 方針の報酬寄与1位種類: ${Object.entries(domByStrat).map(([k, v]) => k + '=' + v).join(' ')} → ${new Set(Object.values(domByStrat)).size}種 (≥2で OK)`);
   console.log(`㉖: 種類別の1体あたり報酬量 ±3倍以内 ${ok26}/${all26}周回`);
+} else if (mode === 'expect') {
+  // ①②③⑨⑬⑫ 各回の期待値方式(第12次): node runner.js expect "" [hours]
+  // 各機能につき「少なくとも1方針が取得し、その方針の“取得した全周回”で稼ぎ力の持ち上げ≥閾値」を要求。
+  const H = hours;
+  const sims = {};
+  for (const s of STRATEGIES) sims[s.id] = G.simulate(s, { hours: H, measure: true });
+  // 機能→{ policyId → [各周回のlift] }
+  function collect(prefix) {
+    const map = {};
+    for (const s of STRATEGIES) {
+      const full = sims[s.id].runs.filter(r => !r.partial && r.measure);
+      for (const r of full) {
+        for (const [k, v] of Object.entries(r.measure.lift)) {
+          if (!k.startsWith(prefix)) continue;
+          (map[k] = map[k] || {}); (map[k][s.id] = map[k][s.id] || []).push(v);
+        }
+      }
+    }
+    return map;
+  }
+  function judge(map, need, label, ids) {
+    let ok = 0; const rows = [];
+    const allKeys = ids || Object.keys(map);
+    for (const k of allKeys) {
+      const byPol = map[k] || {};
+      let passPol = null, bestMin = 0, bestGm = 0;
+      for (const [pol, arr] of Object.entries(byPol)) {
+        const mn = Math.min(...arr);
+        const gm = Math.exp(arr.reduce((a, b) => a + Math.log(b), 0) / arr.length);
+        if (mn >= need && (passPol === null || mn > bestMin)) { passPol = pol; bestMin = mn; bestGm = gm; }
+        if (passPol === null && gm > bestGm) { bestGm = gm; }
+      }
+      const pass = passPol !== null;
+      if (pass) ok++;
+      const picked = Object.keys(byPol).length > 0;
+      rows.push(`  ${pass ? 'OK' : 'NG'} ${k.padEnd(28)} ${pass ? `${passPol} min=${bestMin.toFixed(2)}` : (picked ? `取得あり・全周回≥${need}に未達(最大幾何平均${bestGm.toFixed(2)})` : 'どの方針も未取得')}`);
+    }
+    console.log(`${label} ${ok}/${allKeys.length}`);
+    rows.forEach(r => console.log(r));
+    return ok;
+  }
+  console.log(`=== 期待値方式(${H}h・各回の稼ぎ力の持ち上げ) ===`);
+  judge(collect('res:'), 1.2, '① 研究(各回≥1.2)', G.RESEARCH.map(r => 'res:' + r.id));
+  judge(collect('rw:'), 1.1, '③ 報酬(各回≥1.1)', G.REWARD_POOL.map(r => 'rw:' + r.id));
+  judge(collect('stage:'), 1.05, '⑨ 段階(各回≥1.05)');
+  // ⑬ タイミング: [1.05, 2.00]
+  {
+    const map = collect('timing:');
+    let ok = 0, all = 0;
+    for (const k of Object.keys(map)) {
+      all++;
+      let pass = false, best = 0;
+      for (const arr of Object.values(map[k])) {
+        const gm = Math.exp(arr.reduce((a, b) => a + Math.log(b), 0) / arr.length);
+        if (arr.every(v => v >= 1.05 && v <= 2.0)) pass = true;
+        best = Math.max(best, gm);
+      }
+      if (pass) ok++;
+      console.log(`  ${pass ? 'OK' : 'NG'} ${k} 幾何平均${best.toFixed(3)}`);
+    }
+    console.log(`⑬ タイミング ${ok}/${all}`);
+  }
+  // ② 研究の一強禁止: 各方針で、その方針が取得した研究の「周回幾何平均lift」が幾何平均±3倍
+  {
+    let ok = 0, all = 0;
+    for (const s of STRATEGIES) {
+      const full = sims[s.id].runs.filter(r => !r.partial && r.measure);
+      const per = {};
+      for (const rr of G.RESEARCH) {
+        const vals = full.map(r => r.measure.lift['res:' + rr.id]).filter(v => v != null);
+        if (vals.length) per[rr.id] = Math.exp(vals.reduce((a, b) => a + Math.log(b), 0) / vals.length);
+      }
+      const arr = Object.values(per);
+      if (arr.length < 2) continue;
+      all++;
+      const gm = Math.exp(arr.reduce((a, b) => a + Math.log(b), 0) / arr.length);
+      const within = arr.every(v => v >= gm / 3 && v <= gm * 3);
+      if (within) ok++;
+      console.log(`  ${within ? 'OK' : 'NG'} ${s.id} 研究lift[${Math.min(...arr).toFixed(2)}..${Math.max(...arr).toFixed(2)}] 平均${gm.toFixed(2)}`);
+    }
+    console.log(`② 一強禁止(方針ごと) ${ok}/${all}`);
+  }
+  // ⑫ 周回方針の文脈依存: 5方針それぞれが「1位になる周回」を持つ(全方針・全周回のargmax集合)
+  {
+    const seen = new Set();
+    for (const s of STRATEGIES) for (const r of sims[s.id].runs) if (r.measure && r.measure.bestPol) seen.add(r.measure.bestPol);
+    console.log(`⑫ 周回方針の1位が実在: ${[...seen].join(',')} (${seen.size}/5)`);
+  }
 } else if (mode === 'skillsum') {
   let sum = 0;
   for (const n of G.SKILL_NODES) sum += G.skillCostOf(n);
