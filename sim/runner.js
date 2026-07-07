@@ -64,27 +64,60 @@ function summarize(sim) {
     if (full[i].runCookies >= 100 * full[i - 1].runCookies) doubleOk++;
     if (full[i].gain >= 1 * full[i - 1].gain && full[i].gain <= 100 * full[i - 1].gain) gainOk++;
   }
-  // ⑥ 解放ペース: 2段階帯域・厳密判定 (全スキル解放後は対象外)
+  // ==== テンポ条件 T1〜T3b(2026-07-06 ユーザー確定。旧⑥⑦⑧㉒を置換・3-2反映済み) ====
   const ev = mergeEventsByRun(sim);
+  // T1(周回時間): 各周回(転生から転生まで)20分〜2時間。第0回も含む。
+  // 全スキル解放後の放置周回は対象外【仮:旧⑥⑦の免除ルールを踏襲。要ユーザー確認】
+  let t1Ok = 0, t1All = 0;
+  for (const r of full) {
+    if (r.startT >= fullT) continue;
+    t1All++;
+    if (r.duration >= 1200 && r.duration <= 7200) t1Ok++;
+  }
+  // T2(解放テンポ): 初転生後の各周回で新規解放1〜3件(同一秒は統合済み。スキルは転生時に自然に1件)。
+  // 周回への帰属は [startT, endT)(転生時のスキル取得はその周回の頭に数える)。
+  // 第0回のみ従来の間隔中央値判定: 間隔y÷帯域Y(120+8√x)の中央値が[0.5, 1]【中央値の取り方は仮】
+  let t2Ok = 0, t2All = 0, t2Run0 = null;
+  {
+    const r0 = full[0];
+    if (r0) {
+      const e0 = ev.filter(e => e.t < r0.endT);
+      const ratios = [];
+      for (let i = 0; i + 1 < e0.length; i++) {
+        const y = e0[i + 1].t - e0[i].t;
+        const Y = 120 + 8 * Math.sqrt(e0[i + 1].t);
+        ratios.push(y / Y);
+      }
+      if (ratios.length) {
+        ratios.sort((a, b) => a - b);
+        const med = ratios[Math.floor(ratios.length / 2)];
+        t2Run0 = { med, ok: med >= 0.5 && med <= 1 };
+      }
+    }
+    for (let i = 1; i < full.length; i++) {
+      const r = full[i];
+      if (r.startT >= fullT) continue;
+      const n = ev.filter(e => e.t >= r.startT && e.t < r.endT).length;
+      t2All++;
+      if (n >= 1 && n <= 3) t2Ok++;
+    }
+  }
+  // T3a(未達が先): どの転生も、その周回内でノルマ未達が起きた後に行われる
+  let failOk = 0;
+  for (const r of full) if (r.quotaFailAt != null && r.quotaFailAt < r.duration) failOk++;
+  // T3b(維持時間半分): ノルマを維持できていた時間 ≥ その周回の長さの半分
+  let t3bOk = 0;
+  for (const r of full) if (r.quotaHold >= 0.5 * r.duration) t3bOk++;
+  // 参考指標(合否に使わない): 旧⑥解放間隔の帯域適合
   let paceOk = 0, paceAll = 0;
+  const yC2 = yC;
   for (let i = 0; i + 1 < ev.length; i++) {
     if (ev[i].t >= fullT) continue;
     const y = ev[i + 1].t - ev[i].t;
-    const Y = yC(ev[i + 1].t);
+    const Y = yC2(ev[i + 1].t);
     paceAll++;
     if (y >= 0.5 * Y && y <= Y) paceOk++;
   }
-  // ⑦ ノルマ維持時間の帯域 [0.5Y, Y]: Y は転生した時点の経過時間 x=endT で評価(2026-07-06 確定)
-  let holdOk = 0, holdAll = 0;
-  for (const r of full) {
-    if (r.startT >= fullT) continue;
-    const Y = yC(r.endT);
-    holdAll++;
-    if (r.quotaHold >= 0.5 * Y && r.quotaHold <= Y) holdOk++;
-  }
-  // 条件⑧: 全ての転生がノルマ未達の後に起きる
-  let failOk = 0;
-  for (const r of full) if (r.quotaFailAt != null && r.quotaFailAt < r.duration) failOk++;
   // 条件⑭: 各周回の獲得PT ÷ 次の未取得スキル最安コスト(転生時点・購入前) ∈ [1.0, 3.0]
   let pwOk = 0, pwAll = 0;
   for (const r of full) {
@@ -92,7 +125,7 @@ function summarize(sim) {
     pwAll++;
     if (r.gainToNext >= 1.0 && r.gainToNext <= 3.0) pwOk++;
   }
-  // 条件㉒(新): 各回の周回時間が前回より長い(全ペア・厳密)
+  // 参考指標(合否に使わない): 旧㉒周回時間の単調増加
   let durOk = 0, durAll = 0;
   for (let i = 1; i < full.length; i++) { durAll++; if (full[i].duration > full[i - 1].duration) durOk++; }
   // 条件㉑(Δ生産方式・2026-07-06): 初購入によるΔ生産(系列ボーナス等の固有能力込み)≥購入直前CPS×1/5
@@ -103,7 +136,7 @@ function summarize(sim) {
     if (ratio >= 1) prOk++;
     if (!prWorst || ratio < prWorst.ratio) prWorst = { id: c.id, runIdx: c.runIdx, ratio };
   }
-  return { total, runs: sim.runs.length, doubleOk, doubleAll, gainOk, paceOk, paceAll, holdOk, holdAll, events: ev.length, fullT, failOk, failAll: full.length, pwOk, pwAll, durOk, durAll, prOk, prAll, prWorst };
+  return { total, runs: sim.runs.length, doubleOk, doubleAll, gainOk, t1Ok, t1All, t2Ok, t2All, t2Run0, t3bOk, paceOk, paceAll, events: ev.length, fullT, failOk, failAll: full.length, pwOk, pwAll, durOk, durAll, prOk, prAll, prWorst };
 }
 
 function runBaseline(hours, only) {
@@ -119,11 +152,12 @@ function runBaseline(hours, only) {
 }
 
 function printBaseline(results) {
-  console.log('ID  名称              周回数 総クッキー   ④x100   ⑤PT1-100  ⑥ペース   ⑦帯域   ⑧未達後転生 ⑭購買力 ㉑存在感 ㉒単調増 全解放');
+  console.log('ID  名称              周回数 総クッキー   ④x100  ⑤PT1-100 T1周回時間 T2解放1-3 T2第0回 T3a未達先 T3b維持半分 ⑭購買力 ㉑存在感 全解放 | 参考: 旧⑥ペース 旧㉒単調増');
   for (const r of results) {
     const fullT = r.sum.fullT === Infinity ? '未' : fmtT(r.sum.fullT);
+    const t2r0 = r.sum.t2Run0 ? `${r.sum.t2Run0.ok ? 'OK' : 'NG'}(中央値${r.sum.t2Run0.med.toFixed(2)})` : '-';
     console.log(
-      `${r.s.id.padEnd(3)} ${r.s.name.padEnd(14)} ${String(r.sum.runs).padStart(4)}  ${fmtN(r.sum.total).padStart(10)}  ${r.sum.doubleOk}/${r.sum.doubleAll}   ${r.sum.gainOk}/${r.sum.doubleAll}   ${r.sum.paceOk}/${r.sum.paceAll}  ${r.sum.holdOk}/${r.sum.holdAll}  ${r.sum.failOk}/${r.sum.failAll}  ${r.sum.pwOk}/${r.sum.pwAll}  ${r.sum.prOk}/${r.sum.prAll}  ${r.sum.durOk}/${r.sum.durAll}  ${fullT}  (${r.ms}ms)` +
+      `${r.s.id.padEnd(3)} ${r.s.name.padEnd(14)} ${String(r.sum.runs).padStart(4)}  ${fmtN(r.sum.total).padStart(10)}  ${r.sum.doubleOk}/${r.sum.doubleAll}   ${r.sum.gainOk}/${r.sum.doubleAll}   ${r.sum.t1Ok}/${r.sum.t1All}   ${r.sum.t2Ok}/${r.sum.t2All}  ${t2r0}  ${r.sum.failOk}/${r.sum.failAll}  ${r.sum.t3bOk}/${r.sum.failAll}  ${r.sum.pwOk}/${r.sum.pwAll}  ${r.sum.prOk}/${r.sum.prAll}  ${fullT} | ${r.sum.paceOk}/${r.sum.paceAll} ${r.sum.durOk}/${r.sum.durAll}  (${r.ms}ms)` +
       (r.sum.prWorst && r.sum.prWorst.ratio < 1 ? `  ㉑最悪: ${r.sum.prWorst.id}@run${r.sum.prWorst.runIdx} x${r.sum.prWorst.ratio.toFixed(2)}` : '')
     );
   }
@@ -131,17 +165,17 @@ function printBaseline(results) {
 
 function printDetail(sim, maxRows) {
   const fullT = fullUnlockTime(sim);
-  const yC = makeY(sim);
-  console.log('run  開始      周回時間   ノルマ維持  帯域Y      維持判定 最高層 討伐 金  総クッキー     PT  スキル数  前周比');
+  console.log('run  開始      周回時間   T1判定  ノルマ維持  T3b判定  T3a未達  最高層 討伐 金  総クッキー     PT  スキル数  前周比');
   const rows = sim.runs.slice(0, maxRows || 200);
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
     const prev = i > 0 ? sim.runs[i - 1].runCookies : null;
     const ratio = prev ? (r.runCookies / prev).toFixed(2) : '-';
-    const Y = yC(r.endT);
-    const holdJ = r.partial ? '-' : (r.startT >= fullT ? '免除' : (r.quotaHold >= 0.5 * Y && r.quotaHold <= Y ? 'OK' : (r.quotaHold > Y ? '長い' : '短い')));
+    const t1J = r.partial ? '-' : (r.startT >= fullT ? '免除' : (r.duration >= 1200 && r.duration <= 7200 ? 'OK' : (r.duration > 7200 ? '長い' : '短い')));
+    const t3bJ = r.partial ? '-' : (r.quotaHold >= 0.5 * r.duration ? 'OK' : 'NG');
+    const t3aJ = r.partial ? '-' : (r.quotaFailAt != null && r.quotaFailAt < r.duration ? 'OK' : 'NG');
     console.log(
-      `${String(r.idx).padStart(3)}  ${fmtT(r.startT).padStart(8)}  ${fmtT(r.duration).padStart(8)}  ${fmtT(r.quotaHold).padStart(8)}  ${fmtT(Y).padStart(8)}  ${holdJ.padEnd(4)} ${String(r.maxStage).padStart(4)} ${String(r.kills).padStart(4)} ${String(r.golden).padStart(3)}  ${fmtN(r.runCookies).padStart(12)}  ${String(r.gain).padStart(5)}  ${String(r.skillsBought == null ? '-' : r.skillsBought).padStart(3)}   ${ratio}${r.partial ? ' (途中)' : ''}  ${(r.skillIds || []).join(',')}`
+      `${String(r.idx).padStart(3)}  ${fmtT(r.startT).padStart(8)}  ${fmtT(r.duration).padStart(8)}  ${t1J.padEnd(4)}  ${fmtT(r.quotaHold).padStart(8)}  ${t3bJ.padEnd(3)}  ${t3aJ.padEnd(3)}  ${String(r.maxStage).padStart(4)} ${String(r.kills).padStart(4)} ${String(r.golden).padStart(3)}  ${fmtN(r.runCookies).padStart(12)}  ${String(r.gain).padStart(5)}  ${String(r.skillsBought == null ? '-' : r.skillsBought).padStart(3)}   ${ratio}${r.partial ? ' (途中)' : ''}  ${(r.skillIds || []).join(',')}`
     );
   }
 }
