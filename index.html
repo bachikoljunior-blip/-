@@ -4968,6 +4968,7 @@
       <button id="debugGoldenBtn" type="button">金クキ出す</button>
       <button id="debugMonsterBtn" type="button">クキモン出す</button>
       <button id="debugQuotaBtn" type="button">ノルマ復帰</button>
+      <button id="debugQuotaFailBtn" type="button">ノルマ即失敗</button>
       <button id="debugMaterialsBtn" type="button">素材+100</button>
       <button id="debugStageBtn" type="button">次ステージ解放</button>
       <button id="debugLayerBtn" type="button">深層の層+1</button>
@@ -9195,10 +9196,16 @@ function startBgm() {
     bgmFilter = audioCtx.createBiquadFilter();
     bgmFilter.type = "lowpass";
     bgmFilter.frequency.value = 680;
-    bgmFilter.connect(bgmGainNode);
+
+    // 場面ごとの"音圧感"(ボス=張り出す/未達後=沈む等)を司るダイナミックゲイン。
+    // ユーザーのBGM音量設定(bgmGainNode)とは別段に挟み、シーンで滑らかに増減させる。
+    const bgmDynGain = audioCtx.createGain();
+    bgmDynGain.gain.value = 1;
+    bgmFilter.connect(bgmDynGain);
+    bgmDynGain.connect(bgmGainNode);
     bgmGainNode.connect(audioCtx.destination);
 
-    // 簡易アンビエンス(フィードバックディレイ)。dry(bgmFilter→bgmGainNode)と並行して
+    // 簡易アンビエンス(フィードバックディレイ)。dry(bgmFilter→bgmDynGain)と並行して
     // 薄く尾を引かせ、生成音でも"空間の広がり"を感じられるようにする。
     const bgmDelay = audioCtx.createDelay(1.0);
     bgmDelay.delayTime.value = 0.27;
@@ -9210,7 +9217,7 @@ function startBgm() {
     bgmDelay.connect(bgmDelayFeedback);
     bgmDelayFeedback.connect(bgmDelay);
     bgmDelay.connect(bgmDelayWet);
-    bgmDelayWet.connect(bgmGainNode);
+    bgmDelayWet.connect(bgmDynGain);
 
     bgmStarted = true;
 
@@ -9288,7 +9295,7 @@ function startBgm() {
       g.gain.value = peak || 0.016;
       src.connect(hp);
       hp.connect(g);
-      g.connect(bgmGainNode);
+      g.connect(bgmDynGain);
       src.start(audioCtx.currentTime);
     }
 
@@ -9312,6 +9319,11 @@ function startBgm() {
     function glideCutoff(target) {
       bgmCutoffTarget = target;
       try { bgmFilter.frequency.setTargetAtTime(target, audioCtx.currentTime, 0.28); } catch (e) {}
+    }
+
+    // 場面の"音圧感"(ボスは張り出す、未達後は沈む等)をなめらかに切り替える
+    function glideDynGain(target) {
+      try { bgmDynGain.gain.setTargetAtTime(target, audioCtx.currentTime, 0.35); } catch (e) {}
     }
 
     // メロディをペンタ内で「歩かせる」。停滞と単純往復を避けて自然に流す
@@ -9380,18 +9392,34 @@ function startBgm() {
 
         // ---- メイン: メジャー・ペンタで弾む。ノルマ状態とイベントで変調 ----
         const failed = scene.quota === "failed";
-        const scale = failed ? MEL_MINOR : MEL_MAJOR;
-        // 明るさ(cutoff): 未達後は一段落とす / 金クッキー中は開ける / ボスは少し上げる
-        let cutoff = failed ? 540 : 900;
-        if (scene.event === "golden") cutoff += 250;
-        if (scene.event === "boss") cutoff += 120;
+        const isBoss = scene.event === "boss";
+        const isMonster = scene.event === "monster";
+        const isGolden = scene.event === "golden";
+        // ボスは維持/未達に関わらず強制的に暗い旋法・鋭い音色へ切り替え、戦闘だと一発で分かるようにする
+        const scale = (isBoss || failed) ? MEL_MINOR : MEL_MAJOR;
+        // 明るさ(cutoff): 未達後は大きく沈める / 金クッキー中は開ける / ボスは高域を削って重く
+        let cutoff = failed ? 460 : 900;
+        if (isGolden) cutoff += 260;
+        if (isBoss) cutoff = 620;
         glideCutoff(cutoff);
-        const melType = failed ? "sine" : "triangle";
-        const bright = !failed; // 上物のキラ・パッド・ハモリ・グルーヴ(未達後はOFFで対比を保つ)
+
+        // 場面の音圧感。ボス=張り出す/金クッキー=輝く/モンスター=前のめり/未達後=沈む
+        let dynGain = 1.0;
+        if (isBoss) dynGain = 1.32;
+        else if (isGolden) dynGain = 1.18;
+        else if (isMonster) dynGain = 1.10;
+        else if (failed) dynGain = 0.68;
+        glideDynGain(dynGain);
+
+        const melType = isBoss ? "sawtooth" : (failed ? "sine" : "triangle");
+        const bright = !failed && !isBoss; // パッド・ハモリ・キラ・グルーヴ(未達後とボスは専用の重い/暗いレイヤーに差し替え)
         const chordIdx = Math.floor(bgmStep / 8) % CHORD_ROOTS.length;
 
-        // ベース: 拍1・拍3(step 0,4)で4小節ループのコード根音・5度
-        if (inBar === 0 || inBar === 4) {
+        // ベース: ボスは全拍で刻む重いオスティナート、通常は拍1・拍3(4分)のみ
+        if (isBoss) {
+          const root = CHORD_ROOTS[chordIdx] / 2;
+          playBgmNote(bgmStep % 2 === 0 ? root : root * 1.5, 0.55, 0.01, 0.20, "sawtooth");
+        } else if (inBar === 0 || inBar === 4) {
           const root = CHORD_ROOTS[chordIdx];
           const bf = inBar === 0 ? root : root * 1.5;
           playBgmNote(bf, 1.6, 0.02, 0.18, "triangle");
@@ -9400,39 +9428,63 @@ function startBgm() {
         if (bright && inBar === 0) {
           playBgmPad(CHORD_TRIADS[chordIdx], 3.2, 0.045, "sine", -0.15);
         }
-        // ボス出現中: 拍頭に低い鼓動+暗めの持続音を重ねて重量感を出す
-        if (scene.event === "boss" && (inBar === 0 || inBar === 4)) {
-          playBgmKick();
-          if (inBar === 0) playBgmNote(CHORD_ROOTS[chordIdx] / 2, 2.0, 0.05, 0.09, "sine");
+        // ボス出現中: 毎拍キック+低いドローン+半音の不穏なスタブで戦闘の重さを強調
+        if (isBoss) {
+          if (bgmStep % 2 === 0) playBgmKick();
+          if (inBar === 0) playBgmNote(CHORD_ROOTS[chordIdx] / 4, 3.0, 0.15, 0.11, "sine");
+          if (inBar === 6) playBgmNote(CHORD_ROOTS[chordIdx] * 1.06, 0.4, 0.01, 0.08, "square");
+        }
+        // 未達後: 低いドローンをルート+半音上の不協和で重ね、沈んだ空気を出す(戻りはない)
+        if (failed && inBar === 0) {
+          const root = CHORD_ROOTS[chordIdx] / 2;
+          playBgmNote(root, 3.4, 0.5, 0.09, "sine");
+          playBgmNote(root * 1.06, 3.4, 0.6, 0.05, "sine");
         }
 
-        // メロディ: 裏拍(奇数step)でペンタを歩く。維持時は3度下のハモリを添えて豊かに
-        if (bgmStep % 2 === 1) {
+        // メロディ: 場面ごとにテンポ感を変える(ボス・モンスターは倍速で前のめり、未達後は半分で足取り重く)
+        if (isBoss) {
+          const freq = walkMel(scale);
+          playBgmNote(freq, 0.9, 0.01, 0.17, melType);
+        } else if (isMonster) {
+          const freq = walkMel(scale);
+          playBgmNote(freq, 1.0, 0.01, 0.15, melType, barPan);
+          playBgmNote(freq * 2, 1.0, 0.01, 0.05, "sine", barPan);
+        } else if (failed) {
+          if (bgmStep % 4 === 1) {
+            const freq = walkMel(scale);
+            playBgmNote(freq, 2.6, 0.05, 0.13, melType);
+          }
+        } else if (bgmStep % 2 === 1) {
           const freq = walkMel(scale);
           playBgmNote(freq, 1.3, 0.02, 0.15, melType, barPan);
-          if (!failed) {
-            playBgmNote(freq * 2, 1.3, 0.02, 0.05, "sine", barPan);
-            const harmIdx = Math.max(0, melIndex - 2);
-            playBgmNote(scale[harmIdx], 1.3, 0.03, 0.06, "sine", -barPan);
-          }
+          playBgmNote(freq * 2, 1.3, 0.02, 0.05, "sine", barPan);
+          const harmIdx = Math.max(0, melIndex - 2);
+          playBgmNote(scale[harmIdx], 1.3, 0.03, 0.06, "sine", -barPan);
         }
 
-        // モンスター(通常)戦闘中: 裏拍に軽いハイのブリップを足してアップテンポなドライブ感
-        if (scene.event === "monster" && bgmStep % 2 === 1) {
-          playBgmNote(1320, 0.12, 0.01, 0.05, "square");
+        // モンスター(通常)戦闘中: 全裏拍にハイのブリップ+ハットを足して駆け足のドライブ感を強調
+        if (isMonster) {
+          if (bgmStep % 2 === 0) playBgmNote(1320, 0.10, 0.005, 0.05, "square");
+          playBgmHat(0.020);
         }
 
-        // 上物のキラ: 維持時のみ小節頭に。金クッキー中は駆け上がる3音のきらめきを追加
+        // 上物のキラ: 維持時のみ小節頭に。金クッキー中は毎拍煌めきを重ね絶え間なく輝かせる
         if (bright && inBar === 0) {
           playBgmNote(MEL_MAJOR[MEL_MAJOR.length - 1] * 2, 2.4, 0.03, 0.05, "sine");
         }
-        if (scene.event === "golden" && inBar === 4) {
-          MEL_MAJOR.slice(-3).forEach((f, i) => {
-            playBgmNote(f * 2, 0.9, 0.01 + i * 0.02, 0.07, "sine", -0.3 + i * 0.3);
-          });
+        if (isGolden) {
+          if (bgmStep % 2 === 0) {
+            const g = MEL_MAJOR[Math.floor(bgmStep / 2 * 3) % MEL_MAJOR.length];
+            playBgmNote(g * 2, 0.7, 0.01, 0.08, "sine", barPan);
+          }
+          if (inBar === 4) {
+            MEL_MAJOR.slice(-3).forEach((f, i) => {
+              playBgmNote(f * 2, 0.9, 0.01 + i * 0.02, 0.08, "sine", -0.3 + i * 0.3);
+            });
+          }
         }
 
-        // 軽いハイハット風のtickでグルーヴに厚みを。未達後は静けさを保つため鳴らさない
+        // 軽いハイハット風のtickでグルーヴに厚みを。未達後・ボス中は専用の重さに専念するため鳴らさない
         if (bright && bgmStep % 2 === 0) playBgmHat(0.013);
       } catch (e) {}
     }
@@ -13108,6 +13160,12 @@ function installDebugPanel() {
     state.quotaPausedMs = 0;
     state.quotaPauseStartedAt = 0;
     state.runCookies = Decimal.max(state.runCookies, D(monsterQuotaRequiredAtElapsed(60)));
+    updateTopOnly();
+    renderAllTabs();
+  });
+
+  addTap($("debugQuotaFailBtn"), () => {
+    failQuota("デバッグ：ノルマ強制失敗");
     updateTopOnly();
     renderAllTabs();
   });
