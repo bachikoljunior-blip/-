@@ -4792,6 +4792,7 @@
 <main class="game">
   <section class="top">
     <button id="settingsBtn" type="button" aria-label="設定">⚙</button>
+    <button id="playFullscreenBtn" type="button" aria-label="クッキー画面を全画面">⛶</button>
 
     <div class="cookieCount">
       <span id="cookies">0</span>
@@ -5171,69 +5172,256 @@ const ASSETS = {
     54: "images/54_reward_goldenBeastMutation.png", // 報酬_金獣変異
   },
   screens: {
-    play: "images/01_screen_play.jpg",
-    shop: "images/02_screen_shop.jpg",
-    research: "images/03_screen_research.jpg",
-    prestige: "images/04_screen_prestige.jpg",
-    info: "images/05_screen_info.jpg",
-    rewardModal: "images/06_screen_reward_modal.jpg",
+    play: "images/screen_play.webp",
+    shop: "images/screen_shop.webp",
+    research: "images/screen_research.webp",
+    prestige: "images/screen_prestige.webp",
+    info: "images/screen_info.webp",
+    rewardModal: "images/screen_reward_modal.webp",
     skillTreeUnused: "images/07_screen_skill_tree_unused.jpg"
   },
   objects: {
-    cookie: "images/34_object_cookie.png",
-    goldenCookie: "images/35_object_goldenCookie.png",
-    cookieMonster: "images/36_object_cookieMonster.png"
+    cookie: "images/object_cookie.webp",
+    goldenCookie: "images/object_goldenCookie.webp",
+    cookieMonster: "images/object_cookieMonster.webp"
   },
   upgrades: {
-    finger: "images/08_upgrade_finger.png",
-    grandma: "images/09_upgrade_grandma.png",
-    oven: "images/10_upgrade_oven.png",
-    factory: "images/11_upgrade_factory.png",
-    bank: "images/12_upgrade_bank.png",
-    portal: "images/13_upgrade_portal.png",
-    moonBakery: "images/14_upgrade_moonBakery.png",
-    timeOven: "images/15_upgrade_timeOven.png",
-    galaxyFactory: "images/16_upgrade_galaxyFactory.png",
-    blackHoleMixer: "images/17_upgrade_blackHoleMixer.png",
-    universeOven: "images/18_upgrade_universeOven.png",
-    godFinger: "images/19_upgrade_godFinger.png",
-    cookieSingularity: "images/20_upgrade_cookieSingularity.png",
-    quantumBakery: "images/21_upgrade_quantumBakery.png",
-    antimatterOven: "images/22_upgrade_antimatterOven.png"
+    finger: "images/upgrade_finger.webp",
+    grandma: "images/upgrade_grandma.webp",
+    oven: "images/upgrade_oven.webp",
+    factory: "images/upgrade_factory.webp",
+    bank: "images/upgrade_bank.webp",
+    spiceRack: "images/upgrade_spiceRack.webp",
+    portal: "images/upgrade_portal.webp",
+    moonBakery: "images/upgrade_moonBakery.webp",
+    timeOven: "images/upgrade_timeOven.webp",
+    galaxyFactory: "images/upgrade_galaxyFactory.webp",
+    blackHoleMixer: "images/upgrade_blackHoleMixer.webp",
+    universeOven: "images/upgrade_universeOven.webp",
+    godFinger: "images/upgrade_godFinger.webp",
+    cookieSingularity: "images/upgrade_cookieSingularity.webp",
+    quantumBakery: "images/upgrade_quantumBakery.webp",
+    antimatterOven: "images/upgrade_antimatterOven.webp"
   },
   research: {
-    grandmaCrowd: "images/23_research_grandmaCrowd.png",
-    ovenBatch: "images/24_research_ovenBatch.png",
-    factoryNetwork: "images/25_research_factoryNetwork.png",
-    portalNetwork: "images/26_research_portalNetwork.png",
-    bankClickDividend: "images/27_research_bankClickDividend.png",
-    moonGlobalYeast: "images/28_research_moonGlobalYeast.png",
-    portalGlobalFold: "images/29_research_portalGlobalFold.png",
-    galaxyAssembly: "images/30_research_galaxyAssembly.png",
-    blackHoleCompression: "images/31_research_blackHoleCompression.png",
-    quantumProofing: "images/32_research_quantumProofing.png",
-    antimatterRecipe: "images/33_research_antimatterRecipe.png"
+    fingerTechnique: "images/research_fingerTechnique.webp",
+    grandmaCrowd: "images/research_grandmaCrowd.webp",
+    ovenBatch: "images/research_ovenBatch.webp",
+    factoryNetwork: "images/research_factoryNetwork.webp",
+    spiceBlend: "images/research_spiceBlend.webp",
+    portalNetwork: "images/research_portalNetwork.webp",
+    bankClickDividend: "images/research_bankClickDividend.webp",
+    moonGlobalYeast: "images/research_moonGlobalYeast.webp",
+    portalGlobalFold: "images/research_portalGlobalFold.webp",
+    galaxyAssembly: "images/research_galaxyAssembly.webp",
+    blackHoleCompression: "images/research_blackHoleCompression.webp",
+    quantumProofing: "images/research_quantumProofing.webp",
+    antimatterRecipe: "images/research_antimatterRecipe.webp",
+    bankVault: "images/research_bankVault.webp",
+    moonBake: "images/research_moonBake.webp",
+    timeLayer: "images/research_timeLayer.webp",
+    eventHorizon: "images/research_eventHorizon.webp",
+    cosmicConvection: "images/research_cosmicConvection.webp",
+    singularityFlow: "images/research_singularityFlow.webp",
+    annihilationCore: "images/research_annihilationCore.webp"
   },
   rewards: {
-    goldenRate: "images/37_reward_goldenRate.png",
-    goldenPower: "images/38_reward_goldenPower.png",
-    goldenAmount: "images/39_reward_goldenAmount.png",
-    monsterDamage: "images/40_reward_monsterDamage.png",
-    monsterRate: "images/41_reward_monsterRate.png",
-    goldenChain: "images/42_reward_goldenChain.png",
-    crackedFang: "images/43_reward_crackedFang.png",
-    chainPrep: "images/44_reward_chainPrep.png",
-    goldenTarget: "images/45_reward_goldenTarget.png",
-    goldenFirstHit: "images/46_reward_goldenFirstHit.png",
-    beastScent: "images/47_reward_beastScent.png",
-    beastHeatFerment: "images/48_reward_beastHeatFerment.png",
-    biteRecovery: "images/49_reward_biteRecovery.png",
-    crushedMill: "images/50_reward_crushedMill.png",
-    huntingCore: "images/51_reward_huntingCore.png",
-    brandHunt: "images/52_reward_brandHunt.png",
-    deepPursuit: "images/53_reward_deepPursuit.png",
-    goldenBeastMutation: "images/54_reward_goldenBeastMutation.png"
-  }
+    goldenRate: "images/reward_goldenRate.webp",
+    goldenPower: "images/reward_goldenPower.webp",
+    goldenAmount: "images/reward_goldenAmount.webp",
+    monsterRate: "images/reward_monsterRate.webp",
+    monsterStay: "images/reward_monsterStay.webp",
+    goldenChain: "images/reward_goldenChain.webp",
+    crackedFang: "images/reward_crackedFang.webp",
+    chainPrep: "images/reward_chainPrep.webp",
+    huntFocus: "images/reward_huntFocus.webp",
+    goldenTarget: "images/reward_goldenTarget.webp",
+    goldenFirstHit: "images/reward_goldenFirstHit.webp",
+    beastScent: "images/reward_beastScent.webp",
+    beastHeatFerment: "images/reward_beastHeatFerment.webp",
+    biteRecovery: "images/reward_biteRecovery.webp",
+    crushedMill: "images/reward_crushedMill.webp",
+    huntingCore: "images/reward_huntingCore.webp",
+    brandHunt: "images/reward_brandHunt.webp",
+    deepPursuit: "images/reward_deepPursuit.webp",
+    goldenBeastMutation: "images/reward_goldenBeastMutation.webp",
+    monsterDamage: "images/40_reward_monsterDamage.png"
+  },
+  policies: {
+    balanced: "images/policy_balanced.webp",
+    click: "images/policy_click.webp",
+    bake: "images/policy_bake.webp",
+    hunt: "images/policy_hunt.webp",
+    golden: "images/policy_golden.webp"
+  },
+  bakeStates: {
+    soft: "images/bake_soft.webp",
+    good: "images/bake_good.webp",
+    crispy: "images/bake_crispy.webp",
+    burnt: "images/bake_burnt.webp"
+  },
+  monsters: {
+    swarm: "images/monster_swarm.webp",
+    tank: "images/monster_tank.webp",
+    speedy: "images/monster_speedy.webp",
+    goldenBeast: "images/monster_goldenBeast.webp",
+    boss: "images/monster_boss.webp"
+  },
+  materials: {
+    butter: "images/mat_butter.webp",
+    flour: "images/mat_flour.webp",
+    cacao: "images/mat_cacao.webp",
+    lavaSugar: "images/mat_lavaSugar.webp",
+    ironShard: "images/mat_ironShard.webp",
+    mint: "images/mat_mint.webp",
+    frostSugar: "images/mat_frostSugar.webp",
+    silentCore: "images/mat_silentCore.webp",
+    spice: "images/mat_spice.webp",
+    goldDust: "images/mat_goldDust.webp",
+    stardust: "images/mat_stardust.webp",
+    cometShard: "images/mat_cometShard.webp",
+    bossCore1: "images/mat_bossCore1.webp",
+    bossCore2: "images/mat_bossCore2.webp",
+    bossCore3: "images/mat_bossCore3.webp",
+    bossCore4: "images/mat_bossCore4.webp",
+    bossCore5: "images/mat_bossCore5.webp",
+    voidSugar: "images/mat_voidSugar.webp",
+    deepCore: "images/mat_deepCore.webp",
+    omniFlour: "images/mat_omniFlour.webp"
+  },
+  dishes: {
+    butterCookie: "images/dish_butterCookie.webp",
+    chocoFondant: "images/dish_chocoFondant.webp",
+    mintIce: "images/dish_mintIce.webp",
+    hunterStew: "images/dish_hunterStew.webp",
+    frostCake: "images/dish_frostCake.webp",
+    stardustParfait: "images/dish_stardustParfait.webp",
+    voidTart: "images/dish_voidTart.webp"
+  },
+  equipment: {
+    goldenWhisk: "images/tool_goldenWhisk.webp",
+    ovenMitt: "images/tool_ovenMitt.webp",
+    pressExtractor: "images/tool_pressExtractor.webp",
+    monsterAlmanac: "images/tool_monsterAlmanac.webp",
+    stillFlask: "images/tool_stillFlask.webp",
+    dimensionCompass: "images/tool_dimensionCompass.webp"
+  },
+  orders: {
+    ovenOrder: "images/order_ovenOrder.webp",
+    monsterOrder: "images/order_monsterOrder.webp",
+    goldenOrder: "images/order_goldenOrder.webp",
+    quotaOrder: "images/order_quotaOrder.webp",
+    researchOrder: "images/order_researchOrder.webp",
+    spiceOrder: "images/order_spiceOrder.webp",
+    clickOrder: "images/order_clickOrder.webp"
+  },
+  tabs: {
+    shopTab: "images/tab_shop.webp",
+    researchTab: "images/tab_research.webp",
+    prestigeTab: "images/tab_prestige.webp",
+    orderTab: "images/tab_order.webp",
+    workshopTab: "images/tab_workshop.webp",
+    infoTab: "images/tab_info.webp"
+  },
+  buyModes: {
+    1: "images/buyMode_x1.webp",
+    10: "images/buyMode_x10.webp",
+    100: "images/buyMode_x100.webp",
+    max: "images/buyMode_max.webp"
+  },
+  stageThumbs: {
+    1: "images/stage_thumb_1_meadow.webp",
+    2: "images/stage_thumb_2_volcano.webp",
+    3: "images/stage_thumb_3_glacier.webp",
+    4: "images/stage_thumb_4_dune.webp",
+    5: "images/stage_thumb_5_galaxy.webp",
+    6: "images/stage_thumb_6_deep.webp"
+  },
+  stageBg: {
+    1: "images/bg_stage1_meadow.webp",
+    2: "images/bg_stage2_volcano.webp",
+    3: "images/bg_stage3_glacier.webp",
+    4: "images/bg_stage4_dune.webp",
+    5: "images/bg_stage5_galaxy.webp",
+    6: "images/bg_stage6_deep.webp"
+  },
+  skills: {
+    core: "images/skill_core.webp",
+    click_1: "images/skill_click_1.webp",
+    click_2: "images/skill_click_2.webp",
+    click_3: "images/skill_click_3.webp",
+    click_4: "images/skill_click_4.webp",
+    golden_1: "images/skill_golden_1.webp",
+    golden_2: "images/skill_golden_2.webp",
+    golden_3: "images/skill_golden_3.webp",
+    golden_analysis: "images/skill_golden_analysis.webp",
+    golden_4: "images/skill_golden_4.webp",
+    auto_1: "images/skill_auto_1.webp",
+    auto_2: "images/skill_auto_2.webp",
+    auto_3: "images/skill_auto_3.webp",
+    auto_4: "images/skill_auto_4.webp",
+    bake_temperature: "images/skill_bake_temperature.webp",
+    monster_1: "images/skill_monster_1.webp",
+    monster_2: "images/skill_monster_2.webp",
+    monster_3: "images/skill_monster_3.webp",
+    workshop_1: "images/skill_workshop_1.webp",
+    workshop_2: "images/skill_workshop_2.webp",
+    hunt_analysis: "images/skill_hunt_analysis.webp",
+    monster_4: "images/skill_monster_4.webp",
+    economy_1: "images/skill_economy_1.webp",
+    economy_2: "images/skill_economy_2.webp",
+    economy_analysis: "images/skill_economy_analysis.webp",
+    order_board: "images/skill_order_board.webp",
+    research_1: "images/skill_research_1.webp",
+    research_remodel: "images/skill_research_remodel.webp",
+    research_analysis: "images/skill_research_analysis.webp",
+    upgrade_moon: "images/skill_upgrade_moon.webp",
+    upgrade_time: "images/skill_upgrade_time.webp",
+    upgrade_galaxy: "images/skill_upgrade_galaxy.webp",
+    upgrade_blackhole: "images/skill_upgrade_blackhole.webp",
+    upgrade_universe: "images/skill_upgrade_universe.webp",
+    upgrade_godfinger: "images/skill_upgrade_godfinger.webp",
+    upgrade_singularity: "images/skill_upgrade_singularity.webp",
+    upgrade_quantum: "images/skill_upgrade_quantum.webp",
+    upgrade_antimatter: "images/skill_upgrade_antimatter.webp",
+    reward_1: "images/skill_reward_1.webp",
+    reward_synergy: "images/skill_reward_synergy.webp",
+    reward_choice_2: "images/skill_reward_choice_2.webp",
+    reward_2: "images/skill_reward_2.webp",
+    unlock_reward_crackedFang: "images/skill_unlock_crackedFang.webp",
+    unlock_reward_chainPrep: "images/skill_unlock_chainPrep.webp",
+    unlock_reward_huntFocus: "images/skill_unlock_huntFocus.webp",
+    unlock_reward_biteRecovery: "images/skill_unlock_biteRecovery.webp",
+    unlock_reward_beastHeatFerment: "images/skill_unlock_beastHeatFerment.webp",
+    unlock_reward_huntingCore: "images/skill_unlock_huntingCore.webp",
+    unlock_reward_brandHunt: "images/skill_unlock_brandHunt.webp",
+    unlock_reward_deepPursuit: "images/skill_unlock_deepPursuit.webp",
+    unlock_reward_goldenChain: "images/skill_unlock_goldenChain.webp",
+    unlock_reward_goldenTarget: "images/skill_unlock_goldenTarget.webp",
+    unlock_reward_goldenFirstHit: "images/skill_unlock_goldenFirstHit.webp",
+    unlock_reward_beastScent: "images/skill_unlock_beastScent.webp",
+    unlock_reward_goldenBeastMutation: "images/skill_unlock_goldenBeastMutation.webp",
+    unlock_reward_crushedMill: "images/skill_unlock_crushedMill.webp",
+    start_1: "images/skill_start_1.webp",
+    offline_1: "images/skill_offline_1.webp",
+    start_2: "images/skill_start_2.webp",
+    endless_oven: "images/skill_endless_oven.webp",
+    master_final: "images/skill_master_final.webp"
+  },
+  currency: {
+    cookie: "images/currency_cookie.webp",
+    material: "images/currency_material.webp",
+    research: "images/currency_research.webp"
+  },
+  frames: {
+    normal: "images/frame_reward_normal.webp",
+    rare: "images/frame_reward_rare.webp"
+  },
+  title: {
+    bg: "images/bg_title.webp",
+    logo: "images/logo_title.webp"
+  },
+  settings: "images/icon_settings.webp"
 };
 
 // 完全独立調整：目標側のノルマ・モンスター・レベル・コスト・設備基礎値・スキル効果は、現在CPSや総クッキーなどの達成度に追従しない。
@@ -5874,6 +6062,148 @@ function applyVisualAssets() {
   root.style.setProperty("--cookie-art", `url("${assetUrl(ASSETS.objects.cookie)}")`);
   root.style.setProperty("--golden-cookie-art", `url("${assetUrl(ASSETS.objects.goldenCookie)}")`);
   root.style.setProperty("--monster-art", `url("${assetUrl(ASSETS.objects.cookieMonster)}")`);
+  injectImageAssetStyle();
+  applyUiIcons();
+  applyScreenBackground();
+}
+
+// 追加画像用の共通スタイルを一度だけ差し込む
+function injectImageAssetStyle() {
+  if (document.getElementById("imgAssetStyle")) return;
+  const st = document.createElement("style");
+  st.id = "imgAssetStyle";
+  st.textContent = `
+    .choiceIcon{width:44px;height:44px;object-fit:contain;border-radius:8px;flex:0 0 auto;margin-right:10px;vertical-align:middle}
+    .orderIcon{width:22px;height:22px;object-fit:contain;vertical-align:middle;margin-right:6px}
+    .matIcon{width:22px;height:22px;object-fit:contain;vertical-align:middle;margin-right:6px}
+    .bakeBadgeIcon{width:22px;height:22px;object-fit:contain;vertical-align:middle;margin-right:5px}
+    .tab[data-tab]{display:flex;align-items:center;justify-content:center}
+    .tabIcon{width:30px;height:30px;object-fit:contain;display:block}
+    .tab.tabSilhouette .tabIcon{filter:brightness(0) saturate(0);opacity:.5}
+    .buyIcon{width:16px;height:16px;object-fit:contain;vertical-align:middle;margin-right:4px}
+    .policyChoiceBtn{display:flex;align-items:center;flex-wrap:wrap}
+    .policyChoiceBtn b,.policyChoiceBtn span{flex:1 1 100%}
+    .policyChoiceBtn .choiceIcon{flex:0 0 auto}
+    .titleLogoImg{width:100%;max-width:none;max-height:300px;object-fit:contain;display:block;margin:0 auto;filter:drop-shadow(0 8px 20px rgba(0,0,0,.6))}
+    body.hasTitleLogoImg .titleLogoMain,body.hasTitleLogoImg .titleLogoSub{display:none}
+    /* タイトルの枠を消して背景画像をはっきり見せる */
+    .titleScreenFrame{background:none!important;border:none!important;box-shadow:none!important;width:min(500px,100%)!important}
+    .titleScreen{background:linear-gradient(180deg,rgba(0,0,0,0.02) 40%,rgba(0,0,0,0.42)),var(--screen-play)!important;background-size:cover!important;background-position:center!important}
+    .titleTagline{display:none!important}
+    .selectedSkillDescRow{display:flex;align-items:flex-start;gap:12px}
+    .selectedSkillArt{width:72px;height:72px;flex:0 0 auto;object-fit:contain;border-radius:12px;background:rgba(0,0,0,.18)}
+    .selectedSkillDescRow .selectedSkillDesc{flex:1 1 auto;margin:0}
+    #playFullscreenBtn{position:absolute;top:10px;left:10px;z-index:30;width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,213,138,.32);background:rgba(20,12,6,.5);color:#ffcf87;font-size:17px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
+    body.playFullscreenMode #playFullscreenBtn{color:#fff;background:rgba(180,90,20,.62)}
+    body.playFullscreenMode .top{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:var(--fsTabH,60px)!important;z-index:8000!important;width:auto!important;height:auto!important;max-width:none!important;margin:0!important;border-radius:0!important}
+    /* 全画面中もタブバーを常に表示(最前面・下部固定) */
+    body.sectionFullscreen .tabs,body.playFullscreenMode .tabs{display:flex!important;position:fixed!important;left:0!important;right:0!important;bottom:0!important;height:var(--fsTabH,60px)!important;z-index:9600!important;background:rgba(10,6,3,.94)!important;padding:4px 6px calc(4px + env(safe-area-inset-bottom,0px))!important;margin:0!important}
+    /* 全画面コンテンツはタブバー分だけ下を空ける */
+    body.sectionFullscreen .tabPages{bottom:var(--fsTabH,60px)!important}
+  `;
+  document.head.appendChild(st);
+}
+
+// タブは画像のみ(文字なし)。解放前のタブはアイコンをシルエット表示する。
+const TAB_META = {
+  shopTab: { name: "強化", locked: () => false },
+  researchTab: { name: "研究", locked: () => false },
+  prestigeTab: { name: "転生", locked: () => (typeof prestigeUnlocked === "function" ? !prestigeUnlocked() : false) },
+  orderTab: { name: "注文", locked: () => (typeof orderBoardUnlocked === "function" ? !orderBoardUnlocked() : false) },
+  workshopTab: { name: "工房", locked: () => (typeof workshopTabUnlocked === "function" ? !workshopTabUnlocked() : false) },
+  infoTab: { name: "一覧", locked: () => false }
+};
+
+function renderTabIcons() {
+  document.querySelectorAll(".tab[data-tab]").forEach(btn => {
+    const id = btn.dataset.tab;
+    const src = ASSETS.tabs && ASSETS.tabs[id];
+    if (!src) return;
+    const meta = TAB_META[id] || { name: "", locked: () => false };
+    let img = btn.querySelector(".tabIcon");
+    if (!img) {
+      img = document.createElement("img");
+      img.className = "tabIcon"; img.alt = ""; img.setAttribute("aria-hidden", "true");
+    }
+    img.src = assetUrl(src);
+    // 文字ノードを消してアイコンのみにする
+    btn.textContent = "";
+    btn.appendChild(img);
+    btn.setAttribute("aria-label", meta.name);
+    btn.classList.toggle("tabSilhouette", Boolean(meta.locked()));
+  });
+}
+
+// タブ・購入モード・設定・タイトルロゴのアイコンを注入(重複防止つき)
+function applyUiIcons() {
+  try {
+    renderTabIcons();
+    document.querySelectorAll(".buyModeBtn[data-buymode]").forEach(btn => {
+      const src = ASSETS.buyModes && ASSETS.buyModes[btn.dataset.buymode];
+      if (src && !btn.querySelector(".buyIcon")) {
+        const img = document.createElement("img");
+        img.className = "buyIcon"; img.alt = ""; img.setAttribute("aria-hidden", "true");
+        img.src = assetUrl(src);
+        btn.insertBefore(img, btn.firstChild);
+      }
+    });
+    const logo = document.querySelector(".titleLogo");
+    if (logo && ASSETS.title && ASSETS.title.logo && !logo.querySelector(".titleLogoImg")) {
+      const img = document.createElement("img");
+      img.className = "titleLogoImg"; img.alt = "クッキーストラテジャー";
+      img.src = assetUrl(ASSETS.title.logo);
+      logo.insertBefore(img, logo.firstChild);
+      document.body.classList.add("hasTitleLogoImg");
+    }
+    const settingsBtn = document.getElementById("settingsBtn") || document.querySelector("[data-settings]");
+    if (settingsBtn && ASSETS.settings && !settingsBtn.querySelector(".settingsIcon")) {
+      const img = document.createElement("img");
+      img.className = "settingsIcon"; img.alt = ""; img.style.width = "20px"; img.style.height = "20px"; img.style.objectFit = "contain";
+      img.src = assetUrl(ASSETS.settings);
+      settingsBtn.insertBefore(img, settingsBtn.firstChild);
+    }
+  } catch (e) { /* アイコン注入失敗はゲーム進行に影響させない */ }
+}
+
+// 選択中ステージ(またはタイトル)に応じてメイン背景を切り替える
+function applyScreenBackground() {
+  try {
+    const root = document.documentElement;
+    if (document.body.classList.contains("titleScreenMode") && ASSETS.title && ASSETS.title.bg) {
+      root.style.setProperty("--screen-play", `url("${assetUrl(ASSETS.title.bg)}")`);
+      return;
+    }
+    const no = (typeof currentStageNo === "function") ? currentStageNo() : 1;
+    const info = stageInfo(no);
+    const key = String(info && info.deep ? 6 : no);
+    const src = (ASSETS.stageBg && ASSETS.stageBg[key]) || ASSETS.screens.play;
+    root.style.setProperty("--screen-play", `url("${assetUrl(src)}")`);
+  } catch (e) { /* 背景切替失敗は無視 */ }
+}
+
+// クッキー画面の全画面トグル。金クッキー・モンスターは現在の表示範囲に合わせて
+// バランスよく再配置する(全画面化で広がり、戻すと元の範囲に収め直す)。
+let playFullscreenOn = false;
+
+function repositionFloatingActors() {
+  try {
+    if (typeof goldenVisible !== "undefined" && goldenVisible) {
+      const g = $("goldenCookie");
+      if (g && g.style.display !== "none") placeFixedElement(g, 90, 90, 90);
+    }
+    if (typeof monsters !== "undefined" && Array.isArray(monsters)) {
+      monsters.forEach(m => { if (m && m.el && m.el.isConnected) placeFixedElement(m.el, 236, 254, 90); });
+    }
+  } catch (e) { /* 再配置失敗は無視 */ }
+}
+
+function togglePlayFullscreen() {
+  playFullscreenOn = !playFullscreenOn;
+  document.body.classList.toggle("playFullscreenMode", playFullscreenOn);
+  const btn = $("playFullscreenBtn");
+  if (btn) btn.setAttribute("aria-label", playFullscreenOn ? "クッキー画面の全画面を解除" : "クッキー画面を全画面");
+  // レイアウト確定後に出現物を新しい範囲へ再配置(2フレーム待って寸法を確定させる)
+  requestAnimationFrame(() => requestAnimationFrame(repositionFloatingActors));
 }
 
 
@@ -6539,7 +6869,7 @@ function renderBakeBox() {
   box.classList.add("active");
   box.innerHTML = `
     <div class="bakeHead">
-      <span>焼き加減：<span class="bakeStateName">${stateInfo.name}</span></span>
+      <span><img class="bakeBadgeIcon" src="${assetUrl(ASSETS.bakeStates[stateInfo.id])}" alt="" aria-hidden="true" loading="lazy">焼き加減：<span class="bakeStateName">${stateInfo.name}</span></span>
       <span>残り ${fmtTime(remain)}</span>
     </div>
     <div class="bakeEffectText">${showDetail ? bakeEffectText() : stateInfo.short}</div>
@@ -6902,7 +7232,7 @@ function renderOrderBoard() {
       <h3>注文ボード</h3>
       <div class="desc">1件ずつ届く短期の依頼。要求と報酬は今の状態に相対化される(詳細は注文タブ)。</div>
       <div class="orderCard">
-        <div class="orderHead"><span>${def.name}</span><span>${progressText} / ${needText}${def.unit}</span></div>
+        <div class="orderHead"><span><img class="orderIcon" src="${assetUrl(ASSETS.orders[def.id])}" alt="" aria-hidden="true" loading="lazy">${def.name}</span><span>${progressText} / ${needText}${def.unit}</span></div>
         <div class="desc">条件：${def.desc}</div>
         <div class="orderProgressBar"><div class="orderProgressFill" style="width:${(ratio * 100).toFixed(1)}%"></div></div>
         <div class="desc">報酬：${orderRewardText(order)}</div>
@@ -6965,7 +7295,7 @@ function renderOrder() {
       <h3>注文ボード</h3>
       <div class="desc">短期の依頼が1件ずつ届く。要求量と報酬は今の生産・ペースに合わせて決まり、制限時間内に達成すると報酬、時間切れなら次の注文待ちになる。注文は選び直せない。</div>
       <div class="orderCard">
-        <div class="orderHead"><span>${def.name}</span><span>${progressText} / ${needText}${def.unit}</span></div>
+        <div class="orderHead"><span><img class="orderIcon" src="${assetUrl(ASSETS.orders[def.id])}" alt="" aria-hidden="true" loading="lazy">${def.name}</span><span>${progressText} / ${needText}${def.unit}</span></div>
         <div class="desc">条件：${def.desc}</div>
         <div class="orderProgressBar"><div class="orderProgressFill" style="width:${(ratio * 100).toFixed(1)}%"></div></div>
         <div class="orderTimeRow">
@@ -7134,6 +7464,7 @@ function applyStageTheme() {
   STAGES.forEach(s => document.body.classList.toggle("stageTheme" + s.no, s.no === baseNo));
   document.body.classList.toggle("stageThemeDeep", Boolean(info.deep));
   document.body.style.setProperty("--deepHue", String(info.deep ? (info.deepK * 47) % 360 : 0));
+  applyScreenBackground();
 }
 
 // v3: ステージは転生時のステージ選択画面で決まり、周回中は固定(切替UI・クールダウン廃止)。
@@ -7204,9 +7535,8 @@ function workshopCraftUnlocked() {
 function updateWorkshopTabVisibility() {
   // 工房・注文タブは最初から表示し、未解放の間は「?」で機能を隠す
   const wtab = document.querySelector('.tab[data-tab="workshopTab"]');
-  if (wtab) { wtab.classList.remove("hiddenTab"); wtab.textContent = workshopTabUnlocked() ? "工房" : "?"; }
-  const otab = document.querySelector('.tab[data-tab="orderTab"]');
-  if (otab) otab.textContent = orderBoardUnlocked() ? "注文" : "?";
+  if (wtab) wtab.classList.remove("hiddenTab");
+  renderTabIcons();
 }
 
 function gainMaterial(id, count) {
@@ -7637,7 +7967,7 @@ function renderWorkshop() {
     const can = canAffordMaterials(d.cost) && (act || active.length < MAX_ACTIVE_DISHES) && !pausedForSkillChoice();
 
     return `
-      <button class="item artCard workshopCard ${can ? "canBuy" : ""}" data-dish="${d.id}">
+      <button class="item artCard workshopCard hasArtImage ${can ? "canBuy" : ""}" data-dish="${d.id}" style="--art-img:url('${assetUrl(ASSETS.dishes[d.id])}')">
         <b>${d.name}${act ? `(効果中 残り${Math.max(0, Math.ceil((act.until - now) / 1000))}秒)` : ""}</b>
         <div class="price">${materialCostText(d.cost)}</div>
         <div class="desc">${d.desc} / 効果時間 ${Math.round(dishDurationMs() / 1000)}秒</div>
@@ -7656,7 +7986,7 @@ function renderWorkshop() {
       const canAscend = canAffordMaterials(aCost) && !pausedForSkillChoice();
 
       return `
-        <button class="item artCard workshopCard ${canAscend ? "canBuy" : ""}" data-ascend="${eq.id}">
+        <button class="item artCard workshopCard hasArtImage ${canAscend ? "canBuy" : ""}" data-ascend="${eq.id}" style="--art-img:url('${assetUrl(ASSETS.equipment[eq.id])}')">
           <b>${eq.name} Lv.${lv}(上限${maxLv}${ascendNote})— 限界突破</b>
           <div class="price">${materialCostText(aCost)}</div>
           <div class="desc">現在：${eq.effect(lv)} / 突破するとLv上限が${maxLv + 5}になる</div>
@@ -7667,7 +7997,7 @@ function renderWorkshop() {
     const can = canAffordMaterials(cost) && !pausedForSkillChoice();
 
     return `
-      <button class="item artCard workshopCard ${can ? "canBuy" : ""}" data-equip="${eq.id}">
+      <button class="item artCard workshopCard hasArtImage ${can ? "canBuy" : ""}" data-equip="${eq.id}" style="--art-img:url('${assetUrl(ASSETS.equipment[eq.id])}')">
         <b>${eq.name} Lv.${lv} → Lv.${lv + 1}(上限${maxLv}${ascendNote})</b>
         <div class="price">${materialCostText(cost)}</div>
         <div class="desc">現在：${lv > 0 ? eq.effect(lv) : "未作成"} / 次：${eq.effect(lv + 1)}</div>
@@ -7676,7 +8006,7 @@ function renderWorkshop() {
 
   const matRows = MATERIALS
     .filter(m => materialSeen(m.id))
-    .map(m => `<div class="infoRow"><b>${m.name}</b> ×${fmt(materialCount(m.id))}${m.tier === "r" ? "(レア)" : m.tier === "b" ? "(ボス核)" : ""}</div>`)
+    .map(m => `<div class="infoRow"><img class="matIcon" src="${assetUrl(ASSETS.materials[m.id])}" alt="" aria-hidden="true" loading="lazy"><b>${m.name}</b> ×${fmt(materialCount(m.id))}${m.tier === "r" ? "(レア)" : m.tier === "b" ? "(ボス核)" : ""}</div>`)
     .join("") || `<div class="desc">まだ素材がない</div>`;
 
   // v2: 討伐記録セクション(種ごとの累計/次のマイルストーン/現在ボーナス)
@@ -7688,7 +8018,7 @@ function renderWorkshop() {
     const bonus = m > 0
       ? `ダメージ×${killRecordDamageMultiplier(typeId).toFixed(2)}・ドロップ+${killRecordDropBonus(typeId)}`
       : "ボーナスなし";
-    return `<div class="infoRow"><b>${type.name}</b> 累計${fmt(c)}体 / 次の記録 ${fmt(next)}体 / 記録${m}段：${bonus}</div>`;
+    return `<div class="infoRow"><img class="matIcon" src="${assetUrl(ASSETS.monsters[typeId] || ASSETS.objects.cookieMonster)}" alt="" aria-hidden="true" loading="lazy"><b>${type.name}</b> 累計${fmt(c)}体 / 次の記録 ${fmt(next)}体 / 記録${m}段：${bonus}</div>`;
   }).join("");
 
   // v2: 「作成」(装備)はworkshop_2(工房の拡張)取得で解放
@@ -9592,6 +9922,7 @@ function closePolicyChoiceScreen() {
 function renderPolicyChoiceScreen() {
   $("policyChoiceRow").innerHTML = RUN_POLICIES.map(p => `
     <button type="button" class="policyChoiceBtn" data-runpolicy="${p.id}">
+      <img class="choiceIcon" src="${assetUrl(ASSETS.policies[p.id])}" alt="" aria-hidden="true" loading="lazy">
       <b>${p.name}</b><span>${p.desc}</span><span>${p.bias}</span>
     </button>
   `).join("");
@@ -9661,6 +9992,7 @@ function renderStageChoiceScreen() {
     const s = stageInfo(no);
     rows.push(`
       <button type="button" class="policyChoiceBtn" data-runstage="${no}">
+        <img class="choiceIcon" src="${assetUrl(ASSETS.stageThumbs[String(s.deep ? 6 : no)])}" alt="" aria-hidden="true" loading="lazy">
         <b>第${no}ステージ ${s.name}</b><span>${stageChoiceSummary(no)}</span>
       </button>`);
   }
@@ -9705,7 +10037,10 @@ function renderSkillChoiceScreen() {
       <div class="selectedSkillStatus">${statusText}</div>
     </div>
     <div class="selectedSkillCost">消費PT：${fmt(selected.cost)} / 系統：${selected.branchName}</div>
-    <div class="selectedSkillDesc">${selected.desc}</div>
+    <div class="selectedSkillDescRow">
+      ${ASSETS.skills && ASSETS.skills[selected.id] ? `<img class="selectedSkillArt" src="${assetUrl(ASSETS.skills[selected.id])}" alt="" aria-hidden="true" loading="lazy">` : ""}
+      <div class="selectedSkillDesc">${selected.desc}</div>
+    </div>
     <div class="selectedSkillDesc">前提：${selected.prereqs.length ? selected.prereqs.map(id => getSkill(id)?.name || id).join("、") : "なし"}</div>
   ` : `
     <div class="selectedSkillName">スキルを選択</div>
@@ -10445,7 +10780,7 @@ function updatePrestigeTabLabel() {
   const tab = document.querySelector('.tab[data-tab="prestigeTab"]');
   if (!tab) return;
 
-  tab.textContent = prestigeUnlocked() ? "転生" : "?";
+  renderTabIcons();
 }
 
 function checkPrestigeUnlockNotice() {
@@ -10970,6 +11305,17 @@ document.addEventListener("keydown", e => {
 document.querySelectorAll(".tab").forEach(btn => {
   addTap(btn, () => {
     const tabId = btn.dataset.tab;
+    const inFs = Boolean(pageFullscreenId) || playFullscreenOn;
+    if (inFs) {
+      // 全画面中にタブを押したら、遷移先も全画面のままにする
+      if (playFullscreenOn) { playFullscreenOn = false; document.body.classList.remove("playFullscreenMode"); }
+      if (pageFullscreenId === tabId) { closeTabPageFullscreen(); return; }
+      pageFullscreenId = tabId;
+      switchTab(tabId);
+      syncTabPageFullscreen();
+      renderActiveTab();
+      return;
+    }
     if (activeTab === tabId) {
       toggleTabPageFullscreen(tabId);
       return;
@@ -10977,6 +11323,8 @@ document.querySelectorAll(".tab").forEach(btn => {
     switchTab(tabId);
   });
 });
+
+if ($("playFullscreenBtn")) addTap($("playFullscreenBtn"), togglePlayFullscreen);
 
 function prestigeReset() {
   const gain = prestigeGain();
@@ -11755,6 +12103,8 @@ function createMonsterElement(mon) {
   const wrap = document.createElement("div");
   wrap.className = "monsterInstance mtype-" + type.id;
   wrap.dataset.monsterId = String(mon.id);
+  const monArt = (ASSETS.monsters && ASSETS.monsters[type.id]) || ASSETS.objects.cookieMonster;
+  wrap.style.setProperty("--monster-art", `url("${assetUrl(monArt)}")`);
   wrap.innerHTML = `
     <div class="monsterTypeLabel">${type.name}</div>
     <button class="cookieMonsterButton" aria-label="${type.name}"></button>
@@ -12616,6 +12966,7 @@ function startGameFromTitle() {
 
   document.body.classList.remove("titleScreenMode");
   $("titleAboutOverlay").classList.remove("active");
+  applyScreenBackground();
   scheduleGoldenCookie();
   scheduleMonster();
   updateTopOnly();
@@ -12626,6 +12977,7 @@ function returnToTitleScreen() {
   if (titleScreenActive() || pausedForSkillChoice()) return;
 
   document.body.classList.add("titleScreenMode");
+  applyScreenBackground();
   clearGoldenSpawnTimer();
   clearMonsterSpawnTimer();
   if (goldenVisible) hideGoldenCookie(false);
