@@ -9197,14 +9197,37 @@ function startBgm() {
     bgmFilter.frequency.value = 680;
     bgmFilter.connect(bgmGainNode);
     bgmGainNode.connect(audioCtx.destination);
+
+    // 簡易アンビエンス(フィードバックディレイ)。dry(bgmFilter→bgmGainNode)と並行して
+    // 薄く尾を引かせ、生成音でも"空間の広がり"を感じられるようにする。
+    const bgmDelay = audioCtx.createDelay(1.0);
+    bgmDelay.delayTime.value = 0.27;
+    const bgmDelayFeedback = audioCtx.createGain();
+    bgmDelayFeedback.gain.value = 0.30;
+    const bgmDelayWet = audioCtx.createGain();
+    bgmDelayWet.gain.value = 0.30;
+    bgmFilter.connect(bgmDelay);
+    bgmDelay.connect(bgmDelayFeedback);
+    bgmDelayFeedback.connect(bgmDelay);
+    bgmDelay.connect(bgmDelayWet);
+    bgmDelayWet.connect(bgmGainNode);
+
     bgmStarted = true;
 
     // ポップな土台。画面ごとに差し替え、メイン中はノルマ状態とイベントで変調する。
     // 全て同じ生成エンジンのパラメータ切替(音階・テンポ・音色・音域・上物)で表現する。
     const CHORD_ROOTS = [130.81, 98.00, 110.00, 87.31]; // C3 G2 A2 F2 (I-V-vi-IV のポップ進行)
+    // 上のROOTSと対になるトライアド(パッド用)。同じI-V-vi-IV進行の和音を持続音として重ねる
+    const CHORD_TRIADS = [
+      [130.81, 164.81, 196.00], // C
+      [98.00, 123.47, 146.83],  // G
+      [110.00, 130.81, 164.81], // Am
+      [87.31, 110.00, 130.81]   // F
+    ];
     const MEL_MAJOR = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25]; // Cメジャー・ペンタ(維持時)
     const MEL_MINOR = [220.00, 261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33]; // Aマイナー・ペンタ(未達後)
     const BELL = [329.63, 392.00, 493.88, 587.33, 659.25, 783.99, 987.77]; // スキルツリー用の広めのベル
+    let hatNoiseBuffer = null;
     let melIndex = 3;
     let lastMelDir = 0;
     let lastMelIndex = -1;
@@ -9218,7 +9241,8 @@ function startBgm() {
     ];
     const titlePattern = [0, 2, 1, 3, 2, 3, 1, 2];
 
-    function playBgmNote(freq, len, attack, peak, type) {
+    // pan(-1〜1)を指定すると定位を振る(豪華さ=ステレオの広がり用)。省略時は中央
+    function playBgmNote(freq, len, attack, peak, type, pan) {
       const osc = audioCtx.createOscillator();
       const g = audioCtx.createGain();
       osc.type = type || "sine";
@@ -9227,9 +9251,45 @@ function startBgm() {
       g.gain.linearRampToValueAtTime(peak, audioCtx.currentTime + attack);
       g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + len);
       osc.connect(g);
-      g.connect(bgmFilter);
+      if (pan && audioCtx.createStereoPanner) {
+        const p = audioCtx.createStereoPanner();
+        p.pan.value = Math.max(-1, Math.min(1, pan));
+        g.connect(p);
+        p.connect(bgmFilter);
+      } else {
+        g.connect(bgmFilter);
+      }
       osc.start(audioCtx.currentTime);
       osc.stop(audioCtx.currentTime + len);
+    }
+
+    // 和音を持続音(パッド)として重ねる。減衰の遅いエンベロープで背景の厚みを作る
+    function playBgmPad(freqs, len, peak, type, pan) {
+      freqs.forEach(freq => playBgmNote(freq, len, len * 0.4, peak, type || "sine", pan));
+    }
+
+    // 軽いハイハット風のノイズtick。lowpass(bgmFilter)を経由すると高域が削れてしまうため、
+    // bgmGainNodeへ直結して常にシャリッとした質感を保つ
+    function playBgmHat(peak) {
+      if (!hatNoiseBuffer) {
+        const size = Math.floor(audioCtx.sampleRate * 0.035);
+        hatNoiseBuffer = audioCtx.createBuffer(1, size, audioCtx.sampleRate);
+        const data = hatNoiseBuffer.getChannelData(0);
+        for (let i = 0; i < size; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / size, 4);
+        }
+      }
+      const src = audioCtx.createBufferSource();
+      src.buffer = hatNoiseBuffer;
+      const hp = audioCtx.createBiquadFilter();
+      hp.type = "highpass";
+      hp.frequency.value = 7000;
+      const g = audioCtx.createGain();
+      g.gain.value = peak || 0.016;
+      src.connect(hp);
+      hp.connect(g);
+      g.connect(bgmGainNode);
+      src.start(audioCtx.currentTime);
     }
 
     // ボス戦の低い鼓動(キック)。lowpassを通しても低域は残るので同じ経路で鳴らす
@@ -9274,6 +9334,7 @@ function startBgm() {
       try {
         bgmStep += 1;
         const inBar = bgmStep % 8; // 8分音符×8 = 1小節(約1.9秒)
+        const barPan = (bgmStep % 4 < 2) ? -0.22 : 0.22; // 拍ごとに定位を軽く振ってステレオを広げる
         const scene = bgmSceneState();
 
         // ---- タイトル: 明るいアルペジオを裏拍の弾みつきでポップに ----
@@ -9283,14 +9344,19 @@ function startBgm() {
           if (bgmStep % 2 === 0) {
             const pos = titlePattern[(bgmStep >> 1) % titlePattern.length];
             const freq = chord[pos % chord.length];
-            playBgmNote(freq, 2.6, 0.05, pos === 0 ? 0.85 : 0.5, "triangle");
-            playBgmNote(freq * 2, 2.6, 0.05, 0.09, "sine");
+            playBgmNote(freq, 2.6, 0.05, pos === 0 ? 0.85 : 0.5, "triangle", barPan);
+            playBgmNote(freq * 2, 2.6, 0.05, 0.09, "sine", barPan);
           } else {
             // 裏拍: 高いオクターブを小さく重ねて弾ませる
             const freq = chord[(bgmStep >> 1) % chord.length];
-            playBgmNote(freq * 2, 0.9, 0.02, 0.06, "triangle");
+            playBgmNote(freq * 2, 0.9, 0.02, 0.06, "triangle", -barPan);
           }
-          if (inBar === 0) playBgmNote(chord[chord.length - 1] * 2, 3.2, 0.04, 0.05, "sine");
+          if (inBar === 0) {
+            playBgmNote(chord[chord.length - 1] * 2, 3.2, 0.04, 0.05, "sine");
+            // パッド: 和音を1オクターブ下げて持続させ、背景の厚みを担当
+            playBgmPad(chord.slice(0, 3).map(f => f / 2), 3.6, 0.045, "sine", -0.18);
+            playBgmHat(0.014);
+          }
           return;
         }
 
@@ -9299,10 +9365,16 @@ function startBgm() {
           glideCutoff(1050);
           if (bgmStep % 2 === 0) {
             const freq = walkMel(BELL);
-            playBgmNote(freq, 3.4, 0.03, 0.14, "sine");
-            playBgmNote(freq * 2, 3.4, 0.03, 0.05, "sine");
+            playBgmNote(freq, 3.4, 0.03, 0.14, "sine", barPan);
+            playBgmNote(freq * 2, 3.4, 0.03, 0.05, "sine", barPan);
+            // ハモリ: 1オクターブ下を薄く添えて豊かな響きに
+            playBgmNote(freq / 2, 3.4, 0.05, 0.05, "sine", -barPan);
           }
           if (inBar === 0) playBgmNote(BELL[BELL.length - 1] * 1.5, 4.0, 0.05, 0.06, "sine");
+          // パッド: 2小節ごとに和音を長く伸ばして背景を満たす
+          if (bgmStep % 16 === 0) {
+            playBgmPad([BELL[0] / 2, BELL[2] / 2, BELL[4] / 2], 6.0, 0.035, "sine", 0.15);
+          }
           return;
         }
 
@@ -9315,22 +9387,34 @@ function startBgm() {
         if (scene.event === "boss") cutoff += 120;
         glideCutoff(cutoff);
         const melType = failed ? "sine" : "triangle";
-        const bright = !failed; // 上物のキラ(未達後はOFF)
+        const bright = !failed; // 上物のキラ・パッド・ハモリ・グルーヴ(未達後はOFFで対比を保つ)
+        const chordIdx = Math.floor(bgmStep / 8) % CHORD_ROOTS.length;
 
         // ベース: 拍1・拍3(step 0,4)で4小節ループのコード根音・5度
         if (inBar === 0 || inBar === 4) {
-          const root = CHORD_ROOTS[Math.floor(bgmStep / 8) % CHORD_ROOTS.length];
+          const root = CHORD_ROOTS[chordIdx];
           const bf = inBar === 0 ? root : root * 1.5;
           playBgmNote(bf, 1.6, 0.02, 0.18, "triangle");
         }
-        // ボス出現中: 拍頭に低い鼓動を重ねて重量感を出す
-        if (scene.event === "boss" && (inBar === 0 || inBar === 4)) playBgmKick();
+        // パッド: 小節頭に和音を持続音で重ねて土台を厚くする(維持時のみ)
+        if (bright && inBar === 0) {
+          playBgmPad(CHORD_TRIADS[chordIdx], 3.2, 0.045, "sine", -0.15);
+        }
+        // ボス出現中: 拍頭に低い鼓動+暗めの持続音を重ねて重量感を出す
+        if (scene.event === "boss" && (inBar === 0 || inBar === 4)) {
+          playBgmKick();
+          if (inBar === 0) playBgmNote(CHORD_ROOTS[chordIdx] / 2, 2.0, 0.05, 0.09, "sine");
+        }
 
-        // メロディ: 裏拍(奇数step)でペンタを歩く
+        // メロディ: 裏拍(奇数step)でペンタを歩く。維持時は3度下のハモリを添えて豊かに
         if (bgmStep % 2 === 1) {
           const freq = walkMel(scale);
-          playBgmNote(freq, 1.3, 0.02, 0.15, melType);
-          if (!failed) playBgmNote(freq * 2, 1.3, 0.02, 0.05, "sine");
+          playBgmNote(freq, 1.3, 0.02, 0.15, melType, barPan);
+          if (!failed) {
+            playBgmNote(freq * 2, 1.3, 0.02, 0.05, "sine", barPan);
+            const harmIdx = Math.max(0, melIndex - 2);
+            playBgmNote(scale[harmIdx], 1.3, 0.03, 0.06, "sine", -barPan);
+          }
         }
 
         // モンスター(通常)戦闘中: 裏拍に軽いハイのブリップを足してアップテンポなドライブ感
@@ -9338,13 +9422,18 @@ function startBgm() {
           playBgmNote(1320, 0.12, 0.01, 0.05, "square");
         }
 
-        // 上物のキラ: 維持時のみ小節頭に。金クッキー中は小節中央にも増量してキラッと
+        // 上物のキラ: 維持時のみ小節頭に。金クッキー中は駆け上がる3音のきらめきを追加
         if (bright && inBar === 0) {
           playBgmNote(MEL_MAJOR[MEL_MAJOR.length - 1] * 2, 2.4, 0.03, 0.05, "sine");
         }
         if (scene.event === "golden" && inBar === 4) {
-          playBgmNote(MEL_MAJOR[MEL_MAJOR.length - 1] * 2, 1.6, 0.02, 0.07, "sine");
+          MEL_MAJOR.slice(-3).forEach((f, i) => {
+            playBgmNote(f * 2, 0.9, 0.01 + i * 0.02, 0.07, "sine", -0.3 + i * 0.3);
+          });
         }
+
+        // 軽いハイハット風のtickでグルーヴに厚みを。未達後は静けさを保つため鳴らさない
+        if (bright && bgmStep % 2 === 0) playBgmHat(0.013);
       } catch (e) {}
     }
 
