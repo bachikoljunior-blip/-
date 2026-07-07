@@ -1026,40 +1026,35 @@ function measureFeatureKeys(sim) {
 const MEASURE_POLICIES = ['balanced', 'click', 'golden', 'hunt', 'bake'];
 
 // ==== ㉘稼ぎ口比率(2026-07-06 採用・3-2反映済み): 収入の4分解(設備生産/金/討伐由来/タップ) ====
-// 討伐由来=「討伐系の機能(報酬・素材・連鎖・狩り研究)を全部無効にしたとき消える収入」(ユーザー定義)。
-// 金由来=さらに金系機能を無効にしたとき消える収入。残りをタップ(クリック分)と設備生産に分ける。
-// 機能の割り当て(細部は【仮】・3-2-5): hunt=報酬カテゴリhunt/risk+crushedMill(素材系)+狩り研究
-// (portalNetwork・portalGlobalFold)とその段階 / golden=報酬カテゴリgolden+金研究(spiceBlend)とその段階。
-const HUNT_FEATURE_SET = new Set([
-  ...REWARD_POOL.filter(r => r.category === 'hunt' || r.category === 'risk' || r.id === 'crushedMill').map(r => 'rw:' + r.id),
-  'res:portalNetwork', 'res:portalGlobalFold',
-  'stage:portalNetwork:2', 'stage:portalNetwork:3', 'stage:portalGlobalFold:2', 'stage:portalGlobalFold:3',
-  'chain' // 討伐連鎖(第12次D): 討伐系機能=㉘の討伐由来に計上
-]);
-const GOLDEN_FEATURE_SET = new Set([
-  ...REWARD_POOL.filter(r => r.category === 'golden').map(r => 'rw:' + r.id),
-  'res:spiceBlend', 'stage:spiceBlend:2', 'stage:spiceBlend:3'
-]);
-const HUNT_GOLDEN_FEATURE_SET = new Set([...HUNT_FEATURE_SET, ...GOLDEN_FEATURE_SET]);
+// 【第12次J・(ii) attribution 見直し(ユーザー承認 2026-07-07)】旧方式は hunt/golden の機能セットを丸ごとオフ
+// して earningPower の base(=cps+tap)を崩壊させ、その崩壊分を討伐由来/金に計上していた。だが chain・獣熱発酵・
+// 狩猟核・異世界増幅などは「討伐活動連動の全生産倍率」で全方針の base を共通に押し上げるため、これを丸ごと
+// 討伐由来にするのが後半95%独占の原因だった。→ 新方式では全生産倍率を base に残して全稼ぎ口で共有し(=share比で
+// 相殺)、各稼ぎ口は「その直接収入項」だけで測る(下 incomeParts 参照)。旧セット(HUNT_FEATURE_SET 等)は廃止。
 function incomeParts(sim, pAll) {
   const r = sim.run;
   const clear = () => { sim._bkT = -1; sim._stT = -1; };
-  // 討伐由来: 討伐系機能+討伐チャネルを無効にして消える分
-  sim._mdSet = HUNT_FEATURE_SET; sim._mdChan = { hunt: true };
-  clear();
-  const pNoHunt = earningPowerSafe(sim);
-  // 金由来: さらに金系機能+金チャネルを無効にして消える分
-  sim._mdSet = HUNT_GOLDEN_FEATURE_SET; sim._mdChan = { hunt: true, golden: true };
-  clear();
-  const pCore = earningPowerSafe(sim);
+  // ㉘ attribution 見直し(第12次J・(ii)ユーザー承認 2026-07-07):
+  // 従来は hunt機能を全オフ(_mdSet=HUNT_FEATURE_SET)して earningPower の base(=cps+tap)自体を崩壊させ、
+  // その崩壊分を丸ごと「討伐由来」に計上していた。だが chain/獣熱発酵/狩猟核/異世界増幅などは
+  // 「討伐活動に連動して全生産を持ち上げる倍率」で、bake等あらゆる方針の生産(base)を共通に押し上げる。
+  // これを丸ごと討伐由来にするのが後半95%独占(bake=3/47)の正体だった(第12次J-2実測)。
+  // 【新方式】全生産倍率は base に残して全稼ぎ口で共有(=share比で相殺)し、各稼ぎ口は「その直接収入項」だけで測る:
+  //   討伐由来 = 討伐報酬項(killsPerSec×base×KILL_VALUE_SEC) / 金 = 金クッキー項 / タップ = タップ項 / 設備 = cps。
+  // base はフル(_mdSet=null 固定)。除外するのは _mdChan で指定した「その稼ぎ口の直接項」のみ。
+  sim._mdSet = null;
+  sim._mdChan = { hunt: true }; clear();
+  const pNoHuntTerm = earningPowerSafe(sim);            // base + 金項(討伐報酬項のみ除外)
+  sim._mdChan = { hunt: true, golden: true }; clear();
+  const pCore = earningPowerSafe(sim);                  // base のみ(討伐報酬項・金項を除外)
   const prodCore = computeProd(sim);
   const tapRaw = prodCore.clickEV * (r.monster ? 0 : sim.strat.tapRate);
-  sim._mdSet = null; sim._mdChan = null; clear();
+  sim._mdChan = null; clear();
   if (!(pAll > 0) || !Number.isFinite(pAll) || !(pCore >= 0) || !Number.isFinite(pCore)) return null;
   const tap = Math.max(0, Math.min(tapRaw, pCore));
   return {
-    hunt: Math.max(0, pAll - pNoHunt),
-    golden: Math.max(0, pNoHunt - pCore),
+    hunt: Math.max(0, pAll - pNoHuntTerm),
+    golden: Math.max(0, pNoHuntTerm - pCore),
     tap,
     equip: Math.max(0, pCore - tap)
   };
