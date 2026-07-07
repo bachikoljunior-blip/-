@@ -87,7 +87,13 @@ module.exports = {
     // reachMaxSec=denom の上限クランプ(0=無効)。直前が極端に長い→短い周回で reach が未発火=T3a取りこぼし、を防ぐ。
     // 6000 で確定(sweep_maxsec.js で T3a と T3b を同時掃引): T3a全体 86→88%・S10 18/23@34% → 25/26@62%、
     // かつ T3b を維持(5000だと reach が早発して S8/S10 の T3b が落ちる。6000で S8 T3b40・S10 T3b17 を回復)。4000以下は位置が頭へ崩れる。
-    reachCoef: 20, reachPow: 10, reachMinSec: 600, reachMaxSec: 6000
+    reachCoef: 20, reachPow: 10, reachMinSec: 600, reachMaxSec: 6000,
+    // 提案10(第12次J・ユーザー承認): reach の分母 denom を「直前1周回の長さ」でなく
+    // 「直近 reachDenomK 周回の長さの移動中央値」にする。直前1周回だけだと周回長が乱高下する早期周回で
+    // denom が未成熟に小さく→ρ が早く閾値超え→未達が周回の頭(1〜3%)に寄る問題(第12次I=構造的と実証)を、
+    // 中央値のロバスト性で吸収する(1周回の外れ値に引きずられない)。reachMinSec/reachMaxSec は中央値の後に適用。
+    // reachDenomK=1 で旧挙動(=直前1周回)に一致。
+    reachDenomK: 1
   },
 
   // ---- 討伐連鎖(2026-07-07 ユーザー採用・0-2提案1) ----

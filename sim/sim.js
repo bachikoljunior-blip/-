@@ -339,6 +339,7 @@ function newSim(strategy, opts) {
     prestige: 0, prestigeTotal: 0, prestigeRuns: 0, totalCookies: 0,
     prevMaxStage: 0,            // 提案8: 前回周回の最高到達層(=再登坂の天井)。層の試練を新規開拓層基準へ相対化するのに使う。層数の表示・カウント(run.maxStage)は絶対累積のまま不変更。
     prevDuration: 0,            // 提案9(到達連動ノルマ): 前回周回の長さ(秒)。未達判定の進行比 ρ=経過秒/前回長 の分母。
+    durations: [],              // 提案10: 過去周回の長さ履歴(秒)。reach の分母を直近K周回の移動中央値にする。
     skills: {},
     everUpgrade: {}, everResearch: {}, everStage: {},
     unlockEvents: [],           // {t, kind, id}
@@ -476,6 +477,17 @@ function rewardCategoryBonus(sim, cat) {
   return lg(satLv(sim.run.rewardCategoryCounts[cat] || 0, P.rw.categoryHalf), P.rw.categoryBonusRate) - 1;
 }
 function elapsed(sim) { return sim.t - sim.run.startT; }
+// 提案10: reach の分母の基礎値=直近K周回の長さの移動中央値(reachMinSec/reachMaxSec 適用前)。
+// 履歴が空(初周回)なら prevDuration にフォールバック=旧挙動。中央値は1周回の外れ値に強い。
+function reachDenomBase(sim) {
+  const K = P.quota.reachDenomK || 1;
+  const hist = sim.durations || [];
+  if (K <= 1 || hist.length === 0) return sim.prevDuration || 0;
+  const win = hist.slice(-K);
+  const a = win.slice().sort((x, y) => x - y);
+  const m = Math.floor(a.length / 2);
+  return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+}
 
 function quotaControlMultiplier(sim) {
   let raw = 0;
@@ -1436,6 +1448,11 @@ function doPrestige(sim) {
   sim.prevMaxStage = r.maxStage;
   // 提案9: 今周回の長さを持ち越す(次周回の到達連動ノルマの進行比の分母)。
   sim.prevDuration = sim.t - r.startT;
+  // 提案10: 周回長の履歴に追加(reach の分母=直近K周回の移動中央値に使う)。
+  sim.durations.push(sim.prevDuration);
+  if (P.quota.reachDenomK > 0 && sim.durations.length > P.quota.reachDenomK) {
+    sim.durations.splice(0, sim.durations.length - P.quota.reachDenomK);
+  }
 
   // 新周回
   sim.run = newRun(sim);
@@ -1620,7 +1637,8 @@ function advanceTick(sim, strategy) {
       // runCookies×reachCoef×ρ^reachPow と runCookies を比べる=クッキー桁に依存せず ρ で未達位置が決まる。
       // 進行を層比でなく時間比にする(未達で層が凍結するため層比は序盤に寄る=第12次H実測)。
       if (quota !== null && quota > 0 && P.quota.reachCoef) {
-        let denom = Math.max(sim.prevDuration || 0, P.quota.reachMinSec || 0);
+        // 提案10: 分母は直近K周回の長さの移動中央値(履歴が空なら直前1周回=旧挙動へフォールバック)。
+        let denom = Math.max(reachDenomBase(sim), P.quota.reachMinSec || 0);
         // reachMaxSec>0 のとき denom を上限クランプ(直前が極端に長い→短い周回で reach 未発火を防ぐ)。
         if (P.quota.reachMaxSec) denom = Math.min(denom, P.quota.reachMaxSec);
         if (denom > 0) {
@@ -1671,7 +1689,7 @@ function takeSnapshot(sim) {
   return structuredClone({
     t: sim.t, prestige: sim.prestige, prestigeTotal: sim.prestigeTotal,
     prestigeRuns: sim.prestigeRuns, totalCookies: sim.totalCookies,
-    prevMaxStage: sim.prevMaxStage, prevDuration: sim.prevDuration,
+    prevMaxStage: sim.prevMaxStage, prevDuration: sim.prevDuration, durations: sim.durations,
     skills: sim.skills, rotIdx: sim.rotIdx, upRotIdx: sim.upRotIdx, goldenAlt: sim.goldenAlt,
     firstResearchBuy: sim.firstResearchBuy, firstPerk: sim.firstPerk, firstStageBuy: sim.firstStageBuy,
     run: sim.run
@@ -1686,6 +1704,7 @@ function replayRun(strategy, snap, opts, capSec) {
   sim.prestigeRuns = s.prestigeRuns; sim.totalCookies = s.totalCookies;
   sim.prevMaxStage = s.prevMaxStage || 0;
   sim.prevDuration = s.prevDuration || 0;
+  sim.durations = (s.durations || []).slice();
   sim.skills = s.skills; sim.rotIdx = s.rotIdx; sim.upRotIdx = s.upRotIdx; sim.goldenAlt = s.goldenAlt;
   sim.firstResearchBuy = s.firstResearchBuy; sim.firstPerk = s.firstPerk; sim.firstStageBuy = s.firstStageBuy;
   sim.run = s.run;
