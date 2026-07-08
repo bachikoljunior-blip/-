@@ -6390,7 +6390,25 @@ const JAPANESE_NUMBER_UNITS = [
   "阿僧祇",
   "那由他",
   "不可思議",
-  "無量大数"
+  "無量大数",
+  // ここから先は華厳経・阿僧祇品に由来する実在の大数名(各段に2乗=「〜転」がある)。
+  // 無量(大数)の次から、不可説不可説転(実在最大)まで実名を差し込む。
+  "無辺",
+  "無辺転",
+  "無等",
+  "無等転",
+  "不可数",
+  "不可数転",
+  "不可称",
+  "不可称転",
+  "不可思",
+  "不可思転",
+  "不可量",
+  "不可量転",
+  "不可説",
+  "不可説転",
+  "不可説不可説",
+  "不可説不可説転"
 ];
 
 const HUGE_PREFIX = [
@@ -6451,12 +6469,26 @@ function hasBadCharRepeat(text) {
   return false;
 }
 
+// 華厳経の「不可説不可説転」に倣った意図的な畳語:同じ概念語を重ねて末尾に「転」。
+// 偶発的な 虚空虚空 とは違い、末尾の「転」が付くことで様式的な名前として読める。
+function isReduplicationIdiom(name) {
+  if (!name.endsWith("転")) return false;
+  const body = name.slice(0, -1);
+  const chars = Array.from(body);
+  if (chars.length < 4 || chars.length % 2 !== 0) return false;
+  const half = chars.length / 2;
+  const first = chars.slice(0, half).join("");
+  if (first !== chars.slice(half).join("")) return false;
+  return HUGE_LONG_WORDS.includes(first);
+}
+
 function validHugeUnitName(name) {
   if (!name) return false;
   if (unitLength(name) < 2) return false;
   if (unitLength(name) > 14) return false;
-  if (hasBadCharRepeat(name)) return false;
   if (JAPANESE_NUMBER_UNITS.includes(name)) return false;
+  if (isReduplicationIdiom(name)) return true;  // 意図的な畳語(◯◯◯◯転)は許容
+  if (hasBadCharRepeat(name)) return false;
   return true;
 }
 
@@ -6494,11 +6526,13 @@ function buildHugeUnitCandidate(seed) {
   }
 
   // 3%：レア長名。10〜14文字くらい。
-  const rareType = hashUnitSeed(seed * 79 + 19) % 4;
+  const rareType = hashUnitSeed(seed * 79 + 19) % 5;
 
-  if (rareType === 0) return a + d + "無量";
-  if (rareType === 1) return "不可" + d + e + f;
-  if (rareType === 2) return a + "恒河" + e + c;
+  // 不可説不可説転 に倣った畳語(同じ概念語を重ねて「転」)。実在の桁名様式のレア枠。
+  if (rareType === 0) return d + d + "転";
+  if (rareType === 1) return a + d + "無量";
+  if (rareType === 2) return "不可" + d + e + f;
+  if (rareType === 3) return a + "恒河" + e + c;
   return d + "夢" + e + "数";
 }
 
