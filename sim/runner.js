@@ -850,13 +850,13 @@ if (mode === 'baseline') {
   }
   const CH_NAME = { equip: '設備生産', golden: '金クッキー', hunt: '討伐由来', tap: 'タップ' };
   console.log(`=== ㉘稼ぎ口比率(${H}h・周回シェア=各tickシェアの周回平均) ===`);
-  let okAll = 0, allAll = 0;
+  let okAll = 0, allAll = 0, c2okAll = 0, c2allAll = 0;
   for (const pol of ['balanced', 'click', 'golden', 'hunt', 'bake']) {
     const s = reps[pol];
     if (!s) { console.log(`${pol}: 代表方針なし NG`); continue; }
     const sim = G.simulate(s, { hours: H, measure: true });
     const full = sim.runs.filter(r => !r.partial && r.measure && r.measure.income);
-    let ok = 0, all = 0;
+    let ok = 0, all = 0, c2ok = 0, c2all = 0;
     const rows = [];
     for (const r of full) {
       const gateList = ROLE_RESEARCH[pol] || ALL_ROLE_RES;
@@ -871,14 +871,26 @@ if (mode === 'baseline') {
       const bPass = true;
       const pass = aPass && bPass;
       if (gated) { all++; if (pass) ok++; }
-      rows.push(`  run${String(r.idx).padStart(2)} ${gated ? '対象' : '対象外'} 設備${(shares.equip * 100).toFixed(0)}% 金${(shares.golden * 100).toFixed(0)}% 討伐${(shares.hunt * 100).toFixed(0)}% タップ${(shares.tap * 100).toFixed(0)}%${gated ? ` → (a)${aPass ? 'OK' : 'NG'} (b)${bPass ? 'OK' : 'NG'}` : ''}`);
+      // ②(改・ジャンル単位の一強禁止・2026-07-08 ユーザー承認): 収入をジャンル(設備/金/討伐/タップ)に束ねた
+      // lift(=1/(1-share))を出し、その方針の得意ジャンルの lift が全ジャンル lift 幾何平均の±1.5倍以内。
+      // 得意ジャンルが突出しすぎない(=他ジャンルも腐らない)を担保。個々の研究の±1.5(構造的に不可能)を置換。
+      let c2 = true;
+      if (gated && ROLE_CHANNEL[pol]) {
+        const gl = ['equip', 'golden', 'hunt', 'tap'].map(k => 1 / Math.max(1e-6, 1 - Math.min(0.999, shares[k])));
+        const gm = Math.exp(gl.reduce((a, b) => a + Math.log(b), 0) / gl.length);
+        const spec = 1 / Math.max(1e-6, 1 - Math.min(0.999, shares[ROLE_CHANNEL[pol]]));
+        c2 = spec >= gm / 1.5 && spec <= gm * 1.5;
+        c2all++; if (c2) c2ok++;
+      }
+      rows.push(`  run${String(r.idx).padStart(2)} ${gated ? '対象' : '対象外'} 設備${(shares.equip * 100).toFixed(0)}% 金${(shares.golden * 100).toFixed(0)}% 討伐${(shares.hunt * 100).toFixed(0)}% タップ${(shares.tap * 100).toFixed(0)}%${gated ? ` → (a)${aPass ? 'OK' : 'NG'} ②改${c2 ? 'OK' : 'NG'}` : ''}`);
     }
-    okAll += ok; allAll += all;
+    okAll += ok; allAll += all; c2okAll += c2ok; c2allAll += c2all;
     const role = ROLE_CHANNEL[pol] ? `主役=${CH_NAME[ROLE_CHANNEL[pol]]}≥30%` : '4つすべて≥10%';
     console.log(`${pol}(${s.id} ${s.name}) ${role}: ${ok}/${all}周回 合格`);
     rows.forEach(x => console.log(x));
   }
   console.log(`㉘合計: ${okAll}/${allAll}周回`);
+  console.log(`②(改・ジャンル一強禁止 得意ジャンルlift≤±1.5倍) 合計: ${c2okAll}/${c2allAll}周回`);
 } else if (mode === 'skillsum') {
   let sum = 0;
   for (const n of G.SKILL_NODES) sum += G.skillCostOf(n);
