@@ -11129,19 +11129,19 @@ function researchFormulaText(r) {
 
   if (r.id === "grandmaCrowd") {
     const g = state.upgrades.grandma || 0;
-    return `式：強い指補助 = 1.007^おばあちゃん / オーブン補助 = 1.008^おばあちゃん / 工場補助 = 1.009^おばあちゃん / 現在：おばあちゃん ${fmt(g)}人、指 x${levelGrowth(g, 0.007).toFixed(3)}、炉 x${levelGrowth(g, 0.008).toFixed(3)}、工場 x${levelGrowth(g, 0.009).toFixed(3)}`;
+    return `式：強い指補助 = 1.002^おばあちゃん / オーブン補助 = 1.0025^おばあちゃん / 工場補助 = 1.003^おばあちゃん / 現在：おばあちゃん ${fmt(g)}人、指 x${levelGrowth(g, 0.002).toFixed(3)}、炉 x${levelGrowth(g, 0.0025).toFixed(3)}、工場 x${levelGrowth(g, 0.003).toFixed(3)}`;
   }
 
   if (r.id === "ovenBatch") {
     const oven = state.upgrades.oven || 0;
     const stage = currentQuotaStageNumber();
-    return `式：オーブン研究倍率 = 9 × 1.008^オーブン数 × 1.012^(ノルマ層 - 1) × 方針補正 / 現在：オーブン ${fmt(oven)}個、第${fmt(stage)}層、倍率 x${(9 * ovenStageMultiplier()).toFixed(3)}`;
+    return `式：オーブン研究倍率 = 9 × 1.008^オーブン数 × 1.004^(ノルマ層 - 1) × 方針補正 / 現在：オーブン ${fmt(oven)}個、第${fmt(stage)}層、倍率 x${(9 * ovenStageMultiplier()).toFixed(3)}`;
   }
 
   if (r.id === "factoryNetwork") {
     const low = (state.upgrades.finger || 0) + (state.upgrades.grandma || 0) + (state.upgrades.oven || 0);
     const factory = state.upgrades.factory || 0;
-    return `式：工場倍率 = 9 × 1.002^(強い指+おばあちゃん+オーブン) × 1.060^工場数 / 現在：低ランク設備 ${fmt(low)}個、工場 ${fmt(factory)}個、倍率 x${(9 * factoryNetworkMultiplier()).toFixed(3)}`;
+    return `式：工場倍率 = 9 × 1.002^(強い指+おばあちゃん+オーブン) × 1.008^工場数 / 現在：低ランク設備 ${fmt(low)}個、工場 ${fmt(factory)}個、倍率 x${(9 * factoryNetworkMultiplier()).toFixed(3)}`;
   }
 
   if (r.id === "spiceBlend") {
