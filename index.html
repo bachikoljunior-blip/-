@@ -6393,6 +6393,16 @@ const JAPANESE_NUMBER_UNITS = [
   "無量大数"
 ];
 
+// 華厳経・阿僧祇品の大数(無辺〜不可説不可説転)は各段が前段の2乗で伸びるため、
+// 10^4刻みの桁には収まらない。実在の magnitude 通りの桁位置に差し込む。
+// 指数 E = 37×2^p、桁 level = floor(E/4) = 37×2^(p-2)(厳密な倍精度整数)。
+const REAL_HIGH_UNITS = [
+  ["無辺", 107], ["無辺転", 108], ["無等", 109], ["無等転", 110],
+  ["不可数", 111], ["不可数転", 112], ["不可称", 113], ["不可称転", 114],
+  ["不可思", 115], ["不可思転", 116], ["不可量", 117], ["不可量転", 118],
+  ["不可説", 119], ["不可説転", 120], ["不可説不可説", 121], ["不可説不可説転", 122]
+].map(([name, p]) => ({ name, level: 37 * Math.pow(2, p - 2) }));
+
 const HUGE_PREFIX = [
   "虚", "黒", "白", "夢", "幽", "深", "星", "灰", "空", "逆",
   "霊", "天", "古", "零", "幻", "滅", "永", "冥", "蒼", "紅",
@@ -6433,22 +6443,44 @@ function unitLength(text) {
   return Array.from(String(text || "")).length;
 }
 
-function hasConsecutiveSameChar(text) {
+// 程度・度合いを表す字(極=極み、劫=永劫)だけは、強調として名前内に離れて
+// 二回現れてもよい。物・場所・粒・概念(域・界・海・星・砂・塵 や 虚空・恒河 等)は
+// 重ねると事故に見えるので不可。度合い字であっても隣接の重複(極極・劫劫)は不可。
+const REPEATABLE_UNIT_CHARS = new Set(["極", "劫"]);
+
+function hasBadCharRepeat(text) {
   const chars = Array.from(String(text || ""));
-  for (let i = 1; i < chars.length; i++) {
-    if (chars[i] === chars[i - 1]) return true;
+  const seen = new Set();
+  for (let i = 0; i < chars.length; i++) {
+    const c = chars[i];
+    if (i > 0 && c === chars[i - 1]) return true; // 隣接の重複はどの字も不可
+    if (REPEATABLE_UNIT_CHARS.has(c)) continue;    // 度合い字は離れた重複のみ許容
+    if (seen.has(c)) return true;
+    seen.add(c);
   }
   return false;
+}
+
+// 華厳経の「不可説不可説転」に倣った意図的な畳語:同じ概念語を重ねて末尾に「転」。
+// 偶発的な 虚空虚空 とは違い、末尾の「転」が付くことで様式的な名前として読める。
+function isReduplicationIdiom(name) {
+  if (!name.endsWith("転")) return false;
+  const body = name.slice(0, -1);
+  const chars = Array.from(body);
+  if (chars.length < 4 || chars.length % 2 !== 0) return false;
+  const half = chars.length / 2;
+  const first = chars.slice(0, half).join("");
+  if (first !== chars.slice(half).join("")) return false;
+  return HUGE_LONG_WORDS.includes(first);
 }
 
 function validHugeUnitName(name) {
   if (!name) return false;
   if (unitLength(name) < 2) return false;
   if (unitLength(name) > 14) return false;
-  if (hasConsecutiveSameChar(name)) return false;
-  if (name.includes("不可不可")) return false;
-  if (name.includes("無音無音")) return false;
   if (JAPANESE_NUMBER_UNITS.includes(name)) return false;
+  if (isReduplicationIdiom(name)) return true;  // 意図的な畳語(◯◯◯◯転)は許容
+  if (hasBadCharRepeat(name)) return false;
   return true;
 }
 
@@ -6486,11 +6518,13 @@ function buildHugeUnitCandidate(seed) {
   }
 
   // 3%：レア長名。10〜14文字くらい。
-  const rareType = hashUnitSeed(seed * 79 + 19) % 4;
+  const rareType = hashUnitSeed(seed * 79 + 19) % 5;
 
-  if (rareType === 0) return a + d + "無量";
-  if (rareType === 1) return "不可" + d + e + f;
-  if (rareType === 2) return a + "恒河" + e + c;
+  // 不可説不可説転 に倣った畳語(同じ概念語を重ねて「転」)。実在の桁名様式のレア枠。
+  if (rareType === 0) return d + d + "転";
+  if (rareType === 1) return a + d + "無量";
+  if (rareType === 2) return "不可" + d + e + f;
+  if (rareType === 3) return a + "恒河" + e + c;
   return d + "夢" + e + "数";
 }
 
@@ -6499,6 +6533,11 @@ function generateHugeUnit(level) {
 
   if (level < JAPANESE_NUMBER_UNITS.length) {
     return JAPANESE_NUMBER_UNITS[level];
+  }
+
+  // 華厳経の実在大数は、その本来の magnitude に一致する桁でだけ実名を返す。
+  for (const u of REAL_HIGH_UNITS) {
+    if (level === u.level) return u.name;
   }
 
   const n = level - JAPANESE_NUMBER_UNITS.length + 1;
