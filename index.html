@@ -3829,24 +3829,49 @@
       flex: 0 0 auto;
     }
 
+    /* メダル画像自体をボタンにするので、背景・枠などのUIは持たせない */
     .buyModeBtn {
-      flex: 1 1 auto;
-      padding: 7px 4px;
-      border-radius: 8px;
-      border: 1px solid rgba(255, 213, 138, 0.34);
-      background: linear-gradient(180deg, rgba(64, 40, 24, 0.95), rgba(34, 20, 11, 0.97));
+      flex: 1 1 0;
+      min-width: 0;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: none;
+      box-shadow: none;
       color: #e8cfa4;
       font-size: 12px;
       font-weight: 900;
-      box-shadow: inset 0 1px 0 rgba(255, 232, 168, 0.08), 0 2px 6px rgba(0, 0, 0, 0.3);
       touch-action: manipulation;
+      /* 非選択は少し沈める。選択中との差を出す */
+      filter: saturate(0.8) brightness(0.72);
+      transition: filter 0.15s ease, transform 0.1s ease;
     }
 
+    /* 倍率メダル画像はボタンの空きいっぱいまで大きく表示(絵に×1等が入っているので文字は出さない) */
+    .buyModeBtn .buyIcon {
+      width: 100%;
+      height: auto;
+      max-width: 100%;
+      margin: 0;
+      object-fit: contain;
+      display: block;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+    }
+
+    /* 選択中は明るく・少し大きく・淡く光らせる(枠なしでも分かるように) */
     .buyModeBtn.active {
-      background: linear-gradient(180deg, rgba(255, 200, 105, 0.95), rgba(180, 100, 30, 0.95));
-      border-color: rgba(255, 224, 158, 0.6);
-      color: #2a1608;
-      box-shadow: 0 0 10px rgba(255, 180, 70, 0.35);
+      filter: none;
+      transform: scale(1.08);
+    }
+
+    .buyModeBtn.active .buyIcon {
+      filter: drop-shadow(0 0 9px rgba(255, 190, 80, 0.75)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+    }
+
+    .buyModeBtn:active {
+      transform: scale(0.94);
     }
 
     /* 購入成功時のきらめき */
@@ -6221,8 +6246,10 @@ function applyUiIcons() {
       const src = ASSETS.buyModes && ASSETS.buyModes[btn.dataset.buymode];
       if (src && !btn.querySelector(".buyIcon")) {
         const img = document.createElement("img");
-        img.className = "buyIcon"; img.alt = ""; img.setAttribute("aria-hidden", "true");
+        img.className = "buyIcon"; img.alt = btn.textContent.trim();
         img.src = assetUrl(src);
+        // メダル画像に×1等の表記が入っているので、重複する文字ラベルは消す
+        [...btn.childNodes].forEach(n => { if (n.nodeType === 3) n.remove(); });
         btn.insertBefore(img, btn.firstChild);
       }
     });
