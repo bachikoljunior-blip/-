@@ -6556,6 +6556,47 @@ function fmt(n) {
   return sign + fmtShortJapaneseUnitNumber(scaled) + unit;
 }
 
+// クッキー画面のクッキー数専用: 1,000,000 までは桁を省略せず全表示、
+// それを超えたら有効数字6桁で省略表記する。
+function fmtSixSigMantissa(scaled) {
+  const abs = Math.abs(scaled);
+  const decimals = abs >= 1000 ? 2 : abs >= 100 ? 3 : abs >= 10 ? 4 : 5; // 整数部桁数 + 小数桁 = 6桁
+  let s = abs.toFixed(decimals);
+  if (s.indexOf(".") >= 0) s = s.replace(/\.?0+$/, ""); // 末尾の0は落とす
+  return s;
+}
+
+function fmtCookieCountNumber(n) {
+  if (!Number.isFinite(n)) return "∞";
+  const sign = n < 0 ? "-" : "";
+  const abs = Math.abs(n);
+
+  if (abs <= 1000000) return sign + String(Math.floor(abs)); // 100万までは全桁表示
+
+  let level = Math.max(0, Math.min(77, Math.floor(Math.log10(abs) / 4 + 1e-12)));
+  let scaled = abs / Math.pow(10000, level);
+  // 6桁丸めで桁上がりした場合は単位を1つ繰り上げる
+  let decimals = scaled >= 1000 ? 2 : scaled >= 100 ? 3 : scaled >= 10 ? 4 : 5;
+  if (Number(scaled.toFixed(decimals)) >= 10000 && level < 77) {
+    level += 1;
+    scaled /= 10000;
+  }
+  return sign + fmtSixSigMantissa(scaled) + generateHugeUnit(level);
+}
+
+function fmtCookieCount(n) {
+  if (n instanceof Decimal) {
+    if (!n.isFinite()) return "∞";
+    if (n.e <= 300) return fmtCookieCountNumber(n.toNumber());
+    const sign = n.sign < 0 ? "-" : "";
+    const log = n.log10();
+    const level = Math.max(0, Math.floor(log / 4 + 1e-12));
+    const scaled = Math.pow(10, log - 4 * level);
+    return sign + fmtSixSigMantissa(scaled) + generateHugeUnit(level);
+  }
+  return fmtCookieCountNumber(Number(n) || 0);
+}
+
 // コスト表示用: 小数を出さない(切り捨て)。省略表記でも仮数部を整数化する
 function fmtCost(n) {
   if (n instanceof Decimal) {
@@ -10010,7 +10051,7 @@ function checkQuotaStageTransition() {
 }
 
 function updateTopOnly() {
-  $("cookies").textContent = fmt(state.cookies);
+  $("cookies").textContent = fmtCookieCount(state.cookies);
   const cpsEl = $("cookieCps");
   if (cpsEl) cpsEl.textContent = pausedForSkillChoice() ? "合計毎秒 準備中" : "合計毎秒 " + fmt(currentCps());
 
