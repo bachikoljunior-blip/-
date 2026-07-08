@@ -11038,14 +11038,14 @@ function codexGoldenHtml() {
     items.push(codexItem("金ブースト倍率(全生産×)",
       `<div>金ブーストの倍率。金クッキーを取ると約50%の確率で発動し、一定時間すべての生産が倍増する。</div>`
       + (analyzed
-        ? `<div>式：追加倍率 = 2.1 + 強化Lv・スキル・方針・報酬系統 の合算（香料圧搾機で ×）</div>`
+        ? `<div>基準は追加 x2.1。報酬「金ブースト倍率アップ」・スキル・金色型の方針で上がる。</div>`
           + `<div class="codexSub">現在：追加 x${goldenMultiplier().toFixed(2)}</div>`
         : lock),
       goldenIcon));
     items.push(codexItem("金ブースト持続時間",
-      `<div>金ブーストが続く時間。周回経過・報酬・スキルで伸びる。</div>`
+      `<div>金ブーストが続く時間。</div>`
       + (analyzed
-        ? `<div>式：持続 = 9秒 + 26秒 × 追加 ÷ (追加 + 60000)（最大 約35秒に近づく）</div>`
+        ? `<div>基準は9秒。報酬「金ブースト倍率アップ／獲得量アップ」・スキル・金色型の方針、周回の経過で伸び、最大 約35秒に近づく。</div>`
           + `<div class="codexSub">現在：持続 ${(goldenBoostDuration() / 1000).toFixed(1)}秒</div>`
         : lock),
       goldenIcon));
@@ -11055,8 +11055,8 @@ function codexGoldenHtml() {
     items.push(codexItem("即時クッキー獲得",
       `<div>金クッキーを取ると約50%の確率で、まとまったクッキーを即座に獲得する。</div>`
       + (analyzed
-        ? `<div>式：獲得量 = max(100, 毎秒×2.5, タップ×2.5) × 獲得量倍率</div>`
-          + `<div>式：獲得量倍率 = 1 + 報酬Lv・スキル・方針・ステージ補正</div>`
+        ? `<div>獲得量は「毎秒生産 ×2.5」と「タップ生産 ×2.5」の大きい方（最低100）× 獲得量倍率。</div>`
+          + `<div>獲得量倍率は報酬「金クッキー獲得量アップ」・スキル・金色型の方針・ステージで上がる。</div>`
           + `<div class="codexSub">現在：獲得量倍率 x${goldenAmountMultiplier().toFixed(2)}</div>`
         : lock),
       goldenIcon));
@@ -11065,8 +11065,8 @@ function codexGoldenHtml() {
   // 出現間隔はスキル「金色観測」で初めて観測できる読み取り値なので、解放後のみ表示する
   if (codex.goldenSeen && analyzed) {
     items.push(codexItem("出現間隔",
-      `<div>金クッキーが出現する間隔。強化や方針で短くなる。</div>`
-      + `<div>式：出現間隔倍率 = exp(−出現率強化・スキル・方針・報酬) × 周回テンポ × 焼成/ステージ補正（小さいほど速く出る）</div>`
+      `<div>金クッキーが出現する間隔。</div>`
+      + `<div>報酬「金クッキー出現率アップ」・スキル・金色型の方針で間隔が短くなる（倍率が小さいほど速く出る）。料理「ミントアイスサンド」やステージでも変わる。</div>`
       + `<div class="codexSub">現在：間隔倍率 x${goldenSpawnFactor().toFixed(3)}</div>`,
       goldenIcon));
   }
@@ -11124,10 +11124,74 @@ function codexWorkshopHtml() {
   return parts.join("");
 }
 
+function codexOrderHtml() {
+  if (!orderBoardUnlocked()) {
+    return `<div class="codexEmpty">スキル「注文ボード」を解放すると表示されます。</div>`;
+  }
+  const done = Math.max(0, Number(state.completedOrders) || 0);
+  if (done <= 0) {
+    return `<div class="codexEmpty">注文を達成すると、ここに表示されます。</div>`;
+  }
+  const orderIcon = ASSETS.screens && ASSETS.screens.order;
+  return [
+    codexItem("注文の仕組み",
+      `<div>ノルマの進行に応じて短期目標(注文)が届く。制限時間内に達成すると報酬。同時に1件のみ。</div>`
+      + `<div>制限時間は、プレイ時間が長くなるほど少しずつ伸びる。</div>`
+      + `<div>次の注文までの間隔は、転生するほど短くなる。</div>`
+      + `<div>要求量は、そのときの生産力や討伐ペースに合わせて決まる（放置では届かないが、動けば届く量）。</div>`
+      + `<div class="codexSub">現在：制限時間 ${Math.round(orderTimeLimitMs() / 1000)}秒 / 次の注文間隔 ${Math.round(orderSpawnIntervalMs() / 1000)}秒 / 達成数 ${fmt(done)}</div>`,
+      orderIcon),
+    codexItem("注文の報酬",
+      `<div>注文の種類によって報酬が変わる。</div>`
+      + `<div>・クッキー：毎秒生産に応じたまとまった量を獲得</div>`
+      + `<div>・素材セット：選択中ステージの基本素材 +5（工房の解放時）</div>`
+      + `<div>・毎秒生産 x2（120秒）</div>`,
+      orderIcon)
+  ].join("");
+}
+
+function codexMonsterRewardHtml() {
+  const taken = REWARD_POOL.filter(r => ((state.perks || {})[r.id] || 0) > 0);
+  const monsterIcon = ASSETS.objects && ASSETS.objects.cookieMonster;
+
+  if (!taken.length && !rewardSynergyUnlocked()) {
+    return `<div class="codexEmpty">モンスターを倒して報酬を選ぶと、ここに表示されます。</div>`;
+  }
+
+  const catName = { golden: "金色", hunt: "狩猟", equipment: "設備", risk: "危険" };
+  const catOrder = ["golden", "hunt", "equipment", "risk"];
+  const parts = [];
+
+  // 報酬系統ボーナスはスキルで解放されて初めて存在する効果なので、解放後のみ表示する
+  if (rewardSynergyUnlocked()) {
+    parts.push(codexItem("報酬系統ボーナス",
+      `<div>同じ系統の報酬を多く取るほど、その系統の効果が少しずつ伸びる。</div>`
+      + catOrder.map(c => `<div class="codexSub">${catName[c]}：取得 ${fmt((state.rewardCategoryCounts || {})[c] || 0)} → 補正 x${(1 + rewardCategoryBonus(c)).toFixed(3)}</div>`).join(""),
+      monsterIcon));
+  }
+
+  catOrder.forEach(cat => {
+    const list = taken.filter(r => (r.category || "equipment") === cat);
+    if (!list.length) return;
+    parts.push(`<div class="codexGroupLabel">${catName[cat]}系の報酬</div>`);
+    list.forEach(r => {
+      const lv = state.perks[r.id];
+      parts.push(codexItem(`${r.name} Lv.${lv}`, `<div>現在効果：${r.desc(lv)}</div>`, monsterIcon));
+    });
+  });
+
+  if (!parts.length) {
+    return `<div class="codexEmpty">モンスターを倒して報酬を選ぶと、ここに表示されます。</div>`;
+  }
+  return parts.join("");
+}
+
 function codexTabDefs() {
   return [
     { id: "golden", name: "金クッキー", icon: ASSETS.objects && ASSETS.objects.goldenCookie, show: () => true },
+    { id: "monster", name: "モンスター報酬", icon: ASSETS.objects && ASSETS.objects.cookieMonster, show: () => true },
     { id: "research", name: "研究", icon: ASSETS.screens && ASSETS.screens.research, show: () => true },
+    { id: "order", name: "注文ボード", icon: ASSETS.screens && ASSETS.screens.order, show: () => orderBoardUnlocked() },
     { id: "workshop", name: "工房", icon: ASSETS.screens && ASSETS.screens.workshop, show: () => workshopTabUnlocked() }
   ];
 }
@@ -11149,7 +11213,9 @@ function renderCodex() {
 
   let html = "";
   if (codexTabId === "golden") html = codexGoldenHtml();
+  else if (codexTabId === "monster") html = codexMonsterRewardHtml();
   else if (codexTabId === "research") html = codexResearchHtml();
+  else if (codexTabId === "order") html = codexOrderHtml();
   else if (codexTabId === "workshop") html = codexWorkshopHtml();
   $("codexBody").innerHTML = html;
 }
