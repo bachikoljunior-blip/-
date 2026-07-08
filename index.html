@@ -7775,7 +7775,6 @@ function renderOrder() {
           <span class="orderTimeVal">${fmtTime(remainSec)}</span>
         </div>
         <div class="desc">報酬：${orderRewardText(order)}</div>
-        <div class="orderFormula">${orderFormulaText(order)}</div>
       </div>
       <div class="desc">達成済み注文：${fmt(state.completedOrders || 0)}${(state.expiredOrders ? ` ／ 期限切れ：${fmt(state.expiredOrders)}` : "")}</div>
     </div>
@@ -11063,6 +11062,11 @@ function codexItem(title, body, iconUrl) {
   return `<details class="codexItem"><summary>${icon}<span class="codexItemName">${title}</span></summary><div class="codexItemBody">${body}</div></details>`;
 }
 
+// 未発動の項目：欄(スロット)は出すが、名前と内容は伏せる
+function codexHiddenItem() {
+  return codexItem("？？？", `<div class="codexLock">まだ発動していません。発動すると内容が表示されます。</div>`);
+}
+
 function codexGoldenHtml() {
   const codex = state.codex || {};
   const analyzed = hasSkillEffect("unlockSystem", "goldenAnalysis");
@@ -11071,56 +11075,61 @@ function codexGoldenHtml() {
 
   const items = [];
 
-  if (codex.goldenBoost) {
-    items.push(codexItem("金ブースト倍率(全生産×)",
-      `<div>金ブーストの倍率。金クッキーを取ると約50%の確率で発動し、一定時間すべての生産が倍増する。</div>`
-      + (analyzed
-        ? `<div>基準は追加 x2.1。報酬「金ブースト倍率アップ」・スキル・金色型の方針で上がる。</div>`
-          + `<div class="codexSub">現在：追加 x${goldenMultiplier().toFixed(2)}</div>`
-        : lock),
-      goldenIcon));
-    items.push(codexItem("金ブースト持続時間",
-      `<div>金ブーストが続く時間。</div>`
-      + (analyzed
-        ? `<div>基準は9秒。報酬「金ブースト倍率アップ／獲得量アップ」・スキル・金色型の方針、周回の経過で伸び、最大 約35秒に近づく。</div>`
-          + `<div class="codexSub">現在：持続 ${(goldenBoostDuration() / 1000).toFixed(1)}秒</div>`
-        : lock),
-      goldenIcon));
-  }
+  // 金ブースト倍率(発動前は伏せる)
+  items.push(codex.goldenBoost
+    ? codexItem("金ブースト倍率(全生産×)",
+        `<div>金ブーストの倍率。金クッキーを取ると約50%の確率で発動し、一定時間すべての生産が倍増する。</div>`
+        + (analyzed
+          ? `<div>基準は追加 x2.1。報酬「金ブースト倍率アップ」・スキル・金色型の方針で上がる。</div>`
+            + `<div class="codexSub">現在：追加 x${goldenMultiplier().toFixed(2)}</div>`
+          : lock),
+        goldenIcon)
+    : codexHiddenItem());
 
-  if (codex.goldenInstant) {
-    items.push(codexItem("即時クッキー獲得",
-      `<div>金クッキーを取ると約50%の確率で、まとまったクッキーを即座に獲得する。</div>`
-      + (analyzed
-        ? `<div>獲得量は「毎秒生産 ×2.5」と「タップ生産 ×2.5」の大きい方（最低100）× 獲得量倍率。</div>`
-          + `<div>獲得量倍率は報酬「金クッキー獲得量アップ」・スキル・金色型の方針・ステージで上がる。</div>`
-          + `<div class="codexSub">現在：獲得量倍率 x${goldenAmountMultiplier().toFixed(2)}</div>`
-        : lock),
-      goldenIcon));
-  }
+  // 金ブースト持続時間(発動前は伏せる)
+  items.push(codex.goldenBoost
+    ? codexItem("金ブースト持続時間",
+        `<div>金ブーストが続く時間。</div>`
+        + (analyzed
+          ? `<div>基準は9秒。報酬「金ブースト倍率アップ／獲得量アップ」・スキル・金色型の方針、周回の経過で伸び、最大 約35秒に近づく。</div>`
+            + `<div class="codexSub">現在：持続 ${(goldenBoostDuration() / 1000).toFixed(1)}秒</div>`
+          : lock),
+        goldenIcon)
+    : codexHiddenItem());
 
-  // 出現間隔はスキル「金色観測」で初めて観測できる読み取り値なので、解放後のみ表示する
-  if (codex.goldenSeen && analyzed) {
-    items.push(codexItem("出現間隔",
-      `<div>金クッキーが出現する間隔。</div>`
-      + `<div>報酬「金クッキー出現率アップ」・スキル・金色型の方針で間隔が短くなる（倍率が小さいほど速く出る）。料理「ミントアイスサンド」やステージでも変わる。</div>`
-      + `<div class="codexSub">現在：間隔倍率 x${goldenSpawnFactor().toFixed(3)}</div>`,
-      goldenIcon));
-  }
+  // 即時クッキー獲得(発動前は伏せる)
+  items.push(codex.goldenInstant
+    ? codexItem("即時クッキー獲得",
+        `<div>金クッキーを取ると約50%の確率で、まとまったクッキーを即座に獲得する。</div>`
+        + (analyzed
+          ? `<div>獲得量は「毎秒生産 ×2.5」と「タップ生産 ×2.5」の大きい方（最低100）× 獲得量倍率。</div>`
+            + `<div>獲得量倍率は報酬「金クッキー獲得量アップ」・スキル・金色型の方針・ステージで上がる。</div>`
+            + `<div class="codexSub">現在：獲得量倍率 x${goldenAmountMultiplier().toFixed(2)}</div>`
+          : lock),
+        goldenIcon)
+    : codexHiddenItem());
 
-  if (!items.length) {
-    return `<div class="codexEmpty">金クッキーを取って効果を発動すると、ここに表示されます。</div>`;
-  }
+  // 出現間隔はスキル「金色観測」で初めて観測できる読み取り値。未解放なら伏せる
+  items.push(analyzed
+    ? codexItem("出現間隔",
+        `<div>金クッキーが出現する間隔。</div>`
+        + `<div>報酬「金クッキー出現率アップ」・スキル・金色型の方針で間隔が短くなる（倍率が小さいほど速く出る）。料理「ミントアイスサンド」やステージでも変わる。</div>`
+        + `<div class="codexSub">現在：間隔倍率 x${goldenSpawnFactor().toFixed(3)}</div>`,
+        goldenIcon)
+    : codexHiddenItem());
+
   return items.join("");
 }
 
 function codexResearchHtml() {
-  const owned = RESEARCH.filter(r => state.research[r.id]);
-  if (owned.length === 0) {
-    return `<div class="codexEmpty">研究を取得すると、ここに効果と式がまとめられます。</div>`;
+  // 解放済み(購入可能になった)研究の欄を並べ、未取得は伏せる
+  const available = RESEARCH.filter(r => researchUnlocked(r));
+  if (!available.length) {
+    return `<div class="codexEmpty">研究が解放されると、ここに欄が並びます。</div>`;
   }
   const analyzed = researchAnalysisUnlocked();
-  return owned.map(r => {
+  return available.map(r => {
+    if (!state.research[r.id]) return codexHiddenItem();
     let body;
     if (analyzed) {
       const f = researchFormulaText(r);
@@ -11138,28 +11147,33 @@ function codexWorkshopHtml() {
   if (!workshopTabUnlocked()) {
     return `<div class="codexEmpty">スキル「工房の拡張」を解放すると表示されます。</div>`;
   }
-  const cooked = DISHES.filter(d => state.codex && state.codex.dishes && state.codex.dishes[d.id]);
-  const crafted = EQUIPMENT.filter(eq => equipLv(eq.id) > 0);
-
-  if (!cooked.length && !crafted.length) {
-    return `<div class="codexEmpty">料理を作るか装備を作成すると、ここに効果がまとめられます。</div>`;
-  }
-
   const parts = [];
-  if (cooked.length) {
+
+  // 料理：レシピが判明したものの欄を表示。調理前は伏せる
+  const dishes = DISHES.filter(d => dishRecipeRevealed(d));
+  if (dishes.length) {
     parts.push(`<div class="codexGroupLabel">料理(時限バフ)</div>`);
-    cooked.forEach(d => parts.push(codexItem(d.name,
-      `<div>効果：${d.desc}</div><div class="codexSub">効果時間 ${Math.round(dishDurationMs() / 1000)}秒 / 同時 最大${MAX_ACTIVE_DISHES}品</div>`)));
+    dishes.forEach(d => {
+      const cooked = state.codex && state.codex.dishes && state.codex.dishes[d.id];
+      parts.push(cooked
+        ? codexItem(d.name, `<div>効果：${d.desc}</div><div class="codexSub">効果時間 ${Math.round(dishDurationMs() / 1000)}秒 / 同時 最大${MAX_ACTIVE_DISHES}品</div>`)
+        : codexHiddenItem());
+    });
   }
-  if (crafted.length) {
-    parts.push(`<div class="codexGroupLabel">作成(永続装備)</div>`);
-    crafted.forEach(eq => {
-      const lv = equipLv(eq.id);
+
+  // 作成：装備の欄をすべて表示。作成前は伏せる
+  parts.push(`<div class="codexGroupLabel">作成(永続装備)</div>`);
+  EQUIPMENT.forEach(eq => {
+    const lv = equipLv(eq.id);
+    if (lv > 0) {
       const rule = EQUIP_FORMULA[eq.id];
       parts.push(codexItem(`${eq.name} Lv.${lv}`,
         `<div>現在効果：${eq.effect(lv)}</div>` + (rule ? `<div>式：${rule}</div>` : "")));
-    });
-  }
+    } else {
+      parts.push(codexHiddenItem());
+    }
+  });
+
   return parts.join("");
 }
 
@@ -11178,9 +11192,6 @@ function codexOrderHtml() {
     return `<div class="codexEmpty">スキル「注文ボード」を解放すると表示されます。</div>`;
   }
   const done = Math.max(0, Number(state.completedOrders) || 0);
-  if (done <= 0) {
-    return `<div class="codexEmpty">注文を達成すると、ここに表示されます。</div>`;
-  }
   const orderIcon = ASSETS.screens && ASSETS.screens.order;
   return [
     codexItem("注文の仕組み",
@@ -11224,12 +11235,9 @@ const PERK_FORMULA = {
 };
 
 function codexMonsterRewardHtml() {
-  const taken = REWARD_POOL.filter(r => ((state.perks || {})[r.id] || 0) > 0);
   const monsterIcon = ASSETS.objects && ASSETS.objects.cookieMonster;
-
-  if (!taken.length && !rewardSynergyUnlocked()) {
-    return `<div class="codexEmpty">モンスターを倒して報酬を選ぶと、ここに表示されます。</div>`;
-  }
+  // 解放済み(存在する)報酬だけを対象にする。未取得は伏せる
+  const existing = REWARD_POOL.filter(r => rewardUnlocked(r));
 
   const catName = { golden: "金色", hunt: "狩猟", equipment: "設備", risk: "危険" };
   const catOrder = ["golden", "hunt", "equipment", "risk"];
@@ -11244,11 +11252,12 @@ function codexMonsterRewardHtml() {
   }
 
   catOrder.forEach(cat => {
-    const list = taken.filter(r => (r.category || "equipment") === cat);
+    const list = existing.filter(r => (r.category || "equipment") === cat);
     if (!list.length) return;
     parts.push(`<div class="codexGroupLabel">${catName[cat]}系の報酬</div>`);
     list.forEach(r => {
-      const lv = state.perks[r.id];
+      const lv = (state.perks || {})[r.id] || 0;
+      if (lv <= 0) { parts.push(codexHiddenItem()); return; }
       const rule = PERK_FORMULA[r.id];
       parts.push(codexItem(`${r.name} Lv.${lv}`,
         `<div>現在効果：${r.desc(lv)}</div>` + (rule ? `<div>式：${rule}</div>` : ""),
@@ -11728,24 +11737,26 @@ function appendResearchAnalysisPanel(box) {
   if (owned.length === 0) {
     panel.innerHTML = `
       <h3>研究解析</h3>
-      <div class="researchAnalysisGuide">研究タブを全画面にしている間だけ、取得済み研究の式と判断材料を下に表示する。まだ取得済み研究がない。</div>
+      <div class="researchAnalysisGuide">研究タブを全画面にしている間だけ、取得済み研究の現在効果・相性・弱点を下に表示する。まだ取得済み研究がない。</div>
     `;
     box.appendChild(panel);
     return;
   }
 
+  // 効果の式は図鑑にまとめ、ここでは概要(現在効果・相性・弱点)だけを表示する
   panel.innerHTML = `
     <h3>研究解析</h3>
-    <div class="researchAnalysisGuide">購入欄はそのまま残し、取得済み研究の式・現在値・判断材料だけを下に追加表示している。</div>
-    ${owned.map(r => `
+    <div class="researchAnalysisGuide">購入欄はそのまま残し、取得済み研究の現在効果・相性・弱点を下に追加表示している。詳しい式は図鑑で確認できる。</div>
+    ${owned.map(r => {
+      const cur = researchCurrentEffectText(r);
+      const safeCur = cur && cur.indexOf("式") < 0 ? cur : "";
+      return `
       <div class="researchFormulaCard">
         <b>${r.name}</b>
-        <div class="researchFormulaBlock">効果：${r.desc}</div>
-        ${r.detail ? `<div class="researchFormulaBlock">詳細：${r.detail}</div>` : ""}
-        <div class="researchFormulaBlock">${researchFormulaText(r)}</div>
-        <div class="researchFormulaBlock">${researchCurrentEffectText(r)}</div>
-      </div>
-    `).join("")}
+        <div class="researchFormulaBlock">効果：${researchCardDesc(r)}</div>
+        ${safeCur ? `<div class="researchFormulaBlock">${safeCur}</div>` : ""}
+      </div>`;
+    }).join("")}
   `;
 
   box.appendChild(panel);
