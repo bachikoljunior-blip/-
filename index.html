@@ -11118,11 +11118,23 @@ function codexWorkshopHtml() {
     parts.push(`<div class="codexGroupLabel">作成(永続装備)</div>`);
     crafted.forEach(eq => {
       const lv = equipLv(eq.id);
-      parts.push(codexItem(`${eq.name} Lv.${lv}`, `<div>現在効果：${eq.effect(lv)}</div>`));
+      const rule = EQUIP_FORMULA[eq.id];
+      parts.push(codexItem(`${eq.name} Lv.${lv}`,
+        `<div>現在効果：${eq.effect(lv)}</div>` + (rule ? `<div>式：${rule}</div>` : "")));
     });
   }
   return parts.join("");
 }
+
+// 装備の「式(Lvごとの伸び方)」をゲーム内の言葉で説明する
+const EQUIP_FORMULA = {
+  goldenWhisk: "クリックの生産連動係数が ×(1 + 0.15×Lv)。",
+  ovenMitt: "モンスターへのダメージが +0.05×Lv。",
+  pressExtractor: "金ブースト倍率が ×(1 + 0.04×Lv)。",
+  monsterAlmanac: "素材ドロップ +（Lv÷2の切り捨て）個、モンスターダメージ ×(1 + 0.06×Lv)。",
+  stillFlask: "料理の効果時間が ×(1 + 0.10×Lv)。",
+  dimensionCompass: "ボス化に必要な討伐数 −Lv、選択中ステージの素材ドロップ ×(1 + 0.05×Lv)。"
+};
 
 function codexOrderHtml() {
   if (!orderBoardUnlocked()) {
@@ -11150,6 +11162,30 @@ function codexOrderHtml() {
   ].join("");
 }
 
+// 各報酬の「式(Lvごとの伸び方)」をゲーム内の言葉で説明する
+const PERK_FORMULA = {
+  goldenRate: "取得Lvが上がるほど金クッキーの出現間隔が短くなる（1Lvの効果は徐々に緩やか）。",
+  goldenPower: "金ブースト倍率 +0.25×Lv が基準。Lvが高いほど1Lvの伸びは緩やかになる。",
+  goldenAmount: "即時獲得量 +45%×Lv が基準。Lvが高いほど1Lvの伸びは緩やかになる。",
+  monsterDamage: "モンスターへのダメージが Lv1ごとに +550%（Lvに比例）。",
+  monsterRate: "取得Lvが上がるほどモンスターの出現間隔が短くなる（1Lvの効果は徐々に緩やか）。",
+  monsterStay: "モンスターが画面に留まる時間が Lvごとに伸びる。",
+  goldenChain: "金クッキー取得後、次に出るモンスターへのダメージが +200%×Lv。",
+  crackedFang: "モンスターへのダメージが Lv1ごとに +650%。",
+  chainPrep: "撃破すると次のモンスターがすぐ出る。代わりに次のモンスターのHPも Lvごとに増える。",
+  huntFocus: "次のモンスターへのダメージが大きく上がる。倒せば報酬Lv+1、倒しきれなければ次のHP低下・報酬Lv-1。",
+  goldenTarget: "金ブースト中だけ、モンスターへのダメージが +220%×Lv。",
+  goldenFirstHit: "金クッキー取得後、次のモンスターへの最初の一撃だけ +250%×Lv。",
+  beastScent: "モンスターを倒すと、次の金クッキーが出るまでが Lvごとに早くなる。",
+  beastHeatFerment: "その周回の撃破数に応じて全生産が上がる。撃破1体ごとに +15%×Lv。",
+  biteRecovery: "モンスターにダメージを与えるたび、少量のクッキーを獲得する。",
+  crushedMill: "設備の個別強化（1種を集中して買ったときの伸び）が +150%×Lv。",
+  huntingCore: "その周回の撃破数に応じて毎秒生産が上がる。撃破1体ごとに +18%×Lv。",
+  brandHunt: "所持しているタップ系設備が多いほど、モンスターへのダメージが上がる。",
+  deepPursuit: "モンスターの出現が速くHPも上がるが、報酬Lvも増えやすくなる（Lvごとに強まる）。",
+  goldenBeastMutation: "金ブースト中に撃破すると、一定確率で報酬Lvが+1される（Lvが高いほど確率の上がり方は緩やか）。"
+};
+
 function codexMonsterRewardHtml() {
   const taken = REWARD_POOL.filter(r => ((state.perks || {})[r.id] || 0) > 0);
   const monsterIcon = ASSETS.objects && ASSETS.objects.cookieMonster;
@@ -11176,7 +11212,10 @@ function codexMonsterRewardHtml() {
     parts.push(`<div class="codexGroupLabel">${catName[cat]}系の報酬</div>`);
     list.forEach(r => {
       const lv = state.perks[r.id];
-      parts.push(codexItem(`${r.name} Lv.${lv}`, `<div>現在効果：${r.desc(lv)}</div>`, monsterIcon));
+      const rule = PERK_FORMULA[r.id];
+      parts.push(codexItem(`${r.name} Lv.${lv}`,
+        `<div>現在効果：${r.desc(lv)}</div>` + (rule ? `<div>式：${rule}</div>` : ""),
+        monsterIcon));
     });
   });
 
