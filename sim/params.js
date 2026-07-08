@@ -95,9 +95,15 @@ module.exports = {
   // 追い越されて設備シェアが0%へ減衰する(bake が主役30%を保てない)。そこで生産設備に
   // 「最高層に比例した直接クッキー収入」を新設する。この収入は金ブースト・討伐報酬の乗算対象外の
   // 独立加算項=設備固有の稼ぎ口。全生産倍率ではないので㉘の独占も再発しない。
-  //   equipDirect = coef × baseCps × max(0, 最高層 − startStage)^pow
-  // coef=0 で無効。tune で有効化(設備シェア≥30%と経済非崩壊の両立点を掃引)。調整項目。
-  equipDirect: { coef: 0.05, stagePow: 1.35, startStage: 5 },
+  // 【第12次J-3・対称の直送収入(ユーザー2026-07-08「オーブンが強すぎるなら他も強く」)】
+  //   直送 = coef × base(cps+タップ) × (ジャンル投資量/ref)^countPow × (最高層-startStage)^stagePow
+  // 各稼ぎ口に、そのジャンルへ投資したプレイヤーだけ強く効く独立収入を用意し、各方針の主役を後半も≥30%に立たせる。
+  // すべて skill→research→効果 でゲート(設備=ovenBatch段2/金=spiceBlend段2/討伐=portalNetwork段2/タップ=fingerTechnique段2)。
+  // coef=0 で各無効。tune で全体最良点を掃引(㉘の各主役≥30%と経済/テンポ非破綻の両立)。調整項目。
+  equipDirect:  { coef: 0.02, stagePow: 0.5, countPow: 2, ref: 100, startStage: 5 }, // 投資量=オーブン所持数
+  goldenDirect: { coef: 0.012, stagePow: 0.5, countPow: 2, ref: 30,  startStage: 5 }, // 投資量=金perk合計
+  huntDirect:   { coef: 0.012, stagePow: 0.5, countPow: 2, ref: 30,  startStage: 5 }, // 投資量=討伐perk合計
+  tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5 }, // 投資量=神の指+強い指/10
 
   // ---- 討伐連鎖(2026-07-07 ユーザー採用・0-2提案1) ----
   // 最後の討伐から breakSec 以内に次を倒すと連鎖+1(こつぶ群れは3体分)。過ぎたら0、転生でも0。上限なし。

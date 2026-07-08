@@ -990,32 +990,61 @@ function earningPowerSafe(sim) {
 }
 // 設備直送生産(第12次J・提案A): 生産設備が最高層に応じた直接収入を生む。金ブースト/討伐報酬の
 // 乗算を受けない独立項(設備固有の稼ぎ口)。㉘の設備シェアを後半も保つ。baseCps は素の設備生産。
-function equipDirectIncome(sim, prod) {
-  const D = P.equipDirect;
-  if (!D || !D.coef) return 0;
-  // 第12次J-3(ユーザー2026-07-08規則): 設備に他変数を含む式を足す場合は「スキル解放→研究解放→設備効果」の順で解放する。
-  // 設備直送は「オーブン大量焼成 段階2(スキル auto_3 で解禁→段階2を購入→効果)」にゲートする=
-  // skill(auto_3)→research(ovenBatch段2)→設備効果。プレイヤーには段階2の説明で情報開示する(移植時)。
-  if (!resStage2(sim, 'ovenBatch')) return 0;
-  const s = Math.max(0, (sim.run.maxStage || 0) - (D.startStage || 0));
+// ==== ジャンル直送収入(第12次J-3・ユーザー2026-07-08「オーブンが強すぎるなら他も強く」) ====
+// 各稼ぎ口(設備/金/討伐/タップ)に、そのジャンルへ投資したプレイヤーだけ強く効く独立収入を対称に用意する。
+//   直送 = coef × base(=cps+タップ=生産レート) × (ジャンル投資量/ref)^countPow × (最高層-startStage)^stagePow
+// base比例で後半も金/討伐に dwarf されず主役を張れる大きさになり、投資量^countPow でそのジャンルの
+// プレイヤーだけ大きく効く(他方針では小さい)。すべて skill→research→効果 の順でゲートし、
+// ジャンルごとにスキル解放でプレイヤーへ情報開示する(移植時)。全生産倍率ではないので㉘の独占も再発しない。
+function genreDirect(sim, base, invest, cfg) {
+  if (!cfg || !cfg.coef) return 0;
+  const s = Math.max(0, (sim.run.maxStage || 0) - (cfg.startStage || 0));
   if (s <= 0) return 0;
-  return D.coef * (prod.baseCps || 0) * Math.pow(s, D.stagePow || 1);
+  return cfg.coef * base * Math.pow(Math.max(0, invest) / (cfg.ref || 1), cfg.countPow || 2) * Math.pow(s, cfg.stagePow || 0.5);
+}
+// 設備直送: 投資量=オーブン所持数。ゲート=オーブン大量焼成 段階2(スキル auto_3→段階2購入→効果)。
+function equipDirectIncome(sim, base) {
+  if (!resStage2(sim, 'ovenBatch')) return 0;
+  return genreDirect(sim, base, sim.run.upgrades.oven || 0, P.equipDirect);
+}
+// 金直送: 投資量=金perk合計。ゲート=香料調合 段階2(スキル golden_1→段階2購入→効果)。
+function goldenDirectIncome(sim, base) {
+  if (!resStage2(sim, 'spiceBlend')) return 0;
+  const r = sim.run;
+  const inv = (r.perks.goldenAmount || 0) + (r.perks.goldenPower || 0) + (r.perks.goldenRate || 0);
+  return genreDirect(sim, base, inv, P.goldenDirect);
+}
+// 討伐直送: 投資量=討伐perk合計。ゲート=異世界接続網 段階2(スキル monster_3→段階2購入→効果)。
+function huntDirectIncome(sim, base) {
+  if (!resStage2(sim, 'portalNetwork')) return 0;
+  const r = sim.run;
+  const inv = (r.perks.monsterDamage || 0) + (r.perks.crackedFang || 0) + (r.perks.beastHeatFerment || 0) + (r.perks.huntingCore || 0);
+  return genreDirect(sim, base, inv, P.huntDirect);
+}
+// タップ直送: 投資量=クリック系(神の指+強い指/10)。ゲート=指先の型 段階2(スキル click_2→段階2購入→効果)。
+function tapDirectIncome(sim, base) {
+  if (!resStage2(sim, 'fingerTechnique')) return 0;
+  const r = sim.run;
+  const inv = (r.upgrades.godFinger || 0) + (r.upgrades.finger || 0) * 0.1;
+  return genreDirect(sim, base, inv, P.tapDirect);
 }
 function earningPower(sim) {
   const r = sim.run;
   const prod = computeProd(sim);
   const tapRate = sim.strat.tapRate;
-  const base = prod.cps + prod.clickEV * (r.monster ? 0 : tapRate); // 直接生産(モンスター中はタップは討伐へ)
-  let power = base + equipDirectIncome(sim, prod); // 設備直送(提案A): 設備固有の独立収入=equip チャネルへ
-  // 金クッキー収入率(期待値/秒): 間隔は spawnFactor、1回の価値は即時+ブーストの平均
+  const tapOrig = prod.clickEV * (r.monster ? 0 : tapRate);
+  const base = prod.cps + tapOrig; // 直接生産(モンスター中はタップは討伐へ)
+  // タップ直送は base に含める(タップ稼ぎ口へ。incomeParts の tap 抽出でも同額を足す)
+  let power = base + tapDirectIncome(sim, base) + equipDirectIncome(sim, base); // 設備直送→equip / タップ直送→tap
+  // 金クッキー収入率(期待値/秒): 間隔は spawnFactor、1回の価値は即時+ブーストの平均。+金直送→golden
   if (!(sim._mdChan && sim._mdChan.golden)) {
     const mean = (P.golden.spawnMin + P.golden.spawnMax) / 2;
     const interval = Math.max(1, mean * goldenSpawnFactor(sim) / 1000);
     const instant = Math.max(prod.baseCps, prod.baseClick) * P.golden.instantCoef * goldenAmountMultiplier(sim);
     const boostVal = Math.max(0, goldenMultiplierVal(sim) - 1) * prod.cps * (goldenBoostDurationMs(sim) / 1000);
-    power += (instant + boostVal) / 2 / interval;
+    power += (instant + boostVal) / 2 / interval + goldenDirectIncome(sim, base);
   }
-  // 討伐報酬(投資)価値率: 討伐/秒 × 生産KILL_VALUE_SEC秒ぶん。ダメージ・出現・滞在の報酬がここに効く
+  // 討伐報酬(投資)価値率: 討伐/秒 × 生産KILL_VALUE_SEC秒ぶん。ダメージ・出現・滞在の報酬がここに効く。+討伐直送→hunt
   if (!(sim._mdChan && sim._mdChan.hunt)) {
     const mean = (P.monster.spawnMin + P.monster.spawnMax) / 2;
     const interval = Math.max(1, mean * monsterSpawnFactor(sim) / 1000);
@@ -1026,7 +1055,7 @@ function earningPower(sim) {
     const stay = monsterStayMs(sim) / 1000;
     const killable = ttk <= stay ? 1 : 0;             // 滞在内に倒せるか(滞在報酬が効く)
     const killsPerSec = killable / (interval + ttk);
-    power += killsPerSec * base * KILL_VALUE_SEC;
+    power += killsPerSec * base * KILL_VALUE_SEC + huntDirectIncome(sim, base);
   }
   return power;
 }
@@ -1064,7 +1093,9 @@ function incomeParts(sim, pAll) {
   sim._mdChan = { hunt: true, golden: true }; clear();
   const pCore = earningPowerSafe(sim);                  // base のみ(討伐報酬項・金項を除外)
   const prodCore = computeProd(sim);
-  const tapRaw = prodCore.clickEV * (r.monster ? 0 : sim.strat.tapRate);
+  const tapOrig = prodCore.clickEV * (r.monster ? 0 : sim.strat.tapRate);
+  const baseCore = prodCore.cps + tapOrig;
+  const tapRaw = tapOrig + tapDirectIncome(sim, baseCore); // タップ稼ぎ口=タップ項+タップ直送
   sim._mdChan = null; clear();
   if (!(pAll > 0) || !Number.isFinite(pAll) || !(pCore >= 0) || !Number.isFinite(pCore)) return null;
   const tap = Math.max(0, Math.min(tapRaw, pCore));
@@ -1546,8 +1577,11 @@ function advanceTick(sim, strategy) {
       }
     }
 
-    // 収入(設備直送=提案A: 金/討伐の乗算を受けない設備固有の独立収入を加算)
-    earn(sim, cpsNow * dt + clickNow * tapsForCookies * dt + equipDirectIncome(sim, prod) * dt);
+    // 収入(各ジャンル直送: そのジャンルへ投資したプレイヤーだけ効く独立収入を加算=㉘の各主役を後半も立たせる)
+    const dirBase = prod.cps + prod.clickEV * (r.monster ? 0 : tapRate);
+    const directAll = equipDirectIncome(sim, dirBase) + goldenDirectIncome(sim, dirBase)
+      + huntDirectIncome(sim, dirBase) + tapDirectIncome(sim, dirBase);
+    earn(sim, cpsNow * dt + clickNow * tapsForCookies * dt + directAll * dt);
 
     // 銀行クリック配当 段階2: 複利利息。キャップ撤廃: 硬い min(利息, 毎秒生産×2) を
     // 漸近逓減式 raw/(1+raw/soft) に置換(暴走防止。softは段3で最高層に応じ無限に伸びる)
