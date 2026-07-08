@@ -13128,14 +13128,13 @@ function defeatMonster(id) {
   state.nextRewardCountBonus = 0;
   preloadRewardChoiceImages(pendingRewardChoices);
 
-  // 報酬画面が出るまでの間は別モンスターを撃破できないようロックする
+  // 撃破後の間を無くし、報酬画面を即時に開く(この間の別モンスター撃破は
+  // 報酬モーダルが開いている間のロックで防ぐ)
   rewardPending = true;
   clearTimeout(rewardOpenTimer);
-  rewardOpenTimer = setTimeout(() => {
-    rewardOpenTimer = null;
-    showRewardChoices(rewardLevel);
-    rewardPending = false;
-  }, 700);
+  rewardOpenTimer = null;
+  showRewardChoices(rewardLevel);
+  rewardPending = false;
 
   saveGame();
   updateTopOnly();
