@@ -104,6 +104,9 @@ module.exports = {
   goldenDirect: { coef: 0.012, stagePow: 0.5, countPow: 2, ref: 30,  startStage: 5 }, // 投資量=金perk合計
   huntDirect:   { coef: 0.012, stagePow: 0.5, countPow: 2, ref: 30,  startStage: 5 }, // 投資量=討伐perk合計
   tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5 }, // 投資量=神の指+強い指/10
+  // 銀行配当(直送・第12次J-3 腐り解消): bankClickDividend研究の独立収入。クリック方針で厚く効かせ①の各回minを満たす。
+  // 全体cps倍率をやめ加算収入へ(他機能のlift希釈を回避)。所持数はlog10で床あり=早い周回でも効く。増加方向のみ。
+  bankDirect:   { coef: 0.22, ownRate: 0.5, savedCoef: 0.05, clickBonus: 1.5, countCoef: 0.9, countPow: 1.5, ref: 150 }, // 投資量=銀行所持数+貯蓄(総クッキー桁)
 
   // ---- 討伐連鎖(2026-07-07 ユーザー採用・0-2提案1) ----
   // 最後の討伐から breakSec 以内に次を倒すと連鎖+1(こつぶ群れは3体分)。過ぎたら0、転生でも0。上限なし。
@@ -254,6 +257,7 @@ module.exports = {
     critCpsCoef: 0.00025,
     supExtra: 0.008, supStageCoef: 0.001,
     ovenBakeMulBake: 1.5, ovenBakeMulOther: 1.2,
+    ovenS3Flat: 0.06, ovenStageCoef: 0.004,
     factoryHiKind: 0.15, factoryStageCoef: 0.0012,
     matureRate: 0.006, aromaDur: 12, spiceStageCoef: 0.0015,
     huntExtendSec: 2, huntStageCoef: 0.0008,

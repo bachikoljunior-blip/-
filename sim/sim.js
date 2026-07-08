@@ -735,8 +735,9 @@ function computeProd(sim) {
       resM *= R.ovenSelf * lg(capOwn(owned), R.ovenOwn) * lg(Math.max(0, r.maxStage - 1), R.ovenStage) * (policyIs(sim, 'bake') ? 1.10 : 1);
       // 段階2: 焼き加減連動(こんがり運用で×1.5、それ以外は期待値×1.2)
       if (resStage2(sim, 'ovenBatch')) resM *= policyIs(sim, 'bake') ? P.res2.ovenBakeMulBake : P.res2.ovenBakeMulOther;
-      // 段階3: オーブンの個別強化Lvが研究倍率にも乗る
-      if (resStage3(sim, 'ovenBatch')) resM *= 1 + 0.05 * (r.upgradePerks.oven || 0);
+      // 段階3: 最高到達ノルマ層でオーブンの研究倍率が伸びる(旧・個別強化Lv依存は設備強化報酬撤廃で無効化→層依存へ再設計・増加方向)。
+      // 一定の底上げ(flat)+層ランプ。flatは早い周回(層が浅い)でも⑨の各回minを満たす床。両方とも増加方向。
+      if (resStage3(sim, 'ovenBatch')) resM *= (1 + (P.res2.ovenS3Flat || 0)) * (1 + (P.res2.ovenStageCoef || 0) * r.maxStage);
     }
     if (u.id === 'factory' && resActive(sim, 'factoryNetwork')) {
       const low = (r.upgrades.finger || 0) + (r.upgrades.grandma || 0) + (r.upgrades.oven || 0);
@@ -1028,6 +1029,24 @@ function tapDirectIncome(sim, base) {
   const inv = (r.upgrades.godFinger || 0) + (r.upgrades.finger || 0) * 0.1;
   return genreDirect(sim, base, inv, P.tapDirect);
 }
+// 銀行配当(直送・第12次J-3 腐り解消): 銀行の所持数と貯蓄(総クッキー桁)で毎秒生産へ加算する独立収入。
+// ゲート=銀行クリック配当研究(resActive=①測定トグル対応)。クリック方針で厚く効く(既存の×1.08と整合)。
+// 所持数は log10 で床のある増幅(早い周回でも効く=①の各回minを満たす)。増加方向の変数のみ、既存bankMは保持。
+function bankDirectIncome(sim, base) {
+  const cfg = P.bankDirect;
+  if (!cfg || !cfg.coef) return 0;
+  if (!resActive(sim, 'bankClickDividend')) return 0;
+  const r = sim.run;
+  const bank = r.upgrades.bank || 0;
+  if (bank <= 0) return 0;
+  const saved = Math.log10(r.cookies + 10);
+  const polM = policyIs(sim, 'click') ? (cfg.clickBonus || 1) : 1;
+  // 所持数の項: log10 の床(早い周回でも効く)+ 累乗項(他直送のinvest^2に置いていかれないよう後半で追随)。両方とも増加方向。
+  const ownM = 1 + (cfg.ownRate || 0) * Math.log10(1 + bank)
+             + (cfg.countCoef || 0) * Math.pow(bank / (cfg.ref || 1), cfg.countPow || 1);
+  return cfg.coef * base * ownM
+       * (1 + Math.log1p(saved) * (cfg.savedCoef || 0)) * polM;
+}
 function earningPower(sim) {
   const r = sim.run;
   const prod = computeProd(sim);
@@ -1035,7 +1054,7 @@ function earningPower(sim) {
   const tapOrig = prod.clickEV * (r.monster ? 0 : tapRate);
   const base = prod.cps + tapOrig; // 直接生産(モンスター中はタップは討伐へ)
   // タップ直送は base に含める(タップ稼ぎ口へ。incomeParts の tap 抽出でも同額を足す)
-  let power = base + tapDirectIncome(sim, base) + equipDirectIncome(sim, base); // 設備直送→equip / タップ直送→tap
+  let power = base + tapDirectIncome(sim, base) + equipDirectIncome(sim, base) + bankDirectIncome(sim, base); // 設備直送→equip / タップ直送→tap / 銀行配当→equip残差
   // 金クッキー収入率(期待値/秒): 間隔は spawnFactor、1回の価値は即時+ブーストの平均。+金直送→golden
   if (!(sim._mdChan && sim._mdChan.golden)) {
     const mean = (P.golden.spawnMin + P.golden.spawnMax) / 2;
@@ -1311,13 +1330,9 @@ function buildRewardOffer(sim, level, typeId) {
   const choiceLimit = P.reward.choiceBase + bossBonus + Math.max(0, Math.floor(skillEffect(sim, 'rewardChoices')));
 
   const unlockedPerks = REWARD_POOL.filter(x => rewardUnlockedFn(sim, x));
-  const ownedUps = UPGRADES.filter(u => r.upgrades[u.id] > 0 && upgradeUnlocked(sim, u));
+  // モンスター報酬に「固定で設備強化(upgrade)が1枠入る」仕様は撤廃(2026-07-08 ユーザー決定)。
+  // 報酬は報酬プール(perk)のみから決定的ローテーションで選ぶ。
   const offer = [];
-  if (ownedUps.length > 0) {
-    const u = ownedUps[sim.upRotIdx % ownedUps.length]; sim.upRotIdx++;
-    offer.push({ kind: 'upgrade', id: u.id, count });
-  }
-  // 残りは決定的ローテーションで選ぶ(期待値近似)
   const pool = unlockedPerks.map(x => ({ kind: 'perk', id: x.id, category: x.category, count }));
   for (let k = 0; k < pool.length && offer.length < choiceLimit; k++) {
     const c = pool[(sim.rotIdx + k) % pool.length];
@@ -1580,7 +1595,7 @@ function advanceTick(sim, strategy) {
     // 収入(各ジャンル直送: そのジャンルへ投資したプレイヤーだけ効く独立収入を加算=㉘の各主役を後半も立たせる)
     const dirBase = prod.cps + prod.clickEV * (r.monster ? 0 : tapRate);
     const directAll = equipDirectIncome(sim, dirBase) + goldenDirectIncome(sim, dirBase)
-      + huntDirectIncome(sim, dirBase) + tapDirectIncome(sim, dirBase);
+      + huntDirectIncome(sim, dirBase) + tapDirectIncome(sim, dirBase) + bankDirectIncome(sim, dirBase);
     earn(sim, cpsNow * dt + clickNow * tapsForCookies * dt + directAll * dt);
 
     // 銀行クリック配当 段階2: 複利利息。キャップ撤廃: 硬い min(利息, 毎秒生産×2) を
