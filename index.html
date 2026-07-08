@@ -6730,6 +6730,7 @@ function fmtCookieCount(n) {
 
 // コスト表示用: 小数を出さない(切り捨て)。省略表記でも仮数部を整数化する
 function fmtCost(n) {
+  // 省略表記でも仮数部を切り捨てず、有効数字(ゼロでない桁)まで表示する
   if (n instanceof Decimal) {
     if (!n.isFinite()) return "∞";
     if (n.e <= 15) return fmtCost(n.toNumber());
@@ -6737,7 +6738,7 @@ function fmtCost(n) {
     const log = n.log10();
     const level = Math.max(0, Math.floor(log / 4 + 1e-12));
     const scaled = Math.pow(10, log - 4 * level);
-    return sign + String(Math.floor(scaled)) + generateHugeUnit(level);
+    return sign + fmtSixSigMantissa(scaled) + generateHugeUnit(level);
   }
 
   n = Math.floor(Number(n) || 0);
@@ -6746,16 +6747,15 @@ function fmtCost(n) {
   const sign = n < 0 ? "-" : "";
   const abs = Math.abs(n);
 
-  if (abs < 10000) return sign + String(Math.floor(abs));
+  if (abs < 10000) return sign + String(abs);
 
-  let level = Math.max(0, Math.floor(Math.log10(abs) / 4 + 1e-12));
-  level = Math.min(level, 77);
-
+  let level = Math.max(0, Math.min(77, Math.floor(Math.log10(abs) / 4 + 1e-12)));
   let scaled = abs / Math.pow(10000, level);
-  if (scaled >= 10000 && level < 77) { level += 1; scaled /= 10000; }
-  if (scaled < 1 && level > 0) { level -= 1; scaled *= 10000; }
+  // 有効数字6桁で丸めた結果が桁上がりする場合は単位を1つ繰り上げる
+  const dec = scaled >= 1000 ? 2 : scaled >= 100 ? 3 : scaled >= 10 ? 4 : 5;
+  if (Number(scaled.toFixed(dec)) >= 10000 && level < 77) { level += 1; scaled /= 10000; }
 
-  return sign + String(Math.floor(scaled)) + generateHugeUnit(level);
+  return sign + fmtSixSigMantissa(scaled) + generateHugeUnit(level);
 }
 
 function fmtTime(seconds) {
@@ -11277,8 +11277,8 @@ function renderResearch() {
     list.forEach(r => {
       const btn = document.createElement("button");
 
-      // まだ購入していない研究は絵をシルエットで伏せる
-      btn.className = "item artCard artSilhouette";
+      // 対応設備を購入済み(=解放済み)なので、絵はシルエットにせず通常表示する
+      btn.className = "item artCard";
       btn.dataset.id = r.id;
       btn.dataset.art = researchArt(r);
       setArtImage(btn, ASSETS.research[r.id]);
