@@ -7902,9 +7902,17 @@ function spendMaterials(cost) {
 }
 
 function materialCostText(cost) {
+  // 複数素材は改行して1行ずつ表示する
   return Object.keys(cost || {}).map(id => id === "bossCoreAny"
     ? `ボス核(任意)×${cost[id]}(所持 ${fmt(anyBossCoreCount())})`
-    : `${(getMaterial(id) || { name: id }).name}×${cost[id]}(所持 ${fmt(materialCount(id))})`).join("、");
+    : `${(getMaterial(id) || { name: id }).name}×${cost[id]}(所持 ${fmt(materialCount(id))})`).join("<br>");
+}
+
+// 素材の入手法ガイド(1行ずつ改行)。深層素材は深層ステージ到達後のみ表示する。
+function materialDropGuideHtml() {
+  const lines = ["通常＝基本素材", "金ブースト中＝黄金粉", "オーバーキル＝レア", "狩り窓3連続＝ボス核", "余裕率2倍＝発酵系"];
+  if (maxUnlockedStageNo() > STAGES.length) lines.push("深層＝虚空糖・深層核");
+  return "入手法：<br>" + lines.map(s => "・" + s).join("<br>");
 }
 
 // ==== 作成(永続装備) ====
@@ -8343,7 +8351,7 @@ function renderWorkshop() {
     ${craftSection}
     <div class="infoBox">
       <h3>素材庫</h3>
-      <div class="desc">入手法：通常=基本素材／金ブースト中=黄金粉／オーバーキル=レア／狩り窓3連続=ボス核／余裕率2倍=発酵系。標準方針の万能粉は不足素材の代用(核は不可)。</div>
+      <div class="desc">${materialDropGuideHtml()}<br>標準方針の万能粉は不足素材の代用(核は不可)。</div>
       ${matRows}
     </div>
     <div class="infoBox">
@@ -10356,7 +10364,8 @@ function buyResearchStage(id, stageNo) {
 
 function skillVisible(skill) {
   if (skill.prereqs.length === 0) return true;
-  return skill.prereqs.every(id => hasSkill(id));
+  // 前提が1つでも解放されていれば表示する(購入は全前提解放後)
+  return skill.prereqs.some(id => hasSkill(id));
 }
 
 function skillCanBuy(skill) {
@@ -10444,6 +10453,19 @@ function syncSkillMapZoom() {
   }
 }
 
+// スキルツリー全体がフレーム内に収まる縮小率。全解放状態でも縮小で全て映るように、
+// これを下限として許容する(既定の下限 SKILL_ZOOM_MIN より小さければそちらを採用)。
+function skillMinZoom() {
+  const frame = document.querySelector(".skillMapFrame");
+  if (!frame || !frame.clientWidth || !frame.clientHeight) return SKILL_ZOOM_MIN;
+  const pad = 12;
+  const fit = Math.min(
+    (frame.clientWidth - pad) / SKILL_MAP_WIDTH,
+    (frame.clientHeight - pad) / SKILL_MAP_HEIGHT
+  );
+  return Math.max(0.06, Math.min(SKILL_ZOOM_MIN, fit));
+}
+
 function setSkillMapZoom(nextZoom, keepCenter = true) {
   const frame = document.querySelector(".skillMapFrame");
   const previousZoom = skillMapZoom;
@@ -10455,7 +10477,7 @@ function setSkillMapZoom(nextZoom, keepCenter = true) {
     centerY = (frame.scrollTop + frame.clientHeight / 2) / previousZoom;
   }
 
-  skillMapZoom = Math.max(SKILL_ZOOM_MIN, Math.min(SKILL_ZOOM_MAX, Number(nextZoom) || 1));
+  skillMapZoom = Math.max(skillMinZoom(), Math.min(SKILL_ZOOM_MAX, Number(nextZoom) || 1));
   syncSkillMapZoom();
 
   if (frame && keepCenter && centerX !== null && centerY !== null) {
@@ -10729,6 +10751,8 @@ function renderSkillChoiceScreen() {
   startBtn.textContent = skillViewMode ? "閉じる" : (debugMode && !pausedForSkillChoice() ? "戻る" : "この構成でスタート");
 
   const lines = visibleSkills.flatMap(skill => {
+    // 前提が全て解放される(=購入可能になる)まで線は繋がない
+    if (!skill.prereqs.every(id => hasSkill(id))) return "";
     return skill.prereqs.map(reqId => {
       const from = getSkill(reqId);
       if (!from || !skillVisible(from)) return "";
@@ -11255,6 +11279,14 @@ function visibleResearchStageCards() {
   return cards;
 }
 
+// 研究カードの説明。段階(未解放を含む)のプレビュー「段階購入で〜が追加」は伏せ、基本効果だけ出す。
+// 各段階の内容は解放後に段階カード側で確認できる。
+function researchCardDesc(r) {
+  const d = (r && r.desc) || "";
+  const i = d.indexOf("段階購入で");
+  return (i > 0 ? d.slice(0, i) : d).trim();
+}
+
 function renderResearch() {
   const box = $("research");
   // 購入済みの研究は購入欄から消す(効果は「研究解析」パネルと一覧タブで確認できる)
@@ -11396,7 +11428,7 @@ function renderResearch() {
       btn.innerHTML = `
         <b>${r.name}</b>
         <div class="price researchDonePrice">購入済み</div>
-        <div class="desc">${r.desc}</div>
+        <div class="desc">${researchCardDesc(r)}</div>
       `;
       return;
     }
@@ -11427,7 +11459,7 @@ function renderResearch() {
     btn.innerHTML = `
       <b>${r.name}</b>
       <div class="price">${fmtCost(cost) + " クッキー"}</div>
-      <div class="desc">${r.desc}</div>
+      <div class="desc">${researchCardDesc(r)}</div>
     `;
   });
 
@@ -11664,7 +11696,7 @@ function renderInfo() {
       <h3>ステージと工房</h3>
       <div class="infoRow">現在ステージ：第${currentStageNo()}ステージ ${currentStageInfo().name}(解放済み：第${maxUnlockedStageNo()}ステージまで)</div>
       <div class="infoRow">このステージの討伐数：${fmt((state.stageKills || {})[currentStageNo()] || 0)} / ボス出現まで あと${fmt(stageKillsUntilBoss(currentStageNo()))}体</div>
-      <div class="desc">入手法：通常=基本素材／金ブースト中=黄金粉／オーバーキル=レア／狩り窓3連続=ボス核／余裕率2倍=発酵系／深層=虚空糖・深層核。素材・装備・討伐数は転生後も持ち越し(料理バフと現在ステージはリセット)。</div>
+      ${workshopTabUnlocked() ? `<div class="desc">${materialDropGuideHtml()}<br>素材・装備・討伐数は転生後も持ち越し(料理バフと現在ステージはリセット)。</div>` : ""}
       ${equipmentRows}
       ${activeDishRows}
     </div>
@@ -11898,7 +11930,7 @@ function installSkillTreePinchZoom() {
       const local = framePoint(mid.x, mid.y);
 
       const nextZoom = pinchStartZoom * (dist / pinchStartDistance);
-      skillMapZoom = Math.max(SKILL_ZOOM_MIN, Math.min(SKILL_ZOOM_MAX, nextZoom));
+      skillMapZoom = Math.max(skillMinZoom(), Math.min(SKILL_ZOOM_MAX, nextZoom));
       syncSkillMapZoom();
 
       frame.scrollLeft = Math.max(0, pinchContentX * skillMapZoom - local.x);
