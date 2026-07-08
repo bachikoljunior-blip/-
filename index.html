@@ -11032,29 +11032,38 @@ function codexGoldenHtml() {
   }
   const analyzed = hasSkillEffect("unlockSystem", "goldenAnalysis");
   const lock = `<div class="codexLock">スキル「金色観測」を解放すると効果の式が表示されます。</div>`;
+  const goldenIcon = ASSETS.objects && ASSETS.objects.goldenCookie;
 
   return [
-    codexItem("金ブースト(全生産倍増)",
-      `<div>金クッキーを取ると約50%の確率で、一定時間すべての生産が倍増する。</div>`
+    codexItem("金ブースト倍率(全生産×)",
+      `<div>金クッキーを取ると約50%の確率で、一定時間すべての生産が倍増する。その倍率。</div>`
       + (analyzed
         ? `<div>式：追加倍率 = 2.1 + 強化Lv・スキル・方針・報酬系統 の合算（香料圧搾機で ×）</div>`
-          + `<div>式：持続 = 9秒 + 26秒 × 追加 ÷ (追加 + 60000)（周回経過・報酬・スキルで伸び、最大 約35秒に近づく）</div>`
-          + `<div class="codexSub">現在：追加 x${goldenMultiplier().toFixed(2)} / 持続 ${(goldenBoostDuration() / 1000).toFixed(1)}秒</div>`
+          + `<div class="codexSub">現在：追加 x${goldenMultiplier().toFixed(2)}</div>`
         : lock),
-      ASSETS.objects && ASSETS.objects.goldenCookie),
+      goldenIcon),
+    codexItem("金ブースト持続時間",
+      `<div>金ブーストが続く時間。周回経過・報酬・スキルで伸びる。</div>`
+      + (analyzed
+        ? `<div>式：持続 = 9秒 + 26秒 × 追加 ÷ (追加 + 60000)（最大 約35秒に近づく）</div>`
+          + `<div class="codexSub">現在：持続 ${(goldenBoostDuration() / 1000).toFixed(1)}秒</div>`
+        : lock),
+      goldenIcon),
     codexItem("即時クッキー獲得",
       `<div>金クッキーを取ると約50%の確率で、まとまったクッキーを即座に獲得する。</div>`
       + (analyzed
         ? `<div>式：獲得量 = max(100, 毎秒×2.5, タップ×2.5) × 獲得量倍率</div>`
           + `<div>式：獲得量倍率 = 1 + 報酬Lv・スキル・方針・ステージ補正</div>`
           + `<div class="codexSub">現在：獲得量倍率 x${goldenAmountMultiplier().toFixed(2)}</div>`
-        : lock)),
+        : lock),
+      goldenIcon),
     codexItem("出現間隔",
       `<div>金クッキーは一定間隔で出現し、強化や方針で間隔が短くなる。</div>`
       + (analyzed
         ? `<div>式：出現間隔倍率 = exp(−出現率強化・スキル・方針・報酬) × 周回テンポ × 焼成/ステージ補正（小さいほど速く出る）</div>`
           + `<div class="codexSub">現在：間隔倍率 x${goldenSpawnFactor().toFixed(3)}</div>`
-        : lock))
+        : lock),
+      goldenIcon)
   ].join("");
 }
 
