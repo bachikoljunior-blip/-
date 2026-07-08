@@ -4187,6 +4187,157 @@
       gap: 8px;
     }
 
+    /* ===== 図鑑 ===== */
+    #codexBtn {
+      position: absolute;
+      top: 10px;
+      left: 54px;
+      z-index: 40;
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 213, 138, 0.32);
+      background: rgba(20, 12, 6, 0.5);
+      color: #ffcf87;
+      font-size: 18px;
+      line-height: 1;
+      touch-action: manipulation;
+    }
+
+    .codexIntro {
+      font-size: 12px;
+      color: #d8c39a;
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+
+    .codexTabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .codexTab {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 213, 138, 0.26);
+      background: rgba(30, 18, 10, 0.6);
+      color: #ffe3a6;
+      font-size: 13px;
+      font-weight: 800;
+      touch-action: manipulation;
+    }
+
+    .codexTab img {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      object-fit: cover;
+    }
+
+    .codexTab.active {
+      border-color: rgba(255, 213, 138, 0.8);
+      background: linear-gradient(180deg, rgba(90, 56, 28, 0.9), rgba(50, 30, 15, 0.95));
+      box-shadow: 0 0 12px rgba(255, 190, 88, 0.35);
+    }
+
+    .codexBody {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .codexGroupLabel {
+      margin-top: 6px;
+      font-weight: 900;
+      color: #ffd88a;
+      font-size: 13px;
+    }
+
+    .codexItem {
+      border: 1px solid rgba(255, 213, 138, 0.16);
+      border-radius: 12px;
+      background: rgba(20, 12, 6, 0.5);
+      overflow: hidden;
+    }
+
+    .codexItem > summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 800;
+      color: #ffe3a6;
+      font-size: 14px;
+    }
+
+    .codexItem > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .codexItem > summary::after {
+      content: "＋";
+      margin-left: auto;
+      color: #ffbe58;
+      font-weight: 900;
+    }
+
+    .codexItem[open] > summary::after {
+      content: "－";
+    }
+
+    .codexIcon {
+      width: 26px;
+      height: 26px;
+      border-radius: 7px;
+      object-fit: cover;
+      flex: 0 0 auto;
+    }
+
+    .codexItemName {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .codexItemBody {
+      padding: 0 12px 12px;
+      font-size: 12.5px;
+      line-height: 1.7;
+      color: var(--text);
+    }
+
+    .codexItemBody > div {
+      margin-top: 4px;
+    }
+
+    .codexSub {
+      color: #d8c39a;
+    }
+
+    .codexLock {
+      margin-top: 6px;
+      color: #ffbe58;
+      font-size: 12px;
+    }
+
+    .codexEmpty {
+      padding: 16px 8px;
+      color: #d8c39a;
+      font-size: 13px;
+      text-align: center;
+      line-height: 1.7;
+    }
+
     .settingBtnRow .settingsWideBtn {
       margin-top: 0;
       font-size: 12px;
@@ -4948,10 +5099,23 @@
   </div>
 </div>
 
+<div id="codexOverlay" class="settingsOverlay codexOverlay">
+  <div class="settingsPanel codexPanel">
+    <div class="settingsHead">
+      <h2>図鑑</h2>
+      <button id="codexCloseBtn" type="button" class="titleAboutCloseBtn" aria-label="閉じる">✕</button>
+    </div>
+    <div class="codexIntro">発動したことのある効果を、系統ごとにまとめて確認できる。項目をタップで開閉。</div>
+    <div id="codexTabs" class="codexTabs"></div>
+    <div id="codexBody" class="codexBody"></div>
+  </div>
+</div>
+
 <main class="game">
   <section class="top">
     <button id="settingsBtn" type="button" aria-label="設定">⚙</button>
     <button id="playFullscreenBtn" type="button" aria-label="クッキー画面を全画面">⛶</button>
+    <button id="codexBtn" type="button" aria-label="図鑑">📖</button>
 
     <div class="cookieCount">
       <span id="cookies">0</span>
@@ -6140,6 +6304,10 @@ function ensureState() {
     state.materials[m.id] = Math.max(0, Math.floor(Number(state.materials[m.id]) || 0));
     state.materialsSeen[m.id] = Boolean(state.materialsSeen[m.id]) || state.materials[m.id] > 0;
   });
+
+  // 図鑑: 発動したことのある効果の記録(金クッキー取得・調理した料理)
+  state.codex = state.codex && typeof state.codex === "object" ? state.codex : {};
+  state.codex.dishes = state.codex.dishes && typeof state.codex.dishes === "object" ? state.codex.dishes : {};
 
   // v2: 限界突破回数(転生持ち越し)。装備Lvの上限は EQUIPMENT_MAX_LV+5×突破回数
   state.equipmentAscend = state.equipmentAscend && typeof state.equipmentAscend === "object" ? state.equipmentAscend : {};
@@ -8026,6 +8194,10 @@ function cookDish(id) {
   const until = Date.now() + dishDurationMs();
   if (existing) existing.until = until;
   else list.push({ id, until });
+
+  if (!state.codex || typeof state.codex !== "object") state.codex = {};
+  if (!state.codex.dishes || typeof state.codex.dishes !== "object") state.codex.dishes = {};
+  state.codex.dishes[id] = true;
 
   playSound("reward");
   showMessage(`${dish.name}を調理！${Math.round(dishDurationMs() / 1000)}秒間の効果`);
@@ -10846,6 +11018,137 @@ addTap($("settingsBtn"), () => {
   playSound("tab");
 });
 
+// ===== 図鑑(発動したことのある効果のまとめ) =====
+let codexTabId = "golden";
+
+function codexItem(title, body, iconUrl) {
+  const icon = iconUrl ? `<img class="codexIcon" src="${assetUrl(iconUrl)}" alt="" aria-hidden="true" loading="lazy">` : "";
+  return `<details class="codexItem"><summary>${icon}<span class="codexItemName">${title}</span></summary><div class="codexItemBody">${body}</div></details>`;
+}
+
+function codexGoldenHtml() {
+  if (!(state.codex && state.codex.goldenSeen)) {
+    return `<div class="codexEmpty">金クッキーを一度取ると、ここに効果がまとめられます。</div>`;
+  }
+  const analyzed = hasSkillEffect("unlockSystem", "goldenAnalysis");
+  const lock = `<div class="codexLock">スキル「金色観測」を解放すると効果の式が表示されます。</div>`;
+
+  return [
+    codexItem("金ブースト(全生産倍増)",
+      `<div>金クッキーを取ると約50%の確率で、一定時間すべての生産が倍増する。</div>`
+      + (analyzed
+        ? `<div>式：追加倍率 = 2.1 + 強化Lv・スキル・方針・報酬系統 の合算（香料圧搾機で ×）</div>`
+          + `<div>式：持続 = 9秒 + 26秒 × 追加 ÷ (追加 + 60000)（周回経過・報酬・スキルで伸び、最大 約35秒に近づく）</div>`
+          + `<div class="codexSub">現在：追加 x${goldenMultiplier().toFixed(2)} / 持続 ${(goldenBoostDuration() / 1000).toFixed(1)}秒</div>`
+        : lock),
+      ASSETS.objects && ASSETS.objects.goldenCookie),
+    codexItem("即時クッキー獲得",
+      `<div>金クッキーを取ると約50%の確率で、まとまったクッキーを即座に獲得する。</div>`
+      + (analyzed
+        ? `<div>式：獲得量 = max(100, 毎秒×2.5, タップ×2.5) × 獲得量倍率</div>`
+          + `<div>式：獲得量倍率 = 1 + 報酬Lv・スキル・方針・ステージ補正</div>`
+          + `<div class="codexSub">現在：獲得量倍率 x${goldenAmountMultiplier().toFixed(2)}</div>`
+        : lock)),
+    codexItem("出現間隔",
+      `<div>金クッキーは一定間隔で出現し、強化や方針で間隔が短くなる。</div>`
+      + (analyzed
+        ? `<div>式：出現間隔倍率 = exp(−出現率強化・スキル・方針・報酬) × 周回テンポ × 焼成/ステージ補正（小さいほど速く出る）</div>`
+          + `<div class="codexSub">現在：間隔倍率 x${goldenSpawnFactor().toFixed(3)}</div>`
+        : lock))
+  ].join("");
+}
+
+function codexResearchHtml() {
+  const owned = RESEARCH.filter(r => state.research[r.id]);
+  if (owned.length === 0) {
+    return `<div class="codexEmpty">研究を取得すると、ここに効果と式がまとめられます。</div>`;
+  }
+  const analyzed = researchAnalysisUnlocked();
+  return owned.map(r => {
+    let body;
+    if (analyzed) {
+      const f = researchFormulaText(r);
+      const cur = researchCurrentEffectText(r);
+      const combined = `${f ? `<div>${f}</div>` : ""}${cur ? `<div class="codexSub">${cur}</div>` : ""}`;
+      body = combined || `<div>${r.desc}</div>`;
+    } else {
+      body = `<div>${r.desc}</div><div class="codexLock">スキル「研究解析」を解放すると効果の式が表示されます。</div>`;
+    }
+    return codexItem(r.name, body, ASSETS.research && ASSETS.research[r.id]);
+  }).join("");
+}
+
+function codexWorkshopHtml() {
+  if (!workshopTabUnlocked()) {
+    return `<div class="codexEmpty">スキル「工房の拡張」を解放すると表示されます。</div>`;
+  }
+  const cooked = DISHES.filter(d => state.codex && state.codex.dishes && state.codex.dishes[d.id]);
+  const crafted = EQUIPMENT.filter(eq => equipLv(eq.id) > 0);
+
+  if (!cooked.length && !crafted.length) {
+    return `<div class="codexEmpty">料理を作るか装備を作成すると、ここに効果がまとめられます。</div>`;
+  }
+
+  const parts = [];
+  if (cooked.length) {
+    parts.push(`<div class="codexGroupLabel">料理(時限バフ)</div>`);
+    cooked.forEach(d => parts.push(codexItem(d.name,
+      `<div>効果：${d.desc}</div><div class="codexSub">効果時間 ${Math.round(dishDurationMs() / 1000)}秒 / 同時 最大${MAX_ACTIVE_DISHES}品</div>`)));
+  }
+  if (crafted.length) {
+    parts.push(`<div class="codexGroupLabel">作成(永続装備)</div>`);
+    crafted.forEach(eq => {
+      const lv = equipLv(eq.id);
+      parts.push(codexItem(`${eq.name} Lv.${lv}`, `<div>現在効果：${eq.effect(lv)}</div>`));
+    });
+  }
+  return parts.join("");
+}
+
+function codexTabDefs() {
+  return [
+    { id: "golden", name: "金クッキー", icon: ASSETS.objects && ASSETS.objects.goldenCookie, show: () => true },
+    { id: "research", name: "研究", icon: ASSETS.screens && ASSETS.screens.research, show: () => true },
+    { id: "workshop", name: "工房", icon: ASSETS.screens && ASSETS.screens.workshop, show: () => workshopTabUnlocked() }
+  ];
+}
+
+function renderCodex() {
+  const tabs = codexTabDefs().filter(t => t.show());
+  if (!tabs.some(t => t.id === codexTabId)) codexTabId = tabs[0] ? tabs[0].id : "golden";
+
+  $("codexTabs").innerHTML = tabs.map(t => `
+    <button type="button" class="codexTab ${t.id === codexTabId ? "active" : ""}" data-codex-tab="${t.id}">
+      ${t.icon ? `<img src="${assetUrl(t.icon)}" alt="" aria-hidden="true" loading="lazy">` : ""}
+      <span>${t.name}</span>
+    </button>`).join("");
+  $("codexTabs").querySelectorAll("[data-codex-tab]").forEach(btn => addTap(btn, () => {
+    codexTabId = btn.dataset.codexTab;
+    renderCodex();
+    playSound("tab");
+  }));
+
+  let html = "";
+  if (codexTabId === "golden") html = codexGoldenHtml();
+  else if (codexTabId === "research") html = codexResearchHtml();
+  else if (codexTabId === "workshop") html = codexWorkshopHtml();
+  $("codexBody").innerHTML = html;
+}
+
+function openCodex() {
+  const first = codexTabDefs().find(t => t.show());
+  codexTabId = first ? first.id : "golden";
+  renderCodex();
+  $("codexOverlay").classList.add("active");
+  playSound("tab");
+}
+
+addTap($("codexBtn"), openCodex);
+addTap($("codexCloseBtn"), () => {
+  $("codexOverlay").classList.remove("active");
+  playSound("tab");
+});
+
 addTap($("settingsCloseBtn"), () => {
   $("settingsOverlay").classList.remove("active");
   playSound("tab");
@@ -12801,6 +13104,9 @@ function collectGoldenCookie() {
   if (!goldenVisible) return;
 
   hideGoldenCookie(false);
+
+  if (!state.codex || typeof state.codex !== "object") state.codex = {};
+  state.codex.goldenSeen = true;
 
   if ((state.perks.goldenChain || 0) > 0) {
     state.goldenChainReady = true;
