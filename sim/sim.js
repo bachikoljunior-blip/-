@@ -324,7 +324,10 @@ function lg(level, rate) { return Math.pow(1 + Math.max(0, rate), Math.max(0, le
 function capOwn(n) { return Math.max(0, n); }
 function ir(level, rate) { return Math.pow(1 - Math.min(0.95, Math.max(0, rate)), Math.max(0, level)); }
 // 報酬Lvの逓減: lvが大きいほど1Lvあたりの寄与が下がる(halfで半減)
-function satLv(lv, half) { lv = Math.max(0, lv); return lv / (1 + lv / Math.max(1, half)); }
+// 第12次J-3(ユーザー2026-07-08): モンスター報酬の上限(飽和)を撤廃。旧 satLv は lv/(1+lv/half) で half に漸近する
+// ソフト上限だった。撤廃=所持数に対して線形に伸び続ける(half は無視)。goldenRate/monsterRate は spawn 間隔が
+// 1秒フロアで自己制限、goldenAmount/Power は線形、rewardCategoryBonus のみ (1+rate)^lv で指数のため要 Infinity 監視。
+function satLv(lv, half) { return Math.max(0, lv); }
 // ⑬タイミング: 完全放置モードの判定。idleTiming が対象キーそのもの、または全機能放置 'all' のとき真。
 // 'all' は提案5(2026-07-07 承認)の全体比較用: 全タイミング機能を1本の放置ランで同時に無効化する。
 function idleOn(sim, key) { const it = sim.opt.idleTiming; return it === key || it === 'all'; }
