@@ -3802,6 +3802,37 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
+    /* 撃破で落とした素材の表示(報酬画面) */
+    .rewardDropInfo {
+      margin: 0 0 10px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: rgba(30,18,10,0.5);
+      border: 1px solid rgba(120,220,150,0.28);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+      align-items: center;
+    }
+    .rewardDropTitle {
+      width: 100%;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 900;
+      color: #a8e6b0;
+      margin-bottom: 2px;
+    }
+    .rewardDropItem {
+      padding: 3px 8px;
+      border-radius: 8px;
+      background: rgba(120,220,150,0.14);
+      border: 1px solid rgba(120,220,150,0.3);
+      color: #eaffe8;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
     /* 報酬モーダルの登場演出 */
     #rewardModal .rewardPanel {
       animation: rewardPop 0.34s cubic-bezier(0.2, 1.4, 0.4, 1);
@@ -5210,6 +5241,7 @@
   <div class="rewardPanel">
     <h2>報酬を選択</h2>
     <div class="rewardLockNotice" id="rewardLockNotice">報酬を手に入れた！</div>
+    <div id="rewardDropInfo" class="rewardDropInfo"></div>
     <button id="rewardConfirmBtn" class="rewardConfirmBtn" type="button">OK ― 報酬を選ぶ</button>
     <div id="rewardChoices"></div>
   </div>
@@ -6116,6 +6148,8 @@ let pendingRewardChoices = [];
 let rewardOpenTimer = null;
 // 撃破〜報酬画面が出るまでの間、別のモンスターを撃破できないようにするためのロック
 let rewardPending = false;
+// 直近の撃破で落とした素材(報酬画面に表示するため、イベント文とは分けて保持)
+let lastDropMaterials = [];
 let rewardLockTimer = null;
 let rewardLockUntil = 0;
 
@@ -8346,6 +8380,9 @@ function grantMonsterDrops(typeId, level, overkill) {
   const stage = stageInfo(stageNo);
   const type = MONSTER_TYPES[typeId] || MONSTER_TYPES.normal;
   const parts = [];
+  // 素材ドロップだけを別に集める(報酬画面の「落とした素材」表示用)
+  lastDropMaterials = [];
+  const dropMat = text => { parts.push(text); lastDropMaterials.push(text); };
   // v2: workshop_1(素材の嗅覚)未取得の間は素材ドロップなし(討伐カウント・ステージ解放は進む)
   const dropsEnabled = workshopTabUnlocked();
 
@@ -8359,12 +8396,12 @@ function grantMonsterDrops(typeId, level, overkill) {
     if (dropsEnabled) {
       const coreId = stageNo >= MAX_STAGE_NO ? "deepCore" : "bossCore" + stageNo;
       const got = gainMaterial(coreId, first ? 3 : 1);
-      if (got > 0) parts.push(`+${got} ${getMaterial(coreId).name}`);
+      if (got > 0) dropMat(`+${got} ${getMaterial(coreId).name}`);
 
       // 深層ボスは虚空糖も落とす
       if (stageNo >= MAX_STAGE_NO) {
         const sugar = gainMaterial("voidSugar", 5);
-        if (sugar > 0) parts.push(`+${sugar} ${getMaterial("voidSugar").name}`);
+        if (sugar > 0) dropMat(`+${sugar} ${getMaterial("voidSugar").name}`);
       }
     }
 
@@ -8391,7 +8428,7 @@ function grantMonsterDrops(typeId, level, overkill) {
       const qty = base => Math.max(1, Math.round(base * mult));
       const gain = (id, n) => {
         const got = gainMaterial(id, n);
-        if (got > 0) parts.push(`+${got} ${getMaterial(id).name}`);
+        if (got > 0) dropMat(`+${got} ${getMaterial(id).name}`);
       };
 
       // 通常撃破: ステージ基本素材1個+クリックとどめ+1(とどめは常にタップ)+図鑑/記録/ステージ加算
@@ -13643,7 +13680,7 @@ function defeatMonster(id) {
   rewardPending = true;
   clearTimeout(rewardOpenTimer);
   rewardOpenTimer = null;
-  showRewardChoices(rewardLevel);
+  showRewardChoices(rewardLevel, lastDropMaterials.slice());
   rewardPending = false;
 
   saveGame();
@@ -13863,7 +13900,7 @@ function upgradeRewardPreviewText(choice) {
   `;
 }
 
-function showRewardChoices(level) {
+function showRewardChoices(level, dropMaterials) {
   if (!pendingRewardChoices || pendingRewardChoices.length === 0) {
     pendingRewardChoices = buildMonsterRewardChoices(level);
     state.nextRewardCountBonus = 0;
@@ -13872,6 +13909,20 @@ function showRewardChoices(level) {
   const modal = $("rewardModal");
   const notice = $("rewardLockNotice");
   const box = $("rewardChoices");
+
+  // 落とした素材があれば「報酬を手に入れた」画面に表示する
+  const dropInfo = $("rewardDropInfo");
+  if (dropInfo) {
+    const drops = Array.isArray(dropMaterials) ? dropMaterials : [];
+    if (drops.length) {
+      dropInfo.innerHTML = `<div class="rewardDropTitle">落とした素材</div>`
+        + drops.map(d => `<span class="rewardDropItem">${d}</span>`).join("");
+      dropInfo.style.display = "";
+    } else {
+      dropInfo.innerHTML = "";
+      dropInfo.style.display = "none";
+    }
+  }
 
   box.innerHTML = "";
   rewardLockUntil = 0;
