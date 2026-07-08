@@ -9302,8 +9302,7 @@ function renderQuota() {
   if (pausedForSkillChoice()) {
     box.innerHTML = `
       <div class="quotaFutureLine">
-        <span>現在ノルマ：準備中</span>
-        <span class="quotaProgressPct">第1層 0%</span>
+        <span>モンスター生成ノルマ：準備中</span>
       </div>
       <div class="quotaGauge quotaUnderTarget" aria-label="転生後の準備中">
         <div class="quotaLayer" style="${quotaLayerStyle(0, 0, 1)}"></div>
@@ -9316,10 +9315,9 @@ function renderQuota() {
   // 層はゲージ上のバッジで示す。追跡ノルマ(exist独自システム)の表示は残す。
   box.innerHTML = `
     <div class="quotaFutureLine">
-      <span>ノルマ ${fmt(run)} / ${fmt(quota)}</span>
-      <span class="quotaProgressPct">${ok ? "達成" : "未達"}</span>
+      <span>モンスター生成ノルマ ${fmt(run)} / ${fmt(quota)}</span>
     </div>
-    <div class="quotaGauge ${underTarget ? "quotaUnderTarget" : "quotaOverTarget"}" aria-label="現在ノルマ ${fmt(run)} / ${fmt(gaugeQuota)}">
+    <div class="quotaGauge ${underTarget ? "quotaUnderTarget" : "quotaOverTarget"}" aria-label="モンスター生成ノルマ ${fmt(run)} / ${fmt(gaugeQuota)}">
       ${layerHtml}
       <div class="quotaStageBadge">第<span class="quotaStageNumber">${stageDisplay.stage}</span>層</div>
     </div>
