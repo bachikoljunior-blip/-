@@ -1235,10 +1235,10 @@
     .skillNode::after {
       content: "";
       position: absolute;
-      inset: -18px;
+      inset: -10px;
       background:
         conic-gradient(from 0deg, transparent, rgba(var(--branch-rgb),0.30), transparent 35%, transparent 100%);
-      opacity: 0.38;
+      opacity: 0.24;
       animation: nodeSpin 5s linear infinite;
       pointer-events: none;
     }
@@ -10596,7 +10596,8 @@ function skillLinePoints(from, to) {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const d = Math.max(1, Math.hypot(dx, dy));
-  const radius = 46;
+  // ノード(直径92px=半径46)の外側に余白を取り、線がアイコンに重ならないようにする
+  const radius = 64;
 
   return {
     x1: from.x + dx / d * radius,
