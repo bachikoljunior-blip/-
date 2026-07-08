@@ -975,7 +975,7 @@ function goldenBoostDurationMs(sim) {
 // やり直し比較(replay)を廃止し、各tickで「機能込みの瞬間稼ぎ力 ÷ 機能抜きの瞬間稼ぎ力」を測って
 // 周回平均(対数平均)を取る。同じ状態を2通り評価するだけなので、分かれ道のズレが原理的に発生しない。
 // 稼ぎ力 = 直接生産 + 金クッキー収入率 + 討伐報酬(投資)価値率 の合成。すべて現在状態から式で算出。
-const KILL_VALUE_SEC = 6;   // 討伐1体の価値を「生産◯秒ぶん」で近似(投資=将来の報酬・強化。channel重み)
+const KILL_VALUE_SEC = 4;   // 討伐1体の価値を「生産◯秒ぶん」で近似(投資=将来の報酬・強化。channel重み)
 // earningPower は副作用のある関数(monsterStayMs 等が next*Multiplier をリセット)を呼ぶため、
 // 揮発フィールドを退避・復元して純粋化する(測定が実シミュの状態を壊さないように)
 function earningPowerSafe(sim) {
@@ -985,12 +985,21 @@ function earningPowerSafe(sim) {
   r.nextMonsterStayMultiplier = a; r.nextMonsterSpawnMultiplier = b; r.nextGoldenSpawnMultiplier = c; r.nextMonsterHpMultiplier = d;
   return v;
 }
+// 設備直送生産(第12次J・提案A): 生産設備が最高層に応じた直接収入を生む。金ブースト/討伐報酬の
+// 乗算を受けない独立項(設備固有の稼ぎ口)。㉘の設備シェアを後半も保つ。baseCps は素の設備生産。
+function equipDirectIncome(sim, prod) {
+  const D = P.equipDirect;
+  if (!D || !D.coef) return 0;
+  const s = Math.max(0, (sim.run.maxStage || 0) - (D.startStage || 0));
+  if (s <= 0) return 0;
+  return D.coef * (prod.baseCps || 0) * Math.pow(s, D.stagePow || 1);
+}
 function earningPower(sim) {
   const r = sim.run;
   const prod = computeProd(sim);
   const tapRate = sim.strat.tapRate;
   const base = prod.cps + prod.clickEV * (r.monster ? 0 : tapRate); // 直接生産(モンスター中はタップは討伐へ)
-  let power = base;
+  let power = base + equipDirectIncome(sim, prod); // 設備直送(提案A): 設備固有の独立収入=equip チャネルへ
   // 金クッキー収入率(期待値/秒): 間隔は spawnFactor、1回の価値は即時+ブーストの平均
   if (!(sim._mdChan && sim._mdChan.golden)) {
     const mean = (P.golden.spawnMin + P.golden.spawnMax) / 2;
@@ -1530,8 +1539,8 @@ function advanceTick(sim, strategy) {
       }
     }
 
-    // 収入
-    earn(sim, cpsNow * dt + clickNow * tapsForCookies * dt);
+    // 収入(設備直送=提案A: 金/討伐の乗算を受けない設備固有の独立収入を加算)
+    earn(sim, cpsNow * dt + clickNow * tapsForCookies * dt + equipDirectIncome(sim, prod) * dt);
 
     // 銀行クリック配当 段階2: 複利利息。キャップ撤廃: 硬い min(利息, 毎秒生産×2) を
     // 漸近逓減式 raw/(1+raw/soft) に置換(暴走防止。softは段3で最高層に応じ無限に伸びる)
