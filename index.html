@@ -4789,6 +4789,17 @@
       filter: grayscale(0.4);
     }
 
+    /* 購入済みの研究(一番下に並ぶ・タップ不可) */
+    .item.researchDone {
+      opacity: 0.82;
+      cursor: default;
+    }
+
+    .item.researchDone .researchDonePrice {
+      color: #9fe0a2;
+      font-weight: 800;
+    }
+
   </style>
 </head>
 
@@ -11242,10 +11253,11 @@ function renderResearch() {
   const stageCards = visibleResearchStageCards();
   // 重力圧縮の圧縮ゲージはタップで発動する操作なので、購入後も専用カードとして残す
   const showBhGauge = state.research.blackHoleCompression && resStage2("blackHoleCompression");
+  // 購入済みの研究は一番下に「購入済み」として並べる
+  const ownedList = RESEARCH.filter(r => state.research[r.id]);
 
-  if (list.length === 0 && lockedList.length === 0 && stageCards.length === 0 && !showBhGauge) {
-    const anyBought = RESEARCH.some(r => state.research[r.id]);
-    box.innerHTML = `<div class="desc">${anyBought ? "解放できる研究はすべて取得済み" : "研究はまだない"}</div>`;
+  if (list.length === 0 && lockedList.length === 0 && stageCards.length === 0 && !showBhGauge && ownedList.length === 0) {
+    box.innerHTML = `<div class="desc">研究はまだない</div>`;
     appendResearchAnalysisPanel(box);
     return;
   }
@@ -11253,7 +11265,8 @@ function renderResearch() {
   const ids = list.map(r => r.id)
     .concat(lockedList.map(r => "lock:" + r.id))
     .concat(stageCards.map(sc => sc.key))
-    .concat(showBhGauge ? ["__bhGauge"] : []);
+    .concat(showBhGauge ? ["__bhGauge"] : [])
+    .concat(ownedList.map(r => "own:" + r.id));
   let cards = [...box.querySelectorAll(".item.artCard")];
   const existingIds = cards.map(el => el.dataset.id);
   const sameList = ids.length === existingIds.length && ids.every((id, i) => id === existingIds[i]);
@@ -11314,6 +11327,17 @@ function renderResearch() {
       box.appendChild(gaugeBtn);
     }
 
+    // 購入済みの研究(一番下・購入済み表示、タップ不可)
+    ownedList.forEach(r => {
+      const btn = document.createElement("button");
+      btn.className = "item artCard researchDone";
+      btn.dataset.id = "own:" + r.id;
+      btn.dataset.art = researchArt(r);
+      setArtImage(btn, ASSETS.research[r.id]);
+      btn.disabled = true;
+      box.appendChild(btn);
+    });
+
     cards = [...box.querySelectorAll(".item.artCard")];
   } else {
     const oldPanel = box.querySelector(".researchAnalysisPanel");
@@ -11343,6 +11367,18 @@ function renderResearch() {
       btn.innerHTML = `
         <b>？？？</b>
         <div class="desc">「${eq ? eq.name : "対応設備"}」を購入すると研究が解放されます</div>
+      `;
+      return;
+    }
+
+    if (lockId.startsWith("own:")) {
+      const r = RESEARCH.find(x => ("own:" + x.id) === lockId);
+      if (!r) return;
+      btn.classList.remove("canBuy");
+      btn.innerHTML = `
+        <b>${r.name}</b>
+        <div class="price researchDonePrice">購入済み</div>
+        <div class="desc">${r.desc}</div>
       `;
       return;
     }
