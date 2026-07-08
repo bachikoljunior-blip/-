@@ -11036,7 +11036,7 @@ function codexGoldenHtml() {
 
   if (codex.goldenBoost) {
     items.push(codexItem("金ブースト倍率(全生産×)",
-      `<div>金クッキーを取ると約50%の確率で、一定時間すべての生産が倍増する。その倍率。</div>`
+      `<div>金ブーストの倍率。金クッキーを取ると約50%の確率で発動し、一定時間すべての生産が倍増する。</div>`
       + (analyzed
         ? `<div>式：追加倍率 = 2.1 + 強化Lv・スキル・方針・報酬系統 の合算（香料圧搾機で ×）</div>`
           + `<div class="codexSub">現在：追加 x${goldenMultiplier().toFixed(2)}</div>`
@@ -11062,13 +11062,12 @@ function codexGoldenHtml() {
       goldenIcon));
   }
 
-  if (codex.goldenSeen) {
+  // 出現間隔はスキル「金色観測」で初めて観測できる読み取り値なので、解放後のみ表示する
+  if (codex.goldenSeen && analyzed) {
     items.push(codexItem("出現間隔",
-      `<div>金クッキーは一定間隔で出現し、強化や方針で間隔が短くなる。</div>`
-      + (analyzed
-        ? `<div>式：出現間隔倍率 = exp(−出現率強化・スキル・方針・報酬) × 周回テンポ × 焼成/ステージ補正（小さいほど速く出る）</div>`
-          + `<div class="codexSub">現在：間隔倍率 x${goldenSpawnFactor().toFixed(3)}</div>`
-        : lock),
+      `<div>金クッキーが出現する間隔。強化や方針で短くなる。</div>`
+      + `<div>式：出現間隔倍率 = exp(−出現率強化・スキル・方針・報酬) × 周回テンポ × 焼成/ステージ補正（小さいほど速く出る）</div>`
+      + `<div class="codexSub">現在：間隔倍率 x${goldenSpawnFactor().toFixed(3)}</div>`,
       goldenIcon));
   }
 
