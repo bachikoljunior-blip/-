@@ -10737,9 +10737,6 @@ function renderSkillChoiceScreen() {
   const selectedDone = selected ? hasSkill(selected.id) : false;
   const selectedCanBuy = selected ? skillCanBuy(selected) : false;
 
-  // 前提が全て解放されて初めて名称・効果が判明する(未判明のスキルは伏せる)
-  const selectedRevealed = selected ? (selectedDone || selected.prereqs.every(id => hasSkill(id))) : false;
-
   let statusText = "未選択";
   if (selected) {
     if (selectedDone) statusText = "解放済み";
@@ -10750,13 +10747,13 @@ function renderSkillChoiceScreen() {
 
   $("selectedSkillPanel").innerHTML = selected ? `
     <div class="selectedSkillHead">
-      <div class="selectedSkillName">${selectedRevealed ? `${selected.icon} ${selected.name}` : "？？？"}</div>
+      <div class="selectedSkillName">${selected.icon} ${selected.name}</div>
       <div class="selectedSkillStatus">${statusText}</div>
     </div>
     <div class="selectedSkillCost">消費PT：${fmt(selected.cost)} / 系統：${selected.branchName}</div>
     <div class="selectedSkillDescRow">
       ${ASSETS.skills && ASSETS.skills[selected.id] ? `<img class="selectedSkillArt" src="${assetUrl(ASSETS.skills[selected.id])}" alt="" aria-hidden="true" loading="lazy">` : ""}
-      <div class="selectedSkillDesc">${selectedRevealed ? selected.desc : "前提スキルを全て解放すると判明します。"}</div>
+      <div class="selectedSkillDesc">${selected.desc}</div>
     </div>
     <div class="selectedSkillDesc">前提：${selected.prereqs.length ? selected.prereqs.map(id => getSkill(id)?.name || id).join("、") : "なし"}</div>
   ` : `
@@ -10799,7 +10796,6 @@ function renderSkillChoiceScreen() {
     const done = hasSkill(skill.id);
     const canBuy = skillCanBuy(skill);
     const locked = !done && !canBuy;
-    const revealed = done || skill.prereqs.every(id => hasSkill(id));
     const selectedClass = selectedSkillId === skill.id ? "selected" : "";
 
     return `
@@ -10807,7 +10803,7 @@ function renderSkillChoiceScreen() {
         class="skillNode branch-${skill.branchId} ${selectedClass} ${done ? "done" : ""} ${canBuy ? "canBuy" : ""} ${locked ? "locked" : ""}"
         style="left:${skill.x}px; top:${skill.y}px;"
         data-skill-node="${skill.id}"
-        aria-label="${revealed ? skill.name : "未判明のスキル"}"
+        aria-label="${skill.name}"
       >
         ${ASSETS.skills && ASSETS.skills[skill.id]
           ? `<img class="nodeArt" src="${assetUrl(ASSETS.skills[skill.id])}" alt="" aria-hidden="true">`
