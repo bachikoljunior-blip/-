@@ -3884,6 +3884,16 @@
       100% { filter: brightness(1) saturate(1); }
     }
 
+    /* A案: 初回タップでBGM解禁したあと「もう一度で開始」を促す点滅 */
+    .bgmReadyPulse {
+      animation: bgmReadyPulse 0.85s ease-out 2;
+    }
+
+    @keyframes bgmReadyPulse {
+      0%, 100% { filter: brightness(1); box-shadow: 0 0 0 rgba(255, 200, 110, 0); }
+      50% { filter: brightness(1.3); box-shadow: 0 0 18px rgba(255, 200, 110, 0.75); }
+    }
+
     /* ===== クッキーのタップ演出 ===== */
     #cookie.tapped {
       animation: cookieSquash 0.20s cubic-bezier(0.3, 1.6, 0.5, 1);
@@ -13648,7 +13658,21 @@ function returnToTitleScreen() {
   saveGame();
 }
 
+// A案: タイトルで最初のタップは「音の解禁＋タイトルBGM再生」だけにして、
+// もう一度「はじめる」でゲーム開始する。これで初起動でもタイトルBGMが必ず聞こえる。
+// pointerdown(=doc側のBGM解禁より前のtargetフェーズ)で、タップ前のBGM状態を控えておく。
+let bgmOnBeforeTitleTap = false;
+$("titleStartBtn").addEventListener("pointerdown", () => {
+  bgmOnBeforeTitleTap = bgmStarted;
+});
 addTap($("titleStartBtn"), () => {
+  // このタップより前にBGMが鳴っていなければ、今回は解禁+タイトルBGM再生のみで止める
+  if (!bgmOnBeforeTitleTap) {
+    try { startBgm(); } catch (e) {}
+    const btn = $("titleStartBtn");
+    if (btn) { btn.classList.remove("bgmReadyPulse"); void btn.offsetWidth; btn.classList.add("bgmReadyPulse"); }
+    return;
+  }
   playSound("start");
   startGameFromTitle();
 });
