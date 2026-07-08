@@ -300,7 +300,7 @@ function printToggles(res) {
   //  まぐれ勝ち・まぐれ負け(周回内タイミングの分岐が終盤の急成長で増幅されるもの)に左右されず、
   //  「ふつうの周回で効いているか」を見る。min/max/幾何平均は参考表示として残す。
   //  未使用(どの方針も取得しない)機能は比=1.0=不合格として扱う(スキップしない)
-  console.log('種別      ID                        各回比[min..max] 中央値(幾何平均)   必要   中央値判定   ±3倍判定(全回)');
+  console.log('種別      ID                        各回比[min..max] 中央値(幾何平均)   必要   中央値判定   ±1.5倍判定(全回)');
   const KINDS = [['research', '研究', 1.2], ['reward', '報酬', 1.1], ['stage', '段階', 1.05], ['upgrade', '設備', 1.2]];
   const out = { lowOk: 0, lowAll: 0, bandOk: 0, bandAll: 0 };
   for (const [kind, label, need] of KINDS) {
@@ -319,17 +319,17 @@ function printToggles(res) {
       r._ratios = ratios; r._low = lowOk; r._med = med;
       console.log(`${kind.padEnd(9)} ${r.id.padEnd(26)} [${mn.toFixed(2)}..${mx.toFixed(2)}] 中央値${med.toFixed(2)} (${gm.toFixed(2)}) x${r.logs.length}回  x${need}  ${lowOk ? 'OK' : 'NG(中央値<' + need + ')'}`);
     }
-    // ②(研究のみ・2026-07-06 ユーザー採用): 一強禁止は「研究ごとの中央値」同士で±3倍
+    // ②(研究のみ・2026-07-06 ユーザー採用): 一強禁止は「研究ごとの中央値」同士で±1.5倍
     if (kind === 'research') {
       const meds = rows.filter(r => r.used && r._med != null).map(r => ({ id: r.id, med: r._med }));
       if (meds.length >= 2) {
         const gmean = Math.exp(meds.reduce((a, b) => a + Math.log(b.med), 0) / meds.length);
-        const ok2 = meds.filter(m => m.med >= gmean / 3 && m.med <= gmean * 3);
-        const ng2 = meds.filter(m => !(m.med >= gmean / 3 && m.med <= gmean * 3));
-        console.log(`②(中央値同士の±3倍・平均${gmean.toFixed(2)}): ${ok2.length}/${meds.length}${ng2.length ? ' NG: ' + ng2.map(m => m.id + '=' + m.med.toFixed(2)).join(',') : ' 全研究OK'}`);
+        const ok2 = meds.filter(m => m.med >= gmean / 1.5 && m.med <= gmean * 1.5);
+        const ng2 = meds.filter(m => !(m.med >= gmean / 1.5 && m.med <= gmean * 1.5));
+        console.log(`②(中央値同士の±1.5倍・平均${gmean.toFixed(2)}): ${ok2.length}/${meds.length}${ng2.length ? ' NG: ' + ng2.map(m => m.id + '=' + m.med.toFixed(2)).join(',') : ' 全研究OK'}`);
       }
     }
-    // ±3倍(各回・③⑨⑩は従来どおり): 同一周回内で有効な機能同士。runIdx単位で照合
+    // ±1.5倍(各回・③⑨⑩は従来どおり): 同一周回内で有効な機能同士。runIdx単位で照合
     const used = rows.filter(r => r.used && r.runIdxs);
     const byRun = new Map();
     for (const r of used) {
@@ -343,10 +343,10 @@ function printToggles(res) {
       if (arr.length < 2) continue;
       bAll++;
       const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
-      if (arr.every(v => v >= mean / 3 && v <= mean * 3)) bOk++;
+      if (arr.every(v => v >= mean / 1.5 && v <= mean * 1.5)) bOk++;
     }
     out.bandOk += bOk; out.bandAll += bAll;
-    console.log(`${label}: 中央値OK ${rows.filter(r => r._low).length}/${rows.length} / ±3倍(各回) ${bOk}/${bAll}周回`);
+    console.log(`${label}: 中央値OK ${rows.filter(r => r._low).length}/${rows.length} / ±1.5倍(各回) ${bOk}/${bAll}周回`);
   }
   return out;
 }
@@ -698,7 +698,7 @@ if (mode === 'baseline') {
   // ㉔㉕㉖(第9次【仮】): モンスター種類×報酬相性
   // ㉔ 有効性: 「その回だけ相性を全部×1.0」との獲得効率比(幾何平均≥1.1)+各回minも表示
   // ㉕ 文脈依存性: カテゴリ別の最効率種類が2種以上 / 方針の討伐配分(報酬寄与の1位種類)が2種以上
-  // ㉖ 一強禁止: 各周回で種類ごとの「討伐1体あたり報酬量」が平均±3倍以内(ボスは周期出現のため対象外)
+  // ㉖ 一強禁止: 各周回で種類ごとの「討伐1体あたり報酬量」が平均±1.5倍以内(ボスは周期出現のため対象外)
   const aff = G.P.mtype.affinity;
   const cats = ['golden', 'hunt', 'equipment', 'risk'];
   const bestByCat = {};
@@ -723,7 +723,7 @@ if (mode === 'baseline') {
       if (vals.length < 2) continue;
       all26++;
       const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
-      if (vals.every(v => v >= mean / 3 && v <= mean * 3)) ok26++;
+      if (vals.every(v => v >= mean / 1.5 && v <= mean * 1.5)) ok26++;
     }
     // ㉕ 実測: 報酬寄与の1位種類(標準以外)
     const agg = {};
@@ -740,7 +740,7 @@ if (mode === 'baseline') {
     }
   }
   console.log(`㉕(実測) 方針の報酬寄与1位種類: ${Object.entries(domByStrat).map(([k, v]) => k + '=' + v).join(' ')} → ${new Set(Object.values(domByStrat)).size}種 (≥2で OK)`);
-  console.log(`㉖: 種類別の1体あたり報酬量 ±3倍以内 ${ok26}/${all26}周回`);
+  console.log(`㉖: 種類別の1体あたり報酬量 ±1.5倍以内 ${ok26}/${all26}周回`);
 } else if (mode === 'expect') {
   // ①②③⑨⑬⑫ 各回の期待値方式(第12次): node runner.js expect "" [hours]
   // 各機能につき「少なくとも1方針が取得し、その方針の“取得した全周回”で稼ぎ力の持ち上げ≥閾値」を要求。
@@ -798,7 +798,7 @@ if (mode === 'baseline') {
     });
     console.log(`参考 討伐連鎖lift: ${rows.length ? rows.join(' / ') : '(討伐なし)'}`);
   }
-  // ② 研究の一強禁止: 各方針で、その方針が取得した研究の「周回幾何平均lift」が幾何平均±3倍
+  // ② 研究の一強禁止: 各方針で、その方針が取得した研究の「周回幾何平均lift」が幾何平均±1.5倍
   {
     let ok = 0, all = 0;
     for (const s of STRATEGIES) {
@@ -812,7 +812,7 @@ if (mode === 'baseline') {
       if (arr.length < 2) continue;
       all++;
       const gm = Math.exp(arr.reduce((a, b) => a + Math.log(b), 0) / arr.length);
-      const within = arr.every(v => v >= gm / 3 && v <= gm * 3);
+      const within = arr.every(v => v >= gm / 1.5 && v <= gm * 1.5);
       if (within) ok++;
       console.log(`  ${within ? 'OK' : 'NG'} ${s.id} 研究lift[${Math.min(...arr).toFixed(2)}..${Math.max(...arr).toFixed(2)}] 平均${gm.toFixed(2)}`);
     }
@@ -867,7 +867,8 @@ if (mode === 'baseline') {
       const aPass = pol === 'balanced'
         ? Object.values(shares).every(v => v >= 0.10)
         : shares[ROLE_CHANNEL[pol]] >= 0.30;
-      const bPass = maxShare <= 0.90;
+      // (b)独占禁止: どの稼ぎ口も≤90%。ただし討伐方針(hunt)は免除(2026-07-08 ユーザー決定=討伐特化は討伐由来独占を認める)
+      const bPass = pol === 'hunt' ? true : maxShare <= 0.90;
       const pass = aPass && bPass;
       if (gated) { all++; if (pass) ok++; }
       rows.push(`  run${String(r.idx).padStart(2)} ${gated ? '対象' : '対象外'} 設備${(shares.equip * 100).toFixed(0)}% 金${(shares.golden * 100).toFixed(0)}% 討伐${(shares.hunt * 100).toFixed(0)}% タップ${(shares.tap * 100).toFixed(0)}%${gated ? ` → (a)${aPass ? 'OK' : 'NG'} (b)${bPass ? 'OK' : 'NG'}` : ''}`);
