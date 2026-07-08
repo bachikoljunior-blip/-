@@ -7583,9 +7583,11 @@ function orderSpiceMultiplier() {
 // v4 §19: 報酬は相対型のみ — クッキー(毎秒生産×制限時間×0.5)/素材セット/毎秒生産×2(120秒)
 function applyOrderReward(order) {
   const def = orderDef(order.id);
+  if (!state.codex || typeof state.codex !== "object") state.codex = {};
 
   if (def.id === "ovenOrder" || def.id === "clickOrder") {
     earn(Math.max(1, Number(order.rewardCookies) || Math.floor(currentCps() * 120)));
+    state.codex.orderCookie = true;
     return;
   }
 
@@ -7595,8 +7597,10 @@ function applyOrderReward(order) {
       const matId = currentStageNo() >= MAX_STAGE_NO ? "voidSugar" : (STAGE_MATERIALS[currentStageNo()] || STAGE_MATERIALS[1]).normal;
       gainMaterial(matId, 5);
       showMessage(`注文報酬：${getMaterial(matId).name} +5`);
+      state.codex.orderMaterial = true;
     } else {
       earn(Math.max(1, Number(order.rewardCookies) || Math.floor(currentCps() * 120)));
+      state.codex.orderCookie = true;
     }
     return;
   }
@@ -7604,6 +7608,7 @@ function applyOrderReward(order) {
   // goldenOrder / quotaOrder / researchOrder: 短時間の毎秒生産×2
   state.orderTempCpsMultiplier = 2;
   state.orderTempCpsUntil = Date.now() + 120000;
+  state.codex.orderCps = true;
 }
 
 function completeOrder() {
@@ -11193,21 +11198,38 @@ function codexOrderHtml() {
   }
   const done = Math.max(0, Number(state.completedOrders) || 0);
   const orderIcon = ASSETS.screens && ASSETS.screens.order;
-  return [
-    codexItem("注文の仕組み",
-      `<div>ノルマの進行に応じて短期目標(注文)が届く。制限時間内に達成すると報酬。同時に1件のみ。</div>`
-      + `<div>制限時間は、プレイ時間が長くなるほど少しずつ伸びる。</div>`
-      + `<div>次の注文までの間隔は、転生するほど短くなる。</div>`
-      + `<div>要求量は、そのときの生産力や討伐ペースに合わせて決まる（放置では届かないが、動けば届く量）。</div>`
-      + `<div class="codexSub">現在：制限時間 ${Math.round(orderTimeLimitMs() / 1000)}秒 / 次の注文間隔 ${Math.round(orderSpawnIntervalMs() / 1000)}秒 / 達成数 ${fmt(done)}</div>`,
-      orderIcon),
-    codexItem("注文の報酬",
-      `<div>注文の種類によって報酬が変わる。</div>`
-      + `<div>・クッキー：毎秒生産に応じたまとまった量を獲得</div>`
-      + `<div>・素材セット：選択中ステージの基本素材 +5（工房の解放時）</div>`
-      + `<div>・毎秒生産 x2（120秒）</div>`,
-      orderIcon)
-  ].join("");
+  const codex = state.codex || {};
+
+  const items = [];
+  items.push(codexItem("注文の仕組み",
+    `<div>ノルマの進行に応じて短期目標(注文)が届く。制限時間内に達成すると報酬。同時に1件のみ。</div>`
+    + `<div>制限時間は、プレイ時間が長くなるほど少しずつ伸びる。</div>`
+    + `<div>次の注文までの間隔は、転生するほど短くなる。</div>`
+    + `<div>要求量は、そのときの生産力や討伐ペースに合わせて決まる（放置では届かないが、動けば届く量）。</div>`
+    + `<div class="codexSub">現在：制限時間 ${Math.round(orderTimeLimitMs() / 1000)}秒 / 次の注文間隔 ${Math.round(orderSpawnIntervalMs() / 1000)}秒 / 達成数 ${fmt(done)}</div>`,
+    orderIcon));
+
+  // 報酬ごとの項目(その報酬を受け取るまで伏せる)
+  items.push(codex.orderCookie
+    ? codexItem("報酬：クッキー",
+        `<div>毎秒生産に応じたまとまったクッキーを一度に獲得する。</div>`
+        + `<div class="codexSub">対象の注文：追加焼成・手ごね依頼 など</div>`,
+        orderIcon)
+    : codexHiddenItem());
+  items.push(codex.orderMaterial
+    ? codexItem("報酬：素材セット",
+        `<div>選択中ステージの基本素材を +5 獲得する。</div>`
+        + `<div class="codexSub">対象の注文：討伐依頼・香料仕入れ（工房の解放時）</div>`,
+        orderIcon)
+    : codexHiddenItem());
+  items.push(codex.orderCps
+    ? codexItem("報酬：毎秒生産 x2(120秒)",
+        `<div>120秒のあいだ、毎秒生産が2倍になる。</div>`
+        + `<div class="codexSub">対象の注文：金粉納品・安定焼成・研究依頼 など</div>`,
+        orderIcon)
+    : codexHiddenItem());
+
+  return items.join("");
 }
 
 // 各報酬の「式(Lvごとの伸び方)」をゲーム内の言葉で説明する
@@ -11253,7 +11275,11 @@ function codexMonsterRewardHtml() {
 
   catOrder.forEach(cat => {
     const list = existing.filter(r => (r.category || "equipment") === cat);
-    if (!list.length) return;
+    // 設備系には「◯◯強化」(設備個別強化の報酬)も含める。所持設備が対象
+    const upgradeRewards = cat === "equipment"
+      ? UPGRADES.filter(u => (state.upgrades[u.id] || 0) > 0 && upgradeUnlocked(u))
+      : [];
+    if (!list.length && !upgradeRewards.length) return;
     parts.push(`<div class="codexGroupLabel">${catName[cat]}系の報酬</div>`);
     list.forEach(r => {
       const lv = (state.perks || {})[r.id] || 0;
@@ -11261,6 +11287,14 @@ function codexMonsterRewardHtml() {
       const rule = PERK_FORMULA[r.id];
       parts.push(codexItem(`${r.name} Lv.${lv}`,
         `<div>現在効果：${r.desc(lv)}</div>` + (rule ? `<div>式：${rule}</div>` : ""),
+        monsterIcon));
+    });
+    upgradeRewards.forEach(u => {
+      const lv = (state.upgradePerks || {})[u.id] || 0;
+      if (lv <= 0) { parts.push(codexHiddenItem()); return; }
+      parts.push(codexItem(`${u.name} 強化 Lv.${lv}`,
+        `<div>現在効果：${u.name}の個別強化 ×${upgradePersonalMultiplier(u).toFixed(2)}</div>`
+        + `<div>式：モンスター報酬で取るたびに ${u.name} の効果が上がる（1回で +約${(upgradeBoostRate(u) * 100).toFixed(1)}%、報酬系統・スキルで増幅）。</div>`,
         monsterIcon));
     });
   });
@@ -11727,6 +11761,9 @@ function researchAnalysisFullscreenActive() {
 }
 
 function appendResearchAnalysisPanel(box) {
+  // 研究解析の詳細は図鑑に集約したため、研究タブ下部の解析欄は表示しない
+  return;
+  // eslint-disable-next-line no-unreachable
   if (!researchAnalysisFullscreenActive()) return;
 
   const panel = document.createElement("div");
