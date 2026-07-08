@@ -6433,11 +6433,29 @@ function unitLength(text) {
   return Array.from(String(text || "")).length;
 }
 
-function hasConsecutiveSameChar(text) {
+// 程度・量を表す字は二連続で並んでも自然なので許容する。
+// 域・数などの「概念」を表す字や語は二連続を禁止する。
+const REPEATABLE_UNIT_CHARS = new Set(["量", "極", "層"]);
+
+function hasBadConsecutiveRepeat(text) {
   const chars = Array.from(String(text || ""));
+
+  // 単字の二連続: 程度・量を表す字だけは許容し、域域・数数 などは禁止
   for (let i = 1; i < chars.length; i++) {
-    if (chars[i] === chars[i - 1]) return true;
+    if (chars[i] === chars[i - 1] && !REPEATABLE_UNIT_CHARS.has(chars[i])) {
+      return true;
+    }
   }
+
+  // 二字以上の語の二連続: 虚空虚空・不可不可・零域零域 などを禁止
+  for (let w = 2; w <= 3; w++) {
+    for (let i = 0; i + 2 * w <= chars.length; i++) {
+      const first = chars.slice(i, i + w).join("");
+      const second = chars.slice(i + w, i + 2 * w).join("");
+      if (first === second) return true;
+    }
+  }
+
   return false;
 }
 
@@ -6445,9 +6463,7 @@ function validHugeUnitName(name) {
   if (!name) return false;
   if (unitLength(name) < 2) return false;
   if (unitLength(name) > 14) return false;
-  if (hasConsecutiveSameChar(name)) return false;
-  if (name.includes("不可不可")) return false;
-  if (name.includes("無音無音")) return false;
+  if (hasBadConsecutiveRepeat(name)) return false;
   if (JAPANESE_NUMBER_UNITS.includes(name)) return false;
   return true;
 }
