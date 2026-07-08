@@ -6433,16 +6433,18 @@ function unitLength(text) {
   return Array.from(String(text || "")).length;
 }
 
-// 程度を表す字(極)と、数えられる粒を表す字(沙)は名前内で複数回現れてもよい。
-// 数・量 は数えられないので不可。塵 は粒の集まりで個数では表せないので不可。
-// 域・層・界 等の概念字や、虚空・恒河 等の概念語も、隣接・離れた位置を問わず
-// 同じ字が二回以上現れないようにする。
-const REPEATABLE_UNIT_CHARS = new Set(["極", "沙"]);
+// 程度・度合いを表す字(極=極み、劫=永劫)だけは、強調として名前内に離れて
+// 二回現れてもよい。物・場所・粒・概念(域・界・海・星・砂・塵 や 虚空・恒河 等)は
+// 重ねると事故に見えるので不可。度合い字であっても隣接の重複(極極・劫劫)は不可。
+const REPEATABLE_UNIT_CHARS = new Set(["極", "劫"]);
 
 function hasBadCharRepeat(text) {
+  const chars = Array.from(String(text || ""));
   const seen = new Set();
-  for (const c of Array.from(String(text || ""))) {
-    if (REPEATABLE_UNIT_CHARS.has(c)) continue;
+  for (let i = 0; i < chars.length; i++) {
+    const c = chars[i];
+    if (i > 0 && c === chars[i - 1]) return true; // 隣接の重複はどの字も不可
+    if (REPEATABLE_UNIT_CHARS.has(c)) continue;    // 度合い字は離れた重複のみ許容
     if (seen.has(c)) return true;
     seen.add(c);
   }
