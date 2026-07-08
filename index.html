@@ -6433,18 +6433,12 @@ function unitLength(text) {
   return Array.from(String(text || "")).length;
 }
 
-// 程度・量を表す字は二連続で並んでも自然なので許容する。
-// 域・数などの「概念」を表す字や語は二連続を禁止する。
-const REPEATABLE_UNIT_CHARS = new Set(["量", "極", "層"]);
-
 function hasBadConsecutiveRepeat(text) {
   const chars = Array.from(String(text || ""));
 
-  // 単字の二連続: 程度・量を表す字だけは許容し、域域・数数 などは禁止
+  // 単字の二連続: 量・層・域・数 なども量/程度の「概念」なので一律禁止
   for (let i = 1; i < chars.length; i++) {
-    if (chars[i] === chars[i - 1] && !REPEATABLE_UNIT_CHARS.has(chars[i])) {
-      return true;
-    }
+    if (chars[i] === chars[i - 1]) return true;
   }
 
   // 二字以上の語の二連続: 虚空虚空・不可不可・零域零域 などを禁止
@@ -6459,11 +6453,25 @@ function hasBadConsecutiveRepeat(text) {
   return false;
 }
 
+// 概念語(虚空 など)は一つの単位名に二回以上現れないようにする(離れていても不可)
+function repeatsConceptWord(name) {
+  for (const w of HUGE_LONG_WORDS) {
+    let idx = name.indexOf(w);
+    let count = 0;
+    while (idx !== -1) {
+      if (++count >= 2) return true;
+      idx = name.indexOf(w, idx + 1);
+    }
+  }
+  return false;
+}
+
 function validHugeUnitName(name) {
   if (!name) return false;
   if (unitLength(name) < 2) return false;
   if (unitLength(name) > 14) return false;
   if (hasBadConsecutiveRepeat(name)) return false;
+  if (repeatsConceptWord(name)) return false;
   if (JAPANESE_NUMBER_UNITS.includes(name)) return false;
   return true;
 }
