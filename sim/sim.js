@@ -952,8 +952,13 @@ function monsterStayMs(sim) {
 function goldenAmountMultiplier(sim) {
   const r = sim.run;
   const lv = satLv(rwOff(sim, 'goldenAmount') ? 0 : r.perks.goldenAmount, P.golden.amountLvHalf);
+  // 第12次K: 金報酬トリオ(連鎖/照準/初撃)+獣の匂いを金の即時獲得量へ再テーマ(所持Lvに線形=飽和しない)。増加方向のみ。
+  const trio = (rwOff(sim, 'goldenChain') ? 0 : (r.perks.goldenChain || 0)) * (P.rw.goldenChainAmount || 0)
+    + (rwOff(sim, 'goldenTarget') ? 0 : (r.perks.goldenTarget || 0)) * (P.rw.goldenTargetAmount || 0)
+    + (rwOff(sim, 'goldenFirstHit') ? 0 : (r.perks.goldenFirstHit || 0)) * (P.rw.goldenFirstHitAmount || 0)
+    + (rwOff(sim, 'beastScent') ? 0 : (r.perks.beastScent || 0)) * (P.rw.beastScentAmount || 0);
   return 1 + lv * P.golden.amountPerLv + skillEffect(sim, 'goldenAmount')
-    + rewardCategoryBonus(sim, 'golden') + (policyIs(sim, 'golden') ? 0.10 : 0);
+    + rewardCategoryBonus(sim, 'golden') + (policyIs(sim, 'golden') ? 0.10 : 0) + trio;
 }
 function goldenMultiplierVal(sim) {
   const r = sim.run;
@@ -1251,7 +1256,9 @@ function prestigeGainOf(runCookies) {
   return Math.max(1, Math.floor(pp.pA * (1 - Math.exp(-t / pp.pD1)) + pp.pB * Math.pow(t / pp.pD2, pp.pG)));
 }
 function prestigeUnlockedFn(sim) {
-  return sim.totalCookies >= 1000000 || sim.prestigeTotal > 0 || sim.prestigeRuns > 0;
+  // 初回転生のしきい値=10^costExp0(既定10^6)。以降は prestigeTotal/Runs で解放済み。
+  const firstCost = Math.pow(10, (P.prestige && P.prestige.costExp0 != null) ? P.prestige.costExp0 : 6);
+  return sim.totalCookies >= firstCost || sim.prestigeTotal > 0 || sim.prestigeRuns > 0;
 }
 
 // 可視アップグレード(店に並ぶもの)
@@ -1353,7 +1360,7 @@ function applyReward(sim, choice, typeId) {
   if (choice.kind === 'perk') {
     if (sim.firstPerk[choice.id] === undefined) sim.firstPerk[choice.id] = sim.t;
     r.perks[choice.id] += count;
-    if (choice.id === 'huntFocus') r.huntFocusLv = (r.huntFocusLv || 0) + count;
+    if (choice.id === 'huntFocus' && !rwOff(sim, 'huntFocus')) r.huntFocusLv = (r.huntFocusLv || 0) + count;
   } else {
     r.upgradePerks[choice.id] += count;
   }
@@ -1428,14 +1435,23 @@ function cheapestUnownedSkillCost(sim) {
   if (bestAny !== Infinity) return bestAny;
   return null;
 }
+// 転生に必要な所持クッキー(2026-07-08 ゲーム仕様: 10のべき乗・転生ごとに前回より大)。
+// 必要量 = 10^(costExp0 + costStep×これまでの転生回数)。prestigeRuns は転生完了ごとに+1されるので、
+// 次の転生の必要量は毎回きっちり costStep 桁ぶん大きくなる。
+function prestigeCostOf(sim) {
+  const pc = P.prestige || {};
+  const exp = (pc.costExp0 != null ? pc.costExp0 : 6) + (pc.costStep != null ? pc.costStep : 1) * (sim.prestigeRuns || 0);
+  return Math.pow(10, exp);
+}
 function doPrestige(sim) {
   const r = sim.run;
-  // 転生には所持クッキー100万の消費が必要
-  if (r.cookies < 1000000) return false;
+  // 転生には「10のべき乗・前回より大」の所持クッキー消費が必要(prestigeCostOf)
+  const cost = prestigeCostOf(sim);
+  if (r.cookies < cost) return false;
   const gain = prestigeGainOf(r.runCookies);
   if (gain <= 0) return false;
   const nextCostAt = cheapestUnownedSkillCost(sim); // ⑭: 購入前の次スキル最安
-  r.cookies -= 1000000;
+  r.cookies -= cost;
   sim.prestige += gain;
   sim.prestigeTotal += gain;
   sim.prestigeRuns++;
@@ -1918,7 +1934,7 @@ function bestEfficiency(sim, prod, typeFilter) {
 
 module.exports = {
   P, UPGRADES, RESEARCH, REWARD_POOL, SKILL_NODES, SKILL_BY_ID,
-  simulate, prestigeGainOf, skillCostOf, upgradeCost, researchCostOf,
+  simulate, prestigeGainOf, prestigeCostOf, skillCostOf, upgradeCost, researchCostOf,
   tryBuyUpgrade, tryBuyResearch, bestEfficiency, visibleUpgrades, quotaAtElapsed,
   isUtilitySkill, buildSkillValues, skillRank, skillRiders, trunc2sig, q5, q5cost,
   tryBuyResearchStage, researchStageCostOf, researchStageUnlocked,

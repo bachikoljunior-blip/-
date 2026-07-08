@@ -477,6 +477,51 @@ function geomeanEff(sim) {
   const s = full.reduce((a, r) => a + Math.log(r.runCookies / r.duration), 0);
   return Math.exp(s / full.length);
 }
+// ③ utility軸(2026-07-08 ユーザー承認の「utility報酬を別軸で測る」変更): 直接クッキーを生まない報酬
+// (滞在窓/次イベントの状態書き換え/報酬の量・価値=進行に効く型)は瞬間の稼ぎ力比が構造的に1.00に張り付く
+// (⑬タイミングと同じ理由=効果が「行動の瞬間に一度だけ状態へ書き込まれる」ため、同状態の瞬間評価で差が出ない)。
+// これらは ⑬ と同じ通し比較で測る: その報酬を取得し始めた周回以降の全周回効率(runCookies/duration)の
+// 幾何平均を、最適(=取得あり)と disableReward(=効果無効)で比べる。取得周回に絞るのは③の「取得した周回」の趣旨に合わせ希釈を避けるため。
+// goldenChain/beastScent は所持数が多く(S3で10〜18)、金amount倍率を上げると最終超長周回が Infinity 化するため
+// 係数は控えめ(0.30)に留め、通し比較(utility軸)で測る。金収入は周回で複利的に効くため控えめ係数でも通し比≥1.1。
+// goldenTarget/goldenFirstHit は所持数が少なく instant 中央値≥1.1 を満たす(有限)ので direct 側に残す。
+const UTILITY_REWARDS = ['monsterDamage', 'monsterStay', 'crackedFang', 'brandHunt', 'deepPursuit', 'chainPrep', 'huntFocus', 'biteRecovery', 'crushedMill', 'goldenBeastMutation', 'goldenChain', 'beastScent'];
+function firstAcqIdx(sim, rid) {
+  let best = null;
+  for (const r of sim.runs) { if (!r.partial && r.perks && r.perks[rid] > 0) { if (best === null || r.idx < best) best = r.idx; } }
+  return best;
+}
+function geomeanEffFrom(sim, minIdx) {
+  const full = sim.runs.filter(r => !r.partial && r.idx >= minIdx && r.runCookies > 0 && r.duration > 0 && Number.isFinite(r.runCookies));
+  if (!full.length) return null;
+  return Math.exp(full.reduce((a, r) => a + Math.log(r.runCookies / r.duration), 0) / full.length);
+}
+// 各utility報酬を取得した方針それぞれで通し比較し、1つでも比≥1.1なら合格(未取得=不合格)。
+function judgeUtilityRewards(hours, sims, ids) {
+  let ok = 0;
+  console.log('③ 報酬utility軸(通し比較・取得周回以降の全周回効率幾何平均比 ≥1.1)');
+  for (const rid of ids) {
+    let best = 0, bestPol = null, anyUsed = false;
+    // 取得が早い(idx0小=取得周回が多い)方針から測り、比≥1.1が出たら早期終了(計測コスト削減)
+    const users = STRATEGIES.map(s => ({ s, idx0: firstAcqIdx(sims[s.id], rid) })).filter(x => x.idx0 !== null);
+    users.sort((a, b) => a.idx0 - b.idx0);
+    for (const { s, idx0 } of users) {
+      anyUsed = true;
+      const opt = sims[s.id];
+      const optEff = geomeanEffFrom(opt, idx0);
+      const dis = G.simulate(s, { hours, disableReward: rid });
+      const disEff = geomeanEffFrom(dis, idx0);
+      const lift = (optEff && disEff && disEff > 0) ? optEff / disEff : null;
+      if (lift != null && lift > best) { best = lift; bestPol = s.id; }
+      if (best >= 1.1) break;
+    }
+    const pass = best >= 1.1;
+    if (pass) ok++;
+    console.log(`  ${pass ? 'OK' : 'NG'} rw:${rid.padEnd(20)} ${anyUsed ? `${bestPol} 比=${best.toFixed(3)}` : 'どの方針も未取得'}`);
+  }
+  console.log(`③ utility軸 ${ok}/${ids.length}`);
+  return ok;
+}
 function runWholeTiming(strategy, hours, optSim) {
   const opt = optSim || G.simulate(strategy, { hours });
   const optEff = geomeanEff(opt);
@@ -789,7 +834,13 @@ if (mode === 'baseline') {
   }
   console.log(`=== 期待値方式(${H}h・各回の稼ぎ力の持ち上げ) ===`);
   judge(collect('res:'), 1.2, '① 研究(各回≥1.2)', G.RESEARCH.map(r => 'res:' + r.id));
-  judge(collect('rw:'), 1.1, '③ 報酬(中央値≥1.1・2026-07-08)', G.REWARD_POOL.map(r => 'rw:' + r.id), true);
+  {
+    const UTIL = new Set(UTILITY_REWARDS);
+    const directIds = G.REWARD_POOL.filter(r => !UTIL.has(r.id)).map(r => 'rw:' + r.id);
+    const okDirect = judge(collect('rw:'), 1.1, '③-a 報酬instant(中央値≥1.1・2026-07-08)', directIds, true);
+    const okUtil = judgeUtilityRewards(H, sims, UTILITY_REWARDS);
+    console.log(`③ 報酬 合計 ${okDirect + okUtil}/${G.REWARD_POOL.length} (instant ${okDirect}/${directIds.length} + utility ${okUtil}/${UTILITY_REWARDS.length})`);
+  }
   judge(collect('stage:'), 1.05, '⑨ 段階(各回≥1.05)');
   // ⑬ タイミング(提案5・2026-07-07承認=全体比較): 瞬間比較(collect('timing:'))は構造的に1.000
   // に張り付くため廃止。最適操作/完全放置の通しを走らせ、全周回効率の幾何平均比[1.05,2.0]で判定。

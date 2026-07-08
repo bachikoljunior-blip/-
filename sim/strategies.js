@@ -62,6 +62,12 @@ function pickRewardByPriority(priority) {
       const c = offer.find(o => o.kind === 'perk' && o.id === want);
       if (c) return c;
     }
+    // 優先リストに無い枠: まだ1枚も持っていない札(新規解放=所持0)が出ていれば1枚拾う
+    // (プレイヤー視点=新しく解放された報酬は一度は試す)。それ以外は従来どおり先頭。
+    // 旧・offer[0]固定だと新規解放した札(goldenBeastMutation等)が回転任せで取り漏れる問題を解消しつつ、
+    // 既取得の札の配分は変えない(所持数最小へ全面的に寄せると金の複利が暴走し最終周回がInfinity化するため最小限に留める)。
+    const fresh = offer.find(o => o.kind === 'perk' && (sim.run.perks[o.id] || 0) === 0);
+    if (fresh) return fresh;
     const up = offer.find(o => o.kind === 'upgrade');
     if (up) return up;
     return offer[0] || null;
@@ -136,7 +142,7 @@ function prestigeWhen(minElapsedSec, gainFactor) {
   // 「この周回の獲得予定PTだけで、次に欲しいスキルのコストに届いたら転生」
   return function (sim) {
     if (sim.t - sim.run.startT < minElapsedSec) return false;
-    if (sim.run.cookies < 1000000) return false; // 転生には100万クッキー必要
+    if (sim.run.cookies < G.prestigeCostOf(sim)) return false; // 転生には所持クッキー(10のべき乗・前回より大)が必要
     const next = cheapestNextSkillCost(sim);
     if (next === null) return false; // ツリー完了後はPTの使い道がないため転生しない
     const gain = G.prestigeGainOf(sim.run.runCookies);
@@ -311,7 +317,7 @@ const STRATEGIES = [
       const next = cheapestNextSkillCost(sim);
       if (next === null) return false;
       if ((sim.t - sim.run.startT) < 120) return false;
-      if (sim.run.cookies < 1000000) return false; // 転生には100万クッキー必要
+      if (sim.run.cookies < G.prestigeCostOf(sim)) return false; // 転生には所持クッキー(10のべき乗・前回より大)が必要
       if (sim.run.quotaFailed) return gain >= next * 1.0;
       return gain >= next * 1.5;
     },

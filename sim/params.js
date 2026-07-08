@@ -7,7 +7,10 @@ module.exports = {
   //  1ラング=コスト比1.62 ⇔ クッキー比 1.62^(1/0.08)=10^2.6(④の2.0桁+ノイズ余裕0.6桁)
   //  ⑤: クッキー×100 ⇔ PT×100^0.08=1.44(帯域[1,100]内で平坦寄り=ユーザー確認済みの逓減形)
   // pB=11: 第0回(±2e6クッキー)の獲得PT≈16 → core(コスト13)が⑭帯[1,3]で買える水準
-  prestige: { pA: 0, pD1: 200000, pB: 11, pD2: 10000, pG: 0.075, pMin: 10000 },
+  // costExp0/costStep(2026-07-08 ユーザー・ゲーム仕様変更): 転生に必要な所持クッキーは「10のべき乗」かつ
+  // 「転生するたびに前回より大きくなる」。必要量 = 10^(costExp0 + costStep×これまでの転生回数)。
+  // costStep≥1 で毎回きっちり10のべき乗ぶん増える(前回より必ず大)。costStep は調整項目。
+  prestige: { pA: 0, pD1: 200000, pB: 11, pD2: 10000, pG: 0.075, pMin: 10000, costExp0: 6, costStep: 1 },
 
   // ---- スキルコスト: 手設計順の等比ラダー cost_k = C0 * rho^k ----
   // 2026-07-06 第8次: ⑲=隣接ノード比≤10倍(edgeCap)。rho=1.57(1ラング=クッキー1.57^(1/0.075)≈2.6桁)。
@@ -182,7 +185,11 @@ module.exports = {
     beastScent: 0.5,
     deepPursuitSpawn: 0.045, deepPursuitHp: 1.035, deepPursuitReward: 1.6,
     mutationBase: 0.5, mutationPerLv: 0.1,
-    categoryBonusRate: 0.003, categoryHalf: 400
+    categoryBonusRate: 0.003, categoryHalf: 400,
+    // 第12次K(2026-07-08 ③再テーマ・増加方向のみ): 金報酬トリオ+獣の匂いを飽和しない金の稼ぎ(金即時獲得量=amount)へ
+    // 再テーマ。従来のダメージ/初撃/金出現間隔効果は残置(削除しない)し、金amount倍率への加算を新設(所持Lvに線形=非飽和)。
+    // これで金特化方針で instant lift が立つ(ダメージ飽和次元・通し比較のゆらぎに埋もれない)。
+    goldenChainAmount: 0.30, goldenTargetAmount: 0.30, goldenFirstHitAmount: 0.35, beastScentAmount: 0.30
   },
 
   // ---- モンスター種類×報酬相性(2026-07-06 ユーザー承認・第9次) ----
