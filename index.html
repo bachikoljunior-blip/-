@@ -6433,12 +6433,18 @@ function unitLength(text) {
   return Array.from(String(text || "")).length;
 }
 
+// 程度を表す字は二連続で並んでも自然なので許容する(量・層・域・数 などの
+// 「概念」を表す字は不可)。極は程度を表す語なので許容。
+const REPEATABLE_UNIT_CHARS = new Set(["極"]);
+
 function hasBadConsecutiveRepeat(text) {
   const chars = Array.from(String(text || ""));
 
-  // 単字の二連続: 量・層・域・数 なども量/程度の「概念」なので一律禁止
+  // 単字の二連続: 程度を表す字(極)だけ許容し、量・層・域・数 などは禁止
   for (let i = 1; i < chars.length; i++) {
-    if (chars[i] === chars[i - 1]) return true;
+    if (chars[i] === chars[i - 1] && !REPEATABLE_UNIT_CHARS.has(chars[i])) {
+      return true;
+    }
   }
 
   // 二字以上の語の二連続: 虚空虚空・不可不可・零域零域 などを禁止
