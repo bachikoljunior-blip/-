@@ -12259,6 +12259,14 @@ function renderInfo() {
       <div class="infoRow">毎秒（CPS・自動生産）：${pausedForSkillChoice() ? "準備中" : fmt(currentCps())}</div>
     </div>
 
+    <div class="infoBox">
+      <h3>クッキーとプレイ時間</h3>
+      <div class="infoRow">全周回 総クッキー：${fmt(state.totalCookies)}</div>
+      <div class="infoRow">全周回 プレイ時間：${fmtTime(state.totalPlaySec || 0)}</div>
+      <div class="infoRow">今回 総クッキー：${fmt(state.runCookies)}</div>
+      <div class="infoRow">今回 プレイ時間：${fmtTime(Math.max(0, (state.totalPlaySec || 0) - (state.runStartPlaySec || 0)))}</div>
+    </div>
+
     ${stageWorkshopBox}
 
     <div class="infoBox">
