@@ -26,6 +26,16 @@
     * {
       box-sizing: border-box;
       -webkit-tap-highlight-color: transparent;
+      /* 画像などの長押しで「共有/写真に保存」メニューやプレビューが出るのを全体で抑止 */
+      -webkit-touch-callout: none;
+    }
+
+    /* 画像はドラッグ・選択・長押しコールアウトを禁止(iOSの画像メニュー対策) */
+    img {
+      -webkit-touch-callout: none;
+      -webkit-user-drag: none;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     :root {
