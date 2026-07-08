@@ -867,8 +867,8 @@ if (mode === 'baseline') {
       const aPass = pol === 'balanced'
         ? Object.values(shares).every(v => v >= 0.10)
         : shares[ROLE_CHANNEL[pol]] >= 0.30;
-      // (b)独占禁止: どの稼ぎ口も≤90%。ただし討伐方針(hunt)は免除(2026-07-08 ユーザー決定=討伐特化は討伐由来独占を認める)
-      const bPass = pol === 'hunt' ? true : maxShare <= 0.90;
+      // (b)独占禁止(どの稼ぎ口も≤90%)は2026-07-08 ユーザー決定で全方針撤廃。㉘は(a)主役シェア≥30%のみで判定。
+      const bPass = true;
       const pass = aPass && bPass;
       if (gated) { all++; if (pass) ok++; }
       rows.push(`  run${String(r.idx).padStart(2)} ${gated ? '対象' : '対象外'} 設備${(shares.equip * 100).toFixed(0)}% 金${(shares.golden * 100).toFixed(0)}% 討伐${(shares.hunt * 100).toFixed(0)}% タップ${(shares.tap * 100).toFixed(0)}%${gated ? ` → (a)${aPass ? 'OK' : 'NG'} (b)${bPass ? 'OK' : 'NG'}` : ''}`);
