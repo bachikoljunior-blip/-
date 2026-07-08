@@ -6951,6 +6951,15 @@ function runPolicyUnlocked() {
   return hasSkillEffect("unlockSystem", "runPolicy");
 }
 
+// 未発見の素材名(万能粉)は方針の相性説明でも伏せる
+function policyBiasText(p) {
+  if (!p) return "";
+  if (p.id === "balanced" && !materialSeen("omniFlour")) {
+    return p.bias.replace(/万能粉/g, "特殊素材");
+  }
+  return p.bias;
+}
+
 // v4 §18: 素材は「どう倒したか」の条件ドロップ制。方針は倒し方を通じて間接的に素材を偏らせる
 const RUN_POLICIES = [
   { id: "balanced", name: "標準", desc: "補正なし。いつもの周回。", bias: "素材: 万能粉(任意素材の代替・必要数2倍換算)が討伐で手に入る唯一の方針" },
@@ -8351,7 +8360,7 @@ function renderWorkshop() {
     ${craftSection}
     <div class="infoBox">
       <h3>素材庫</h3>
-      <div class="desc">${materialDropGuideHtml()}<br>標準方針の万能粉は不足素材の代用(核は不可)。</div>
+      <div class="desc">${materialDropGuideHtml()}${materialSeen("omniFlour") ? "<br>標準方針の万能粉は不足素材の代用(核は不可)。" : ""}</div>
       ${matRows}
     </div>
     <div class="infoBox">
@@ -9366,7 +9375,7 @@ function renderQuota() {
 const SETTINGS_KEY = "cookie_game_settings_v1_exist";
 const settings = {
   seVolume: 100,
-  bgmVolume: 35,
+  bgmVolume: 60,
   tapFx: true,
   fancyFx: true,
   cardArt: true,
@@ -9397,7 +9406,7 @@ function applySettings() {
     document.querySelectorAll(".buyModeBtn").forEach(b => b.classList.toggle("active", b.dataset.buymode === "1"));
   }
   if (seMasterGain) seMasterGain.gain.value = Math.max(0, Math.min(1, settings.seVolume / 100));
-  if (bgmGainNode) bgmGainNode.gain.value = Math.max(0, settings.bgmVolume / 100) * 0.10;
+  if (bgmGainNode) bgmGainNode.gain.value = Math.max(0, settings.bgmVolume / 100) * 0.14;
 }
 
 loadSettings();
@@ -9462,7 +9471,7 @@ function startBgm() {
     if (audioCtx.state === "suspended") audioCtx.resume();
 
     bgmGainNode = audioCtx.createGain();
-    bgmGainNode.gain.value = Math.max(0, settings.bgmVolume / 100) * 0.10;
+    bgmGainNode.gain.value = Math.max(0, settings.bgmVolume / 100) * 0.14;
     bgmFilter = audioCtx.createBiquadFilter();
     bgmFilter.type = "lowpass";
     bgmFilter.frequency.value = 680;
@@ -10387,8 +10396,10 @@ function scrollSelectedSkillIntoView() {
   const skill = getSkill(selectedSkillId);
   if (!frame || !skill) return;
 
-  const x = skill.x * skillMapZoom;
-  const y = skill.y * skillMapZoom;
+  const padX = frame.clientWidth / 2;
+  const padY = frame.clientHeight / 2;
+  const x = padX + skill.x * skillMapZoom;
+  const y = padY + skill.y * skillMapZoom;
   const margin = 70;
 
   const viewL = frame.scrollLeft;
@@ -10437,11 +10448,17 @@ function takeSelectedSkill() {
 function syncSkillMapZoom() {
   const stage = $("skillMapStage");
   const map = $("skillMap");
+  const frame = document.querySelector(".skillMapFrame");
   const zoomLabel = $("skillZoomResetBtn");
 
+  // マップの周囲に半画面分の余白を確保し、コアや端のノードも画面中央へ寄せられるようにする
+  const padX = frame && frame.clientWidth ? Math.round(frame.clientWidth / 2) : 0;
+  const padY = frame && frame.clientHeight ? Math.round(frame.clientHeight / 2) : 0;
+
   if (stage) {
-    stage.style.width = `${Math.round(SKILL_MAP_WIDTH * skillMapZoom)}px`;
-    stage.style.height = `${Math.round(SKILL_MAP_HEIGHT * skillMapZoom)}px`;
+    stage.style.width = `${Math.round(SKILL_MAP_WIDTH * skillMapZoom) + padX * 2}px`;
+    stage.style.height = `${Math.round(SKILL_MAP_HEIGHT * skillMapZoom) + padY * 2}px`;
+    stage.style.padding = `${padY}px ${padX}px`;
   }
 
   if (map) {
@@ -10469,20 +10486,28 @@ function skillMinZoom() {
 function setSkillMapZoom(nextZoom, keepCenter = true) {
   const frame = document.querySelector(".skillMapFrame");
   const previousZoom = skillMapZoom;
-  let centerX = null;
-  let centerY = null;
+  const minZoom = skillMinZoom();
+  let mapCX = null;
+  let mapCY = null;
 
   if (frame && keepCenter) {
-    centerX = (frame.scrollLeft + frame.clientWidth / 2) / previousZoom;
-    centerY = (frame.scrollTop + frame.clientHeight / 2) / previousZoom;
+    const padX = frame.clientWidth / 2;
+    const padY = frame.clientHeight / 2;
+    mapCX = (frame.scrollLeft + frame.clientWidth / 2 - padX) / previousZoom;
+    mapCY = (frame.scrollTop + frame.clientHeight / 2 - padY) / previousZoom;
   }
 
-  skillMapZoom = Math.max(skillMinZoom(), Math.min(SKILL_ZOOM_MAX, Number(nextZoom) || 1));
+  skillMapZoom = Math.max(minZoom, Math.min(SKILL_ZOOM_MAX, Number(nextZoom) || 1));
   syncSkillMapZoom();
 
-  if (frame && keepCenter && centerX !== null && centerY !== null) {
-    frame.scrollLeft = Math.max(0, centerX * skillMapZoom - frame.clientWidth / 2);
-    frame.scrollTop = Math.max(0, centerY * skillMapZoom - frame.clientHeight / 2);
+  // 完全縮小(下限)時は最初のスキル(コア)を画面中央に置く
+  if (frame && skillMapZoom <= minZoom + 1e-4) {
+    centerSkillMapOnCore();
+  } else if (frame && keepCenter && mapCX !== null && mapCY !== null) {
+    const padX = frame.clientWidth / 2;
+    const padY = frame.clientHeight / 2;
+    frame.scrollLeft = Math.max(0, padX + mapCX * skillMapZoom - frame.clientWidth / 2);
+    frame.scrollTop = Math.max(0, padY + mapCY * skillMapZoom - frame.clientHeight / 2);
   }
 }
 
@@ -10492,8 +10517,10 @@ function centerSkillMapOnCore() {
 
   if (!frame || !core) return;
 
-  frame.scrollLeft = Math.max(0, core.x * skillMapZoom - frame.clientWidth / 2);
-  frame.scrollTop = Math.max(0, core.y * skillMapZoom - frame.clientHeight / 2);
+  const padX = frame.clientWidth / 2;
+  const padY = frame.clientHeight / 2;
+  frame.scrollLeft = Math.max(0, padX + core.x * skillMapZoom - frame.clientWidth / 2);
+  frame.scrollTop = Math.max(0, padY + core.y * skillMapZoom - frame.clientHeight / 2);
 }
 
 function toggleSkillTreeOnly() {
@@ -10610,7 +10637,7 @@ function renderPolicyChoiceScreen() {
   $("policyChoiceRow").innerHTML = RUN_POLICIES.map(p => `
     <button type="button" class="policyChoiceBtn" data-runpolicy="${p.id}">
       <img class="choiceIcon" src="${assetUrl(ASSETS.policies[p.id])}" alt="" aria-hidden="true" loading="lazy">
-      <b>${p.name}</b><span>${p.desc}</span>${showBias ? `<span class="policyBias">${p.bias}</span>` : ""}
+      <b>${p.name}</b><span>${p.desc}</span>${showBias ? `<span class="policyBias">${policyBiasText(p)}</span>` : ""}
     </button>
   `).join("");
 
@@ -10710,6 +10737,9 @@ function renderSkillChoiceScreen() {
   const selectedDone = selected ? hasSkill(selected.id) : false;
   const selectedCanBuy = selected ? skillCanBuy(selected) : false;
 
+  // 前提が全て解放されて初めて名称・効果が判明する(未判明のスキルは伏せる)
+  const selectedRevealed = selected ? (selectedDone || selected.prereqs.every(id => hasSkill(id))) : false;
+
   let statusText = "未選択";
   if (selected) {
     if (selectedDone) statusText = "解放済み";
@@ -10720,13 +10750,13 @@ function renderSkillChoiceScreen() {
 
   $("selectedSkillPanel").innerHTML = selected ? `
     <div class="selectedSkillHead">
-      <div class="selectedSkillName">${selected.icon} ${selected.name}</div>
+      <div class="selectedSkillName">${selectedRevealed ? `${selected.icon} ${selected.name}` : "？？？"}</div>
       <div class="selectedSkillStatus">${statusText}</div>
     </div>
     <div class="selectedSkillCost">消費PT：${fmt(selected.cost)} / 系統：${selected.branchName}</div>
     <div class="selectedSkillDescRow">
       ${ASSETS.skills && ASSETS.skills[selected.id] ? `<img class="selectedSkillArt" src="${assetUrl(ASSETS.skills[selected.id])}" alt="" aria-hidden="true" loading="lazy">` : ""}
-      <div class="selectedSkillDesc">${selected.desc}</div>
+      <div class="selectedSkillDesc">${selectedRevealed ? selected.desc : "前提スキルを全て解放すると判明します。"}</div>
     </div>
     <div class="selectedSkillDesc">前提：${selected.prereqs.length ? selected.prereqs.map(id => getSkill(id)?.name || id).join("、") : "なし"}</div>
   ` : `
@@ -10769,6 +10799,7 @@ function renderSkillChoiceScreen() {
     const done = hasSkill(skill.id);
     const canBuy = skillCanBuy(skill);
     const locked = !done && !canBuy;
+    const revealed = done || skill.prereqs.every(id => hasSkill(id));
     const selectedClass = selectedSkillId === skill.id ? "selected" : "";
 
     return `
@@ -10776,7 +10807,7 @@ function renderSkillChoiceScreen() {
         class="skillNode branch-${skill.branchId} ${selectedClass} ${done ? "done" : ""} ${canBuy ? "canBuy" : ""} ${locked ? "locked" : ""}"
         style="left:${skill.x}px; top:${skill.y}px;"
         data-skill-node="${skill.id}"
-        aria-label="${skill.name}"
+        aria-label="${revealed ? skill.name : "未判明のスキル"}"
       >
         ${ASSETS.skills && ASSETS.skills[skill.id]
           ? `<img class="nodeArt" src="${assetUrl(ASSETS.skills[skill.id])}" alt="" aria-hidden="true">`
@@ -11713,7 +11744,7 @@ function renderInfo() {
 
     <div class="infoBox">
       <h3>現在の倍率・状態</h3>
-      <div class="infoRow">周回方針：${runPolicyName()}<div class="desc">${(RUN_POLICIES.find(p => p.id === state.runPolicy) || {}).bias || ""}</div></div>
+      <div class="infoRow">周回方針：${runPolicyName()}<div class="desc">${policyBiasText(RUN_POLICIES.find(p => p.id === state.runPolicy))}</div></div>
       <div class="infoRow">報酬系統：金${fmt((state.rewardCategoryCounts||{}).golden||0)} / 狩猟${fmt((state.rewardCategoryCounts||{}).hunt||0)} / 設備${fmt((state.rewardCategoryCounts||{}).equipment||0)} / 危険${fmt((state.rewardCategoryCounts||{}).risk||0)}</div>
       <div class="infoRow">スキル全体倍率：x${prestigeMultiplier().toFixed(3)}</div>
       <div class="infoRow">スキルタップ倍率：x${clickSkillMultiplier().toFixed(3)}</div>
@@ -11888,8 +11919,8 @@ function installSkillTreePinchZoom() {
     mode = "pinch";
     pinchStartDistance = distanceBetweenTouches(a, b);
     pinchStartZoom = skillMapZoom;
-    pinchContentX = (frame.scrollLeft + local.x) / skillMapZoom;
-    pinchContentY = (frame.scrollTop + local.y) / skillMapZoom;
+    pinchContentX = (frame.scrollLeft + local.x - frame.clientWidth / 2) / skillMapZoom;
+    pinchContentY = (frame.scrollTop + local.y - frame.clientHeight / 2) / skillMapZoom;
   }
 
   frame.addEventListener("pointerdown", e => {
@@ -11933,8 +11964,8 @@ function installSkillTreePinchZoom() {
       skillMapZoom = Math.max(skillMinZoom(), Math.min(SKILL_ZOOM_MAX, nextZoom));
       syncSkillMapZoom();
 
-      frame.scrollLeft = Math.max(0, pinchContentX * skillMapZoom - local.x);
-      frame.scrollTop = Math.max(0, pinchContentY * skillMapZoom - local.y);
+      frame.scrollLeft = Math.max(0, frame.clientWidth / 2 + pinchContentX * skillMapZoom - local.x);
+      frame.scrollTop = Math.max(0, frame.clientHeight / 2 + pinchContentY * skillMapZoom - local.y);
 
       e.preventDefault();
       return;
