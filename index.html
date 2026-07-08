@@ -1196,12 +1196,28 @@
         inset 0 0 12px rgba(var(--branch-rgb),0.18),
         0 0 12px rgba(var(--branch-rgb),0.36),
         0 10px 22px rgba(0,0,0,0.48);
-      padding: 6px;
-      display: grid;
-      grid-template-rows: 28px 1fr 14px;
-      place-items: center;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       overflow: hidden;
       touch-action: pan-x pan-y;
+    }
+
+    /* スキル画像をノードいっぱいに表示(テキストは出さない) */
+    .skillNode .nodeArt {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      clip-path: inherit;
+      z-index: 1;
+    }
+
+    .skillNode .nodeMark {
+      font-size: 36px;
+      line-height: 1;
     }
 
     .skillNode::before {
@@ -10738,9 +10754,9 @@ function renderSkillChoiceScreen() {
         data-skill-node="${skill.id}"
         aria-label="${skill.name}"
       >
-        <span class="nodeMark">${skill.icon}</span>
-        <span class="nodeName">${skill.name}</span>
-        <span class="nodeCost">${done ? "済" : "PT " + fmt(skill.cost)}</span>
+        ${ASSETS.skills && ASSETS.skills[skill.id]
+          ? `<img class="nodeArt" src="${assetUrl(ASSETS.skills[skill.id])}" alt="" aria-hidden="true">`
+          : `<span class="nodeMark">${skill.icon}</span>`}
       </button>
     `;
   }).join("");
