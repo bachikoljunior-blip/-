@@ -993,6 +993,10 @@ function earningPowerSafe(sim) {
 function equipDirectIncome(sim, prod) {
   const D = P.equipDirect;
   if (!D || !D.coef) return 0;
+  // 第12次J-3(ユーザー2026-07-08規則): 設備に他変数を含む式を足す場合は「スキル解放→研究解放→設備効果」の順で解放する。
+  // 設備直送は「オーブン大量焼成 段階2(スキル auto_3 で解禁→段階2を購入→効果)」にゲートする=
+  // skill(auto_3)→research(ovenBatch段2)→設備効果。プレイヤーには段階2の説明で情報開示する(移植時)。
+  if (!resStage2(sim, 'ovenBatch')) return 0;
   const s = Math.max(0, (sim.run.maxStage || 0) - (D.startStage || 0));
   if (s <= 0) return 0;
   return D.coef * (prod.baseCps || 0) * Math.pow(s, D.stagePow || 1);
