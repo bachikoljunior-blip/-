@@ -4496,9 +4496,16 @@
     /* モンスター種類ごとの見た目：既存画像+CSSフィルタ(hue-rotate/scale/明度)で差をつける */
     /* 種類差は大きさ・光り方で表現し、色(hue)は通常クッキーモンスターのまま変えない。
        大きさは通常(200px)基準に、swarm/speedyは少し小さく・tank/bossは少し大きく自然な範囲で */
+    /* こつぶ群れは小さく、枠(HPバー含む)も本体に合わせて細くして3体が並べられるようにする */
+    .monsterInstance.mtype-swarm {
+      width: 116px;
+    }
     .monsterInstance.mtype-swarm .cookieMonsterButton {
-      width: 160px;
-      height: 160px;
+      width: 104px;
+      height: 104px;
+    }
+    .monsterInstance.mtype-swarm .monsterHp {
+      width: 116px !important;
     }
 
     .monsterInstance.mtype-tank .cookieMonsterButton {
@@ -5329,6 +5336,12 @@ const ASSETS = {
     goldenBeast: "images/monster_goldenBeast.webp",
     boss: "images/monster_boss.webp"
   },
+  // こつぶ群れ(swarm)は3体それぞれ別の絵を使う
+  swarmVariants: [
+    "images/monster_swarm1.webp",
+    "images/monster_swarm2.webp",
+    "images/monster_swarm3.webp"
+  ],
   materials: {
     butter: "images/mat_butter.webp",
     flour: "images/mat_flour.webp",
@@ -12462,6 +12475,46 @@ function placeFixedElement(el, width, height, minY) {
   el.style.top = y + "px";
 }
 
+// こつぶ群れ(count>1)を横方向に等分したスロットへ配置し、必ず重ならないようにする。
+// 各個体を自分のスロット内に収めるので、y をずらしても互いに重ならない。
+function placeSwarmMember(el, index, total) {
+  const host = document.querySelector(".top");
+  if (!el || !host) return;
+
+  const pad = 8;
+  const quota = $("quotaBox");
+  const hostW = host.clientWidth || 360;
+  const hostH = host.clientHeight || 320;
+  const quotaBottom = quota ? quota.offsetTop + quota.offsetHeight : 0;
+  const minY = Math.max(pad, quotaBottom + 6);
+
+  const w = el.offsetWidth || 110;
+  const h = el.offsetHeight || 150;
+  const n = Math.max(1, total);
+  const availW = Math.max(1, hostW - pad * 2);
+  const availH = Math.max(1, hostH - minY - pad);
+  const slot = availW / n;
+
+  // 横は必ずスロット内に収める(=互いに重ならない)。縦幅にも収める
+  const scale = Math.max(0.5, Math.min(1, (slot - 8) / w, availH / h));
+  const sw = w * scale;
+  const sh = h * scale;
+
+  const cx = pad + slot * (index + 0.5); // スロット中心
+  let x = cx - sw / 2;
+  // 縦は中段〜下段でジグザグに散らす(クッキー中央を避けやすくする)
+  const fy = [0.62, 0.30, 0.62][index % 3];
+  let y = minY + (availH - sh) * fy;
+
+  x = Math.min(Math.max(x, pad), Math.max(pad, hostW - sw - pad));
+  y = Math.min(Math.max(y, minY), Math.max(minY, hostH - sh - pad));
+
+  el.style.transform = scale < 0.999 ? `translateZ(0) scale(${scale.toFixed(3)})` : "translateZ(0)";
+  el.style.transformOrigin = "top left";
+  el.style.left = Math.round(x) + "px";
+  el.style.top = Math.round(y) + "px";
+}
+
 
 function showGoldenCookie() {
   if (pausedForSkillChoice()) return;
@@ -12625,7 +12678,11 @@ function createMonsterElement(mon) {
   const wrap = document.createElement("div");
   wrap.className = "monsterInstance mtype-" + type.id;
   wrap.dataset.monsterId = String(mon.id);
-  const monArt = (ASSETS.monsters && ASSETS.monsters[type.id]) || ASSETS.objects.cookieMonster;
+  let monArt = (ASSETS.monsters && ASSETS.monsters[type.id]) || ASSETS.objects.cookieMonster;
+  // こつぶ群れは3体それぞれ別の絵にする
+  if (type.id === "swarm" && Array.isArray(ASSETS.swarmVariants) && ASSETS.swarmVariants.length) {
+    monArt = ASSETS.swarmVariants[(mon.variant || 0) % ASSETS.swarmVariants.length];
+  }
   wrap.style.setProperty("--monster-art", `url("${assetUrl(monArt)}")`);
   wrap.innerHTML = `
     <div class="monsterTypeLabel">${type.name}</div>
@@ -12681,6 +12738,7 @@ function showMonster() {
       id,
       level,
       typeId,
+      variant: i,
       goldenChainMultiplier: chainReady
         ? 1 + (state.perks.goldenChain || 0) * 2.0
         : 1,
@@ -12697,8 +12755,13 @@ function showMonster() {
 
     monsters.push(mon);
 
-    // モンスター大型化(origin/main): 142x158 → 236x254
-    placeFixedElement(mon.el, 236, 254, 90);
+    if (typeId === "swarm" && (type.count || 1) > 1) {
+      // こつぶ群れは重ならないよう横に3分割で配置する
+      placeSwarmMember(mon.el, i, type.count);
+    } else {
+      // モンスター大型化(origin/main): 142x158 → 236x254
+      placeFixedElement(mon.el, 236, 254, 90);
+    }
     renderMonsterHp(mon.id);
 
     mon.hideTimer = setTimeout(() => {
