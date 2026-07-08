@@ -6433,10 +6433,10 @@ function unitLength(text) {
   return Array.from(String(text || "")).length;
 }
 
-// 程度を表す字だけは名前内で複数回現れてもよい(極 など)。
-// 量・層・域・数 等の概念字や、虚空・恒河 等の概念語は、隣接・離れた位置を
-// 問わず同じ字が二回以上現れないようにする。
-const REPEATABLE_UNIT_CHARS = new Set(["極"]);
+// 程度を表す字(極)と、個数で表せる字(数・量)は名前内で複数回現れてもよい。
+// 域・層・界 等の概念字や、沙・塵 のような粒の集まり、虚空・恒河 等の概念語は、
+// 隣接・離れた位置を問わず同じ字が二回以上現れないようにする。
+const REPEATABLE_UNIT_CHARS = new Set(["極", "数", "量"]);
 
 function hasBadCharRepeat(text) {
   const seen = new Set();
