@@ -761,22 +761,27 @@ if (mode === 'baseline') {
     }
     return map;
   }
-  function judge(map, need, label, ids) {
+  // median(配列の中央値。偶数個は中間2つの平均)
+  function medOf(arr) { const a = arr.slice().sort((x, y) => x - y); const m = a.length >> 1; return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; }
+  // useMed=true のとき「その方針の全周回の中央値≥need」で判定(③のみ・2026-07-08 ユーザー承認。工房⑮の2と同じ=貯める/使わない回を許容)。
+  // useMed=false は従来「全周回の最小値≥need(=全周回)」(①⑨は据え置き)。
+  function judge(map, need, label, ids, useMed) {
     let ok = 0; const rows = [];
     const allKeys = ids || Object.keys(map);
     for (const k of allKeys) {
       const byPol = map[k] || {};
-      let passPol = null, bestMin = 0, bestGm = 0;
+      let passPol = null, bestStat = 0, bestGm = 0;
       for (const [pol, arr] of Object.entries(byPol)) {
-        const mn = Math.min(...arr);
+        const stat = useMed ? medOf(arr) : Math.min(...arr);
         const gm = Math.exp(arr.reduce((a, b) => a + Math.log(b), 0) / arr.length);
-        if (mn >= need && (passPol === null || mn > bestMin)) { passPol = pol; bestMin = mn; bestGm = gm; }
+        if (stat >= need && (passPol === null || stat > bestStat)) { passPol = pol; bestStat = stat; bestGm = gm; }
         if (passPol === null && gm > bestGm) { bestGm = gm; }
       }
       const pass = passPol !== null;
       if (pass) ok++;
       const picked = Object.keys(byPol).length > 0;
-      rows.push(`  ${pass ? 'OK' : 'NG'} ${k.padEnd(28)} ${pass ? `${passPol} min=${bestMin.toFixed(2)}` : (picked ? `取得あり・全周回≥${need}に未達(最大幾何平均${bestGm.toFixed(2)})` : 'どの方針も未取得')}`);
+      const stName = useMed ? '中央値' : 'min';
+      rows.push(`  ${pass ? 'OK' : 'NG'} ${k.padEnd(28)} ${pass ? `${passPol} ${stName}=${bestStat.toFixed(2)}` : (picked ? `取得あり・${useMed ? '中央値' : '全周回'}≥${need}に未達(最大幾何平均${bestGm.toFixed(2)})` : 'どの方針も未取得')}`);
     }
     console.log(`${label} ${ok}/${allKeys.length}`);
     rows.forEach(r => console.log(r));
@@ -784,7 +789,7 @@ if (mode === 'baseline') {
   }
   console.log(`=== 期待値方式(${H}h・各回の稼ぎ力の持ち上げ) ===`);
   judge(collect('res:'), 1.2, '① 研究(各回≥1.2)', G.RESEARCH.map(r => 'res:' + r.id));
-  judge(collect('rw:'), 1.1, '③ 報酬(各回≥1.1)', G.REWARD_POOL.map(r => 'rw:' + r.id));
+  judge(collect('rw:'), 1.1, '③ 報酬(中央値≥1.1・2026-07-08)', G.REWARD_POOL.map(r => 'rw:' + r.id), true);
   judge(collect('stage:'), 1.05, '⑨ 段階(各回≥1.05)');
   // ⑬ タイミング(提案5・2026-07-07承認=全体比較): 瞬間比較(collect('timing:'))は構造的に1.000
   // に張り付くため廃止。最適操作/完全放置の通しを走らせ、全周回効率の幾何平均比[1.05,2.0]で判定。
