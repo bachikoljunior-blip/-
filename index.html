@@ -3849,10 +3849,10 @@
       transition: filter 0.15s ease, transform 0.1s ease;
     }
 
-    /* 倍率メダル画像はボタンの空きいっぱいまで大きく表示(絵に×1等が入っているので文字は出さない) */
+    /* 倍率メダル画像(絵に×1等が入っているので文字は出さない)。大きすぎたので直径を約半分に */
     .buyModeBtn .buyIcon {
-      width: 100%;
-      height: auto;
+      width: auto;
+      height: 42px;
       max-width: 100%;
       margin: 0;
       object-fit: contain;
