@@ -735,7 +735,11 @@ function computeProd(sim) {
     }
   }
 
-  const killMulAll = 1 + (r.quotaMonsterKills || 0) * (r.perks.beastHeatFerment * effRw(sim, 'beastHeatFerment'));
+  // ③死に報酬対策(第12次P・枝分かれmeasure下では安全): 討伐ダメージ系報酬(割れた牙/焼き印狩り)を「討伐数×全生産倍率」へ繋ぐ。
+  // ダメージ二値しきい値(killable)に吸収されず、討伐が速い方針でも討伐数に比例して総クッキーに効く経路。
+  const cfKill = rwOff(sim, 'crackedFang') ? 0 : (r.perks.crackedFang || 0) * (P.rw.crackedFangKill || 0);
+  const bhKill = rwOff(sim, 'brandHunt') ? 0 : (r.perks.brandHunt || 0) * (P.rw.brandHuntKill || 0);
+  const killMulAll = 1 + (r.quotaMonsterKills || 0) * (r.perks.beastHeatFerment * effRw(sim, 'beastHeatFerment') + cfKill + bhKill);
   const killMulCps = 1 + (r.quotaMonsterKills || 0) * (r.perks.huntingCore * effRw(sim, 'huntingCore'));
 
   // 個別強化倍率・研究倍率・支援倍率
@@ -1633,8 +1637,8 @@ function advanceTick(sim, strategy) {
       const biteLv = rwOff(sim, 'biteRecovery') ? 0 : (r.perks.biteRecovery || 0);
       if (biteLv > 0) {
         const rawRec = dmg * clickNow * P.rw.biteRecovery * biteLv * hits;
-        const softLine = Math.max(1, cpsNow * 2);
-        earn(sim, rawRec / (1 + rawRec / softLine) + Math.log1p(rawRec / softLine) * softLine * 0.08);
+        const softLine = Math.max(1, cpsNow * 30); // ③死に報酬対策(第12次P): 回収の天井を cps×2→×30 に引き上げ、総クッキーに効く量へ
+        earn(sim, rawRec / (1 + rawRec / softLine) + Math.log1p(rawRec / softLine) * softLine * 0.4);
       }
       r.monster.hp -= dealt;
       tapsForCookies = 0;
