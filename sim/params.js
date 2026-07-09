@@ -116,10 +116,13 @@ module.exports = {
   // 分子分母で相殺(希釈しない)、④⑤も周回比で相殺。加算の直接収入(第12次J-4のresEquipDirect=㉘破壊)や
   // 一設備だけの倍率(第12次Kのflat床=③希釈)と違い、条件を壊さずに①を立てられる。共鳴((1+r)^n)ではなく線形floor。
   // これらの研究段3(⑨)も同型の全生産倍率floorで立てる(下 s3Floor)。増加方向のみ。resActive/resStage3 ゲート。
+  // floor のみ(own/stage=0): 研究が解放中は M=1+floor の定数。定数なら③の通し比(報酬あり÷なし)で M が
+  // 分子分母で厳密に相殺=③を希釈しない。own/log10・層項は取得済み設備数/層に依存しトラジェクトリで揺れ、
+  // 末尾数回しか取得しない最弱utility報酬の通し比を崩したため撤去(第12次M診断)。floor=0.25 で①のmin≥1.2に余裕。
   resGlobal: {
-    portal:  { floor: 0.20, own: 0.05, stage: 0.001, s3Floor: 0.06 },
-    galaxy:  { floor: 0.20, own: 0.05, stage: 0.001, s3Floor: 0.06 },
-    quantum: { floor: 0.20, own: 0.05, stage: 0.001 },
+    portal:  { floor: 0.25, own: 0, stage: 0, s3Floor: 0.06 },
+    galaxy:  { floor: 0.25, own: 0, stage: 0, s3Floor: 0.06 },
+    quantum: { floor: 0.25, own: 0, stage: 0 },
     factoryS3Floor: 0.06, spiceS3Floor: 0.06
   },
 
