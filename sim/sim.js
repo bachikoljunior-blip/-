@@ -709,6 +709,21 @@ function computeProd(sim) {
     }
   }
 
+  // 研究連動の全生産倍率(第12次L・提案A): 対応研究/段3が解放されている間、全生産に一律倍率(線形floor+所持log10+層)。
+  // 全生産倍率=㉘シェア相殺・③⑨他機能lift相殺・④⑤周回比相殺=条件中立で①/⑨の設備系腐りを立てる。resActive/resStage3ゲート(①⑨トグル対応)。
+  const RG = P.resGlobal;
+  if (RG) {
+    const seg = (id, own, cfg) => resActive(sim, id) ? (1 + (cfg.floor || 0) + (cfg.own || 0) * Math.log10(1 + own) + (cfg.stage || 0) * r.maxStage) : 1;
+    globalRes *= seg('portalNetwork', r.upgrades.portal || 0, RG.portal)
+      * seg('galaxyAssembly', r.upgrades.galaxyFactory || 0, RG.galaxy)
+      * seg('quantumProofing', r.upgrades.quantumBakery || 0, RG.quantum);
+    // 段3(⑨)の全生産倍率floor: 対応段3が解放されている間だけ立つ(⑨の各回lift≥1.05)
+    if (resStage3(sim, 'portalNetwork')) globalRes *= 1 + (RG.portal.s3Floor || 0);
+    if (resStage3(sim, 'galaxyAssembly')) globalRes *= 1 + (RG.galaxy.s3Floor || 0);
+    if (resStage3(sim, 'factoryNetwork')) globalRes *= 1 + (RG.factoryS3Floor || 0);
+    if (resStage3(sim, 'spiceBlend')) globalRes *= 1 + (RG.spiceS3Floor || 0);
+  }
+
   const killMulAll = 1 + (r.quotaMonsterKills || 0) * (r.perks.beastHeatFerment * effRw(sim, 'beastHeatFerment'));
   const killMulCps = 1 + (r.quotaMonsterKills || 0) * (r.perks.huntingCore * effRw(sim, 'huntingCore'));
 
