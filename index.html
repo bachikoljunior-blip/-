@@ -860,13 +860,8 @@
       flex: 0 0 auto;
       position: relative;
       z-index: 30;
-      /* 上部パネルは画面の45%までに抑え、残りをスキルマップに回す。
-         中の説明パネルだけをスクロールさせ、見出しと操作ボタン(取得/スタート)は
-         常に表示されるようにする(短い画面でボタンが隠れて押せなくなるのを防ぐ)。 */
-      max-height: 45%;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
+      /* 見出し・スキル説明・操作ボタンは内容に合わせた高さで常に全部表示する
+         (スクロールさせない)。余った高さは下のスキルマップが吸収して縮む。 */
       background:
         linear-gradient(135deg, rgba(37,155,255,0.14), rgba(176,72,255,0.08) 48%, rgba(255,185,62,0.09)),
         rgba(5, 8, 16, 0.94);
@@ -921,11 +916,7 @@
     }
 
     .selectedSkillPanel {
-      /* このパネルだけが伸縮・スクロールし、下の操作ボタンは常に見える位置に残す */
-      flex: 1 1 auto;
-      min-height: 0;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
+      /* 説明はスクロールさせず、内容の高さのまま表示する */
       background:
         linear-gradient(135deg, rgba(80,180,255,0.10), rgba(0,0,0,0.10)),
         rgba(2,8,18,0.92);
@@ -5003,11 +4994,10 @@
     }
 
     /* ===== クッキー画面(上部)の各表示が潰れない調整 ===== */
-    /* クッキー本体を最小116pxまでは縮めない(潰れ防止)。タブ表示域を50→46%に
-       わずかに譲り、それでも収まらない場合は切らずに縦スクロールさせる */
+    /* クッキー画面はスクロールさせない。収まらない分はクッキー画像(.cookieWrap)を
+       縮めて必ず画面内に全部を表示する(数値・ノルマ等は縮めない設定のまま)。 */
     .top {
-      overflow-y: auto !important;
-      overflow-x: hidden !important;
+      overflow: hidden !important;
       scrollbar-width: none;
     }
     .top::-webkit-scrollbar { display: none; }
@@ -5016,7 +5006,7 @@
       max-height: 46% !important;
     }
     .cookieWrap {
-      min-height: 116px !important;
+      min-height: 72px !important;
     }
 
     /* ===== スキルツリーのスワイプ中はアニメ/重フィルタを止めてガクつきを防ぐ ===== */
