@@ -722,6 +722,9 @@ function computeProd(sim) {
     if (resStage3(sim, 'galaxyAssembly')) globalRes *= 1 + (RG.galaxy.s3Floor || 0);
     if (resStage3(sim, 'factoryNetwork')) globalRes *= 1 + (RG.factoryS3Floor || 0);
     if (resStage3(sim, 'spiceBlend')) globalRes *= 1 + (RG.spiceS3Floor || 0);
+    // 指先の型 段3(⑨whole=会心の余熱): 会心/クリック依存で取得方針(S6等)に効果が出ないため、
+    // 取得中だけの全生産floorで総クッキーに繋ぐ(2026-07-09 ユーザー承認A・枝分かれmeasureで判定)。既存の余熱effectは残置。
+    if (resStage3(sim, 'fingerTechnique')) globalRes *= 1 + (RG.fingerS3Floor || 0);
     // 月面発酵 段2(⑨): 効果は強い(幾何平均3.82)が余裕率の低い1周回で min<1.05 に落ちるため、全生産倍率 floor で下支え。
     if (resStage2(sim, 'moonGlobalYeast')) globalRes *= 1 + (RG.moonS2Floor || 0);
     // 観測ゆらぎ(量子証明 段2・⑬タイミング): 全生産の90秒周期の波。最適操作=山に活動を寄せる(waveOpt=2/π)、
@@ -954,9 +957,14 @@ function monsterSpawnFactor(sim) {
   const rateLv = satLv(rwOff(sim, 'monsterRate') ? 0 : (r.perks.monsterRate || 0), P.monster.rateLvHalf);
   const deep = Math.exp(-(rwOff(sim, 'deepPursuit') ? 0 : (r.perks.deepPursuit || 0)) * P.rw.deepPursuitSpawn);
   let portalHunt = 1;
-  if (resActive(sim, 'portalNetwork') && sim.t < r.portalHuntUntil) {
-    portalHunt = ir(r.upgrades.portal || 0, P.res.portalHuntSpawn);
-    if (resStage3(sim, 'portalNetwork')) portalHunt *= Math.exp(-P.res2.huntStageCoef * r.maxStage);
+  if (resActive(sim, 'portalNetwork')) {
+    // 常時項(窓非依存・2026-07-09): 旧「窓が金で常時ON」時代の討伐テンポの土台を戻す(㉘討伐/⑨段2/③金の波及を回復)。
+    // 窓は追加ブースト(portalHuntSpawn)として残し、⑬延長狩りのタイミングの遊び(窓を討伐で維持)を保つ。増幅方向のみ。
+    portalHunt = ir(r.upgrades.portal || 0, P.res.portalHuntSpawnBase || 0);
+    if (sim.t < r.portalHuntUntil) {
+      portalHunt *= ir(r.upgrades.portal || 0, P.res.portalHuntSpawn);
+      if (resStage3(sim, 'portalNetwork')) portalHunt *= Math.exp(-P.res2.huntStageCoef * r.maxStage);
+    }
   }
   return Math.exp(
     -Math.max(0, rateLv) * P.monster.ratePerLv
@@ -1344,7 +1352,9 @@ function collectGolden(sim, prod) {
   if ((r.perks.goldenChain || 0) > 0 && sim.opt.disableReward !== 'goldenChain') r.goldenChainReady = true;
   if ((r.perks.goldenFirstHit || 0) > 0 && sim.opt.disableReward !== 'goldenFirstHit') r.goldenFirstHitReady = true;
   if (resActive(sim, 'spiceBlend')) r.spiceBoostUntil = sim.t + (P.res.spiceGoldDur + Math.log1p(r.upgrades.spiceRack || 0) * 1800) / 1000;
-  if (resActive(sim, 'portalNetwork')) r.portalHuntUntil = sim.t + (P.res.portalHuntDur * lg(r.upgrades.portal || 0, P.res.portalHuntGrow)) / 1000;
+  // ⑬延長狩り作り替え(2026-07-09・承認事項2の式変更): 狩り窓は金クッキーでは開かない(旧・金で開く/再設定は、
+  // はやて連鎖の金高頻度化で「常時ON(延長無意味)」か「短すぎて窓内討伐ゼロ(延長不発)」の両端にしか倒れず死んでいた)。
+  // 窓は討伐そのものが開く・維持する(下・kill側)。ここでは何もしない。
 
   // 期待値: 交互に即時獲得/ブースト
   sim.goldenAlt ^= 1;
@@ -1425,10 +1435,11 @@ function defeatMonster(sim, mon) {
   if (typeId === 'boss') r.killsSinceBoss = 0; else r.killsSinceBoss += units;
   // はやての運び屋: 撃破すると次の金クッキーが早く来る
   if (typeId === 'speedy' && M) r.nextGoldenSpawnMultiplier *= M.speedyGoldenCut;
-  // 異世界接続網 段階2: 狩り窓中の討伐で窓を延長(完全放置は窓中に討伐を寄せられず延長なし: 条件⑬)
-  if (resActive(sim, 'portalNetwork') && resStage2(sim, 'portalNetwork') && sim.t < r.portalHuntUntil
-    && !idleOn(sim, 'huntExtend')) {
-    r.portalHuntUntil += P.res2.huntExtendSec;
+  // 異世界接続網 段階2: 延長狩り(⑬・2026-07-09 作り替え)= 討伐のリズムを保つと狩り窓が続く。
+  // 討伐のたびに窓を「今+huntExtendSec」まで張り直す(討伐間隔<huntExtendSec なら窓が途切れない)。
+  // 完全放置は張り直しに気づかない=窓なし。金クッキー非依存なので常時ON/不発の両端に倒れない。
+  if (resActive(sim, 'portalNetwork') && resStage2(sim, 'portalNetwork') && !idleOn(sim, 'huntExtend')) {
+    r.portalHuntUntil = Math.max(r.portalHuntUntil, sim.t + P.res2.huntExtendSec);
   }
   if (!r.quotaFailed) r.quotaMonsterKills += units;
   // 討伐連鎖(第12次D): breakSec以内の連続討伐で+units(こつぶ群れ=3体分)、途切れたら振出し
@@ -1601,7 +1612,15 @@ function advanceTick(sim, strategy) {
     // かつ全効果と比較した「操作の巧拙」を測れる。60秒ごとに1標本(コスト削減)。timing sim でのみ有効。
     if (sim.opt.trackTickPower && sim.t % 60 === 0) {
       const ep = earningPowerSafe(sim);
-      if (ep > 0 && Number.isFinite(ep)) { sim._tpS = (sim._tpS || 0) + Math.log(ep); sim._tpN = (sim._tpN || 0) + 1; }
+      if (ep > 0 && Number.isFinite(ep)) {
+        const lg = Math.log(ep);
+        sim._tpS = (sim._tpS || 0) + lg; sim._tpN = (sim._tpN || 0) + 1;
+        // ⑬タイミングを「取得周回以降」窓で測るため per-tick 稼ぎ力を周回インデックス別にも積算(2026-07-09 ユーザー承認B)。
+        const ri = sim.runs.length; // 現在進行中の周回のidx(push前=runs.length)
+        if (!sim._tpByRun) sim._tpByRun = [];
+        const b = sim._tpByRun[ri] || (sim._tpByRun[ri] = { s: 0, n: 0 });
+        b.s += lg; b.n++;
+      }
     }
     if (sim.debugTrace && sim.runs.length === sim.opt.debugRunIdx) {
       const rr = sim.run;

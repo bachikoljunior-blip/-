@@ -570,83 +570,76 @@ function stageFirstAcqIdx(sim, stageKey) {
   for (const r of sim.runs) { if (!r.partial && (r[arr] || []).includes(rid)) { if (best === null || r.idx < best) best = r.idx; } }
   return best;
 }
-// ⑨whole軸(利息/余熱)。※この per-run 幾何平均は③utilityと同型の"脆弱measure"(2026-07-09 実測=枝分かれ比では
-// bankClickDividend段2/3・fingerTechnique段3 とも中央値1.00〜1.03=真値は弱い)。③と同じ「短い枝分かれ比べ」へ統一し
-// 3段を復活させるのが本筋だが、⑨の測り方変更はユーザー未承認かつ利息/余熱の復活調整が別途要るため今回は現状式を維持。
+// ⑨whole軸(利息/余熱)を③と同じ「短い枝分かれ比べ」へ統一(2026-07-09 ユーザー承認A)。旧 per-run 幾何平均は③と同型で
+// 軌道に脆弱=偽合格を出していた(枝分かれ比では3段とも真値1.00〜1.03)。各段が解放済みの周回の開始スナップから
+// disableStage で1周回ぶん枝分かれし、総クッキー比の中央値≥1.05。robust化に伴い3段の効果は別途「総クッキーに繋ぐ」復活調整を実施。
+function stageHeld(r, key) { const p = key.split(':'); const arr = p[2] === '2' ? 'stages2' : 'stages3'; return (r[arr] || []).includes(p[1]); }
 function judgeStageWhole(hours, sims, keys) {
   let ok = 0;
-  console.log('⑨ 段階whole軸(通し比較・取得周回以降の全周回効率幾何平均比 ≥1.05・利息/余熱=瞬間比較の外の稼ぎ)');
+  console.log('⑨ 段階whole軸(短い枝分かれ比べ・同一状態から1周回ぶん・総クッキー比の中央値 ≥1.05・利息/余熱)');
+  const optSnap = {};
+  for (const s of STRATEGIES) optSnap[s.id] = G.simulate(s, { hours, snapshots: true });
   for (const key of keys) {
     const p = key.split(':'); const disableVal = p[1] + ':' + p[2];
-    let best = 0, bestPol = null, anyUsed = false;
-    const users = STRATEGIES.map(s => ({ s, idx0: stageFirstAcqIdx(sims[s.id], key) })).filter(x => x.idx0 !== null);
-    users.sort((a, b) => a.idx0 - b.idx0);
-    for (const { s, idx0 } of users) {
+    let best = 0, bestPol = null, bestN = 0, anyUsed = false;
+    const users = STRATEGIES.map(s => {
+      const sim = optSnap[s.id];
+      const acq = sim.runs.filter(r => !r.partial && stageHeld(r, key) && r.runCookies > 0 && r.duration > 0 && sim.snapshots[r.idx]);
+      return { s, sim, acq };
+    }).filter(x => x.acq.length > 0).sort((a, b) => b.acq.length - a.acq.length);
+    for (const { s, sim, acq } of users) {
       anyUsed = true;
-      const optEff = geomeanEffFrom(sims[s.id], idx0);
-      const dis = G.simulate(s, { hours, disableStage: disableVal });
-      const disEff = geomeanEffFrom(dis, idx0);
-      const lift = (optEff && disEff && disEff > 0) ? optEff / disEff : null;
-      if (lift != null && lift > best) { best = lift; bestPol = s.id; }
+      const ratios = [];
+      for (const optRun of sampleRuns(acq, 12)) {
+        const off = G.replayRun(s, sim.snapshots[optRun.idx], { hours, disableStage: disableVal }, optRun.duration);
+        if (off && off.runCookies > 0 && Number.isFinite(off.runCookies) && Number.isFinite(optRun.runCookies)) ratios.push(Math.min(BRANCH_CAP, optRun.runCookies / off.runCookies));
+      }
+      const m = ratios.length ? medianOf(ratios) : null;
+      if (m != null && m > best) { best = m; bestPol = s.id; bestN = ratios.length; }
       if (best >= 1.05) break;
     }
     const pass = best >= 1.05;
     if (pass) ok++;
-    console.log(`  ${pass ? 'OK' : 'NG'} ${key.padEnd(28)} ${anyUsed ? `${bestPol} 比=${best.toFixed(3)}` : 'どの方針も未取得'}`);
+    console.log(`  ${pass ? 'OK' : 'NG'} ${key.padEnd(28)} ${anyUsed ? `${bestPol} 中央値比=${best.toFixed(3)} (n=${bestN})` : 'どの方針も未取得'}`);
   }
   console.log(`⑨ whole軸 ${ok}/${keys.length}`);
   return ok;
 }
-// ⑬ B案(2026-07-09 ユーザー承認): sim の per-tick 稼ぎ力の幾何平均(=時間平均の稼ぎ率)。
-function tickPower(sim) { return (sim._tpN > 0) ? Math.exp(sim._tpS / sim._tpN) : null; }
-function runWholeTiming(strategy, hours, optSim) {
-  // 【第12次N・B案・ユーザー承認 2026-07-09】per-run 効率(runCookies/duration の幾何平均)は idle 化で転生回数が
-  // 変わると暴れる(bhCharge=0.27〜1318)。かつ機能を登録させるため生産を足すと③の最弱utility報酬を希釈する。
-  // B案=opt-timing と idle-timing の2本を走らせ「per-tick 稼ぎ力(全生産源の合計)の幾何平均」の比を取る。
-  // (1)全効果と比較(稼ぎ力=総合) (2)per-run 分割の転生回数ノイズなし (3)状態書き込み型も2本の状態差で出る
-  // (4)機能の平均強度を変えないので③非干渉。opt/idle 両方 trackTickPower で per-tick 稼ぎ力を積算。
-  const opt = G.simulate(strategy, { hours, trackTickPower: true });
-  const optTp = tickPower(opt);
-  const out = { perFeature: {}, used: {}, allLift: null };
+// ⑬ タイミング機能=「短い枝分かれ比べ」(2026-07-09 実装。承認B「取得後窓」を実測した結果、晩期取得機能=
+// 圧縮チャージで opt/idle 軌道乖離が窓内で複利発散(比2.5e16)し帯[1.05,2.0]で測れないと確認。ユーザーの包括承認
+// 「総クッキーへの影響が測れてない場合は測れる条件に変えてよい」に基づき、③/⑨と同じ枝分かれ方式へ統一):
+// その機能(段2)を取得済みの各周回の開始スナップから「その機能だけ完全放置(idleTiming)」で同一時間だけ枝分かれ再実行し、
+// 総クッキー比(最適/放置)の中央値が [1.05, 2.0]。1周回で閉じる=軌道乖離が複利発散しない・希釈もない。
+function timingHeld(r, rid) { return (r.stages2 || []).includes(rid); }
+function judgeWholeTiming(hours, sims) {
+  let ok = 0;
+  console.log(`⑬ タイミング機能(短い枝分かれ比べ・最適操作/その機能だけ完全放置の1周回総クッキー比の中央値, 要求[1.05,2.00])`);
+  const optSnap = {};
+  for (const s of STRATEGIES) optSnap[s.id] = G.simulate(s, { hours, snapshots: true });
   for (const f of TIMING_FEATURES) {
     const rid = f.stage.split(':')[0];
-    out.used[f.key] = opt.runs.some(r => !r.partial && (r.stages2 || []).includes(rid));
-    if (!out.used[f.key] || optTp == null) { out.perFeature[f.key] = null; continue; }
-    const idle = G.simulate(strategy, { hours, idleTiming: f.key, trackTickPower: true });
-    const idleTp = tickPower(idle);
-    out.perFeature[f.key] = (idleTp && idleTp > 0) ? optTp / idleTp : null;
-  }
-  const all = G.simulate(strategy, { hours, idleTiming: 'all', trackTickPower: true });
-  const allTp = tickPower(all);
-  out.allLift = (allTp && optTp && allTp > 0) ? optTp / allTp : null;
-  return out;
-}
-// 全方針を跨いだ⑬判定: 各機能につき「使用した方針が1つ以上あり、その方針の通し比が[1.05,2.0]」。
-function judgeWholeTiming(hours, sims) {
-  const perStrat = {};
-  // opt は必ず plain(idleTiming=null・measure なし)で作る。共有 sims[s.id] は measure モードで per-tick
-  // サンドボックス・トグルによりトラジェクトリが変わり(opt効率が数倍膨張)、plain の idle と比べると
-  // 比が壊れる(モード不整合)。opt/idle を同じ plain モードに揃えて全体比較の一貫性を担保する。
-  for (const s of STRATEGIES) perStrat[s.id] = runWholeTiming(s, hours);
-  let ok = 0;
-  console.log(`⑬ タイミング機能(全体比較・最適操作/完全放置の全周回効率幾何平均比, 要求[1.05,2.00])`);
-  for (const f of TIMING_FEATURES) {
     const rows = [];
     let feature = false;
     for (const s of STRATEGIES) {
-      const w = perStrat[s.id];
-      const lift = w.perFeature[f.key];
-      if (!w.used[f.key] || lift == null) continue;
-      const inBand = lift >= 1.05 && lift <= 2.0;
+      const sim = optSnap[s.id];
+      const acq = sim.runs.filter(r => !r.partial && timingHeld(r, rid) && r.runCookies > 0 && r.duration > 0 && sim.snapshots[r.idx]);
+      if (!acq.length) continue;
+      const ratios = [];
+      for (const optRun of sampleRuns(acq, 12)) {
+        const idle = G.replayRun(s, sim.snapshots[optRun.idx], { hours, idleTiming: f.key }, optRun.duration);
+        if (idle && idle.runCookies > 0 && Number.isFinite(idle.runCookies) && Number.isFinite(optRun.runCookies)) {
+          ratios.push(Math.min(BRANCH_CAP, optRun.runCookies / idle.runCookies));
+        }
+      }
+      const m = ratios.length ? medianOf(ratios) : null;
+      if (m == null) continue;
+      const inBand = m >= 1.05 && m <= 2.0;
       if (inBand) feature = true;
-      rows.push(`${s.id}=${lift.toFixed(3)}${inBand ? '✓' : ''}`);
+      rows.push(`${s.id}=${m.toFixed(3)}${inBand ? '✓' : ''}(n=${ratios.length})`);
     }
     if (feature) ok++;
     console.log(`  ${feature ? 'OK' : 'NG'} ${f.label.padEnd(26)} ${rows.join(' ') || '(どの方針も未使用)'}`);
   }
-  // 参考: 全機能同時放置の合算(方針ごと)
-  const allRows = STRATEGIES.map(s => { const a = perStrat[s.id].allLift; return a ? `${s.id}=${a.toFixed(2)}` : null; }).filter(Boolean);
-  console.log(`  参考 全機能同時放置lift: ${allRows.join(' ')}`);
   console.log(`⑬ タイミング ${ok}/${TIMING_FEATURES.length}`);
   return ok;
 }

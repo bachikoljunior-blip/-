@@ -126,7 +126,7 @@ module.exports = {
     portal:  { floor: 0.25, own: 0, stage: 0, s3Floor: 0.06 },
     galaxy:  { floor: 0.25, own: 0, stage: 0, s3Floor: 0.06 },
     quantum: { floor: 0.25, own: 0, stage: 0 },
-    factoryS3Floor: 0.06, spiceS3Floor: 0.06, moonS2Floor: 0.06
+    factoryS3Floor: 0.06, spiceS3Floor: 0.06, moonS2Floor: 0.06, fingerS3Floor: 0.08
   },
 
   // ---- 討伐連鎖(2026-07-07 ユーザー採用・0-2提案1) ----
@@ -151,7 +151,9 @@ module.exports = {
     ovenSelf: 30, ovenOwn: 0.067, ovenStage: 0.012,
     factorySelf: 30, factoryLow: 0.006, factoryOwn: 0.057,
     spiceOwn: 0.071, spiceGold: 15, spiceGoldOwn: 0.014, spiceGoldDur: 30000,
-    portalSelf: 25, portalHuntDur: 20000, portalHuntGrow: 0.0042, portalHuntSpawn: 0.010,
+    // 狩り窓(2026-07-09 ⑬作り替え): 窓は討伐が開く・維持する(金クッキー非関与)。portalHuntDur/Grow は旧・金開窓用=現在未使用(移植時に削除)。
+    // portalHuntSpawnBase=窓に関係ない常時スポーン加速(研究解放中)/ portalHuntSpawn=窓中の追加加速(⑬延長狩りのコントラスト)。
+    portalSelf: 25, portalHuntDur: 5000, portalHuntGrow: 0.0042, portalHuntSpawn: 0.003, portalHuntSpawnBase: 0.007,
     bankOwn: 0.040, bankSaved: 10.0,
     moonBase: 25, moonStage: 0.003, moonOwn: 0.001,
     foldPortal: 0.002, foldMonster: 2.5, foldGold: 8,
@@ -283,18 +285,18 @@ module.exports = {
   //  - 重力圧縮 段3: 圧縮×(1-min(0.35,0.001×最高層)) → 圧縮×e^(-0.001×最高層)(負値防止の逓減式)
   res2: {
     comboRate: 0.03, comboWindow: 30,
-    critCpsCoef: 0.00025,
+    critCpsCoef: 0.003,
     supExtra: 0.008, supStageCoef: 0.001,
     ovenBakeMulBake: 1.5, ovenBakeMulOther: 1.2,
     ovenS3Flat: 0.06, ovenStageCoef: 0.004,
     factoryHiKind: 0.15, factoryStageCoef: 0.0012,
     matureRate: 0.006, aromaDur: 12, spiceStageCoef: 0.0015,
-    huntExtendSec: 30, huntStageCoef: 0.0008,
-    bankIntRate: 0.0012, bankIntCapCps: 2.0, bankCapStageCoef: 0.004,
+    huntExtendSec: 40, huntStageCoef: 0.0008,
+    bankIntRate: 0.004, bankIntCapCps: 8.0, bankCapStageCoef: 0.03,
     moonMarginDiv: 10, moonResCount: 0.05,
     foldKillCoef: 0.002, foldStageCoef: 0.001,
     galaxyBonusCoef: 0.05, galaxySat: 120, galaxyStageCoef: 0.0008,
-    bhChargeFull: 2500, bhBoostCoef: 0.5, bhBoostDur: 60, bhBoostStageCoef: 0.002,
+    bhChargeFull: 2500, bhBoostCoef: 0.25, bhBoostDur: 60, bhBoostStageCoef: 0.002,
     bhCompStageCoef: 0.001,
     waveAmpBase: 0.30, waveAmpPerRes: 0.05, wavePeriod: 90, waveStageCoef: 0.001,
     antiStageCoef: 0.0008, antiPrestigeCoef: 0.03
