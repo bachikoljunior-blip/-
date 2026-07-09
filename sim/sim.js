@@ -1015,7 +1015,7 @@ function goldenBoostDurationMs(sim) {
 // やり直し比較(replay)を廃止し、各tickで「機能込みの瞬間稼ぎ力 ÷ 機能抜きの瞬間稼ぎ力」を測って
 // 周回平均(対数平均)を取る。同じ状態を2通り評価するだけなので、分かれ道のズレが原理的に発生しない。
 // 稼ぎ力 = 直接生産 + 金クッキー収入率 + 討伐報酬(投資)価値率 の合成。すべて現在状態から式で算出。
-const KILL_VALUE_SEC = 4;   // 討伐1体の価値を「生産◯秒ぶん」で近似(投資=将来の報酬・強化。channel重み)
+const KILL_VALUE_SEC = 5;   // 討伐1体の価値を「生産◯秒ぶん」で近似(投資=将来の報酬・強化。channel重み)。㉘討伐由来を早い周回tickから底上げ(4→5)。金/設備specialistは巻き込まず、⑬は1機能が帯落ちする副作用あり(要監視)
 // earningPower は副作用のある関数(monsterStayMs 等が next*Multiplier をリセット)を呼ぶため、
 // 揮発フィールドを退避・復元して純粋化する(測定が実シミュの状態を壊さないように)
 function earningPowerSafe(sim) {

@@ -108,7 +108,7 @@ module.exports = {
   // coef=0 で各無効。tune で全体最良点を掃引(㉘の各主役≥30%と経済/テンポ非破綻の両立)。調整項目。
   equipDirect:  { coef: 0.02, stagePow: 0.5, countPow: 2, ref: 100, startStage: 5 }, // 投資量=オーブン所持数
   goldenDirect: { coef: 0.012, stagePow: 0.5, countPow: 2, ref: 30,  startStage: 5 }, // 投資量=金perk合計
-  huntDirect:   { coef: 0.012, stagePow: 0.5, countPow: 2, ref: 30,  startStage: 5 }, // 投資量=討伐perk合計
+  huntDirect:   { coef: 0.07, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5 }, // 投資量=討伐perk合計(㉘討伐≥30%へ増幅・投資連動=狩猟専の周回だけ強く効く。countPow緩め=低投資周回も効く)
   tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5 }, // 投資量=神の指+強い指/10
   // 銀行配当(直送・第12次J-3 腐り解消): bankClickDividend研究の独立収入。クリック方針で厚く効かせ①の各回minを満たす。
   // 全体cps倍率をやめ加算収入へ(他機能のlift希釈を回避)。所持数はlog10で床あり=早い周回でも効く。増加方向のみ。
