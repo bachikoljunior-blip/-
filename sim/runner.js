@@ -570,6 +570,9 @@ function stageFirstAcqIdx(sim, stageKey) {
   for (const r of sim.runs) { if (!r.partial && (r[arr] || []).includes(rid)) { if (best === null || r.idx < best) best = r.idx; } }
   return best;
 }
+// ⑨whole軸(利息/余熱)。※この per-run 幾何平均は③utilityと同型の"脆弱measure"(2026-07-09 実測=枝分かれ比では
+// bankClickDividend段2/3・fingerTechnique段3 とも中央値1.00〜1.03=真値は弱い)。③と同じ「短い枝分かれ比べ」へ統一し
+// 3段を復活させるのが本筋だが、⑨の測り方変更はユーザー未承認かつ利息/余熱の復活調整が別途要るため今回は現状式を維持。
 function judgeStageWhole(hours, sims, keys) {
   let ok = 0;
   console.log('⑨ 段階whole軸(通し比較・取得周回以降の全周回効率幾何平均比 ≥1.05・利息/余熱=瞬間比較の外の稼ぎ)');

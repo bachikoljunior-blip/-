@@ -734,12 +734,18 @@ function computeProd(sim) {
       globalRes *= 1 + amp * wf;
     }
   }
+  // ③死に報酬対策(第12次P・枝分かれmeasure下で安全): 巨砕ミル(装備)/金獣変異(金)に「取得中だけ立つ全生産floor」を
+  // 持たせ、効果を総クッキーに繋ぐ(取得が稀=n小でも枝分かれ比が確実に≥1.1へ)。他報酬のON/OFF比では定数として相殺=非干渉。
+  if (!rwOff(sim, 'crushedMill') && (r.perks.crushedMill || 0) > 0) globalRes *= 1 + (r.perks.crushedMill || 0) * (P.rw.crushedMillProd || 0);
+  if (!rwOff(sim, 'goldenBeastMutation') && (r.perks.goldenBeastMutation || 0) > 0) globalRes *= 1 + (r.perks.goldenBeastMutation || 0) * (P.rw.goldenBeastMutationProd || 0);
+  if (!rwOff(sim, 'brandHunt') && (r.perks.brandHunt || 0) > 0) globalRes *= 1 + (r.perks.brandHunt || 0) * (P.rw.brandHuntProd || 0);
 
   // ③死に報酬対策(第12次P・枝分かれmeasure下では安全): 討伐ダメージ系報酬(割れた牙/焼き印狩り)を「討伐数×全生産倍率」へ繋ぐ。
   // ダメージ二値しきい値(killable)に吸収されず、討伐が速い方針でも討伐数に比例して総クッキーに効く経路。
   const cfKill = rwOff(sim, 'crackedFang') ? 0 : (r.perks.crackedFang || 0) * (P.rw.crackedFangKill || 0);
   const bhKill = rwOff(sim, 'brandHunt') ? 0 : (r.perks.brandHunt || 0) * (P.rw.brandHuntKill || 0);
-  const killMulAll = 1 + (r.quotaMonsterKills || 0) * (r.perks.beastHeatFerment * effRw(sim, 'beastHeatFerment') + cfKill + bhKill);
+  const brKill = rwOff(sim, 'biteRecovery') ? 0 : (r.perks.biteRecovery || 0) * (P.rw.biteRecoveryKill || 0);
+  const killMulAll = 1 + (r.quotaMonsterKills || 0) * (r.perks.beastHeatFerment * effRw(sim, 'beastHeatFerment') + cfKill + bhKill + brKill);
   const killMulCps = 1 + (r.quotaMonsterKills || 0) * (r.perks.huntingCore * effRw(sim, 'huntingCore'));
 
   // 個別強化倍率・研究倍率・支援倍率
