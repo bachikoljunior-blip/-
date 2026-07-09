@@ -724,6 +724,15 @@ function computeProd(sim) {
     if (resStage3(sim, 'spiceBlend')) globalRes *= 1 + (RG.spiceS3Floor || 0);
     // 月面発酵 段2(⑨): 効果は強い(幾何平均3.82)が余裕率の低い1周回で min<1.05 に落ちるため、全生産倍率 floor で下支え。
     if (resStage2(sim, 'moonGlobalYeast')) globalRes *= 1 + (RG.moonS2Floor || 0);
+    // 観測ゆらぎ(量子証明 段2・⑬タイミング): 全生産の90秒周期の波。最適操作=山に活動を寄せる(waveOpt=2/π)、
+    // 完全放置=全周期平均(waveIdle=1/π)。sim では定数乗数なので ⑬比=(1+amp·waveOpt)/(1+amp·waveIdle)=定数k
+    // (安定・トラジェクトリ非依存)。晩期取得(≈idx44)なので③測定への摂動は末尾数周回のみ。増加方向。
+    if (resStage2(sim, 'quantumProofing')) {
+      let amp = P.res2.waveAmpBase;
+      if (resStage3(sim, 'quantumProofing')) amp *= 1 + P.res2.waveStageCoef * r.maxStage;
+      const wf = idleOn(sim, 'wave') ? P.timing.waveIdle : P.timing.waveOpt;
+      globalRes *= 1 + amp * wf;
+    }
   }
 
   const killMulAll = 1 + (r.quotaMonsterKills || 0) * (r.perks.beastHeatFerment * effRw(sim, 'beastHeatFerment'));
@@ -783,14 +792,8 @@ function computeProd(sim) {
     if (u.id === 'quantumBakery' && resActive(sim, 'quantumProofing')) {
       const rc = RESEARCH.filter(x => r.research[x.id]).length;
       resM *= lg(rc, R.quantumRes) * lg(capOwn(owned), R.quantumOwn);
-      // 段階2: 観測ゆらぎ(90秒周期の波。山でのみ増幅、谷は×1)
-      if (resStage2(sim, 'quantumProofing')) {
-        let amp = P.res2.waveAmpBase + P.res2.waveAmpPerRes * rc;
-        if (resStage3(sim, 'quantumProofing')) amp *= 1 + P.res2.waveStageCoef * r.maxStage;
-        // タイミング(条件⑬): 最適操作=山に活動を寄せる(正相平均2/π) / 完全放置=全周期平均(1/π)
-        const wf = idleOn(sim, 'wave') ? P.timing.waveIdle : P.timing.waveOpt;
-        resM *= 1 + amp * wf;
-      }
+      // 観測ゆらぎ(段2・⑬)は量子ベーカリー1種だと晩期取得時に総生産のごく一部で全体比が1.000へ潰れるため、
+      // 全生産の波(下 globalRes 側)へ移設(第12次N)。ここでは適用しない。
     }
     let supM = 1;
     if (resActive(sim, 'grandmaCrowd')) {

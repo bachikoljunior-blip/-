@@ -293,7 +293,7 @@ module.exports = {
     galaxyBonusCoef: 0.05, galaxySat: 120, galaxyStageCoef: 0.0008,
     bhChargeFull: 2500, bhBoostCoef: 0.5, bhBoostDur: 60, bhBoostStageCoef: 0.002,
     bhCompStageCoef: 0.001,
-    waveAmpBase: 0.5, waveAmpPerRes: 0.05, wavePeriod: 90, waveStageCoef: 0.001,
+    waveAmpBase: 0.30, waveAmpPerRes: 0.05, wavePeriod: 90, waveStageCoef: 0.001,
     antiStageCoef: 0.0008, antiPrestigeCoef: 0.03
   },
 
