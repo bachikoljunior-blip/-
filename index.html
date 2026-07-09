@@ -5218,7 +5218,7 @@
 
     <section id="prestigeTab" class="tabPage">
       <div class="tabPageHead" data-full-target="prestigeTab">
-        <h2>転生</h2>
+        <h2 id="prestigeHeadTitle">？？？</h2>
       </div>
       <div id="prestigePanel" class="pageScroll"></div>
     </section>
@@ -12066,6 +12066,10 @@ function checkPrestigeUnlockNotice() {
 function renderPrestige() {
   const box = $("prestigePanel");
 
+  // 転生が解放されるまでは見出しの「転生」も伏せる
+  const head = $("prestigeHeadTitle");
+  if (head) head.textContent = prestigeUnlocked() ? "転生" : "？？？";
+
   if (!prestigeUnlocked()) {
     box.innerHTML = `
       <div class="infoBox">
@@ -12261,10 +12265,12 @@ function renderInfo() {
 
     <div class="infoBox">
       <h3>クッキーとプレイ時間</h3>
-      <div class="infoRow">全周回 総クッキー：${fmt(state.totalCookies)}</div>
-      <div class="infoRow">全周回 プレイ時間：${fmtTime(state.totalPlaySec || 0)}</div>
+      <div class="infoRow">総クッキー：${fmt(state.totalCookies)}</div>
+      <div class="infoRow">総プレイ時間：${fmtTime(state.totalPlaySec || 0)}</div>
+      ${(Number(state.prestigeRuns) || 0) > 0 ? `
       <div class="infoRow">今回 総クッキー：${fmt(state.runCookies)}</div>
       <div class="infoRow">今回 プレイ時間：${fmtTime(Math.max(0, (state.totalPlaySec || 0) - (state.runStartPlaySec || 0)))}</div>
+      ` : ""}
     </div>
 
     ${stageWorkshopBox}
