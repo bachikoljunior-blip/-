@@ -722,6 +722,8 @@ function computeProd(sim) {
     if (resStage3(sim, 'galaxyAssembly')) globalRes *= 1 + (RG.galaxy.s3Floor || 0);
     if (resStage3(sim, 'factoryNetwork')) globalRes *= 1 + (RG.factoryS3Floor || 0);
     if (resStage3(sim, 'spiceBlend')) globalRes *= 1 + (RG.spiceS3Floor || 0);
+    // 月面発酵 段2(⑨): 効果は強い(幾何平均3.82)が余裕率の低い1周回で min<1.05 に落ちるため、全生産倍率 floor で下支え。
+    if (resStage2(sim, 'moonGlobalYeast')) globalRes *= 1 + (RG.moonS2Floor || 0);
   }
 
   const killMulAll = 1 + (r.quotaMonsterKills || 0) * (r.perks.beastHeatFerment * effRw(sim, 'beastHeatFerment'));
@@ -883,10 +885,21 @@ function rwOff(sim, id) { return sim.opt.disableReward === id || sim._md === 'rw
 // 討伐連鎖(第12次D・提案1採用): 最後の討伐から breakSec 以内なら連鎖が生きている。
 // 討伐系機能として一時無効(_md/_mdSet 'chain')に対応=期待値方式・㉘討伐由来分解の対象
 function chainOff(sim) { return sim.opt.disableChain || sim._md === 'chain' || (sim._mdSet ? sim._mdSet.has('chain') : false); }
+// chainPrep 再テーマ(第12次M・カオス解消): 連戦準備は討伐連鎖の持続窓(breakSec)を Lv で延長する。
+// 連鎖が長続き→連鎖数↑→全生産×(1+prodCoef×連鎖)が伸びる=飽和しない通しに効く。従来の次モンスター spawn/hp 効果は残置。増加方向のみ。
+function chainBreakSec(sim) {
+  const base = (P.chain && P.chain.breakSec) || 0;
+  const r = sim.run;
+  const cp = rwOff(sim, 'chainPrep') ? 0 : (r.perks.chainPrep || 0);
+  // monsterStay 再テーマ(第12次M・飽和解消): 滞在が長い=次の討伐までの間が空いても連鎖が切れにくい、として
+  // 連鎖持続窓を滞在Lvでも延長する(連鎖数で全生産×(1+prodCoef×連鎖)に効く=飽和しない)。従来の滞在窓延長は残置。増加方向のみ。
+  const ms = rwOff(sim, 'monsterStay') ? 0 : (r.perks.monsterStay || 0);
+  return base * (1 + cp * (P.rw.chainPrepPersist || 0) + ms * (P.rw.monsterStayChain || 0));
+}
 function chainCount(sim) {
   if (!P.chain || chainOff(sim)) return 0;
   const r = sim.run;
-  return (sim.t - r.chainLastT) <= P.chain.breakSec ? r.chainN : 0;
+  return (sim.t - r.chainLastT) <= chainBreakSec(sim) ? r.chainN : 0;
 }
 // 報酬効果値(無効化対応)
 function effRw(sim, id) {
@@ -1402,7 +1415,7 @@ function defeatMonster(sim, mon) {
   if (!r.quotaFailed) r.quotaMonsterKills += units;
   // 討伐連鎖(第12次D): breakSec以内の連続討伐で+units(こつぶ群れ=3体分)、途切れたら振出し
   if (P.chain) {
-    r.chainN = (sim.t - r.chainLastT) <= P.chain.breakSec ? r.chainN + units : units;
+    r.chainN = (sim.t - r.chainLastT) <= chainBreakSec(sim) ? r.chainN + units : units;
     r.chainLastT = sim.t;
     if (r.chainN > r.chainMax) r.chainMax = r.chainN;
   }

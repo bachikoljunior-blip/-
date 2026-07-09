@@ -123,7 +123,7 @@ module.exports = {
     portal:  { floor: 0.25, own: 0, stage: 0, s3Floor: 0.06 },
     galaxy:  { floor: 0.25, own: 0, stage: 0, s3Floor: 0.06 },
     quantum: { floor: 0.25, own: 0, stage: 0 },
-    factoryS3Floor: 0.06, spiceS3Floor: 0.06
+    factoryS3Floor: 0.06, spiceS3Floor: 0.06, moonS2Floor: 0.06
   },
 
   // ---- 討伐連鎖(2026-07-07 ユーザー採用・0-2提案1) ----
@@ -197,6 +197,9 @@ module.exports = {
     biteRecovery: 0.5,
     crushedMill: 1.5,
     chainPrepSpawn: 0.2, chainPrepHp: 1.032,
+    // 第12次M 再テーマ(増加方向・従来効果は残置): monsterStay/chainPrep とも討伐連鎖の持続窓 breakSec を Lv で延長し、
+    // 連鎖数で全生産×(1+prodCoef×連鎖)に効かせる(飽和/カオス解消)。monsterStay は取得数が多いので per-Lv を小さく。
+    monsterStayChain: 0.03, chainPrepPersist: 0.25,
     beastScent: 0.5,
     deepPursuitSpawn: 0.045, deepPursuitHp: 1.035, deepPursuitReward: 1.6,
     mutationBase: 0.5, mutationPerLv: 0.1,
