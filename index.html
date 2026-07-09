@@ -12277,7 +12277,7 @@ function renderInfo() {
 
     <div class="infoBox">
       <h3>現在の倍率・状態</h3>
-      <div class="infoRow">周回方針：${runPolicyName()}<div class="desc">${policyBiasText(RUN_POLICIES.find(p => p.id === state.runPolicy))}</div></div>
+      ${runPolicyUnlocked() ? `<div class="infoRow">周回方針：${runPolicyName()}${workshopTabUnlocked() ? `<div class="desc">${policyBiasText(RUN_POLICIES.find(p => p.id === state.runPolicy))}</div>` : ""}</div>` : ""}
       <div class="infoRow">報酬系統：金${fmt((state.rewardCategoryCounts||{}).golden||0)} / 狩猟${fmt((state.rewardCategoryCounts||{}).hunt||0)} / 設備${fmt((state.rewardCategoryCounts||{}).equipment||0)} / 危険${fmt((state.rewardCategoryCounts||{}).risk||0)}</div>
       <div class="infoRow">スキル全体倍率：x${prestigeMultiplier().toFixed(3)}</div>
       <div class="infoRow">スキルタップ倍率：x${clickSkillMultiplier().toFixed(3)}</div>
