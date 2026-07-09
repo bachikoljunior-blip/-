@@ -1292,8 +1292,8 @@ function prestigeGainOf(runCookies) {
   return Math.max(1, Math.floor(pp.pA * (1 - Math.exp(-t / pp.pD1)) + pp.pB * Math.pow(t / pp.pD2, pp.pG)));
 }
 function prestigeUnlockedFn(sim) {
-  // 初回転生のしきい値=10^costExp0(既定10^6)。以降は prestigeTotal/Runs で解放済み。
-  const firstCost = Math.pow(10, (P.prestige && P.prestige.costExp0 != null) ? P.prestige.costExp0 : 6);
+  // 初回転生のしきい値=firstCost(2026-07-09 ユーザー・ゲーム仕様変更=500万)。以降は prestigeTotal/Runs で解放済み。
+  const firstCost = (P.prestige && P.prestige.firstCost != null) ? P.prestige.firstCost : 5e6;
   return sim.totalCookies >= firstCost || sim.prestigeTotal > 0 || sim.prestigeRuns > 0;
 }
 
@@ -1475,8 +1475,12 @@ function cheapestUnownedSkillCost(sim) {
 // 必要量 = 10^(costExp0 + costStep×これまでの転生回数)。prestigeRuns は転生完了ごとに+1されるので、
 // 次の転生の必要量は毎回きっちり costStep 桁ぶん大きくなる。
 function prestigeCostOf(sim) {
+  // 転生のクッキー必要量(2026-07-09 ユーザー・ゲーム仕様変更): 初回転生=500万(firstCost)、
+  // 以降は10のべき乗で増加(10^7, 10^8, 10^9…)。初回だけ500万の固定値、2回目以降は 10^(costExp0+costStep×回数)。
   const pc = P.prestige || {};
-  const exp = (pc.costExp0 != null ? pc.costExp0 : 6) + (pc.costStep != null ? pc.costStep : 1) * (sim.prestigeRuns || 0);
+  const runs = sim.prestigeRuns || 0;
+  if (runs === 0) return pc.firstCost != null ? pc.firstCost : 5e6;
+  const exp = (pc.costExp0 != null ? pc.costExp0 : 6) + (pc.costStep != null ? pc.costStep : 1) * runs;
   return Math.pow(10, exp);
 }
 function doPrestige(sim) {
