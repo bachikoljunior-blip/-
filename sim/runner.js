@@ -522,6 +522,49 @@ function judgeUtilityRewards(hours, sims, ids) {
   console.log(`③ utility軸 ${ok}/${ids.length}`);
   return ok;
 }
+// ⑨ の段階のうち、⑬タイミング機能そのもの(観測ゆらぎ=量子証明段2/3・圧縮チャージ=重力圧縮段2/3)は
+// ⑬(最適操作 vs 完全放置の通し比較[1.05,2.0])で判定済み。⑨(瞬間比較lift≥1.05)は同じ機能を構造的に
+// 測れない(タイミング効果は行動の瞬間に一度だけ状態へ書き込むため1.00張り付き)ので⑨の判定対象から除外する
+// (2026-07-08 ユーザー承認・提案1)。※spiceBlend段2/portalNetwork段2 は非タイミングの生産効果もあり⑨で通るので残す。
+const STAGE_TIMING_EXCLUDE = new Set([
+  'stage:quantumProofing:2', 'stage:quantumProofing:3',
+  'stage:blackHoleCompression:2', 'stage:blackHoleCompression:3'
+]);
+// ⑨ の段階のうち、効果が earningPower(⑨の瞬間比較proxy)の外で稼ぐもの(銀行の複利利息・会心の余熱)は
+// 瞬間比較では構造的に1.00。これらは「瞬間判断以外」で測る(2026-07-08 ユーザー承認・提案2)=⑬/③utility軸と同じ
+// 通し比較: その段を取得し始めた周回以降の全周回効率(runCookies/duration)の幾何平均を、最適と disableStage で比べ ≥1.05。
+const STAGE_WHOLE = ['stage:bankClickDividend:2', 'stage:bankClickDividend:3', 'stage:fingerTechnique:3'];
+function stageFirstAcqIdx(sim, stageKey) {
+  const p = stageKey.split(':'); const rid = p[1], lv = p[2];
+  const arr = lv === '2' ? 'stages2' : 'stages3';
+  let best = null;
+  for (const r of sim.runs) { if (!r.partial && (r[arr] || []).includes(rid)) { if (best === null || r.idx < best) best = r.idx; } }
+  return best;
+}
+function judgeStageWhole(hours, sims, keys) {
+  let ok = 0;
+  console.log('⑨ 段階whole軸(通し比較・取得周回以降の全周回効率幾何平均比 ≥1.05・利息/余熱=瞬間比較の外の稼ぎ)');
+  for (const key of keys) {
+    const p = key.split(':'); const disableVal = p[1] + ':' + p[2];
+    let best = 0, bestPol = null, anyUsed = false;
+    const users = STRATEGIES.map(s => ({ s, idx0: stageFirstAcqIdx(sims[s.id], key) })).filter(x => x.idx0 !== null);
+    users.sort((a, b) => a.idx0 - b.idx0);
+    for (const { s, idx0 } of users) {
+      anyUsed = true;
+      const optEff = geomeanEffFrom(sims[s.id], idx0);
+      const dis = G.simulate(s, { hours, disableStage: disableVal });
+      const disEff = geomeanEffFrom(dis, idx0);
+      const lift = (optEff && disEff && disEff > 0) ? optEff / disEff : null;
+      if (lift != null && lift > best) { best = lift; bestPol = s.id; }
+      if (best >= 1.05) break;
+    }
+    const pass = best >= 1.05;
+    if (pass) ok++;
+    console.log(`  ${pass ? 'OK' : 'NG'} ${key.padEnd(28)} ${anyUsed ? `${bestPol} 比=${best.toFixed(3)}` : 'どの方針も未取得'}`);
+  }
+  console.log(`⑨ whole軸 ${ok}/${keys.length}`);
+  return ok;
+}
 function runWholeTiming(strategy, hours, optSim) {
   const opt = optSim || G.simulate(strategy, { hours });
   const optEff = geomeanEff(opt);
@@ -841,7 +884,17 @@ if (mode === 'baseline') {
     const okUtil = judgeUtilityRewards(H, sims, UTILITY_REWARDS);
     console.log(`③ 報酬 合計 ${okDirect + okUtil}/${G.REWARD_POOL.length} (instant ${okDirect}/${directIds.length} + utility ${okUtil}/${UTILITY_REWARDS.length})`);
   }
-  judge(collect('stage:'), 1.05, '⑨ 段階(各回≥1.05)');
+  {
+    const stageMap = collect('stage:');
+    const wholeSet = new Set(STAGE_WHOLE);
+    // instant判定: ⑬タイミング段は除外、利息/余熱(whole軸)も除外。残りを瞬間比較lift≥1.05。
+    const instantIds = Object.keys(stageMap).filter(k => !STAGE_TIMING_EXCLUDE.has(k) && !wholeSet.has(k));
+    const okInstant = judge(stageMap, 1.05, '⑨-a 段階instant(各回≥1.05・⑬タイミング段は除外)', instantIds);
+    // whole軸: 利息/余熱を通し比較で判定(取得された段のみ対象)
+    const wholeKeys = STAGE_WHOLE.filter(k => STRATEGIES.some(s => stageFirstAcqIdx(sims[s.id], k) !== null));
+    const okWhole = judgeStageWhole(H, sims, wholeKeys);
+    console.log(`⑨ 段階 合計 ${okInstant + okWhole}/${instantIds.length + wholeKeys.length} (instant ${okInstant}/${instantIds.length} + whole ${okWhole}/${wholeKeys.length}・⑬タイミング段${[...STAGE_TIMING_EXCLUDE].filter(k => stageMap[k]).length}件は⑬で判定のため除外)`);
+  }
   // ⑬ タイミング(提案5・2026-07-07承認=全体比較): 瞬間比較(collect('timing:'))は構造的に1.000
   // に張り付くため廃止。最適操作/完全放置の通しを走らせ、全周回効率の幾何平均比[1.05,2.0]で判定。
   judgeWholeTiming(H, sims);
