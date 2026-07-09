@@ -7406,7 +7406,8 @@ function rewardModalOpen() {
 }
 
 function quotaClockPaused() {
-  return pausedForSkillChoice() || rewardModalOpen() || titleScreenActive();
+  // ゲームを閉じている・バックグラウンド/画面ロック中(タブ非表示)もノルマを止める
+  return pausedForSkillChoice() || rewardModalOpen() || titleScreenActive() || document.hidden;
 }
 
 function startQuotaPause() {
@@ -10114,7 +10115,20 @@ document.addEventListener("pointerdown", () => { try { startBgm(); } catch (e) {
 // 一度中断した音を以降の操作・再表示で必ず復帰させる
 document.addEventListener("pointerdown", resumeAudioIfNeeded);
 document.addEventListener("touchstart", resumeAudioIfNeeded, { passive: true });
-document.addEventListener("visibilitychange", () => { if (!document.hidden) resumeAudioIfNeeded(); });
+document.addEventListener("visibilitychange", () => {
+  // タブ非表示(=ゲームを閉じている/ロック中)の切り替わりでノルマ時計を止める/戻す
+  updateQuotaPauseState();
+  if (document.hidden) {
+    saveGame();
+  } else {
+    resumeAudioIfNeeded();
+    updateTopOnly();
+  }
+});
+window.addEventListener("pagehide", () => {
+  updateQuotaPauseState();
+  saveGame();
+});
 window.addEventListener("focus", resumeAudioIfNeeded);
 window.addEventListener("pageshow", resumeAudioIfNeeded);
 
