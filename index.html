@@ -12158,6 +12158,8 @@ function upgradeEffectiveContribution(u) {
 
 function renderInfo() {
   const box = $("infoPanel");
+  // 1秒ごとの再描画でもスクロール位置を保つ
+  const savedScroll = box.scrollTop;
 
   const visible = visibleUpgrades();
 
@@ -12314,6 +12316,8 @@ function renderInfo() {
       ${upgradeRows}
     </div>
   `;
+
+  box.scrollTop = savedScroll;
 }
 
 function renderActiveTab() {
@@ -14452,7 +14456,8 @@ setInterval(() => {
     refreshOrderTab();
   } else if (activeTab === "workshopTab") {
     refreshWorkshopTab();
-  } else if (activeTab !== "infoTab" && document.activeElement.tagName !== "INPUT") {
+  } else if (document.activeElement.tagName !== "INPUT") {
+    // 一覧タブもスキル解放などの変化を反映するため毎秒再描画する(スクロール位置は保持)
     renderActiveTab();
   }
 
