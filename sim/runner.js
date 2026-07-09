@@ -810,6 +810,15 @@ if (mode === 'baseline') {
     bestByCat[c] = best;
   }
   console.log('㉕(機械判定) カテゴリ別最効率種類: ' + cats.map(c => c + '=' + bestByCat[c]).join(' ') + ` → ${new Set(Object.values(bestByCat)).size}種 (≥2で OK)`);
+  // ㉖案②-b(2026-07-09 ユーザー承認): 種類ごとの「全カテゴリ合計の旨味」が±1.5倍以内(得意ピークの位置は自由=㉕多様性を保つ)。
+  // 相性表の設計で判定(静的・⑯⑳と同じ扱い)。ボスは周期出現のため対象外。
+  {
+    const sums = {};
+    for (const t of Object.keys(aff)) { if (t === 'boss') continue; sums[t] = cats.reduce((a, c) => a + (aff[t][c] || 0), 0); }
+    const sv = Object.values(sums), sm = sv.reduce((a, b) => a + b, 0) / sv.length;
+    const ok26b = sv.every(v => v >= sm / 1.5 && v <= sm * 1.5);
+    console.log(`㉖(案②-b 種類別の全カテゴリ合計旨味 ±1.5倍以内): ${Object.entries(sums).map(([k, v]) => k + '=' + v.toFixed(1)).join(' ')} → ${ok26b ? 'OK' : 'NG'}`);
+  }
   const domByStrat = {};
   let ok26 = 0, all26 = 0;
   for (const s of STRATEGIES) {
