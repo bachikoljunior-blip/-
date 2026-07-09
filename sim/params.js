@@ -289,7 +289,7 @@ module.exports = {
     ovenS3Flat: 0.06, ovenStageCoef: 0.004,
     factoryHiKind: 0.15, factoryStageCoef: 0.0012,
     matureRate: 0.006, aromaDur: 12, spiceStageCoef: 0.0015,
-    huntExtendSec: 2, huntStageCoef: 0.0008,
+    huntExtendSec: 30, huntStageCoef: 0.0008,
     bankIntRate: 0.0012, bankIntCapCps: 2.0, bankCapStageCoef: 0.004,
     moonMarginDiv: 10, moonResCount: 0.05,
     foldKillCoef: 0.002, foldStageCoef: 0.001,
