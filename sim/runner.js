@@ -569,29 +569,28 @@ function judgeStageWhole(hours, sims, keys) {
   console.log(`⑨ whole軸 ${ok}/${keys.length}`);
   return ok;
 }
+// ⑬ B案(2026-07-09 ユーザー承認): sim の per-tick 稼ぎ力の幾何平均(=時間平均の稼ぎ率)。
+function tickPower(sim) { return (sim._tpN > 0) ? Math.exp(sim._tpS / sim._tpN) : null; }
 function runWholeTiming(strategy, hours, optSim) {
-  // opt は plain(measure なし)。idle と同じモードに揃える(measure モードの opt は per-tick サンドボックス・
-  // トグルでトラジェクトリが数倍ズレて比が壊れるため。第12次N診断で確定)。
-  const opt = G.simulate(strategy, { hours });
+  // 【第12次N・B案・ユーザー承認 2026-07-09】per-run 効率(runCookies/duration の幾何平均)は idle 化で転生回数が
+  // 変わると暴れる(bhCharge=0.27〜1318)。かつ機能を登録させるため生産を足すと③の最弱utility報酬を希釈する。
+  // B案=opt-timing と idle-timing の2本を走らせ「per-tick 稼ぎ力(全生産源の合計)の幾何平均」の比を取る。
+  // (1)全効果と比較(稼ぎ力=総合) (2)per-run 分割の転生回数ノイズなし (3)状態書き込み型も2本の状態差で出る
+  // (4)機能の平均強度を変えないので③非干渉。opt/idle 両方 trackTickPower で per-tick 稼ぎ力を積算。
+  const opt = G.simulate(strategy, { hours, trackTickPower: true });
+  const optTp = tickPower(opt);
   const out = { perFeature: {}, used: {}, allLift: null };
   for (const f of TIMING_FEATURES) {
     const rid = f.stage.split(':')[0];
-    // 【第12次N・ユーザー承認 2026-07-09「研究モンスター報酬は全部取得周回以降で」】取得周回以降の通し比較に統一。条件文の「全周回」だが、晩期取得の機能は
-    // 取得前の同一周回が分母を埋めて比が1.000へ薄まり、かつ idle 化が転生回数を変えると全周回幾何平均が暴れる
-    // (bhCharge=0.755〜1318 のカオス)。③utility軸・⑨whole軸と同じ「機能を取得し始めた周回以降の全周回効率
-    // 幾何平均比」に統一すると雑音が減る(diag: bhCharge S4=1.905・mature=1.079 と帯内で安定)。
-    let idx0 = null;
-    for (const r of opt.runs) if (!r.partial && (r.stages2 || []).includes(rid)) { if (idx0 === null || r.idx < idx0) idx0 = r.idx; }
-    out.used[f.key] = idx0 !== null;
-    if (idx0 === null) { out.perFeature[f.key] = null; continue; }
-    const optEff = geomeanEffFrom(opt, idx0);
-    const idle = G.simulate(strategy, { hours, idleTiming: f.key });
-    const e = geomeanEffFrom(idle, idx0);
-    out.perFeature[f.key] = (optEff && e && e > 0) ? optEff / e : null;
+    out.used[f.key] = opt.runs.some(r => !r.partial && (r.stages2 || []).includes(rid));
+    if (!out.used[f.key] || optTp == null) { out.perFeature[f.key] = null; continue; }
+    const idle = G.simulate(strategy, { hours, idleTiming: f.key, trackTickPower: true });
+    const idleTp = tickPower(idle);
+    out.perFeature[f.key] = (idleTp && idleTp > 0) ? optTp / idleTp : null;
   }
-  const all = G.simulate(strategy, { hours, idleTiming: 'all' });
-  const ea = geomeanEff(all), oe = geomeanEff(opt);
-  out.allLift = (ea && oe && ea > 0) ? oe / ea : null;
+  const all = G.simulate(strategy, { hours, idleTiming: 'all', trackTickPower: true });
+  const allTp = tickPower(all);
+  out.allLift = (allTp && optTp && allTp > 0) ? optTp / allTp : null;
   return out;
 }
 // 全方針を跨いだ⑬判定: 各機能につき「使用した方針が1つ以上あり、その方針の通し比が[1.05,2.0]」。

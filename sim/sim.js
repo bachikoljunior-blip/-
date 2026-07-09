@@ -336,7 +336,7 @@ function idleOn(sim, key) { const it = sim.opt.idleTiming; return it === key || 
 function newSim(strategy, opts) {
   return {
     strat: strategy,
-    opt: Object.assign({ disableResearch: null, disableReward: null, disableStage: null, disableUpgrade: null, disableAffinity: false, idleTiming: null, trackGain: false, hours: 100 }, opts || {}),
+    opt: Object.assign({ disableResearch: null, disableReward: null, disableStage: null, disableUpgrade: null, disableAffinity: false, idleTiming: null, trackGain: false, trackTickPower: false, hours: 100 }, opts || {}),
     t: 0,                       // 総経過秒
     // 永続
     prestige: 0, prestigeTotal: 0, prestigeRuns: 0, totalCookies: 0,
@@ -1582,6 +1582,13 @@ function advanceTick(sim, strategy) {
   {
     sim.t += dt;
     if (sim.hourly && sim.t % 60 === 0) sim.hourly.push(sim.totalCookies);
+    // ⑬タイミング(B案・2026-07-09 ユーザー承認): 同一トラジェクトリの per-tick 稼ぎ力の幾何平均(=時間平均の稼ぎ率)を
+    // 記録。opt-timing/idle-timing の2本でこれを比べると、per-run 効率(転生回数変動でカオス化)を使わず、
+    // かつ全効果と比較した「操作の巧拙」を測れる。60秒ごとに1標本(コスト削減)。timing sim でのみ有効。
+    if (sim.opt.trackTickPower && sim.t % 60 === 0) {
+      const ep = earningPowerSafe(sim);
+      if (ep > 0 && Number.isFinite(ep)) { sim._tpS = (sim._tpS || 0) + Math.log(ep); sim._tpN = (sim._tpN || 0) + 1; }
+    }
     if (sim.debugTrace && sim.runs.length === sim.opt.debugRunIdx) {
       const rr = sim.run;
       sim.debugTrace.push({ t: sim.t, el: sim.t - rr.startT, c: rr.runCookies, boosts: rr.boosts.length, bm: goldenBoostMultiplier(sim), mon: !!rr.monster, kills: rr.kills, gold: rr.goldenTaken });
