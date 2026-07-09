@@ -1487,6 +1487,7 @@ function doPrestige(sim) {
   const gain = prestigeGainOf(r.runCookies);
   if (gain <= 0) return false;
   const nextCostAt = cheapestUnownedSkillCost(sim); // ⑭: 購入前の次スキル最安
+  const onHandCookies = r.cookies; // 転生時の所持クッキー(コスト控除前・第0回コスト再算定用=diag_prestige0.js)
   r.cookies -= cost;
   sim.prestige += gain;
   sim.prestigeTotal += gain;
@@ -1498,6 +1499,7 @@ function doPrestige(sim) {
     startT: r.startT, endT: sim.t,
     duration: sim.t - r.startT,
     runCookies: r.runCookies,
+    prestigeCookies: onHandCookies,
     quotaHold: r.quotaHoldSeconds,
     maxStage: r.maxStage,
     kills: r.kills, golden: r.goldenTaken, chainMax: r.chainMax,
