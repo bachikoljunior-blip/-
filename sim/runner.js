@@ -482,8 +482,12 @@ function geomeanEff(sim) {
 // (⑬タイミングと同じ理由=効果が「行動の瞬間に一度だけ状態へ書き込まれる」ため、同状態の瞬間評価で差が出ない)。
 // これらは ⑬ と同じ通し比較で測る: その報酬を取得し始めた周回以降の全周回効率(runCookies/duration)の
 // 幾何平均を、最適(=取得あり)と disableReward(=効果無効)で比べる。取得周回に絞るのは③の「取得した周回」の趣旨に合わせ希釈を避けるため。
-// goldenChain/beastScent は所持数が多く(S3で10〜18)、金amount倍率を上げると最終超長周回が Infinity 化するため
-// 係数は控えめ(0.30)に留め、通し比較(utility軸)で測る。金収入は周回で複利的に効くため控えめ係数でも通し比≥1.1。
+// goldenChain/beastScent は所持数が多く(S3で10〜18)、通し比較(utility軸)で測る。金収入は周回で複利的に
+// 効くため控えめ係数でも通し比≥1.1。※2026-07-09 ユーザー通知: ゲーム側で総クッキー計算方式を変更済み=総クッキーが
+// float の Infinity(~1.8e308)を超えても処理落ちしない。よって「最終放置周回の Infinity 化を避けるため係数を抑える」
+// 制約は撤廃(有限性条件も撤廃済み)。sim は float 依存のため最終放置周回のみ Infinity に達しうるが、④⑤は転生周回だけ
+// を比較し、その転生周回は全方針有限(e155〜e233 ≪ e308)なので無関係。下の isFinite ガードはこの最終放置周回を
+// 幾何平均計算から除くだけの float アーティファクト対策で、合否条件ではない。
 // goldenTarget/goldenFirstHit は所持数が少なく instant 中央値≥1.1 を満たす(有限)ので direct 側に残す。
 const UTILITY_REWARDS = ['monsterDamage', 'monsterStay', 'crackedFang', 'brandHunt', 'deepPursuit', 'chainPrep', 'huntFocus', 'biteRecovery', 'crushedMill', 'goldenBeastMutation', 'goldenChain', 'beastScent'];
 function firstAcqIdx(sim, rid) {

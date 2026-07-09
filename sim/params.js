@@ -56,7 +56,8 @@ module.exports = {
     lvEarlyDiv: 92,
     lvLateDiv: 320, lvLatePow: 1.22,
     dmgSqrtCoef: 0.45,
-    ratePerLv: 0.09
+    ratePerLv: 0.09,
+    rateKillBonus: 0.35, rateKillHalf: 4
   },
 
   // ---- ノルマ ----

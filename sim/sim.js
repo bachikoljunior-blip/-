@@ -1106,7 +1106,12 @@ function earningPower(sim) {
     const ttk = hp / Math.max(1e-9, dmg * tapRate); // 撃破所要秒
     const stay = monsterStayMs(sim) / 1000;
     const killable = ttk <= stay ? 1 : 0;             // 滞在内に倒せるか(滞在報酬が効く)
-    const killsPerSec = killable / (interval + ttk);
+    // 出現頻度報酬の討伐手数ボーナス(増加方向・飽和形): killsPerSec への ttk 非依存の純乗算。
+    // 兄弟の討伐報酬(滞在/連戦/深追い)を disable して測る utility比では分子分母が同じ係数で割れて比が
+    // 保たれ、かつ ttk に依存しないため低生産(高ttk)局面の instant 中央値も持ち上がる。上限付きで高Lv暴走を防ぐ。
+    const mrLv = rwOff(sim, 'monsterRate') ? 0 : Math.max(0, sim.run.perks.monsterRate || 0);
+    const rateTempo = 1 + (P.monster.rateKillBonus || 0) * mrLv / (mrLv + (P.monster.rateKillHalf || 1));
+    const killsPerSec = killable / (interval + ttk) * rateTempo;
     power += killsPerSec * base * KILL_VALUE_SEC + huntDirectIncome(sim, base);
   }
   return power;
