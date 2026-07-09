@@ -500,28 +500,53 @@ function geomeanEffFrom(sim, minIdx) {
   if (!full.length) return null;
   return Math.exp(full.reduce((a, r) => a + Math.log(r.runCookies / r.duration), 0) / full.length);
 }
-// 各utility報酬を取得した方針それぞれで通し比較し、1つでも比≥1.1なら合格(未取得=不合格)。
+// median(中央値)
+function medianOf(arr) { const a = arr.slice().sort((x, y) => x - y); const m = a.length >> 1; return a.length ? (a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2) : null; }
+// 取得済み周回の等間隔サンプル(最大 k 個)。全周回を replay するとコスト過大なので間引く(中央値は安定)。
+function sampleRuns(runs, k) {
+  if (runs.length <= k) return runs;
+  const out = []; const step = (runs.length - 1) / (k - 1);
+  for (let i = 0; i < k; i++) out.push(runs[Math.round(i * step)]);
+  return out;
+}
+// ③utility軸(2026-07-09 ユーザー承認=「短い枝分かれ比べ」): 各周回の開始スナップショット(同一状態)から、
+// 報酬アリ(=opt周回そのもの)と報酬ナシ(disableReward)を**その1周回ぶんだけ**枝分かれさせ、
+// 同一時間(optの周回長)で稼いだ総クッキーの比を取る。枝分かれが1周回で閉じる=転生回数の増減が混入せず
+// 軌道に鈍い(per-run 100h幾何平均の脆さ=旧B案/instant/per-tickの行き止まりを解消)。取得した周回の中央値≥1.1で合格。
+// ON側は opt 周回の runCookies をそのまま使う(replay不要=コスト半減)。比は上限クランプで Infinity/NaN を避ける。
+const BRANCH_CAP = 1e9; // 比の上限(≥1.1判定には十分。idle成長で1周回内でも数十桁差が出るためのガード)
 function judgeUtilityRewards(hours, sims, ids) {
   let ok = 0;
-  console.log('③ 報酬utility軸(通し比較・取得周回以降の全周回効率幾何平均比 ≥1.1)');
+  console.log('③ 報酬utility軸(短い枝分かれ比べ・同一状態から1周回ぶん・総クッキー比の中央値 ≥1.1)');
+  // 各方針の snapshot 付き opt を1回だけ作って使い回す
+  const optSnap = {};
+  for (const s of STRATEGIES) optSnap[s.id] = G.simulate(s, { hours, snapshots: true });
   for (const rid of ids) {
-    let best = 0, bestPol = null, anyUsed = false;
-    // 取得が早い(idx0小=取得周回が多い)方針から測り、比≥1.1が出たら早期終了(計測コスト削減)
-    const users = STRATEGIES.map(s => ({ s, idx0: firstAcqIdx(sims[s.id], rid) })).filter(x => x.idx0 !== null);
-    users.sort((a, b) => a.idx0 - b.idx0);
-    for (const { s, idx0 } of users) {
+    let best = 0, bestPol = null, bestN = 0, anyUsed = false;
+    const users = STRATEGIES.map(s => {
+      const sim = optSnap[s.id];
+      const acq = sim.runs.filter(r => !r.partial && r.perks && r.perks[rid] > 0 && r.runCookies > 0 && r.duration > 0 && sim.snapshots[r.idx]);
+      return { s, sim, acq };
+    }).filter(x => x.acq.length > 0);
+    // 取得周回が多い方針から測り、中央値≥1.1が出たら早期終了
+    users.sort((a, b) => b.acq.length - a.acq.length);
+    for (const { s, sim, acq } of users) {
       anyUsed = true;
-      const opt = sims[s.id];
-      const optEff = geomeanEffFrom(opt, idx0);
-      const dis = G.simulate(s, { hours, disableReward: rid });
-      const disEff = geomeanEffFrom(dis, idx0);
-      const lift = (optEff && disEff && disEff > 0) ? optEff / disEff : null;
-      if (lift != null && lift > best) { best = lift; bestPol = s.id; }
+      const ratios = [];
+      for (const optRun of sampleRuns(acq, 12)) {
+        const snap = sim.snapshots[optRun.idx];
+        const off = G.replayRun(s, snap, { hours, disableReward: rid }, optRun.duration);
+        if (off && off.runCookies > 0 && Number.isFinite(off.runCookies) && Number.isFinite(optRun.runCookies)) {
+          ratios.push(Math.min(BRANCH_CAP, optRun.runCookies / off.runCookies));
+        }
+      }
+      const m = ratios.length ? medianOf(ratios) : null;
+      if (m != null && m > best) { best = m; bestPol = s.id; bestN = ratios.length; }
       if (best >= 1.1) break;
     }
     const pass = best >= 1.1;
     if (pass) ok++;
-    console.log(`  ${pass ? 'OK' : 'NG'} rw:${rid.padEnd(20)} ${anyUsed ? `${bestPol} 比=${best.toFixed(3)}` : 'どの方針も未取得'}`);
+    console.log(`  ${pass ? 'OK' : 'NG'} rw:${rid.padEnd(20)} ${anyUsed ? `${bestPol} 中央値比=${best.toFixed(3)} (n=${bestN})` : 'どの方針も未取得'}`);
   }
   console.log(`③ utility軸 ${ok}/${ids.length}`);
   return ok;
