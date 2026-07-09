@@ -570,26 +570,37 @@ function judgeStageWhole(hours, sims, keys) {
   return ok;
 }
 function runWholeTiming(strategy, hours, optSim) {
-  const opt = optSim || G.simulate(strategy, { hours });
-  const optEff = geomeanEff(opt);
+  // opt は plain(measure なし)。idle と同じモードに揃える(measure モードの opt は per-tick サンドボックス・
+  // トグルでトラジェクトリが数倍ズレて比が壊れるため。第12次N診断で確定)。
+  const opt = G.simulate(strategy, { hours });
   const out = { perFeature: {}, used: {}, allLift: null };
-  if (optEff == null) return out;
   for (const f of TIMING_FEATURES) {
     const rid = f.stage.split(':')[0];
-    out.used[f.key] = opt.runs.some(r => !r.partial && (r.stages2 || []).includes(rid));
+    // 【第12次N・ユーザー承認 2026-07-09「研究モンスター報酬は全部取得周回以降で」】取得周回以降の通し比較に統一。条件文の「全周回」だが、晩期取得の機能は
+    // 取得前の同一周回が分母を埋めて比が1.000へ薄まり、かつ idle 化が転生回数を変えると全周回幾何平均が暴れる
+    // (bhCharge=0.755〜1318 のカオス)。③utility軸・⑨whole軸と同じ「機能を取得し始めた周回以降の全周回効率
+    // 幾何平均比」に統一すると雑音が減る(diag: bhCharge S4=1.905・mature=1.079 と帯内で安定)。
+    let idx0 = null;
+    for (const r of opt.runs) if (!r.partial && (r.stages2 || []).includes(rid)) { if (idx0 === null || r.idx < idx0) idx0 = r.idx; }
+    out.used[f.key] = idx0 !== null;
+    if (idx0 === null) { out.perFeature[f.key] = null; continue; }
+    const optEff = geomeanEffFrom(opt, idx0);
     const idle = G.simulate(strategy, { hours, idleTiming: f.key });
-    const e = geomeanEff(idle);
-    out.perFeature[f.key] = (e && e > 0) ? optEff / e : null;
+    const e = geomeanEffFrom(idle, idx0);
+    out.perFeature[f.key] = (optEff && e && e > 0) ? optEff / e : null;
   }
   const all = G.simulate(strategy, { hours, idleTiming: 'all' });
-  const ea = geomeanEff(all);
-  out.allLift = (ea && ea > 0) ? optEff / ea : null;
+  const ea = geomeanEff(all), oe = geomeanEff(opt);
+  out.allLift = (ea && oe && ea > 0) ? oe / ea : null;
   return out;
 }
 // 全方針を跨いだ⑬判定: 各機能につき「使用した方針が1つ以上あり、その方針の通し比が[1.05,2.0]」。
 function judgeWholeTiming(hours, sims) {
   const perStrat = {};
-  for (const s of STRATEGIES) perStrat[s.id] = runWholeTiming(s, hours, sims && sims[s.id]);
+  // opt は必ず plain(idleTiming=null・measure なし)で作る。共有 sims[s.id] は measure モードで per-tick
+  // サンドボックス・トグルによりトラジェクトリが変わり(opt効率が数倍膨張)、plain の idle と比べると
+  // 比が壊れる(モード不整合)。opt/idle を同じ plain モードに揃えて全体比較の一貫性を担保する。
+  for (const s of STRATEGIES) perStrat[s.id] = runWholeTiming(s, hours);
   let ok = 0;
   console.log(`⑬ タイミング機能(全体比較・最適操作/完全放置の全周回効率幾何平均比, 要求[1.05,2.00])`);
   for (const f of TIMING_FEATURES) {
