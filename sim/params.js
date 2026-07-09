@@ -230,7 +230,7 @@ module.exports = {
     bossChoiceBonus: 1,
     affinity: {
       normal: { golden: 1.0, hunt: 1.0, equipment: 1.0, risk: 1.0 },
-      swarm: { golden: 0.5, hunt: 0.5, equipment: 0.5, risk: 0.5 }, // 1体あたり(3体で計1.5)
+      swarm: { golden: 0.6, hunt: 1.6, equipment: 0.8, risk: 1.0 }, // 1体あたり。㉖=行合計4.0(±1.5倍帯内)・狩りピーク(㉕多様性)。③がrobust化したので合計上げでも③非崩壊
       tank: { golden: 0.5, hunt: 2.0, equipment: 3.5, risk: 1.0 },
       speedy: { golden: 3.0, hunt: 0.5, equipment: 0.5, risk: 1.5 },
       goldenBeast: { golden: 3.5, hunt: 1.0, equipment: 0.5, risk: 2.0 },
