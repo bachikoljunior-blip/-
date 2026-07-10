@@ -315,5 +315,52 @@ module.exports = {
   tempo: { ramp: 0.105, rampDiv: 420 },
 
   // ---- 報酬選択 ----
-  reward: { lvPerCount: 26, choiceBase: 3 }
+  reward: { lvPerCount: 26, choiceBase: 3 },
+
+  // ---- 工房・素材・ステージ・注文ボード(第12次P・本シム統合。WORKSHOP_SPEC v1〜v4) ----
+  // 素材はクッキー経済と交差しない(買えない/変換できない=④⑤へ直接干渉しない)。
+  // 効果はすべて相対型・進行スケール型(固定倍率は腐る)。数値は調整項目。
+  ws: {
+    // ステージ(v3 §13: 周回選択制・S6深層は層が無限)。ボス化=そのステージ累計討伐 bossBase+bossPer×(no-1)−コンパスLv
+    stages: [
+      { no: 1, hpMul: 1,  dropMul: 1, c: ['butter', 'flour'],     r: [] },
+      { no: 2, hpMul: 3,  dropMul: 2, c: ['cacao', 'lavaSugar'],  r: ['ironShard'], goldenGain: 1.10 },
+      { no: 3, hpMul: 8,  dropMul: 2, c: ['mint', 'frostSugar'],  r: ['silentCore'], stayMul: 0.85 },
+      { no: 4, hpMul: 20, dropMul: 2, c: ['spice'],               r: ['goldDust'], goldenIntMul: 0.9, rewardLvAdd: 8, gbShareAdd: 0.15 },
+      { no: 5, hpMul: 60, dropMul: 3, c: ['stardust'],            r: ['cometShard'], bossCycleAdd: -10 },
+      { no: 6, hpMul: 60, hpGrow: 4, dropMul: 3, dropPerLayer: 1, c: ['stardust'], r: ['voidSugar'] }
+    ],
+    bossBase: 25, bossPer: 10,
+    // 条件ドロップ(v4 §18): 通常撃破=基本素材/クリックとどめ=共通+1/金ブースト中=黄金粉/
+    // オーバーキル(残HPの5倍)=レア枠/連続3体(狩り窓)=ボス核+1/余裕率2倍=共通+1/深層=虚空糖
+    drops: { base: 1, lvDiv: 6, overkillMul: 5, chainKills: 3, marginThresh: 2, clickFinishDiv: 7, universalRate: 0.8 },
+    // 料理(600秒バフ・同時3品・転生で解除。レシピ=対応素材の初入手で開示)
+    cookDur: 600, cookMax: 3,
+    recipes: [
+      { id: 'butterCookie',    cost: { butter: 5, flour: 3 } },        // 全生産×(1+0.02×最高層)
+      { id: 'chocoFondant',    cost: { cacao: 6, butter: 4 } },        // クリック生産連動係数×2
+      { id: 'mintIce',         cost: { mint: 6, frostSugar: 3 } },     // 金出現間隔×0.75
+      { id: 'hunterStew',      cost: { ironShard: 2, spice: 4 } },     // モンスター間隔×0.75・ダメージ×1.5
+      { id: 'frostCake',       cost: { frostSugar: 5, silentCore: 1 } }, // ノルマゲージ増加×0.85
+      { id: 'stardustParfait', cost: { stardust: 8, cometShard: 1 } }, // 効果中購入設備=その周回中生産×1.25
+      { id: 'voidTart',        cost: { voidSugar: 10, cometShard: 2 } } // ドロップ×2・モンスター間隔×0.7
+    ],
+    fx: { butterLayerCoef: 0.02, fondantClickMul: 2, mintIceGoldenInt: 0.75, stewMonsterInt: 0.75, stewDmg: 1.5,
+      frostGauge: 0.85, parfaitProdMul: 1.25, voidDrop: 2, voidMonsterInt: 0.7 },
+    // 作成(装備・永続Lv・コスト=基本×2.2^Lv・Lv上限10=限界突破は本シム省略)
+    eqGrowth: 2.2, eqLvCap: 10,
+    equipment: [
+      { id: 'goldenWhisk',      cost: { butter: 10, flour: 8 } },      // クリック連動係数×(1+0.15Lv)
+      { id: 'ovenMitt',         cost: { cacao: 12, ironShard: 2 } },   // こんがり+0.05Lv
+      { id: 'pressExtractor',   cost: { spice: 14, goldDust: 2 } },    // 金ブースト×(1+0.04Lv)
+      { id: 'monsterAlmanac',   cost: { ironShard: 4, silentCore: 2 } }, // ドロップ+floor(Lv/2)・ダメージ×(1+0.06Lv)
+      { id: 'stillFlask',       cost: { mint: 10, lavaSugar: 6 } },    // 料理効果時間×(1+0.10Lv)
+      { id: 'dimensionCompass', cost: { bossCore: 1, stardust: 12 } }  // ボス周期−Lv・選択ステージのドロップ×(1+0.05Lv)
+    ],
+    eqFx: { whiskPerLv: 0.15, mittPerLv: 0.05, pressPerLv: 0.04, almanacDmgPerLv: 0.06, flaskPerLv: 0.10, compassDropPerLv: 0.05 },
+    // 注文ボード(§19: 同時1件・間隔1800×0.85^転生回数・制限240+4√経過秒・必要量/報酬は現在値に相対)
+    orders: { intervalBase: 1800, intervalDecay: 0.85, limitBase: 240, limitSqrt: 4,
+      needProd: 0.25, needClick: 0.5, needHunt: 0.6, rewardCookie: 0.5, rewardBoostMul: 2, rewardBoostSec: 120,
+      rewardMatSet: 6 }
+  }
 };

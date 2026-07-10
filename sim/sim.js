@@ -118,6 +118,10 @@ const SKILL_NODES = [
   { id: 'auto_4', cost: 58, prereqs: ['auto_3'], effects: [['cps', null, 0.24], ['all', null, 0.02]] },
   { id: 'bake_temperature', cost: 69, prereqs: ['auto_3'], effects: [['unlockSystem', 'bakeTemperature']] },
   { id: 'monster_1', cost: 41, prereqs: ['golden_1'], effects: [['monsterRate', null, 0.04]] },
+  // 工房(WORKSHOP_SPEC v2 §7・第12次P本シム統合): 素材の嗅覚=素材ドロップ+料理解放/工房の拡張=作成(装備)解放。
+  // QoLノード(utilRatio価格)=メインのはしご(rungCosts)を消費しない→既存スキルコストは1つも動かない。
+  { id: 'workshop_1', cost: 15, prereqs: ['monster_1'], effects: [['unlockSystem', 'workshop1']] },
+  { id: 'workshop_2', cost: 15, prereqs: ['workshop_1'], effects: [['unlockSystem', 'workshop2']] },
   { id: 'monster_2', cost: 43, prereqs: ['monster_1', 'golden_2'], effects: [['monsterDamageSkill', null, 0.16]] },
   { id: 'monster_3', cost: 47, prereqs: ['monster_2'], effects: [['monsterHpDown', null, 0.07]] },
   { id: 'hunt_analysis', cost: 69, prereqs: ['monster_3'], effects: [['unlockSystem', 'huntAnalysis']] },
@@ -170,7 +174,7 @@ const SKILL_BY_ID = {}; SKILL_NODES.forEach(s => SKILL_BY_ID[s.id] = s);
 const UTILITY_SKILLS = new Set([
   'golden_analysis', 'hunt_analysis', 'economy_analysis', 'research_analysis',
   'order_board', 'bake_temperature', 'reward_synergy', 'reward_1', 'reward_choice_2',
-  'start_1', 'offline_1', 'start_2'
+  'start_1', 'offline_1', 'start_2', 'workshop_1', 'workshop_2'
 ]);
 function isUtilitySkill(id) { return UTILITY_SKILLS.has(id); }
 
@@ -178,7 +182,7 @@ function isUtilitySkill(id) { return UTILITY_SKILLS.has(id); }
 const SKILL_HAND_ORDER = [
   // 2026-07-06 第8次 ⑲対応v3: 取得順(=コストはしご順)。全ツリー辺のメインラング差≤5。
   // 設備解放: 月面=r12(7種設備の壁dec40を跨ぐ前)、時空=r17、以降約3ラングごとに第16種(r40)まで。
-  'core', 'click_1', 'golden_1', 'monster_1', 'auto_1', 'economy_1',
+  'core', 'click_1', 'golden_1', 'monster_1', 'workshop_1', 'workshop_2', 'auto_1', 'economy_1',
   'click_2', 'golden_2', 'monster_2', 'auto_2', 'economy_2',
   'mastery_low',
   'click_3', 'upgrade_moon', 'auto_3', 'research_1', 'research_remodel', 'economy_analysis', 'order_board',
@@ -351,6 +355,9 @@ function newSim(strategy, opts) {
     unlockEvents: [],           // {t, kind, id}
     firstResearchBuy: {}, firstPerk: {}, firstStageBuy: {},
     runs: [],                   // 各周回の結果
+    // 工房・素材・ステージ・注文(第12次P統合・転生持ち越し)
+    ws: { mats: {}, eq: {}, seen: {}, everWs: {}, stageUnlocked: 1, deepLayer: 0,
+      matRot: 0, orderNextT: null, order: null, orderKindRot: 0, orderRewardRot: 0 },
     // 周回内
     run: null,
     rotIdx: 0, upRotIdx: 0, goldenAlt: 0,
@@ -392,7 +399,8 @@ function newRun(sim) {
     surge: {},                 // まとめ買い割増: 設備idごとの熱量 {h, t}(購入+1、halfSecで半減)
     killsByType: {}, rewardByType: {},
     critAtBuy: undefined, critNow: 0, critMax: 0,
-    chainN: 0, chainLastT: -1e15, chainMax: 0 // 討伐連鎖(第12次D): 周回内変数。転生で0
+    chainN: 0, chainLastT: -1e15, chainMax: 0, // 討伐連鎖(第12次D): 周回内変数。転生で0
+    wsStage: 0, buffs: {}, parfaitUps: {}, ordersDone: {} // 工房: 周回ステージ・料理バフ{id:untilT}・パフェ中購入設備数・注文達成{kind:n}
   };
 }
 
@@ -404,9 +412,9 @@ function pickMonsterType(sim) {
   const r = sim.run;
   const M = P.mtype;
   if (!M) return 'normal';
-  if (r.killsSinceBoss >= M.bossCycle) return 'boss';
+  if (r.killsSinceBoss >= (P.ws ? wsBossCycle(sim) : M.bossCycle)) return 'boss';
   if (goldenBoostActive(sim)) {
-    r.gbAcc += M.goldenBeastShare;
+    r.gbAcc += M.goldenBeastShare + ((P.ws && wsStageDef(sim).gbShareAdd) || 0);
     if (r.gbAcc >= 1) { r.gbAcc -= 1; return 'goldenBeast'; }
   }
   const ids = Object.keys(M.weights);
@@ -425,6 +433,225 @@ function affinityOf(sim, typeId, category) {
   const M = P.mtype;
   const row = M && M.affinity && M.affinity[typeId];
   return (row && row[category] != null) ? row[category] : 1;
+}
+
+// ================= 工房・素材・ステージ・注文ボード(第12次P・WORKSHOP_SPEC v1〜v4統合) =================
+// 素材はクッキーと交差しない(期待値の小数個で保持)。効果は相対型のみ。
+// 計測ゲート: wsOff(sim,'dish:xxx'/'eq:xxx'/'order:xxx') で単体無効化(⑮の2・㉙の枝分かれ判定用)。
+function wsOff(sim, key) {
+  return sim.opt.disableWs === key || sim._md === 'ws:' + key || !!(sim._mdSet && sim._mdSet.has('ws:' + key));
+}
+function wsUnlocked(sim) { return hasSkillEffect(sim, 'unlockSystem', 'workshop1'); }
+function wsEqUnlocked(sim) { return hasSkillEffect(sim, 'unlockSystem', 'workshop2'); }
+// 現在の周回ステージ定義(未選択=最初のtickで方針に応じて選択)
+function wsStageDef(sim) {
+  const no = (sim.run && sim.run.wsStage) || 1;
+  return P.ws.stages[Math.min(no, 6) - 1];
+}
+function wsStageNo(sim) { return (sim.run && sim.run.wsStage) || 1; }
+// ステージ選択(v3 §13: 転生時に選択・周回中固定)。素材が偏らないよう方針で好みを分ける:
+// hunt/bake=最前線(レア・核)/golden=金の砂丘(S4)以深/click=こつぶの多い低ステージ周回/balanced=順繰り。
+function wsPickStage(sim) {
+  const un = sim.ws.stageUnlocked;
+  const pol = sim.run.policy;
+  if (un <= 1) return 1;
+  if (pol === 'click') return Math.max(1, Math.min(un, 1 + (sim.prestigeRuns % Math.min(un, 3))));
+  if (pol === 'golden') return Math.min(un, Math.max(4, un - 1) <= un ? Math.min(4, un) : un);
+  if (pol === 'balanced') return 1 + (sim.prestigeRuns % un);
+  return un; // hunt/bake=最前線
+}
+function wsBuffActive(sim, id) {
+  const r = sim.run;
+  return !wsOff(sim, 'dish:' + id) && r.buffs && (r.buffs[id] || 0) > sim.t;
+}
+function wsEqLv(sim, id) {
+  if (wsOff(sim, 'eq:' + id)) return 0;
+  return (sim.ws.eq && sim.ws.eq[id]) || 0;
+}
+function wsAddMat(sim, id, n) {
+  if (!(n > 0)) return;
+  const ws = sim.ws;
+  ws.mats[id] = (ws.mats[id] || 0) + n;
+  if (!ws.seen[id]) {
+    ws.seen[id] = true;
+    // レシピ開示=対応素材の初入手(解放イベント=T2の工房系)
+    if (!ws.everWs['mat:' + id]) { ws.everWs['mat:' + id] = true; sim.unlockEvents.push({ t: sim.t, kind: 'ws', id: 'mat:' + id }); }
+  }
+}
+function wsCanAfford(sim, cost, mul) {
+  const m = mul || 1;
+  const uni = sim.ws.mats.universal || 0; // 万能粉: 任意素材の代替・2倍換算
+  let uniNeed = 0;
+  for (const k in cost) {
+    const need = cost[k] * m;
+    const have = sim.ws.mats[k] || 0;
+    if (have < need) {
+      if (k === 'bossCore' || k === 'voidSugar') return false; // 核・虚空糖は代替不可
+      uniNeed += (need - have) * 2;
+      if (uniNeed > uni) return false;
+    }
+  }
+  return true;
+}
+function wsConsume(sim, cost, mul) {
+  const m = mul || 1;
+  for (const k in cost) {
+    const need = cost[k] * m;
+    const have = sim.ws.mats[k] || 0;
+    const used = Math.min(have, need);
+    sim.ws.mats[k] = have - used;
+    if (need > used) sim.ws.mats.universal = Math.max(0, (sim.ws.mats.universal || 0) - (need - used) * 2);
+  }
+}
+// 方針ごとの料理・装備の好み(自然なプレイ: 主役を伸ばす品を優先)
+const WS_DISH_PREF = {
+  bake: ['butterCookie', 'stardustParfait', 'frostCake'],
+  click: ['chocoFondant', 'butterCookie', 'frostCake'],
+  golden: ['mintIce', 'butterCookie', 'frostCake'],
+  hunt: ['hunterStew', 'voidTart', 'butterCookie'],
+  balanced: ['butterCookie', 'mintIce', 'hunterStew']
+};
+const WS_EQ_PREF = {
+  bake: ['ovenMitt', 'stillFlask', 'dimensionCompass', 'monsterAlmanac', 'goldenWhisk', 'pressExtractor'],
+  click: ['goldenWhisk', 'stillFlask', 'monsterAlmanac', 'ovenMitt', 'pressExtractor', 'dimensionCompass'],
+  golden: ['pressExtractor', 'goldenWhisk', 'stillFlask', 'dimensionCompass', 'ovenMitt', 'monsterAlmanac'],
+  hunt: ['monsterAlmanac', 'dimensionCompass', 'stillFlask', 'pressExtractor', 'goldenWhisk', 'ovenMitt'],
+  balanced: ['stillFlask', 'monsterAlmanac', 'goldenWhisk', 'ovenMitt', 'pressExtractor', 'dimensionCompass']
+};
+const WS_RECIPE_BY_ID = {}; // params から引く(遅延)
+function wsRecipeOf(id) {
+  if (!WS_RECIPE_BY_ID[id]) for (const rc of P.ws.recipes) WS_RECIPE_BY_ID[rc.id] = rc;
+  return WS_RECIPE_BY_ID[id];
+}
+function wsEqDefOf(id) { for (const e of P.ws.equipment) if (e.id === id) return e; return null; }
+// レシピ開示済み=コスト素材を全て一度は入手済み
+function wsRecipeSeen(sim, rc) { for (const k in rc.cost) if (!sim.ws.seen[k]) return false; return true; }
+// 工房の自動プレイ(毎tick・軽量): 料理を維持し、装備を育てる
+function wsAutoPlay(sim) {
+  if (!wsUnlocked(sim)) return;
+  const r = sim.run, ws = sim.ws, t = sim.t;
+  // 料理: 好み順に、切れていて作れるものを作る(同時 cookMax 品)
+  const pref = WS_DISH_PREF[r.policy] || WS_DISH_PREF.balanced;
+  let active = 0;
+  for (const id in r.buffs) if (r.buffs[id] > t) active++;
+  for (const id of pref) {
+    if (active >= P.ws.cookMax) break;
+    if ((r.buffs[id] || 0) > t) continue;
+    const rc = wsRecipeOf(id);
+    if (!rc || !wsRecipeSeen(sim, rc) || !wsCanAfford(sim, rc.cost)) continue;
+    wsConsume(sim, rc.cost);
+    const dur = P.ws.cookDur * (1 + P.ws.eqFx.flaskPerLv * wsEqLv(sim, 'stillFlask'));
+    r.buffs[id] = t + dur;
+    active++;
+    if (!ws.everWs['dish:' + id]) { ws.everWs['dish:' + id] = true; sim.unlockEvents.push({ t, kind: 'ws', id: 'dish:' + id }); }
+  }
+  // 作成(装備): workshop_2 解放後、好み順にLvを上げる
+  if (wsEqUnlocked(sim)) {
+    const epref = WS_EQ_PREF[r.policy] || WS_EQ_PREF.balanced;
+    for (const id of epref) {
+      const def = wsEqDefOf(id);
+      const lv = (ws.eq[id] || 0);
+      if (lv >= P.ws.eqLvCap) continue;
+      const mul = Math.pow(P.ws.eqGrowth, lv);
+      if (!wsCanAfford(sim, def.cost, mul)) continue;
+      wsConsume(sim, def.cost, mul);
+      ws.eq[id] = lv + 1;
+      if (!ws.everWs['eq:' + id]) { ws.everWs['eq:' + id] = true; sim.unlockEvents.push({ t, kind: 'ws', id: 'eq:' + id }); }
+      break; // 1tick1回
+    }
+  }
+}
+// 討伐ドロップ(v4 §18 条件ドロップ制・期待値)
+function wsDropMaterials(sim, mon, overkill) {
+  if (!wsUnlocked(sim)) return;
+  const r = sim.run, ws = sim.ws, D = P.ws.drops;
+  const st = wsStageDef(sim);
+  const units = (P.mtype && P.mtype.rewardEvents && P.mtype.rewardEvents[mon.typeId]) || 1;
+  const lv = Math.max(1, mon.level || 1);
+  let dropMul = st.dropMul + (st.dropPerLayer ? st.dropPerLayer * sim.ws.deepLayer : 0);
+  dropMul *= 1 + (P.chain ? P.chain.dropCoef * chainCount(sim) : 0);
+  dropMul *= 1 + P.ws.eqFx.compassDropPerLv * wsEqLv(sim, 'dimensionCompass');
+  if (wsBuffActive(sim, 'voidTart')) dropMul *= P.ws.fx.voidDrop;
+  const per = (D.base + Math.floor(Math.sqrt(lv) / D.lvDiv) + Math.floor(wsEqLv(sim, 'monsterAlmanac') / 2)) * dropMul;
+  // 共通素材(ステージ基本): 決定的ローテーション
+  const cList = st.c;
+  const cPick = cList[ws.matRot % cList.length]; ws.matRot++;
+  let commonN = per * units;
+  // クリックとどめ: 共通+1(タップ率が高いほど確度が高い=期待値)
+  commonN += Math.min(1, sim.strat.tapRate / D.clickFinishDiv) * units;
+  // ノルマ余裕率2倍以上で撃破: 共通+1
+  const quota = Math.max(1, quotaAtElapsed(sim, sim.t - r.startT));
+  if (r.runCookies >= D.marginThresh * quota) commonN += units;
+  wsAddMat(sim, cPick, commonN);
+  // 金ブースト中に撃破=黄金粉(唯一の経路)
+  if (goldenBoostActive(sim)) wsAddMat(sim, 'goldDust', units);
+  // オーバーキル=レア枠
+  if (overkill && st.r.length) wsAddMat(sim, st.r[0], per);
+  // 狩り窓中の3体連続=ボス核+1
+  if (sim.t < r.portalHuntUntil && P.chain && r.chainN > 0 && r.chainN % D.chainKills === 0) wsAddMat(sim, 'bossCore', 1);
+  // 深層: 虚空糖(レア枠と別口の少量)
+  if (wsStageNo(sim) >= 6) wsAddMat(sim, 'voidSugar', 0.2 * units);
+  // バランス型: 万能粉
+  if (r.policy === 'balanced') wsAddMat(sim, 'universal', D.universalRate * units);
+  // ボス: 核(初回3・以後1)+ステージ解放
+  if (mon.typeId === 'boss') {
+    const first = !ws.everWs['boss:' + wsStageNo(sim) + (wsStageNo(sim) >= 6 ? ':' + ws.deepLayer : '')];
+    wsAddMat(sim, 'bossCore', first ? 3 : 1);
+    if (first) ws.everWs['boss:' + wsStageNo(sim) + (wsStageNo(sim) >= 6 ? ':' + ws.deepLayer : '')] = true;
+    if (wsStageNo(sim) === ws.stageUnlocked && ws.stageUnlocked < 6) {
+      ws.stageUnlocked++;
+      sim.unlockEvents.push({ t: sim.t, kind: 'ws', id: 'stage:' + ws.stageUnlocked });
+    } else if (wsStageNo(sim) >= 6) {
+      ws.deepLayer++;
+    }
+  }
+}
+// ボス化に必要な討伐数(ステージ依存+コンパス)。深層(S6)=65+10×層(仕様§9)=層が深いほど
+// 次のボスが遠い(自己制動)。固定周期だと24hで層74まで暴走しHP=60×4^74で序盤討伐が全滅する(実測)。
+function wsBossCycle(sim) {
+  const no = wsStageNo(sim);
+  if (no >= 6) return Math.max(5, 65 + 10 * (sim.ws.deepLayer + 1) - wsEqLv(sim, 'dimensionCompass'));
+  const st = wsStageDef(sim);
+  return Math.max(5, P.ws.bossBase + P.ws.bossPer * (no - 1) + (st.bossCycleAdd || 0) - wsEqLv(sim, 'dimensionCompass'));
+}
+// 注文ボード(§19): 同時1件・間隔は転生回数で短縮・必要量/報酬は現在値に相対。
+// order_board スキル(既存ツリー)で解放。完了は期待値: 必要量/現在レートが制限時間内なら達成。
+function wsOrderTick(sim, prod) {
+  if (!hasSkillEffect(sim, 'unlockSystem', 'orderBoard')) return;
+  const O = P.ws.orders, ws = sim.ws, t = sim.t;
+  if (ws.orderNextT == null) ws.orderNextT = t + O.intervalBase * Math.pow(O.intervalDecay, sim.prestigeRuns);
+  if (!ws.order && t >= ws.orderNextT) {
+    const kinds = ['prod', 'click', 'hunt'];
+    const kind = kinds[ws.orderKindRot % 3]; ws.orderKindRot++;
+    const limit = O.limitBase + O.limitSqrt * Math.sqrt(t);
+    ws.order = { kind, startT: t, limit };
+  }
+  if (ws.order) {
+    const o = ws.order;
+    // 現在レートで必要量を消化できる時刻(期待値)。レートが要求係数を上回る分だけ早く終わる。
+    const doneFrac = (t - o.startT) / o.limit;
+    const rateOk = o.kind === 'prod' ? 1 / O.needProd : o.kind === 'click' ? 1 / O.needClick : 1 / O.needHunt;
+    // 要求=現在値×制限×係数 → 通常プレイの消化速度は係数の逆数倍=必ず達成可能・放置では届かない想定
+    if (doneFrac * rateOk >= 1) {
+      // 達成: 報酬(種別ローテ)。㉙=各報酬の稼ぎ比≥1.2 の判定対象
+      const rkinds = ['cookie', 'materials', 'boost'];
+      const rk = rkinds[ws.orderRewardRot % 3]; ws.orderRewardRot++;
+      if (rk === 'cookie' && !wsOff(sim, 'order:cookie')) earn(sim, prod.cps * o.limit * O.rewardCookie);
+      else if (rk === 'materials' && !wsOff(sim, 'order:materials')) {
+        const st = wsStageDef(sim);
+        wsAddMat(sim, st.c[ws.matRot % st.c.length], O.rewardMatSet); ws.matRot++;
+      } else if (rk === 'boost' && !wsOff(sim, 'order:boost')) {
+        sim.run.boosts.push({ mult: O.rewardBoostMul, until: t + O.rewardBoostSec });
+      }
+      sim.run.ordersDone[rk] = (sim.run.ordersDone[rk] || 0) + 1;
+      if (!ws.everWs['order:' + rk]) { ws.everWs['order:' + rk] = true; sim.unlockEvents.push({ t, kind: 'ws', id: 'order:' + rk }); }
+      ws.order = null;
+      ws.orderNextT = t + O.intervalBase * Math.pow(O.intervalDecay, sim.prestigeRuns);
+    } else if (t - o.startT > o.limit) {
+      ws.order = null; // 時間切れ
+      ws.orderNextT = t + O.intervalBase * Math.pow(O.intervalDecay, sim.prestigeRuns);
+    }
+  }
 }
 
 // ================= 効果計算(ゲーム式の移植) =================
@@ -509,7 +736,8 @@ function quotaAtElapsed(sim, s) {
   const trial = q.trialCoef
     ? Math.pow(1 + q.trialCoef, Math.max(0, sim.run.maxStage - trialFloor))
     : 1;
-  return Math.max(1, Math.floor((base * wall * trial) / quotaControlMultiplier(sim)));
+  const frost = wsBuffActive(sim, 'frostCake') ? P.ws.fx.frostGauge : 1; // 霜降りケーキ: ノルマゲージ増加×0.85(必要量減の近似)
+  return Math.max(1, Math.floor((base * wall * trial * frost) / quotaControlMultiplier(sim)));
 }
 function monsterQuotaRequired(sim) {
   const r = sim.run;
@@ -615,7 +843,7 @@ function bakeEVRaw(sim) {
   const goodCps = 1.06 * powerMul;
   const burntCps = lg(stage, B.burntCps) * lg(oven, B.burntOwn);
   const softGold = ir(oven + Math.max(0, stage - 1) * 10, B.softGold);
-  const crispyDmg = 1.08 * powerMul;
+  const crispyDmg = (1.08 + P.ws.eqFx.mittPerLv * wsEqLv(sim, 'ovenMitt')) * powerMul; // 断熱オーブン手袋: こんがり+0.05Lv
   const crispyStay = lg(oven, B.crispyStay);
   const burntHp = lg(stage, B.burntHp);
   return {
@@ -829,7 +1057,10 @@ function computeProd(sim) {
     } else if (hasSkillEffect(sim, 'unlockSystem', 'masteryHigh')) {
       mastMul = Math.pow(1 + P.mastery.high, owned);
     }
-    const contrib = owned * u.value * personal * resM * supM * mastMul;
+    let contrib = owned * u.value * personal * resM * supM * mastMul;
+    // 星屑パフェ: バフ中購入分は×1.25(所持数比で期待値化)
+    const pfN = (r.parfaitUps && !wsOff(sim, 'dish:stardustParfait')) ? (r.parfaitUps[u.id] || 0) : 0;
+    if (pfN > 0 && owned > 0) contrib *= 1 + (P.ws.fx.parfaitProdMul - 1) * Math.min(1, pfN / owned);
     directContrib[i] = contrib; // 系列ボーナスの参照元(この設備の直接生産。系列ぶんは含まない)
     if (u.type === 'click') clickRaw += contrib; else cpsRaw += contrib;
   }
@@ -863,7 +1094,10 @@ function computeProd(sim) {
 
   // クリック変更 案A(指先連動): クリック力 = 従来項 + 毎秒生産×係数×(1+0.02×√強い指)×(1+クリック系スキル効果)
   const CL = P.clickLink;
-  click += cps * CL.cpsCoef * (1 + CL.fingerSqrt * Math.sqrt(r.upgrades.finger || 0)) * clickSkillMul;
+  // 工房: 濃厚ショコラ=クリック生産連動係数×2 / 黄金の泡立て器=×(1+0.15Lv)
+  const wsClickM = (wsBuffActive(sim, 'chocoFondant') ? P.ws.fx.fondantClickMul : 1)
+    * (1 + P.ws.eqFx.whiskPerLv * wsEqLv(sim, 'goldenWhisk'));
+  click += cps * CL.cpsCoef * wsClickM * (1 + CL.fingerSqrt * Math.sqrt(r.upgrades.finger || 0)) * clickSkillMul;
   // クリック変更 案C(神の指=クリックの上位段): 1個ごとにクリック×godFingerExp(指数)
   click *= Math.pow(CL.godFingerExp, r.upgrades.godFinger || 0);
   // 系列ボーナス(神の指): クリック力×(1+coef×台数)
@@ -873,6 +1107,11 @@ function computeProd(sim) {
   // 連鎖数は討伐数に線形でしか増えない(共鳴型の雪だるまにならない)。途切れ・転生で0。
   const chainM = 1 + (P.chain ? P.chain.prodCoef * chainCount(sim) : 0);
   click *= chainM; cps *= chainM;
+  // 工房: バタークッキー生地=全生産×(1+0.02×最高層)(600秒バフ・相対型)
+  if (wsBuffActive(sim, 'butterCookie')) {
+    const bm = 1 + P.ws.fx.butterLayerCoef * Math.max(1, r.maxStage);
+    click *= bm; cps *= bm;
+  }
 
   // 会心(期待値)
   let critEV = 1;
@@ -942,7 +1181,9 @@ function monsterDamage(sim, prod) {
     + Math.sqrt(clickOwned) * (r.perks.brandHunt || 0) * effRw(sim, 'brandHunt')
     + rewardCategoryBonus(sim, 'hunt')
     + (policyIs(sim, 'hunt') ? 0.14 : 0)
-  ) * prod.bake.dmg;
+  ) * prod.bake.dmg
+    * (wsBuffActive(sim, 'hunterStew') ? P.ws.fx.stewDmg : 1)
+    * (1 + P.ws.eqFx.almanacDmgPerLv * wsEqLv(sim, 'monsterAlmanac'));
   return Math.max(1, Math.ceil(base * mult));
 }
 
@@ -954,7 +1195,9 @@ function goldenSpawnFactor(sim) {
     - Math.max(0, skillEffect(sim, 'goldenRate')) * 1.8
     - rewardCategoryBonus(sim, 'golden') * 1.2
     - (policyIs(sim, 'golden') ? 0.12 : 0)
-  ) * runTempoRamp(sim) * bakeEV(sim).golden;
+  ) * runTempoRamp(sim) * bakeEV(sim).golden
+    * (wsBuffActive(sim, 'mintIce') ? P.ws.fx.mintIceGoldenInt : 1)
+    * ((P.ws && wsStageDef(sim).goldenIntMul) || 1);
 }
 function monsterSpawnFactor(sim) {
   const r = sim.run;
@@ -975,7 +1218,9 @@ function monsterSpawnFactor(sim) {
     - Math.max(0, skillEffect(sim, 'monsterRate')) * 1.8
     - rewardCategoryBonus(sim, 'hunt') * 1.0
     - (policyIs(sim, 'hunt') ? 0.10 : 0)
-  ) * deep * portalHunt * runTempoRamp(sim);
+  ) * deep * portalHunt * runTempoRamp(sim)
+    * (wsBuffActive(sim, 'hunterStew') ? P.ws.fx.stewMonsterInt : 1)
+    * (wsBuffActive(sim, 'voidTart') ? P.ws.fx.voidMonsterInt : 1);
 }
 function monsterLevel(sim) {
   const s = elapsed(sim);
@@ -991,6 +1236,11 @@ function monsterHpValue(sim, level) {
   hp *= Math.exp(-Math.max(0, skillEffect(sim, 'monsterHpDown')));
   hp *= Math.pow(P.rw.deepPursuitHp, rwOff(sim, 'deepPursuit') ? 0 : (sim.run.perks.deepPursuit || 0));
   hp *= bakeEV(sim).hp;
+  // ステージHP補正(工房統合): S1=×1〜S5=×60・深層=60×4^層
+  if (P.ws) {
+    const st = wsStageDef(sim);
+    hp *= st.hpMul * (st.hpGrow ? Math.pow(st.hpGrow, sim.ws.deepLayer) : 1);
+  }
   return Math.floor(hp);
 }
 function monsterStayMs(sim) {
@@ -998,7 +1248,7 @@ function monsterStayMs(sim) {
   const rewardLv = rwOff(sim, 'monsterStay') ? 0 : Math.max(0, r.perks.monsterStay || 0);
   const mult = Math.exp(rewardLv * P.monster.stayPerLv + Math.max(0, skillEffect(sim, 'monsterStay')) * 0.12
     + (policyIs(sim, 'hunt') ? 0.10 : 0) + rewardCategoryBonus(sim, 'hunt'))
-    * (r.nextMonsterStayMultiplier || 1) * bakeEV(sim).stay;
+    * (r.nextMonsterStayMultiplier || 1) * bakeEV(sim).stay * ((P.ws && wsStageDef(sim).stayMul) || 1);
   r.nextMonsterStayMultiplier = 1;
   return Math.max(4000, P.monster.stayBase * mult);
 }
@@ -1018,8 +1268,9 @@ function goldenAmountMultiplier(sim) {
 function goldenMultiplierVal(sim) {
   const r = sim.run;
   const lv = satLv(rwOff(sim, 'goldenPower') ? 0 : r.perks.goldenPower, P.golden.powerLvHalf);
-  return P.golden.multBase + lv * P.golden.powerPerLv + skillEffect(sim, 'goldenPower')
-    + rewardCategoryBonus(sim, 'golden') + (policyIs(sim, 'golden') ? 0.18 : 0);
+  return (P.golden.multBase + lv * P.golden.powerPerLv + skillEffect(sim, 'goldenPower')
+    + rewardCategoryBonus(sim, 'golden') + (policyIs(sim, 'golden') ? 0.18 : 0))
+    * (1 + P.ws.eqFx.pressPerLv * wsEqLv(sim, 'pressExtractor')); // 香料圧搾機: 金ブースト倍率×(1+0.04Lv)
 }
 function goldenBoostDurationMs(sim) {
   const r = sim.run;
@@ -1133,7 +1384,8 @@ function goldenRateValue(sim, prod) {
   // 即時獲得の計測は実支払い(collectGolden: max(cps, clickEV)×instantCoef×gAM)と同式にする。
   // 旧: baseClick(会心・ブースト抜き)を参照していたため、会心が育つ後半周回で金の実収入を
   // critEV×boostM 倍(10-30倍)過小評価し、S3金特化の後半の金シェアが25%へ沈んで見えていた(㉘計測歪み)。
-  const instant = Math.max(prod.cps, prod.clickEV) * P.golden.instantCoef * goldenAmountMultiplier(sim);
+  const instant = Math.max(prod.cps, prod.clickEV) * P.golden.instantCoef * goldenAmountMultiplier(sim)
+    * ((P.ws && wsStageDef(sim).goldenGain) || 1);
   const boostVal = Math.max(0, goldenMultiplierVal(sim) - 1) * prod.cps * (goldenBoostDurationMs(sim) / 1000);
   return (instant + boostVal) / 2 / interval;
 }
@@ -1406,7 +1658,8 @@ function collectGolden(sim, prod) {
   // 期待値: 交互に即時獲得/ブースト
   sim.goldenAlt ^= 1;
   if (sim.goldenAlt === 1) {
-    earn(sim, Math.max(100, prod.cps * P.golden.instantCoef, prod.clickEV * P.golden.instantCoef) * goldenAmountMultiplier(sim));
+    earn(sim, Math.max(100, prod.cps * P.golden.instantCoef, prod.clickEV * P.golden.instantCoef) * goldenAmountMultiplier(sim)
+      * ((P.ws && wsStageDef(sim).goldenGain) || 1));
   } else {
     const mult = goldenMultiplierVal(sim);
     const dur = goldenBoostDurationMs(sim) / 1000;
@@ -1425,7 +1678,8 @@ function collectGolden(sim, prod) {
 function buildRewardOffer(sim, level, typeId) {
   const r = sim.run;
   // 鉄焼きガード等: 種類による報酬レベル加算(ゲームの rewardLvAdd と同じ)
-  const lvAdd = (P.mtype && P.mtype.rewardLvAdd && P.mtype.rewardLvAdd[typeId]) || 0;
+  const lvAdd = ((P.mtype && P.mtype.rewardLvAdd && P.mtype.rewardLvAdd[typeId]) || 0)
+    + ((P.ws && wsStageDef(sim).rewardLvAdd) || 0);
   // 討伐連鎖(第12次D): 報酬レベル +floor(rewardCoef×連鎖数)
   const chainLv = P.chain ? Math.floor(P.chain.rewardCoef * chainCount(sim)) : 0;
   const baseCount = 1 + Math.floor((level + lvAdd + chainLv) / P.reward.lvPerCount);
@@ -1480,6 +1734,7 @@ function defeatMonster(sim, mon) {
   r.kills += units;
   r.killsByType[typeId] = (r.killsByType[typeId] || 0) + units;
   if (typeId === 'boss') r.killsSinceBoss = 0; else r.killsSinceBoss += units;
+  wsDropMaterials(sim, mon, !!mon.overkill); // 素材ドロップ(条件ドロップ制・workshop_1ゲート)
   // はやての運び屋: 撃破すると次の金クッキーが早く来る
   if (typeId === 'speedy' && M) r.nextGoldenSpawnMultiplier *= M.speedyGoldenCut;
   // 異世界接続網 段階2: 延長狩り(⑬・2026-07-09 作り替え)= 討伐のリズムを保つと狩り窓が続く。
@@ -1587,6 +1842,7 @@ function doPrestige(sim) {
     nextSkillCost: nextCostAt, gainToNext: nextCostAt ? gain / nextCostAt : null,
     critAtBuy: r.critAtBuy, critEnd: r.critNow, critMax: r.critMax,
     killsByType: Object.assign({}, r.killsByType), rewardByType: Object.assign({}, r.rewardByType),
+    wsDishes: Object.keys(r.buffs || {}), wsEq: Object.assign({}, sim.ws.eq), wsOrders: Object.assign({}, r.ordersDone), wsStageNo: r.wsStage,
     measure: finalizeMeasure(r)
   });
 
@@ -1677,8 +1933,11 @@ function advanceTick(sim, strategy) {
     purgeBoosts(sim);
     // afterheat 有効化(fromを過ぎたものだけ乗せる)
     r.afterheats = r.afterheats.filter(a => a.until > sim.t);
+    if (!r.wsStage) r.wsStage = wsPickStage(sim); // 周回ステージ選択(転生時に選択・周回中固定)
     const prod = computeProd(sim);
     sim._lastProd = prod; // ㉑判定用: 直近の生産値
+    wsAutoPlay(sim);       // 工房: 料理の維持・装備の作成(素材の嗅覚/工房の拡張スキルでゲート)
+    wsOrderTick(sim, prod); // 注文ボード(order_boardスキルでゲート)
     // ㉓(会心1%開始)用: 研究取得直後/転生時点/周回最大の会心率を記録
     if (prod.critChance > 0) {
       if (r.critAtBuy === undefined) r.critAtBuy = prod.critChance;
@@ -1712,9 +1971,11 @@ function advanceTick(sim, strategy) {
         const softLine = Math.max(1, cpsNow * 30); // ③死に報酬対策(第12次P): 回収の天井を cps×2→×30 に引き上げ、総クッキーに効く量へ
         earn(sim, rawRec / (1 + rawRec / softLine) + Math.log1p(rawRec / softLine) * softLine * 0.4);
       }
+      const hpBefore = r.monster.hp;
       r.monster.hp -= dealt;
       tapsForCookies = 0;
       if (r.monster.hp <= 0) {
+        r.monster.overkill = dealt >= (P.ws && P.ws.drops ? P.ws.drops.overkillMul : 5) * Math.max(1, hpBefore);
         defeatMonster(sim, r.monster);
         r.monster = null;
         scheduleMonster(sim);
@@ -1877,6 +2138,7 @@ function takeSnapshot(sim) {
     prevMaxStage: sim.prevMaxStage, prevDuration: sim.prevDuration,
     skills: sim.skills, rotIdx: sim.rotIdx, upRotIdx: sim.upRotIdx, goldenAlt: sim.goldenAlt,
     firstResearchBuy: sim.firstResearchBuy, firstPerk: sim.firstPerk, firstStageBuy: sim.firstStageBuy,
+    ws: sim.ws,
     run: sim.run
   });
 }
@@ -1891,6 +2153,7 @@ function replayRun(strategy, snap, opts, capSec) {
   sim.prevDuration = s.prevDuration || 0;
   sim.skills = s.skills; sim.rotIdx = s.rotIdx; sim.upRotIdx = s.upRotIdx; sim.goldenAlt = s.goldenAlt;
   sim.firstResearchBuy = s.firstResearchBuy; sim.firstPerk = s.firstPerk; sim.firstStageBuy = s.firstStageBuy;
+  if (s.ws) sim.ws = s.ws;
   sim.run = s.run;
   const horizonAbs = sim.run.startT + (capSec != null ? capSec : sim.opt.hours * 3600);
   while (sim.t < horizonAbs) {
@@ -1937,6 +2200,7 @@ function simulate(strategy, opts) {
     upgradePerkTotal: Object.values(r.upgradePerks).reduce((a, b) => a + b, 0),
     critAtBuy: r.critAtBuy, critEnd: r.critNow, critMax: r.critMax,
     killsByType: Object.assign({}, r.killsByType), rewardByType: Object.assign({}, r.rewardByType),
+    wsDishes: Object.keys(r.buffs || {}), wsEq: Object.assign({}, sim.ws.eq), wsOrders: Object.assign({}, r.ordersDone), wsStageNo: r.wsStage,
     skillsBought: 0, skillIds: []
   });
   return sim;
@@ -1949,6 +2213,8 @@ function tryBuyUpgrade(sim, u, budgetRatio) {
   if (cost > sim.run.cookies) return false;
   sim.run.cookies -= cost;
   sim.run.upgrades[u.id]++;
+  // 星屑パフェ: 効果中に購入した設備はその周回中、生産×1.25(成長ゲート型)
+  if (sim.run.buffs && (sim.run.buffs.stardustParfait || 0) > sim.t) sim.run.parfaitUps[u.id] = (sim.run.parfaitUps[u.id] || 0) + 1;
   // まとめ買い割増: 熱量を減衰させてから+1
   {
     const r2 = sim.run;

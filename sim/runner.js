@@ -817,6 +817,50 @@ if (mode === 'baseline') {
     console.log(`${s.id}: 研究取得周回=${runs.length} 取得直後率=[${buyMin === null ? '-' : (buyMin * 100).toFixed(1)}%..${buyMax === null ? '-' : (buyMax * 100).toFixed(1)}%] ㉓-2 転生時5%以上=${ge5}/${runs.length}(${runs.length ? Math.round(ge5 / runs.length * 100) : 0}%) 周回内最大=${(mx * 100).toFixed(1)}%`);
   }
   console.log(`㉓-3: 50%超の方針=${over50}(≥1で OK) / 100%到達=${reach100}(0で OK)`);
+} else if (mode === 'ws') {
+  // ⑮の2(工房の制作項目の有効性)+㉙(注文ボードの有効性)。第12次P・本シム統合後の判定。
+  // 測り方=③⑨⑬と同じ「短い枝分かれ比べ」: その項目を使った周回の開始スナップから
+  // 項目だけ無効(disableWs)で1周回ぶん枝分かれ、総クッキー比の中央値。
+  // ⑮の2: 料理7種+装備6種・中央値≥1.05(どの方針も一度も作らない項目=不合格)。
+  // ㉙: 注文報酬3種(クッキー/素材セット/短時間全生産)・稼ぎ比≥1.2。
+  const H = hours;
+  const optSnap = {};
+  for (const s of STRATEGIES) optSnap[s.id] = G.simulate(s, { hours: H, snapshots: true });
+  const judge = (key, label, usedIn, thr) => {
+    let best = 0, bestPol = null, bestN = 0, anyUsed = false;
+    const users = STRATEGIES.map(s => {
+      const sim = optSnap[s.id];
+      const acq = sim.runs.filter(r => !r.partial && usedIn(r) && r.runCookies > 0 && r.duration > 0 && sim.snapshots[r.idx]);
+      return { s, sim, acq };
+    }).filter(x => x.acq.length > 0);
+    users.sort((a, b) => b.acq.length - a.acq.length);
+    for (const { s, sim, acq } of users) {
+      anyUsed = true;
+      const ratios = [];
+      for (const optRun of sampleRuns(acq, 10)) {
+        const snap = sim.snapshots[optRun.idx];
+        const off = G.replayRun(s, snap, { hours: H, disableWs: key }, optRun.duration);
+        if (off && off.runCookies > 0 && Number.isFinite(off.runCookies) && Number.isFinite(optRun.runCookies)) {
+          ratios.push(Math.min(1e9, optRun.runCookies / off.runCookies));
+        }
+      }
+      const m = ratios.length ? medianOf(ratios) : null;
+      if (m != null && m > best) { best = m; bestPol = s.id; bestN = ratios.length; }
+      if (best >= thr) break;
+    }
+    const pass = best >= thr;
+    console.log(`  ${pass ? 'OK' : 'NG'} ${label.padEnd(24)} ${anyUsed ? `${bestPol} 中央値比=${best.toFixed(3)} (n=${bestN})` : 'どの方針も未使用'}`);
+    return pass ? 1 : 0;
+  };
+  console.log('⑮の2 工房の制作項目(枝分かれ比べ・中央値≥1.05)');
+  let ok15 = 0;
+  for (const rc of G.P.ws.recipes) ok15 += judge('dish:' + rc.id, '料理:' + rc.id, r => (r.wsDishes || []).includes(rc.id), 1.05);
+  for (const eq of G.P.ws.equipment) ok15 += judge('eq:' + eq.id, '装備:' + eq.id, r => ((r.wsEq || {})[eq.id] || 0) > 0, 1.05);
+  console.log(`⑮の2 合計 ${ok15}/13`);
+  console.log('㉙ 注文ボードの報酬(枝分かれ比べ・稼ぎ比≥1.2)');
+  let ok29 = 0;
+  for (const rk of ['cookie', 'materials', 'boost']) ok29 += judge('order:' + rk, '注文報酬:' + rk, r => ((r.wsOrders || {})[rk] || 0) > 0, 1.2);
+  console.log(`㉙ 合計 ${ok29}/3`);
 } else if (mode === 'affinity') {
   // ㉔㉕㉖(第9次【仮】): モンスター種類×報酬相性
   // ㉔ 有効性: 「その回だけ相性を全部×1.0」との獲得効率比(幾何平均≥1.1)+各回minも表示
