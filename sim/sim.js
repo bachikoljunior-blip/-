@@ -1401,11 +1401,12 @@ function equipDirectIncome(sim, base, prod) {
   // 0/32・click(タップ≥30%)が5/25 に崩壊する(実測2026-07-10)。焼成方針だけフルに効き、他方針は
   // 従来規模(×0.2≒旧coef0.02)に留める(bankDirectのclickBonus・ovenBakeMulBake/Otherと同処方)。
   const polM = policyIs(sim, 'bake') ? 1 : (P.equipDirect.otherMul != null ? P.equipDirect.otherMul : 1);
-  // アンカー=max(base, 金相場)(第12次R続き・anchorGolden=1で有効): 後半周回は金項/討直(金相場=clickEV連動)が
+  // アンカー=max(base, anchorGolden×金相場)(第12次R続き): 後半周回は金項/討直(金相場=clickEV連動)が
   // 複利で伸び、base(cps+タップ素点)係留の設直だけが沈む(bake後半 設直30→5-7%・balanced後半 設5-8%の正体)。
   // huntDirect「戦利品は金相場で売れる」と同型の処方=量産品も金相場で売れる。中盤は base>金相場 なので不変。
+  // anchorGolden は係数(0=OFF・1=金相場フル)。1.0 は bake後半 設71%独走で②改が43→7/47に崩壊(100h実測)=係数で絞る。
   let anchor = base;
-  if (P.equipDirect.anchorGolden && prod) anchor = Math.max(base, goldenRateValue(sim, prod));
+  if (P.equipDirect.anchorGolden > 0 && prod) anchor = Math.max(base, P.equipDirect.anchorGolden * goldenRateValue(sim, prod));
   return genreDirect(sim, anchor, sim.run.upgrades.oven || 0, P.equipDirect) * polM;
 }
 // 金直送: 投資量=金perk合計。ゲート=香料調合 段階2(スキル golden_1→段階2購入→効果)。
