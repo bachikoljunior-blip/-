@@ -102,51 +102,54 @@ const SKILL_NODES = [
   { id: 'click_1', cost: 40, prereqs: ['core'], effects: [['click', null, 0.06]] },
   { id: 'click_2', cost: 41, prereqs: ['click_1'], effects: [['click', null, 0.10]] },
   { id: 'click_3', cost: 43, prereqs: ['click_2', 'golden_2'], effects: [['click', null, 0.14], ['goldenAmount', null, 0.06]] },
-  { id: 'click_4', cost: 58, prereqs: ['golden_3', 'research_remodel'], effects: [['click', null, 0.24], ['all', null, 0.02]] },
+  { id: 'click_4', cost: 58, prereqs: ['click_3', 'auto_4'], effects: [['click', null, 0.24], ['all', null, 0.02]] },
   { id: 'golden_1', cost: 41, prereqs: ['click_1'], effects: [['goldenRate', null, 0.04]] },
   { id: 'golden_2', cost: 43, prereqs: ['golden_1'], effects: [['goldenAmount', null, 0.15]] },
-  { id: 'golden_3', cost: 47, prereqs: ['click_3'], effects: [['goldenPower', null, 0.35]] },
+  { id: 'golden_3', cost: 47, prereqs: ['golden_2'], effects: [['goldenPower', null, 0.35]] },
   { id: 'golden_analysis', cost: 66, prereqs: ['golden_3'], effects: [['unlockSystem', 'goldenAnalysis']] },
-  { id: 'golden_4', cost: 78, prereqs: ['click_4'], effects: [['goldenRate', null, 0.08], ['goldenAmount', null, 0.25]] },
+  { id: 'golden_4', cost: 78, prereqs: ['golden_3'], effects: [['goldenRate', null, 0.08], ['goldenAmount', null, 0.25]] },
   { id: 'auto_1', cost: 40, prereqs: ['monster_1'], effects: [['cps', null, 0.06]] },
-  { id: 'auto_2', cost: 41, prereqs: ['auto_1'], effects: [['cps', null, 0.10]] },
+  { id: 'auto_2', cost: 41, prereqs: ['auto_1', 'monster_2'], effects: [['cps', null, 0.10]] },
   { id: 'auto_3', cost: 43, prereqs: ['auto_2', 'monster_2'], effects: [['cps', null, 0.14], ['monsterDamageSkill', null, 0.06]] },
-  { id: 'auto_4', cost: 58, prereqs: ['monster_3'], effects: [['cps', null, 0.24], ['all', null, 0.02]] },
-  { id: 'bake_temperature', cost: 69, prereqs: ['auto_3', 'research_remodel'], effects: [['unlockSystem', 'bakeTemperature']] },
+  { id: 'auto_4', cost: 58, prereqs: ['auto_3'], effects: [['cps', null, 0.24], ['all', null, 0.02]] },
+  { id: 'bake_temperature', cost: 69, prereqs: ['auto_3'], effects: [['unlockSystem', 'bakeTemperature']] },
   { id: 'monster_1', cost: 41, prereqs: ['golden_1'], effects: [['monsterRate', null, 0.04]] },
-  { id: 'monster_2', cost: 43, prereqs: ['monster_1'], effects: [['monsterDamageSkill', null, 0.16]] },
-  { id: 'monster_3', cost: 47, prereqs: ['auto_3'], effects: [['monsterHpDown', null, 0.07]] },
+  { id: 'monster_2', cost: 43, prereqs: ['monster_1', 'golden_2'], effects: [['monsterDamageSkill', null, 0.16]] },
+  { id: 'monster_3', cost: 47, prereqs: ['monster_2'], effects: [['monsterHpDown', null, 0.07]] },
   { id: 'hunt_analysis', cost: 69, prereqs: ['monster_3'], effects: [['unlockSystem', 'huntAnalysis']] },
-  { id: 'monster_4', cost: 83, prereqs: ['auto_4'], effects: [['monsterStay', null, 0.10]] },
+  { id: 'monster_4', cost: 83, prereqs: ['monster_3', 'click_4'], effects: [['monsterStay', null, 0.10]] },
   { id: 'economy_1', cost: 41, prereqs: ['auto_1'], effects: [['upgradeDiscount', null, 0.02], ['researchDiscount', null, 0.02]] },
   { id: 'research_1', cost: 41, prereqs: ['economy_2'], effects: [['researchDiscount', null, 0.04]] },
   { id: 'research_remodel', cost: 44, prereqs: ['research_1'], effects: [['researchDiscount', null, 0.03], ['unlockSystem', 'researchRemodel']] },
   { id: 'economy_2', cost: 47, prereqs: ['economy_1'], effects: [['upgradeDiscount', null, 0.05]] },
+  // 熟練(2026-07-06 ユーザー採用・第11次): スキルで解放。同じ設備を買うほど1台あたり生産が複利で伸びる
+  { id: 'mastery_low', cost: 52, prereqs: ['economy_2'], effects: [['unlockSystem', 'masteryLow']] },
+  { id: 'mastery_high', cost: 210, prereqs: ['mastery_low', 'upgrade_galaxy'], effects: [['unlockSystem', 'masteryHigh']] },
   { id: 'economy_analysis', cost: 62, prereqs: ['economy_2'], effects: [['unlockSystem', 'economyAnalysis']] },
   { id: 'order_board', cost: 86, prereqs: ['economy_analysis'], effects: [['unlockSystem', 'orderBoard']] },
   { id: 'upgrade_moon', cost: 52, prereqs: ['economy_2'], effects: [['unlockUpgrade', 'moonBakery']] },
-  { id: 'upgrade_time', cost: 62, prereqs: ['upgrade_moon'], effects: [['unlockUpgrade', 'timeOven']] },
+  { id: 'upgrade_time', cost: 62, prereqs: ['upgrade_moon', 'research_remodel'], effects: [['unlockUpgrade', 'timeOven']] },
   { id: 'upgrade_galaxy', cost: 98, prereqs: ['upgrade_time', 'auto_4'], effects: [['unlockUpgrade', 'galaxyFactory']] },
   { id: 'upgrade_blackhole', cost: 187, prereqs: ['upgrade_galaxy'], effects: [['unlockUpgrade', 'blackHoleMixer']] },
-  { id: 'research_analysis', cost: 222, prereqs: ['upgrade_time'], effects: [['unlockSystem', 'researchAnalysis']] },
+  { id: 'research_analysis', cost: 222, prereqs: ['research_remodel'], effects: [['unlockSystem', 'researchAnalysis']] },
   { id: 'reward_1', cost: 159, prereqs: ['monster_4'], effects: [['rewardChoices', null, 1]] },
   { id: 'reward_synergy', cost: 213, prereqs: ['reward_1'], effects: [['unlockSystem', 'rewardSynergy']] },
   { id: 'reward_choice_2', cost: 357, prereqs: ['reward_synergy'], effects: [['rewardChoices', null, 1]] },
-  { id: 'reward_2', cost: 238, prereqs: ['unlock_reward_beastScent', 'upgrade_singularity'], effects: [['upgradePerkPower', null, 0.15]] },
+  { id: 'reward_2', cost: 238, prereqs: ['upgrade_singularity'], effects: [['upgradePerkPower', null, 0.15]] },
   { id: 'unlock_reward_crackedFang', cost: 107, prereqs: ['monster_4'], effects: [['unlockReward', 'crackedFang']] },
   { id: 'unlock_reward_chainPrep', cost: 141, prereqs: ['unlock_reward_crackedFang'], effects: [['unlockReward', 'chainPrep']] },
   { id: 'unlock_reward_huntFocus', cost: 189, prereqs: ['unlock_reward_crackedFang'], effects: [['unlockReward', 'huntFocus']] },
-  { id: 'unlock_reward_biteRecovery', cost: 304, prereqs: ['reward_2'], effects: [['unlockReward', 'biteRecovery']] },
-  { id: 'unlock_reward_beastHeatFerment', cost: 275, prereqs: ['reward_2'], effects: [['unlockReward', 'beastHeatFerment']] },
+  { id: 'unlock_reward_biteRecovery', cost: 304, prereqs: ['unlock_reward_huntFocus'], effects: [['unlockReward', 'biteRecovery']] },
+  { id: 'unlock_reward_beastHeatFerment', cost: 275, prereqs: ['unlock_reward_biteRecovery'], effects: [['unlockReward', 'beastHeatFerment']] },
   { id: 'unlock_reward_huntingCore', cost: 412, prereqs: ['unlock_reward_beastHeatFerment'], effects: [['unlockReward', 'huntingCore']] },
   { id: 'unlock_reward_brandHunt', cost: 472, prereqs: ['unlock_reward_biteRecovery'], effects: [['unlockReward', 'brandHunt']] },
   { id: 'unlock_reward_deepPursuit', cost: 808, prereqs: ['unlock_reward_huntingCore'], effects: [['unlockReward', 'deepPursuit']] },
-  { id: 'unlock_reward_goldenChain', cost: 102, prereqs: ['monster_4', 'golden_4'], effects: [['unlockReward', 'goldenChain']] },
+  { id: 'unlock_reward_goldenChain', cost: 102, prereqs: ['golden_4', 'unlock_reward_crackedFang'], effects: [['unlockReward', 'goldenChain']] },
   { id: 'unlock_reward_goldenTarget', cost: 122, prereqs: ['unlock_reward_goldenChain'], effects: [['unlockReward', 'goldenTarget']] },
   { id: 'unlock_reward_goldenFirstHit', cost: 165, prereqs: ['unlock_reward_goldenTarget'], effects: [['unlockReward', 'goldenFirstHit']] },
   { id: 'unlock_reward_beastScent', cost: 174, prereqs: ['unlock_reward_goldenTarget'], effects: [['unlockReward', 'beastScent']] },
   { id: 'unlock_reward_goldenBeastMutation', cost: 1096, prereqs: ['unlock_reward_deepPursuit'], effects: [['unlockReward', 'goldenBeastMutation']] },
-  { id: 'unlock_reward_crushedMill', cost: 357, prereqs: ['unlock_reward_huntingCore'], effects: [['unlockReward', 'crushedMill']] },
+  { id: 'unlock_reward_crushedMill', cost: 357, prereqs: ['reward_2', 'unlock_reward_huntingCore'], effects: [['unlockReward', 'crushedMill']] },
   { id: 'start_1', cost: 139, prereqs: ['golden_4'], effects: [['startCookies', null, 50000]] },
   { id: 'offline_1', cost: 139, prereqs: ['auto_4'], effects: [['offlineHours', null, 4]] },
   { id: 'start_2', cost: 359, prereqs: ['start_1', 'offline_1'], effects: [['startCookies', null, 950000], ['offlineHours', null, 4]] },
@@ -173,10 +176,11 @@ const SKILL_HAND_ORDER = [
   // 設備解放: 月面=r12(7種設備の壁dec40を跨ぐ前)、時空=r17、以降約3ラングごとに第16種(r40)まで。
   'core', 'click_1', 'golden_1', 'monster_1', 'auto_1', 'economy_1',
   'click_2', 'golden_2', 'monster_2', 'auto_2', 'economy_2',
+  'mastery_low',
   'click_3', 'upgrade_moon', 'auto_3', 'research_1', 'research_remodel', 'economy_analysis', 'order_board',
   'golden_3', 'golden_analysis', 'upgrade_time', 'research_analysis', 'monster_3', 'hunt_analysis', 'bake_temperature',
-  'click_4', 'auto_4', 'offline_1',
-  'upgrade_galaxy', 'golden_4', 'start_1', 'monster_4', 'reward_1', 'reward_synergy', 'reward_choice_2', 'start_2',
+  'auto_4', 'click_4', 'offline_1',
+  'upgrade_galaxy', 'mastery_high', 'golden_4', 'start_1', 'monster_4', 'reward_1', 'reward_synergy', 'reward_choice_2', 'start_2',
   'upgrade_blackhole', 'unlock_reward_crackedFang', 'unlock_reward_goldenChain',
   'upgrade_universe', 'unlock_reward_chainPrep', 'unlock_reward_huntFocus',
   'upgrade_godfinger', 'unlock_reward_goldenTarget', 'upgrade_singularity',
@@ -226,7 +230,6 @@ function buildSkillCosts() {
   if (SKILL_HAND_ORDER.length !== SKILL_NODES.length) throw new Error('order length mismatch');
   let rank = 0, rung = 0;
   let lastRungCost = P.skillCost.C0;
-  const edgeCap = P.skillCost.edgeCap || 100;
   for (const id of SKILL_HAND_ORDER) {
     const n = SKILL_BY_ID[id];
     if (!n) throw new Error('unknown node ' + id);
@@ -245,14 +248,12 @@ function buildSkillCosts() {
       } else {
         tentative = lastRungCost * (P.skillCost.rho || 4);
       }
-      const capByEdges = n.prereqs.length
-        ? Math.min(...n.prereqs.map(q => SKILL_COST_MAP[q])) * edgeCap
-        : Infinity;
-      const val = Math.min(tentative, capByEdges);
-      if (val < tentative * 0.99) SKILL_RIDERS.add(id);
-      lastRungCost = tentative; // はしごはクランプに関係なく進む
+      // ⑲改(2026-07-06 ユーザー承認・第9次): 「各ノードは少なくとも1本、コスト比10倍以内の辺で
+      // 結ばれていればよい」へ変更。辺ごとのクランプは廃止(はしごコストがそのまま立つ・ライダーなし)。
+      // 検証は runner.js の check19(⑲改判定)。関連効果どうしを結ぶ遠距離辺は距離自由。
+      lastRungCost = tentative;
       rung++;
-      SKILL_COST_MAP[id] = q5cost(val); // 丸め規則(有効数字3桁=5の倍数)を内部値にも適用
+      SKILL_COST_MAP[id] = q5cost(tentative); // 丸め規則(有効数字3桁=5の倍数)を内部値にも適用
     }
     have[id] = true;
   }
@@ -314,24 +315,33 @@ function buildSkillValues() {
   }
   return SKILL_VALUES;
 }
-// ==== 2段階帯域(⑥⑦ 確定・2026-07-06): 初転生まで Y=120+8√x、初転生後 Y=1440+8√x (x=総経過秒) ====
-function bandY(prestiged, x) { return (prestiged ? 1440 : 120) + 8 * Math.sqrt(Math.max(0, x)); }
+// ==== 2段階帯域(⑥⑦ 2026-07-06 ユーザー承認で更新): 初転生まで Y=120+8√x、初転生後 Y=1440+3√x ====
+// (第10次: 初転生後の伸びの係数 8→3。24分スタートは維持)
+function bandY(prestiged, x) { return prestiged ? 1440 + 3 * Math.sqrt(Math.max(0, x)) : 120 + 8 * Math.sqrt(Math.max(0, x)); }
 
 function lg(level, rate) { return Math.pow(1 + Math.max(0, rate), Math.max(0, level)); }
 // 2026-07-05 キャップ全撤廃: 所有数上限(ownCap)は撤廃(負値ガードのみ)
 function capOwn(n) { return Math.max(0, n); }
 function ir(level, rate) { return Math.pow(1 - Math.min(0.95, Math.max(0, rate)), Math.max(0, level)); }
 // 報酬Lvの逓減: lvが大きいほど1Lvあたりの寄与が下がる(halfで半減)
-function satLv(lv, half) { lv = Math.max(0, lv); return lv / (1 + lv / Math.max(1, half)); }
+// 第12次J-3(ユーザー2026-07-08): モンスター報酬の上限(飽和)を撤廃。旧 satLv は lv/(1+lv/half) で half に漸近する
+// ソフト上限だった。撤廃=所持数に対して線形に伸び続ける(half は無視)。goldenRate/monsterRate は spawn 間隔が
+// 1秒フロアで自己制限、goldenAmount/Power は線形、rewardCategoryBonus のみ (1+rate)^lv で指数のため要 Infinity 監視。
+function satLv(lv, half) { return Math.max(0, lv); }
+// ⑬タイミング: 完全放置モードの判定。idleTiming が対象キーそのもの、または全機能放置 'all' のとき真。
+// 'all' は提案5(2026-07-07 承認)の全体比較用: 全タイミング機能を1本の放置ランで同時に無効化する。
+function idleOn(sim, key) { const it = sim.opt.idleTiming; return it === key || it === 'all'; }
 
 // ================= シミュレーション状態 =================
 function newSim(strategy, opts) {
   return {
     strat: strategy,
-    opt: Object.assign({ disableResearch: null, disableReward: null, disableStage: null, disableUpgrade: null, idleTiming: null, trackGain: false, hours: 100 }, opts || {}),
+    opt: Object.assign({ disableResearch: null, disableReward: null, disableStage: null, disableUpgrade: null, disableAffinity: false, idleTiming: null, trackGain: false, trackTickPower: false, hours: 100 }, opts || {}),
     t: 0,                       // 総経過秒
     // 永続
     prestige: 0, prestigeTotal: 0, prestigeRuns: 0, totalCookies: 0,
+    prevMaxStage: 0,            // 提案8: 前回周回の最高到達層(=再登坂の天井)。層の試練を新規開拓層基準へ相対化するのに使う。層数の表示・カウント(run.maxStage)は絶対累積のまま不変更。
+    prevDuration: 0,            // 提案9(到達連動ノルマ): 前回周回の長さ(秒)。未達判定の進行比 ρ=経過秒/前回長 の分母。
     skills: {},
     everUpgrade: {}, everResearch: {}, everStage: {},
     unlockEvents: [],           // {t, kind, id}
@@ -359,9 +369,6 @@ function newRun(sim) {
     rewardCategoryCounts: { golden: 0, hunt: 0, equipment: 0, risk: 0 },
     quotaFailed: false, quotaHoldSeconds: 0, quotaMonsterKills: 0,
     quotaFailAt: null, gainSeries: null,
-    // 追跡ノルマ(2026-07-06 ⑧): chase は runCookies×10^-m を下限に毎秒 10^θ 倍で追い上げる。
-    // runCookies < chase になったら未達。θ は周回開始時の総経過時間ベース(ゲームは総プレイ時間で実装)
-    chase: 0, chaseTheta: (P.quota.chase ? P.quota.chase.m / (P.quota.chase.c * bandY(sim.prestigeRuns > 0, sim.t)) : 0),
     lastGoldenT: sim.t, spiceBurstM: 1, spiceAromaUntil: 0, bhCharge: 0, bhUses: 0, bhBoostUntil: 0, bhBoostMult: 1, bhReadyAt: null,
     blackHoleCompressionUsed: false, blackHoleQuotaMultiplier: 1,
     maxStage: 1,
@@ -373,10 +380,47 @@ function newRun(sim) {
     nextMonsterSpawnMultiplier: 1, nextMonsterHpMultiplier: 1, nextGoldenSpawnMultiplier: 1,
     nextRewardCountBonus: 0, huntFocusLv: 0, huntFocusRewardPenalty: 0,
     nextMonsterStayMultiplier: 1,
-    monster: null,             // {level,hp,maxHp,stayLeft,goldenChainMultiplier,firstHit}
+    monster: null,             // {typeId,level,hp,maxHp,stayLeft,goldenChainMultiplier,firstHit}
     policy: 'balanced',
-    kills: 0, goldenTaken: 0
+    kills: 0, goldenTaken: 0,
+    // モンスター種類(第9次): 決定的ローテーションの蓄積器と種類別集計
+    mtAcc: {}, gbAcc: 0, killsSinceBoss: 0,
+    surge: {},                 // まとめ買い割増: 設備idごとの熱量 {h, t}(購入+1、halfSecで半減)
+    killsByType: {}, rewardByType: {},
+    critAtBuy: undefined, critNow: 0, critMax: 0,
+    chainN: 0, chainLastT: -1e15, chainMax: 0 // 討伐連鎖(第12次D): 周回内変数。転生で0
   };
+}
+
+// ==== モンスター種類の決定的抽選(期待値化・第9次) ====
+// 重み比例の決定的ローテーション: 各種類の蓄積器に weight/総weight を足し、最大の種類を出す。
+// 黄金獣: 金ブースト中は出現枠の goldenBeastShare 分を置換(確率を蓄積し1超えで発生)。
+// ボス: 討伐 bossCycle 体ごとに次の出現がボス化(ゲームと同じ周期規則の期待値版)。
+function pickMonsterType(sim) {
+  const r = sim.run;
+  const M = P.mtype;
+  if (!M) return 'normal';
+  if (r.killsSinceBoss >= M.bossCycle) return 'boss';
+  if (goldenBoostActive(sim)) {
+    r.gbAcc += M.goldenBeastShare;
+    if (r.gbAcc >= 1) { r.gbAcc -= 1; return 'goldenBeast'; }
+  }
+  const ids = Object.keys(M.weights);
+  let totalW = 0; for (const id of ids) totalW += M.weights[id];
+  let best = ids[0], bestV = -Infinity;
+  for (const id of ids) {
+    r.mtAcc[id] = (r.mtAcc[id] || 0) + M.weights[id] / totalW;
+    if (r.mtAcc[id] > bestV) { bestV = r.mtAcc[id]; best = id; }
+  }
+  r.mtAcc[best] -= 1;
+  return best;
+}
+// 種類×報酬カテゴリの相性倍率(条件㉔の「その回だけ無効」= すべて×1.0)
+function affinityOf(sim, typeId, category) {
+  if (sim.opt.disableAffinity) return 1;
+  const M = P.mtype;
+  const row = M && M.affinity && M.affinity[typeId];
+  return (row && row[category] != null) ? row[category] : 1;
 }
 
 // ================= 効果計算(ゲーム式の移植) =================
@@ -423,6 +467,8 @@ function rewardUnlockedFn(sim, r) {
   return !r.unlockSkill || hasSkill(sim, r.unlockSkill);
 }
 function resActive(sim, id) {
+  if (sim._md === 'res:' + id) return false; // 期待値測定の一時無効(①)
+  if (sim._mdSet && sim._mdSet.has('res:' + id)) return false; // ㉘稼ぎ口分解の一括無効
   return sim.run.research[id] && sim.opt.disableResearch !== id;
 }
 function policyIs(sim, id) {
@@ -450,7 +496,16 @@ function quotaAtElapsed(sim, s) {
     + q.w1 * Math.pow(Math.max(0, (s - q.w1T) / q.w1D), q.w1P)
     + q.w2 * Math.pow(Math.max(0, (s - q.w2T) / q.w2D), q.w2P)
     + q.w3 * Math.pow(Math.max(0, (s - q.w3T) / q.w3D), q.w3P);
-  return Math.max(1, Math.floor((base * wall) / quotaControlMultiplier(sim)));
+  // 層の試練(第12次D・提案4採用 / 第12次H・提案8で新規開拓層基準へ相対化): 層が深いほどノルマが重い。
+  // 提案8: 「絶対の最高層」ではなく「前回周回の天井(prevMaxStage)+trialStartLayer を超えて新しく潜った分」に
+  // だけ効かせる。再登坂(前回天井までの登り直し)は試練ゼロ=タダで、新フロンティア開拓(周回後半)で初めて
+  // 試練が立ち上がる → 未達位置が後半へ移り、速い方針も後半に新層を開けば未達する。層数の表示(run.maxStage)は
+  // 絶対累積のまま(前回基準で1から数え直さない・ユーザー指示)。相対化するのはこの指数計算だけ。
+  const trialFloor = (sim.prevMaxStage || 0) + (q.trialStartLayer || 0);
+  const trial = q.trialCoef
+    ? Math.pow(1 + q.trialCoef, Math.max(0, sim.run.maxStage - trialFloor))
+    : 1;
+  return Math.max(1, Math.floor((base * wall * trial) / quotaControlMultiplier(sim)));
 }
 function monsterQuotaRequired(sim) {
   const r = sim.run;
@@ -470,16 +525,45 @@ function monsterQuotaRequired(sim) {
   }
   return Math.max(1, Math.floor(baseQuota * (r.blackHoleQuotaMultiplier || 1)));
 }
-function quotaGaugeProgressRatio(run, quota) {
-  const base = Math.max(1, quota || 1);
-  const r = P.quota.gaugeR;
-  const total = Math.max(0, run);
-  if (total <= 0) return 0;
-  const fullStages = Math.max(0, Math.floor(Math.log(total * (r - 1) / base + 1) / Math.log(r)));
-  const used = base * (Math.pow(r, fullStages) - 1) / (r - 1);
-  const remaining = Math.max(0, total - used);
-  const nextNeed = base * Math.pow(r, fullStages);
-  return fullStages + remaining / nextNeed;
+// ==== ノルマ層ゲージ(2026-07-06 ユーザー確定仕様・第9次) ====
+// ゲージは「現時点のその回の総クッキー数が、何秒先のノルマまで達成できるか」の先行秒数 L で貯まる。
+// L = (ノルマ曲線が今の総クッキーに達する将来時刻 s*) − 現在の経過秒。
+// 層進行の式は秒数のみを変数とする: 層kの必要ゲージ秒 = gaugeSec × gaugeGrow^(k-1)(調整項目)。
+function quotaLeadSeconds(sim) {
+  const r = sim.run;
+  const el = elapsed(sim);
+  const total = r.runCookies;
+  if (!(total > 0)) return 0;
+  // s* をギャロップ+二分探索(quotaAtElapsed は s について単調非減少、runCookies も単調増加なので
+  // 前回の s* から前進のみで探索できる。研究購入等でノルマ係数が下がった場合も s* は増える方向)
+  let lo = Math.max(el, r._leadS || 0);
+  if (quotaAtElapsed(sim, lo) > total) lo = el;
+  if (quotaAtElapsed(sim, lo) > total) return 0;
+  let hi = Math.max(lo * 2, lo + 64), guard = 0;
+  while (hi < 1e62 && quotaAtElapsed(sim, hi) <= total && guard++ < 250) { lo = hi; hi *= 2; }
+  while (hi - lo > Math.max(1, lo * 1e-6)) {
+    const mid = lo + (hi - lo) / 2;
+    if (quotaAtElapsed(sim, mid) <= total) lo = mid; else hi = mid;
+  }
+  r._leadS = lo;
+  return Math.max(0, lo - el);
+}
+// 先行秒数 L → 層進行(小数)。満たした層数+現在層の端数。
+// 層は「秒数のみの関数」。ただし総クッキーが浮動小数上限(~1e308)に近づく放置周回では
+// 先行秒数が天文学的(~1e300)になり層が青天井に伸びるため、層の上限 gaugeMaxLayer で頭打ちにする
+// (=先行秒数の実効上限。通常の転生周回は最大でも約190層で、上限には決して届かない=遊びに影響なし)。
+function quotaLayerProgress(leadSec) {
+  const g = Math.max(1, P.quota.gaugeSec), r = P.quota.gaugeGrow;
+  const cap = P.quota.gaugeMaxLayer || Infinity;
+  if (!(leadSec > 0)) return 0;
+  let pr;
+  if (r <= 1.0001) pr = leadSec / g;
+  else {
+    const k = Math.max(0, Math.floor(Math.log(leadSec * (r - 1) / g + 1) / Math.log(r)));
+    const used = g * (Math.pow(r, k) - 1) / (r - 1);
+    pr = k + Math.max(0, leadSec - used) / (g * Math.pow(r, k));
+  }
+  return Math.min(cap, pr);
 }
 function currentStage(sim) {
   if (sim._stT === sim.t) return sim._stV;
@@ -489,12 +573,14 @@ function currentStage(sim) {
 }
 function currentStageRaw(sim) {
   const quota = monsterQuotaRequired(sim);
-  if (!quota || quota <= 0) return 1;
-  const pr = quotaGaugeProgressRatio(sim.run.runCookies, quota);
+  if (quota === null || quota <= 0) return Math.max(1, sim.run._stFrozen || 1);
+  const pr = quotaLayerProgress(quotaLeadSeconds(sim));
   if (pr <= 0) return 1;
   const whole = Math.floor(pr);
   const frac = pr - whole;
-  return (frac <= 0.0001 && whole > 0) ? whole : whole + 1;
+  const v = (frac <= 0.0001 && whole > 0) ? whole : whole + 1;
+  sim.run._stFrozen = v; // 未達後(quota=null)は最後の層で凍結(層1へ落とさない)
+  return v;
 }
 
 function runTempoRamp(sim) {
@@ -623,7 +709,46 @@ function computeProd(sim) {
     }
   }
 
-  const killMulAll = 1 + (r.quotaMonsterKills || 0) * (r.perks.beastHeatFerment * effRw(sim, 'beastHeatFerment'));
+  // 研究連動の全生産倍率(第12次L・提案A): 対応研究/段3が解放されている間、全生産に一律倍率(線形floor+所持log10+層)。
+  // 全生産倍率=㉘シェア相殺・③⑨他機能lift相殺・④⑤周回比相殺=条件中立で①/⑨の設備系腐りを立てる。resActive/resStage3ゲート(①⑨トグル対応)。
+  const RG = P.resGlobal;
+  if (RG) {
+    const seg = (id, own, cfg) => resActive(sim, id) ? (1 + (cfg.floor || 0) + (cfg.own || 0) * Math.log10(1 + own) + (cfg.stage || 0) * r.maxStage) : 1;
+    globalRes *= seg('portalNetwork', r.upgrades.portal || 0, RG.portal)
+      * seg('galaxyAssembly', r.upgrades.galaxyFactory || 0, RG.galaxy)
+      * seg('quantumProofing', r.upgrades.quantumBakery || 0, RG.quantum);
+    // 段3(⑨)の全生産倍率floor: 対応段3が解放されている間だけ立つ(⑨の各回lift≥1.05)
+    if (resStage3(sim, 'portalNetwork')) globalRes *= 1 + (RG.portal.s3Floor || 0);
+    if (resStage3(sim, 'galaxyAssembly')) globalRes *= 1 + (RG.galaxy.s3Floor || 0);
+    if (resStage3(sim, 'factoryNetwork')) globalRes *= 1 + (RG.factoryS3Floor || 0);
+    if (resStage3(sim, 'spiceBlend')) globalRes *= 1 + (RG.spiceS3Floor || 0);
+    // 指先の型 段3(⑨whole=会心の余熱): 会心/クリック依存で取得方針(S6等)に効果が出ないため、
+    // 取得中だけの全生産floorで総クッキーに繋ぐ(2026-07-09 ユーザー承認A・枝分かれmeasureで判定)。既存の余熱effectは残置。
+    if (resStage3(sim, 'fingerTechnique')) globalRes *= 1 + (RG.fingerS3Floor || 0);
+    // 月面発酵 段2(⑨): 効果は強い(幾何平均3.82)が余裕率の低い1周回で min<1.05 に落ちるため、全生産倍率 floor で下支え。
+    if (resStage2(sim, 'moonGlobalYeast')) globalRes *= 1 + (RG.moonS2Floor || 0);
+    // 観測ゆらぎ(量子証明 段2・⑬タイミング): 全生産の90秒周期の波。最適操作=山に活動を寄せる(waveOpt=2/π)、
+    // 完全放置=全周期平均(waveIdle=1/π)。sim では定数乗数なので ⑬比=(1+amp·waveOpt)/(1+amp·waveIdle)=定数k
+    // (安定・トラジェクトリ非依存)。晩期取得(≈idx44)なので③測定への摂動は末尾数周回のみ。増加方向。
+    if (resStage2(sim, 'quantumProofing')) {
+      let amp = P.res2.waveAmpBase;
+      if (resStage3(sim, 'quantumProofing')) amp *= 1 + P.res2.waveStageCoef * r.maxStage;
+      const wf = idleOn(sim, 'wave') ? P.timing.waveIdle : P.timing.waveOpt;
+      globalRes *= 1 + amp * wf;
+    }
+  }
+  // ③死に報酬対策(第12次P・枝分かれmeasure下で安全): 巨砕ミル(装備)/金獣変異(金)に「取得中だけ立つ全生産floor」を
+  // 持たせ、効果を総クッキーに繋ぐ(取得が稀=n小でも枝分かれ比が確実に≥1.1へ)。他報酬のON/OFF比では定数として相殺=非干渉。
+  if (!rwOff(sim, 'crushedMill') && (r.perks.crushedMill || 0) > 0) globalRes *= 1 + (r.perks.crushedMill || 0) * (P.rw.crushedMillProd || 0);
+  if (!rwOff(sim, 'goldenBeastMutation') && (r.perks.goldenBeastMutation || 0) > 0) globalRes *= 1 + (r.perks.goldenBeastMutation || 0) * (P.rw.goldenBeastMutationProd || 0);
+  if (!rwOff(sim, 'brandHunt') && (r.perks.brandHunt || 0) > 0) globalRes *= 1 + (r.perks.brandHunt || 0) * (P.rw.brandHuntProd || 0);
+
+  // ③死に報酬対策(第12次P・枝分かれmeasure下では安全): 討伐ダメージ系報酬(割れた牙/焼き印狩り)を「討伐数×全生産倍率」へ繋ぐ。
+  // ダメージ二値しきい値(killable)に吸収されず、討伐が速い方針でも討伐数に比例して総クッキーに効く経路。
+  const cfKill = rwOff(sim, 'crackedFang') ? 0 : (r.perks.crackedFang || 0) * (P.rw.crackedFangKill || 0);
+  const bhKill = rwOff(sim, 'brandHunt') ? 0 : (r.perks.brandHunt || 0) * (P.rw.brandHuntKill || 0);
+  const brKill = rwOff(sim, 'biteRecovery') ? 0 : (r.perks.biteRecovery || 0) * (P.rw.biteRecoveryKill || 0);
+  const killMulAll = 1 + (r.quotaMonsterKills || 0) * (r.perks.beastHeatFerment * effRw(sim, 'beastHeatFerment') + cfKill + bhKill + brKill);
   const killMulCps = 1 + (r.quotaMonsterKills || 0) * (r.perks.huntingCore * effRw(sim, 'huntingCore'));
 
   // 個別強化倍率・研究倍率・支援倍率
@@ -634,6 +759,7 @@ function computeProd(sim) {
 
   let clickRaw = 1;
   let cpsRaw = 0;
+  const directContrib = [];
   for (let i = 0; i < UPGRADES.length; i++) {
     const u = UPGRADES[i];
     const owned = r.upgrades[u.id];
@@ -648,8 +774,9 @@ function computeProd(sim) {
       resM *= R.ovenSelf * lg(capOwn(owned), R.ovenOwn) * lg(Math.max(0, r.maxStage - 1), R.ovenStage) * (policyIs(sim, 'bake') ? 1.10 : 1);
       // 段階2: 焼き加減連動(こんがり運用で×1.5、それ以外は期待値×1.2)
       if (resStage2(sim, 'ovenBatch')) resM *= policyIs(sim, 'bake') ? P.res2.ovenBakeMulBake : P.res2.ovenBakeMulOther;
-      // 段階3: オーブンの個別強化Lvが研究倍率にも乗る
-      if (resStage3(sim, 'ovenBatch')) resM *= 1 + 0.05 * (r.upgradePerks.oven || 0);
+      // 段階3: 最高到達ノルマ層でオーブンの研究倍率が伸びる(旧・個別強化Lv依存は設備強化報酬撤廃で無効化→層依存へ再設計・増加方向)。
+      // 一定の底上げ(flat)+層ランプ。flatは早い周回(層が浅い)でも⑨の各回minを満たす床。両方とも増加方向。
+      if (resStage3(sim, 'ovenBatch')) resM *= (1 + (P.res2.ovenS3Flat || 0)) * (1 + (P.res2.ovenStageCoef || 0) * r.maxStage);
     }
     if (u.id === 'factory' && resActive(sim, 'factoryNetwork')) {
       const low = (r.upgrades.finger || 0) + (r.upgrades.grandma || 0) + (r.upgrades.oven || 0);
@@ -678,14 +805,8 @@ function computeProd(sim) {
     if (u.id === 'quantumBakery' && resActive(sim, 'quantumProofing')) {
       const rc = RESEARCH.filter(x => r.research[x.id]).length;
       resM *= lg(rc, R.quantumRes) * lg(capOwn(owned), R.quantumOwn);
-      // 段階2: 観測ゆらぎ(90秒周期の波。山でのみ増幅、谷は×1)
-      if (resStage2(sim, 'quantumProofing')) {
-        let amp = P.res2.waveAmpBase + P.res2.waveAmpPerRes * rc;
-        if (resStage3(sim, 'quantumProofing')) amp *= 1 + P.res2.waveStageCoef * r.maxStage;
-        // タイミング(条件⑬): 最適操作=山に活動を寄せる(正相平均2/π) / 完全放置=全周期平均(1/π)
-        const wf = sim.opt.idleTiming === 'wave' ? P.timing.waveIdle : P.timing.waveOpt;
-        resM *= 1 + amp * wf;
-      }
+      // 観測ゆらぎ(段2・⑬)は量子ベーカリー1種だと晩期取得時に総生産のごく一部で全体比が1.000へ潰れるため、
+      // 全生産の波(下 globalRes 側)へ移設(第12次N)。ここでは適用しない。
     }
     let supM = 1;
     if (resActive(sim, 'grandmaCrowd')) {
@@ -697,8 +818,32 @@ function computeProd(sim) {
       // 段階3: 最高到達ノルマ層で全支援が伸びる
       if (supM > 1 && resStage3(sim, 'grandmaCrowd')) supM *= 1 + P.res2.supStageCoef * r.maxStage;
     }
-    const contrib = owned * u.value * personal * resM * supM;
+    // 熟練(スキル解放・研究不要): 下位7種=職人の手 / 上位9種=工程の極み。×(1+rate)^所持数
+    let mastMul = 1;
+    if (i <= UPIDX.portal) {
+      if (hasSkillEffect(sim, 'unlockSystem', 'masteryLow')) mastMul = Math.pow(1 + P.mastery.low, owned);
+    } else if (hasSkillEffect(sim, 'unlockSystem', 'masteryHigh')) {
+      mastMul = Math.pow(1 + P.mastery.high, owned);
+    }
+    const contrib = owned * u.value * personal * resM * supM * mastMul;
+    directContrib[i] = contrib; // 系列ボーナスの参照元(この設備の直接生産。系列ぶんは含まない)
     if (u.type === 'click') clickRaw += contrib; else cpsRaw += contrib;
+  }
+  // 系列ボーナス(2026-07-06 ユーザー採用・第11次): スキル解放の上位設備の固有能力(研究不要)。
+  // 1台につき「自分より下位の設備の直接生産(毎秒)の合計×coef」を追加生産。直接生産のみを参照する
+  // ため掛け算の連鎖(又取り)にはならない。神の指はクリック型なので、クリック力×(1+coef×台数)の線形倍率。
+  let godFingerLineageMul = 1;
+  if (P.lineage && P.lineage.coef > 0) {
+    let lowerCps = 0;
+    for (let i = 0; i < UPGRADES.length; i++) {
+      const u = UPGRADES[i];
+      const owned = r.upgrades[u.id];
+      if (owned > 0 && UPGRADE_UNLOCK_SKILLS[u.id] && sim.opt.disableUpgrade !== u.id) {
+        if (u.id === 'godFinger') godFingerLineageMul = 1 + P.lineage.coef * owned;
+        else cpsRaw += owned * P.lineage.coef * lowerCps;
+      }
+      if (u.type === 'cps' && sim.opt.disableUpgrade !== u.id) lowerCps += directContrib[i] || 0;
+    }
   }
 
   // 銀行クリック配当
@@ -717,6 +862,13 @@ function computeProd(sim) {
   click += cps * CL.cpsCoef * (1 + CL.fingerSqrt * Math.sqrt(r.upgrades.finger || 0)) * clickSkillMul;
   // クリック変更 案C(神の指=クリックの上位段): 1個ごとにクリック×godFingerExp(指数)
   click *= Math.pow(CL.godFingerExp, r.upgrades.godFinger || 0);
+  // 系列ボーナス(神の指): クリック力×(1+coef×台数)
+  click *= godFingerLineageMul;
+
+  // 討伐連鎖(第12次D・提案1採用): 倒し続けている間だけ全生産×(1+prodCoef×連鎖数)。
+  // 連鎖数は討伐数に線形でしか増えない(共鳴型の雪だるまにならない)。途切れ・転生で0。
+  const chainM = 1 + (P.chain ? P.chain.prodCoef * chainCount(sim) : 0);
+  click *= chainM; cps *= chainM;
 
   // 会心(期待値)
   let critEV = 1;
@@ -724,7 +876,8 @@ function computeProd(sim) {
   if (resActive(sim, 'fingerTechnique')) {
     const f = r.upgrades.finger || 0;
     const policyC = policyIs(sim, 'click') ? 0.010 : 0;
-    const score = R.fingerBase + Math.sqrt(f) * R.fingerSqrt + policyC;
+    // 会心1%開始(第9次): 開始値0.01(=会心率1.0%)+設備√+最高到達層(周回内で育つ動的項)
+    const score = R.fingerBase + Math.sqrt(f) * R.fingerSqrt + (R.fingerStage || 0) * r.maxStage + policyC;
     const chance = 1 - Math.exp(-score);
     critChanceOut = chance;
     let critMul = R.fingerCritBase + score * R.fingerCritGrow;
@@ -743,9 +896,30 @@ function computeProd(sim) {
   };
 }
 
+// 報酬の無効化判定(恒久 disableReward + 期待値測定の一時 _md + ㉘一括無効 _mdSet の対応)
+function rwOff(sim, id) { return sim.opt.disableReward === id || sim._md === 'rw:' + id || (sim._mdSet ? sim._mdSet.has('rw:' + id) : false); }
+// 討伐連鎖(第12次D・提案1採用): 最後の討伐から breakSec 以内なら連鎖が生きている。
+// 討伐系機能として一時無効(_md/_mdSet 'chain')に対応=期待値方式・㉘討伐由来分解の対象
+function chainOff(sim) { return sim.opt.disableChain || sim._md === 'chain' || (sim._mdSet ? sim._mdSet.has('chain') : false); }
+// chainPrep 再テーマ(第12次M・カオス解消): 連戦準備は討伐連鎖の持続窓(breakSec)を Lv で延長する。
+// 連鎖が長続き→連鎖数↑→全生産×(1+prodCoef×連鎖)が伸びる=飽和しない通しに効く。従来の次モンスター spawn/hp 効果は残置。増加方向のみ。
+function chainBreakSec(sim) {
+  const base = (P.chain && P.chain.breakSec) || 0;
+  const r = sim.run;
+  const cp = rwOff(sim, 'chainPrep') ? 0 : (r.perks.chainPrep || 0);
+  // monsterStay 再テーマ(第12次M・飽和解消): 滞在が長い=次の討伐までの間が空いても連鎖が切れにくい、として
+  // 連鎖持続窓を滞在Lvでも延長する(連鎖数で全生産×(1+prodCoef×連鎖)に効く=飽和しない)。従来の滞在窓延長は残置。増加方向のみ。
+  const ms = rwOff(sim, 'monsterStay') ? 0 : (r.perks.monsterStay || 0);
+  return base * (1 + cp * (P.rw.chainPrepPersist || 0) + ms * (P.rw.monsterStayChain || 0));
+}
+function chainCount(sim) {
+  if (!P.chain || chainOff(sim)) return 0;
+  const r = sim.run;
+  return (sim.t - r.chainLastT) <= chainBreakSec(sim) ? r.chainN : 0;
+}
 // 報酬効果値(無効化対応)
 function effRw(sim, id) {
-  if (sim.opt.disableReward === id) return 0;
+  if (rwOff(sim, id)) return 0;
   return P.rw[id] != null ? P.rw[id] : 0;
 }
 
@@ -757,7 +931,7 @@ function monsterDamage(sim, prod) {
   const chain = r.monster ? ((r.monster.goldenChainMultiplier || 1) - 1) : 0;
   const clickOwned = (r.upgrades.finger || 0) + (r.upgrades.godFinger || 0);
   const mult = (1
-    + (sim.opt.disableReward === 'monsterDamage' ? 0 : r.perks.monsterDamage * P.rw.monsterDamage)
+    + (rwOff(sim, 'monsterDamage') ? 0 : r.perks.monsterDamage * P.rw.monsterDamage)
     + skillEffect(sim, 'monsterDamageSkill')
     + (r.perks.crackedFang || 0) * effRw(sim, 'crackedFang')
     + goldTarget + chain
@@ -770,7 +944,7 @@ function monsterDamage(sim, prod) {
 
 function goldenSpawnFactor(sim) {
   const r = sim.run;
-  const rateLv = satLv(sim.opt.disableReward === 'goldenRate' ? 0 : (r.perks.goldenRate || 0), P.golden.rateLvHalf);
+  const rateLv = satLv(rwOff(sim, 'goldenRate') ? 0 : (r.perks.goldenRate || 0), P.golden.rateLvHalf);
   return Math.exp(
     -Math.max(0, rateLv) * P.golden.ratePerLv
     - Math.max(0, skillEffect(sim, 'goldenRate')) * 1.8
@@ -780,12 +954,17 @@ function goldenSpawnFactor(sim) {
 }
 function monsterSpawnFactor(sim) {
   const r = sim.run;
-  const rateLv = satLv(sim.opt.disableReward === 'monsterRate' ? 0 : (r.perks.monsterRate || 0), P.monster.rateLvHalf);
-  const deep = Math.exp(-(sim.opt.disableReward === 'deepPursuit' ? 0 : (r.perks.deepPursuit || 0)) * P.rw.deepPursuitSpawn);
+  const rateLv = satLv(rwOff(sim, 'monsterRate') ? 0 : (r.perks.monsterRate || 0), P.monster.rateLvHalf);
+  const deep = Math.exp(-(rwOff(sim, 'deepPursuit') ? 0 : (r.perks.deepPursuit || 0)) * P.rw.deepPursuitSpawn);
   let portalHunt = 1;
-  if (resActive(sim, 'portalNetwork') && sim.t < r.portalHuntUntil) {
-    portalHunt = ir(r.upgrades.portal || 0, P.res.portalHuntSpawn);
-    if (resStage3(sim, 'portalNetwork')) portalHunt *= Math.exp(-P.res2.huntStageCoef * r.maxStage);
+  if (resActive(sim, 'portalNetwork')) {
+    // 常時項(窓非依存・2026-07-09): 旧「窓が金で常時ON」時代の討伐テンポの土台を戻す(㉘討伐/⑨段2/③金の波及を回復)。
+    // 窓は追加ブースト(portalHuntSpawn)として残し、⑬延長狩りのタイミングの遊び(窓を討伐で維持)を保つ。増幅方向のみ。
+    portalHunt = ir(r.upgrades.portal || 0, P.res.portalHuntSpawnBase || 0);
+    if (sim.t < r.portalHuntUntil) {
+      portalHunt *= ir(r.upgrades.portal || 0, P.res.portalHuntSpawn);
+      if (resStage3(sim, 'portalNetwork')) portalHunt *= Math.exp(-P.res2.huntStageCoef * r.maxStage);
+    }
   }
   return Math.exp(
     -Math.max(0, rateLv) * P.monster.ratePerLv
@@ -806,13 +985,13 @@ function monsterHpValue(sim, level) {
   const timePressure = 1 + Math.pow(Math.max(0, s - 45) / M.hpPressureDiv, M.hpPressurePow);
   let hp = M.hpBase * Math.pow(M.hpGrowth, Math.max(0, level - 1)) * timePressure;
   hp *= Math.exp(-Math.max(0, skillEffect(sim, 'monsterHpDown')));
-  hp *= Math.pow(P.rw.deepPursuitHp, sim.opt.disableReward === 'deepPursuit' ? 0 : (sim.run.perks.deepPursuit || 0));
+  hp *= Math.pow(P.rw.deepPursuitHp, rwOff(sim, 'deepPursuit') ? 0 : (sim.run.perks.deepPursuit || 0));
   hp *= bakeEV(sim).hp;
   return Math.floor(hp);
 }
 function monsterStayMs(sim) {
   const r = sim.run;
-  const rewardLv = sim.opt.disableReward === 'monsterStay' ? 0 : Math.max(0, r.perks.monsterStay || 0);
+  const rewardLv = rwOff(sim, 'monsterStay') ? 0 : Math.max(0, r.perks.monsterStay || 0);
   const mult = Math.exp(rewardLv * P.monster.stayPerLv + Math.max(0, skillEffect(sim, 'monsterStay')) * 0.12
     + (policyIs(sim, 'hunt') ? 0.10 : 0) + rewardCategoryBonus(sim, 'hunt'))
     * (r.nextMonsterStayMultiplier || 1) * bakeEV(sim).stay;
@@ -821,20 +1000,27 @@ function monsterStayMs(sim) {
 }
 function goldenAmountMultiplier(sim) {
   const r = sim.run;
-  const lv = satLv(sim.opt.disableReward === 'goldenAmount' ? 0 : r.perks.goldenAmount, P.golden.amountLvHalf);
+  const lv = satLv(rwOff(sim, 'goldenAmount') ? 0 : r.perks.goldenAmount, P.golden.amountLvHalf);
+  // 第12次K: 金報酬トリオ(連鎖/照準/初撃)+獣の匂いを金の即時獲得量へ再テーマ(所持Lvに線形=飽和しない)。増加方向のみ。
+  const trio = (rwOff(sim, 'goldenChain') ? 0 : (r.perks.goldenChain || 0)) * (P.rw.goldenChainAmount || 0)
+    + (rwOff(sim, 'goldenTarget') ? 0 : (r.perks.goldenTarget || 0)) * (P.rw.goldenTargetAmount || 0)
+    + (rwOff(sim, 'goldenFirstHit') ? 0 : (r.perks.goldenFirstHit || 0)) * (P.rw.goldenFirstHitAmount || 0)
+    + (rwOff(sim, 'beastScent') ? 0 : (r.perks.beastScent || 0)) * (P.rw.beastScentAmount || 0)
+    // goldenPower も同パターンで即時獲得量へ相乗り(2026-07-09・③instantが1.05-1.09を彷徨う恒久対策。ブースト側効果は残置・増加方向のみ)
+    + (rwOff(sim, 'goldenPower') ? 0 : (r.perks.goldenPower || 0)) * (P.rw.goldenPowerAmount || 0);
   return 1 + lv * P.golden.amountPerLv + skillEffect(sim, 'goldenAmount')
-    + rewardCategoryBonus(sim, 'golden') + (policyIs(sim, 'golden') ? 0.10 : 0);
+    + rewardCategoryBonus(sim, 'golden') + (policyIs(sim, 'golden') ? 0.10 : 0) + trio;
 }
 function goldenMultiplierVal(sim) {
   const r = sim.run;
-  const lv = satLv(sim.opt.disableReward === 'goldenPower' ? 0 : r.perks.goldenPower, P.golden.powerLvHalf);
+  const lv = satLv(rwOff(sim, 'goldenPower') ? 0 : r.perks.goldenPower, P.golden.powerLvHalf);
   return P.golden.multBase + lv * P.golden.powerPerLv + skillEffect(sim, 'goldenPower')
     + rewardCategoryBonus(sim, 'golden') + (policyIs(sim, 'golden') ? 0.18 : 0);
 }
 function goldenBoostDurationMs(sim) {
   const r = sim.run;
-  const gp = sim.opt.disableReward === 'goldenPower' ? 0 : r.perks.goldenPower;
-  const ga = sim.opt.disableReward === 'goldenAmount' ? 0 : r.perks.goldenAmount;
+  const gp = rwOff(sim, 'goldenPower') ? 0 : r.perks.goldenPower;
+  const ga = rwOff(sim, 'goldenAmount') ? 0 : r.perks.goldenAmount;
   const perkRaw = Math.max(0, gp) * 260 + Math.max(0, ga) * 65;
   const skillRaw = Math.max(0, skillEffect(sim, 'goldenPower') * 900 + skillEffect(sim, 'goldenRate') * 1800 + skillEffect(sim, 'goldenAmount') * 700);
   const runRaw = 900 * (1 - Math.exp(-elapsed(sim) / 420));
@@ -845,14 +1031,254 @@ function goldenBoostDurationMs(sim) {
   return P.golden.boostBase + P.golden.boostExtraCap * rawExtra / (rawExtra + P.golden.boostExtraHalf);
 }
 
+// ==== 各回の期待値方式(第12次・2026-07-06 ユーザー採用): 同一周回内で「稼ぎ力」を測る ====
+// やり直し比較(replay)を廃止し、各tickで「機能込みの瞬間稼ぎ力 ÷ 機能抜きの瞬間稼ぎ力」を測って
+// 周回平均(対数平均)を取る。同じ状態を2通り評価するだけなので、分かれ道のズレが原理的に発生しない。
+// 稼ぎ力 = 直接生産 + 金クッキー収入率 + 討伐報酬(投資)価値率 の合成。すべて現在状態から式で算出。
+const KILL_VALUE_SEC = 7;   // 討伐1体の価値を「生産◯秒ぶん」で近似。㉘: balancedの序盤討伐シェア(4-9%)を≥10%へ底上げ(5→7)。③⑨⑬は枝分かれrobust化済みで非干渉
+// earningPower は副作用のある関数(monsterStayMs 等が next*Multiplier をリセット)を呼ぶため、
+// 揮発フィールドを退避・復元して純粋化する(測定が実シミュの状態を壊さないように)
+function earningPowerSafe(sim) {
+  const r = sim.run;
+  const a = r.nextMonsterStayMultiplier, b = r.nextMonsterSpawnMultiplier, c = r.nextGoldenSpawnMultiplier, d = r.nextMonsterHpMultiplier;
+  const v = earningPower(sim);
+  r.nextMonsterStayMultiplier = a; r.nextMonsterSpawnMultiplier = b; r.nextGoldenSpawnMultiplier = c; r.nextMonsterHpMultiplier = d;
+  return v;
+}
+// 設備直送生産(第12次J・提案A): 生産設備が最高層に応じた直接収入を生む。金ブースト/討伐報酬の
+// 乗算を受けない独立項(設備固有の稼ぎ口)。㉘の設備シェアを後半も保つ。baseCps は素の設備生産。
+// ==== ジャンル直送収入(第12次J-3・ユーザー2026-07-08「オーブンが強すぎるなら他も強く」) ====
+// 各稼ぎ口(設備/金/討伐/タップ)に、そのジャンルへ投資したプレイヤーだけ強く効く独立収入を対称に用意する。
+//   直送 = coef × base(=cps+タップ=生産レート) × (ジャンル投資量/ref)^countPow × (最高層-startStage)^stagePow
+// base比例で後半も金/討伐に dwarf されず主役を張れる大きさになり、投資量^countPow でそのジャンルの
+// プレイヤーだけ大きく効く(他方針では小さい)。すべて skill→research→効果 の順でゲートし、
+// ジャンルごとにスキル解放でプレイヤーへ情報開示する(移植時)。全生産倍率ではないので㉘の独占も再発しない。
+function genreDirect(sim, base, invest, cfg) {
+  if (!cfg || !cfg.coef) return 0;
+  const s = Math.max(0, (sim.run.maxStage || 0) - (cfg.startStage || 0));
+  if (s <= 0) return 0;
+  return cfg.coef * base * Math.pow(Math.max(0, invest) / (cfg.ref || 1), cfg.countPow || 2) * Math.pow(s, cfg.stagePow || 0.5);
+}
+// 設備直送: 投資量=オーブン所持数。ゲート=オーブン大量焼成 段階2(スキル auto_3→段階2購入→効果)。
+function equipDirectIncome(sim, base) {
+  if (!resStage2(sim, 'ovenBatch')) return 0;
+  return genreDirect(sim, base, sim.run.upgrades.oven || 0, P.equipDirect);
+}
+// 金直送: 投資量=金perk合計。ゲート=香料調合 段階2(スキル golden_1→段階2購入→効果)。
+function goldenDirectIncome(sim, base) {
+  if (!resStage2(sim, 'spiceBlend')) return 0;
+  const r = sim.run;
+  const inv = (r.perks.goldenAmount || 0) + (r.perks.goldenPower || 0) + (r.perks.goldenRate || 0);
+  return genreDirect(sim, base, inv, P.goldenDirect);
+}
+// 討伐直送: 投資量=討伐perk合計。ゲート=異世界接続網 段階2(スキル monster_3→段階2購入→効果)。
+function huntDirectIncome(sim, base) {
+  if (!resStage2(sim, 'portalNetwork')) return 0;
+  const r = sim.run;
+  const inv = (r.perks.monsterDamage || 0) + (r.perks.crackedFang || 0) + (r.perks.beastHeatFerment || 0) + (r.perks.huntingCore || 0);
+  return genreDirect(sim, base, inv, P.huntDirect);
+}
+// タップ直送: 投資量=クリック系(神の指+強い指/10)。ゲート=指先の型 段階2(スキル click_2→段階2購入→効果)。
+function tapDirectIncome(sim, base) {
+  if (!resStage2(sim, 'fingerTechnique')) return 0;
+  const r = sim.run;
+  const inv = (r.upgrades.godFinger || 0) + (r.upgrades.finger || 0) * 0.1;
+  return genreDirect(sim, base, inv, P.tapDirect);
+}
+// 銀行配当(直送・第12次J-3 腐り解消): 銀行の所持数と貯蓄(総クッキー桁)で毎秒生産へ加算する独立収入。
+// ゲート=銀行クリック配当研究(resActive=①測定トグル対応)。クリック方針で厚く効く(既存の×1.08と整合)。
+// 所持数は log10 で床のある増幅(早い周回でも効く=①の各回minを満たす)。増加方向の変数のみ、既存bankMは保持。
+function bankDirectIncome(sim, base) {
+  const cfg = P.bankDirect;
+  if (!cfg || !cfg.coef) return 0;
+  if (!resActive(sim, 'bankClickDividend')) return 0;
+  const r = sim.run;
+  const bank = r.upgrades.bank || 0;
+  if (bank <= 0) return 0;
+  const saved = Math.log10(r.cookies + 10);
+  const polM = policyIs(sim, 'click') ? (cfg.clickBonus || 1) : 1;
+  // 所持数の項: log10 の床(早い周回でも効く)+ 累乗項(他直送のinvest^2に置いていかれないよう後半で追随)。両方とも増加方向。
+  const ownM = 1 + (cfg.ownRate || 0) * Math.log10(1 + bank)
+             + (cfg.countCoef || 0) * Math.pow(bank / (cfg.ref || 1), cfg.countPow || 1);
+  return cfg.coef * base * ownM
+       * (1 + Math.log1p(saved) * (cfg.savedCoef || 0)) * polM;
+}
+function earningPower(sim) {
+  const r = sim.run;
+  const prod = computeProd(sim);
+  const tapRate = sim.strat.tapRate;
+  const tapOrig = prod.clickEV * (r.monster ? 0 : tapRate);
+  const base = prod.cps + tapOrig; // 直接生産(モンスター中はタップは討伐へ)
+  // タップ直送は base に含める(タップ稼ぎ口へ。incomeParts の tap 抽出でも同額を足す)
+  let power = base + tapDirectIncome(sim, base) + equipDirectIncome(sim, base) + bankDirectIncome(sim, base); // 設備直送→equip / タップ直送→tap / 銀行配当→equip残差
+  // 金クッキー収入率(期待値/秒): 間隔は spawnFactor、1回の価値は即時+ブーストの平均。+金直送→golden
+  if (!(sim._mdChan && sim._mdChan.golden)) {
+    const mean = (P.golden.spawnMin + P.golden.spawnMax) / 2;
+    const interval = Math.max(1, mean * goldenSpawnFactor(sim) / 1000);
+    const instant = Math.max(prod.baseCps, prod.baseClick) * P.golden.instantCoef * goldenAmountMultiplier(sim);
+    const boostVal = Math.max(0, goldenMultiplierVal(sim) - 1) * prod.cps * (goldenBoostDurationMs(sim) / 1000);
+    power += (instant + boostVal) / 2 / interval + goldenDirectIncome(sim, base);
+  }
+  // 討伐報酬(投資)価値率: 討伐/秒 × 生産KILL_VALUE_SEC秒ぶん。ダメージ・出現・滞在の報酬がここに効く。+討伐直送→hunt
+  if (!(sim._mdChan && sim._mdChan.hunt)) {
+    const mean = (P.monster.spawnMin + P.monster.spawnMax) / 2;
+    const interval = Math.max(1, mean * monsterSpawnFactor(sim) / 1000);
+    const level = monsterLevel(sim);
+    const hp = Math.max(1, monsterHpValue(sim, level));
+    const dmg = Math.max(1, monsterDamage(sim, prod));
+    const ttk = hp / Math.max(1e-9, dmg * tapRate); // 撃破所要秒
+    const stay = monsterStayMs(sim) / 1000;
+    const killable = ttk <= stay ? 1 : 0;             // 滞在内に倒せるか(滞在報酬が効く)
+    // 出現頻度報酬の討伐手数ボーナス(増加方向・飽和形): killsPerSec への ttk 非依存の純乗算。
+    // 兄弟の討伐報酬(滞在/連戦/深追い)を disable して測る utility比では分子分母が同じ係数で割れて比が
+    // 保たれ、かつ ttk に依存しないため低生産(高ttk)局面の instant 中央値も持ち上がる。上限付きで高Lv暴走を防ぐ。
+    const mrLv = rwOff(sim, 'monsterRate') ? 0 : Math.max(0, sim.run.perks.monsterRate || 0);
+    const rateTempo = 1 + (P.monster.rateKillBonus || 0) * mrLv / (mrLv + (P.monster.rateKillHalf || 1));
+    const killsPerSec = killable / (interval + ttk) * rateTempo;
+    power += killsPerSec * base * KILL_VALUE_SEC + huntDirectIncome(sim, base);
+  }
+  return power;
+}
+// 測定対象の機能一覧(_md キー)。取得済みのものだけ測る
+function measureFeatureKeys(sim) {
+  const keys = [];
+  for (const rr of RESEARCH) if (sim.run.research[rr.id]) keys.push('res:' + rr.id);
+  for (const rw of REWARD_POOL) if (sim.run.perks[rw.id] > 0) keys.push('rw:' + rw.id);
+  for (const rr of RESEARCH) { if (sim.run.research2[rr.id]) keys.push('stage:' + rr.id + ':2'); if (sim.run.research3[rr.id]) keys.push('stage:' + rr.id + ':3'); }
+  if (P.chain && sim.run.kills > 0) keys.push('chain'); // 討伐連鎖(参考計測。合否は③②⑫㉘経由)
+  return keys;
+}
+const MEASURE_POLICIES = ['balanced', 'click', 'golden', 'hunt', 'bake'];
+
+// ==== ㉘稼ぎ口比率(2026-07-06 採用・3-2反映済み): 収入の4分解(設備生産/金/討伐由来/タップ) ====
+// 【第12次J・(ii) attribution 見直し(ユーザー承認 2026-07-07)】旧方式は hunt/golden の機能セットを丸ごとオフ
+// して earningPower の base(=cps+tap)を崩壊させ、その崩壊分を討伐由来/金に計上していた。だが chain・獣熱発酵・
+// 狩猟核・異世界増幅などは「討伐活動連動の全生産倍率」で全方針の base を共通に押し上げるため、これを丸ごと
+// 討伐由来にするのが後半95%独占の原因だった。→ 新方式では全生産倍率を base に残して全稼ぎ口で共有し(=share比で
+// 相殺)、各稼ぎ口は「その直接収入項」だけで測る(下 incomeParts 参照)。旧セット(HUNT_FEATURE_SET 等)は廃止。
+function incomeParts(sim, pAll) {
+  const r = sim.run;
+  const clear = () => { sim._bkT = -1; sim._stT = -1; };
+  // ㉘ attribution 見直し(第12次J・(ii)ユーザー承認 2026-07-07):
+  // 従来は hunt機能を全オフ(_mdSet=HUNT_FEATURE_SET)して earningPower の base(=cps+tap)自体を崩壊させ、
+  // その崩壊分を丸ごと「討伐由来」に計上していた。だが chain/獣熱発酵/狩猟核/異世界増幅などは
+  // 「討伐活動に連動して全生産を持ち上げる倍率」で、bake等あらゆる方針の生産(base)を共通に押し上げる。
+  // これを丸ごと討伐由来にするのが後半95%独占(bake=3/47)の正体だった(第12次J-2実測)。
+  // 【新方式】全生産倍率は base に残して全稼ぎ口で共有(=share比で相殺)し、各稼ぎ口は「その直接収入項」だけで測る:
+  //   討伐由来 = 討伐報酬項(killsPerSec×base×KILL_VALUE_SEC) / 金 = 金クッキー項 / タップ = タップ項 / 設備 = cps。
+  // base はフル(_mdSet=null 固定)。除外するのは _mdChan で指定した「その稼ぎ口の直接項」のみ。
+  sim._mdSet = null;
+  sim._mdChan = { hunt: true }; clear();
+  const pNoHuntTerm = earningPowerSafe(sim);            // base + 金項(討伐報酬項のみ除外)
+  sim._mdChan = { hunt: true, golden: true }; clear();
+  const pCore = earningPowerSafe(sim);                  // base のみ(討伐報酬項・金項を除外)
+  const prodCore = computeProd(sim);
+  const tapOrig = prodCore.clickEV * (r.monster ? 0 : sim.strat.tapRate);
+  const baseCore = prodCore.cps + tapOrig;
+  const tapRaw = tapOrig + tapDirectIncome(sim, baseCore); // タップ稼ぎ口=タップ項+タップ直送
+  sim._mdChan = null; clear();
+  if (!(pAll > 0) || !Number.isFinite(pAll) || !(pCore >= 0) || !Number.isFinite(pCore)) return null;
+  const tap = Math.max(0, Math.min(tapRaw, pCore));
+  return {
+    hunt: Math.max(0, pAll - pNoHuntTerm),
+    golden: Math.max(0, pNoHuntTerm - pCore),
+    tap,
+    equip: Math.max(0, pCore - tap)
+  };
+}
+// 1サンプル: 各機能の「稼ぎ力の持ち上げ幅」を対数で積算。周回内キャッシュは都度クリアして正しく再計算
+function measureTick(sim) {
+  const r = sim.run;
+  if (!r._meas) r._meas = {};
+  const clearCaches = () => { sim._bkT = -1; sim._stT = -1; };
+  clearCaches();
+  const pOn = earningPowerSafe(sim);
+  if (!(pOn > 0) || !Number.isFinite(pOn)) return;
+  for (const key of measureFeatureKeys(sim)) {
+    sim._md = key;
+    clearCaches();
+    const pOff = earningPowerSafe(sim);
+    sim._md = null;
+    clearCaches();
+    if (pOff > 0 && Number.isFinite(pOff)) {
+      const m = r._meas[key] || (r._meas[key] = { s: 0, n: 0 });
+      m.s += Math.log(pOn / pOff); m.n++;
+    }
+  }
+  // ⑬タイミング: idleTiming を opt で一時切替(最適操作=既定 / 放置=idle)して稼ぎ力比
+  for (const tf of TIMING_KEYS) {
+    const [rid, st] = tf.stage.split(':');
+    const active = st === '2' ? r.research2[rid] : r.research3[rid];
+    if (!active) continue;
+    const savedIdle = sim.opt.idleTiming;
+    sim.opt.idleTiming = tf.key; clearCaches();
+    const pIdle = earningPowerSafe(sim);
+    sim.opt.idleTiming = savedIdle; clearCaches();
+    if (pIdle > 0 && Number.isFinite(pIdle)) {
+      const m = r._meas['timing:' + tf.key] || (r._meas['timing:' + tf.key] = { s: 0, n: 0 });
+      m.s += Math.log(pOn / pIdle); m.n++;
+    }
+  }
+  // ㉘稼ぎ口比率: 各tickの収入シェアを積算し周回平均を取る(絶対量で足すと垂直成長の終盤が
+  // 支配するため、シェアの単純平均=周回を通した「時間平均の稼ぎ口構成」で見る【集計方法は仮】)
+  {
+    const parts = incomeParts(sim, pOn);
+    if (parts) {
+      const tot = parts.equip + parts.golden + parts.hunt + parts.tap;
+      if (tot > 0 && Number.isFinite(tot)) {
+        const inc = r._inc || (r._inc = { equip: 0, golden: 0, hunt: 0, tap: 0, n: 0 });
+        inc.equip += parts.equip / tot; inc.golden += parts.golden / tot;
+        inc.hunt += parts.hunt / tot; inc.tap += parts.tap / tot; inc.n++;
+      }
+    }
+  }
+  // ⑫文脈依存性: 5方針それぞれの稼ぎ力(この周回の中身に対して)。argmax を後で集計
+  if (!r._polPow) r._polPow = {};
+  const savedPol = r.policy;
+  for (const pol of MEASURE_POLICIES) {
+    r.policy = pol; clearCaches();
+    const pp = earningPowerSafe(sim);
+    if (pp > 0 && Number.isFinite(pp)) r._polPow[pol] = (r._polPow[pol] || 0) + Math.log(pp);
+  }
+  r.policy = savedPol; clearCaches();
+}
+// 周回終了時に _meas / _polPow を平均して記録に落とす
+function finalizeMeasure(run) {
+  const lift = {};
+  if (run._meas) for (const [k, m] of Object.entries(run._meas)) if (m.n > 0) lift[k] = Math.exp(m.s / m.n);
+  let bestPol = null, bestV = -Infinity;
+  if (run._polPow) for (const [pol, v] of Object.entries(run._polPow)) if (v > bestV) { bestV = v; bestPol = pol; }
+  let income = null;
+  if (run._inc && run._inc.n > 0) {
+    const i = run._inc;
+    income = { equip: i.equip / i.n, golden: i.golden / i.n, hunt: i.hunt / i.n, tap: i.tap / i.n };
+  }
+  return { lift, bestPol, income };
+}
+// タイミング機能(⑬)の測定: idleTiming を _md ではなく opt で切替えるため別扱い
+const TIMING_KEYS = [
+  { key: 'wave', stage: 'quantumProofing:2' },
+  { key: 'bhCharge', stage: 'blackHoleCompression:2' },
+  { key: 'mature', stage: 'spiceBlend:2' },
+  { key: 'huntExtend', stage: 'portalNetwork:2' }
+];
+
+// まとめ買い割増(2026-07-06 ユーザー採用): 現在の熱量(時間減衰込み)
+function surgeHeat(sim, id) {
+  const sg = sim.run.surge && sim.run.surge[id];
+  if (!sg || !(sg.h > 0)) return 0;
+  return sg.h * Math.pow(0.5, (sim.t - sg.t) / Math.max(1, P.upSurge.halfSec));
+}
 function upgradeCost(sim, u) {
   const owned = sim.run.upgrades[u.id];
   const disc = Math.exp(-Math.max(0, skillEffect(sim, 'upgradeDiscount')));
   // 所有数指数: knee以降は急勾配(大量買い占め抑制)
   const knee = P.upCost.knee || Infinity;
   const e = owned <= knee ? owned * P.upCost.ownPow : knee * P.upCost.ownPow + (owned - knee) * (P.upCost.ownPow2 || P.upCost.ownPow);
+  // まとめ買い割増: (1+perBuy)^熱量。時間経過で元に戻る(=壁ができない)
+  const surge = Math.pow(1 + (P.upSurge ? P.upSurge.perBuy : 0), surgeHeat(sim, u.id));
   // 丸め規則: 設備コストは有効数字3桁=5の倍数+小数切り捨て(表示も内部値もこの値)
-  return q5cost(P.upCost.coef * Math.pow(u.base, P.upCost.basePow) * Math.pow(u.growth, e) * disc);
+  return q5cost(P.upCost.coef * Math.pow(u.base, P.upCost.basePow) * Math.pow(u.growth, e) * surge * disc);
 }
 function researchCostOf(sim, id) {
   const disc = Math.exp(-Math.max(0, skillEffect(sim, 'researchDiscount')));
@@ -860,8 +1286,8 @@ function researchCostOf(sim, id) {
 }
 // 研究の段階 (1=購入 / 2,3=対応スキル取得後に購入欄へカード追加→クッキーで購入して有効化)
 // disableStage='研究id:2' 等で単体効果ゼロ化(購入行動は同一。条件⑨用)
-function resStage2(sim, id) { return !!sim.run.research2[id] && sim.opt.disableStage !== id + ':2'; }
-function resStage3(sim, id) { return !!sim.run.research3[id] && sim.opt.disableStage !== id + ':3'; }
+function resStage2(sim, id) { return !!sim.run.research2[id] && sim.opt.disableStage !== id + ':2' && sim._md !== 'stage:' + id + ':2' && !(sim._mdSet && sim._mdSet.has('stage:' + id + ':2')); }
+function resStage3(sim, id) { return !!sim.run.research3[id] && sim.opt.disableStage !== id + ':3' && sim._md !== 'stage:' + id + ':3' && !(sim._mdSet && sim._mdSet.has('stage:' + id + ':3')); }
 // 段階カードの表示条件: 前段階を購入済み かつ 対応スキルを取得済み
 function researchStageUnlocked(sim, id, stage) {
   const r = sim.run;
@@ -869,10 +1295,12 @@ function researchStageUnlocked(sim, id, stage) {
   if (stage === 2) return !!sim.skills[RES_STAGE2[id]];
   return !!r.research2[id] && !!sim.skills[RES_STAGE3[id]];
 }
-// 段階コスト: 段1コスト×倍率(確定: 段2=×1,500 / 段3=×2,250,000)。researchDiscountは段1と同様に効く
+// 段階コスト: 段1コスト×倍率。研究ごとの個別倍率(resStageCostEach: 値段割りD'用)があれば優先、
+// なければ共通倍率(resStageCost)。researchDiscountは段1と同様に効く
 function researchStageCostOf(sim, id, stage) {
   const disc = Math.exp(-Math.max(0, skillEffect(sim, 'researchDiscount')));
-  const mult = stage === 2 ? P.resStageCost.s2 : P.resStageCost.s3;
+  const each = P.resStageCostEach && P.resStageCostEach[id];
+  const mult = stage === 2 ? ((each && each.s2) || P.resStageCost.s2) : ((each && each.s3) || P.resStageCost.s3);
   return q5cost(P.resCost[id] * mult * disc);
 }
 // capv(効果キャップ)は2026-07-05のキャップ全撤廃で削除済み
@@ -884,7 +1312,9 @@ function prestigeGainOf(runCookies) {
   return Math.max(1, Math.floor(pp.pA * (1 - Math.exp(-t / pp.pD1)) + pp.pB * Math.pow(t / pp.pD2, pp.pG)));
 }
 function prestigeUnlockedFn(sim) {
-  return sim.totalCookies >= 1000000 || sim.prestigeTotal > 0 || sim.prestigeRuns > 0;
+  // 初回転生のしきい値=firstCost(2026-07-09 ユーザー・ゲーム仕様変更=500万)。以降は prestigeTotal/Runs で解放済み。
+  const firstCost = (P.prestige && P.prestige.firstCost != null) ? P.prestige.firstCost : 5e6;
+  return sim.totalCookies >= firstCost || sim.prestigeTotal > 0 || sim.prestigeRuns > 0;
 }
 
 // 可視アップグレード(店に並ぶもの)
@@ -896,6 +1326,9 @@ function visibleUpgrades(sim) {
 }
 
 // ================= イベント処理 =================
+// クッキー数の上限: 2026-07-06 ユーザー許可「上限は超えてもよい」。クランプはしない。
+// ツリー完成後の超長時間放置では浮動小数の上限(~1.8e308)を超えて Infinity 表示になり得るが許容。
+// 有限性の判定は「転生する周回」のみを対象とする(転生周回の最大は ~e155 で十分収まる)。
 function earn(sim, amount) {
   if (!(amount > 0)) return 0;
   sim.run.cookies += amount;
@@ -911,7 +1344,7 @@ function collectGolden(sim, prod) {
   if (resActive(sim, 'spiceBlend') && resStage2(sim, 'spiceBlend')) {
     const mature = Math.max(0, sim.t - (r.lastGoldenT || r.startT)); // キャップ撤廃(旧min 240s)
     // タイミング(条件⑬): 完全放置は爆発窓に行動を寄せられないため係数を減衰
-    const matureEff = sim.opt.idleTiming === 'mature' ? P.timing.matureIdleMul : 1;
+    const matureEff = idleOn(sim, 'mature') ? P.timing.matureIdleMul : 1;
     let burst = 1 + P.res2.matureRate * mature * matureEff;
     if (resStage3(sim, 'spiceBlend')) burst *= 1 + P.res2.spiceStageCoef * r.maxStage;
     r.spiceBurstM = burst;
@@ -921,7 +1354,9 @@ function collectGolden(sim, prod) {
   if ((r.perks.goldenChain || 0) > 0 && sim.opt.disableReward !== 'goldenChain') r.goldenChainReady = true;
   if ((r.perks.goldenFirstHit || 0) > 0 && sim.opt.disableReward !== 'goldenFirstHit') r.goldenFirstHitReady = true;
   if (resActive(sim, 'spiceBlend')) r.spiceBoostUntil = sim.t + (P.res.spiceGoldDur + Math.log1p(r.upgrades.spiceRack || 0) * 1800) / 1000;
-  if (resActive(sim, 'portalNetwork')) r.portalHuntUntil = sim.t + (P.res.portalHuntDur * lg(r.upgrades.portal || 0, P.res.portalHuntGrow)) / 1000;
+  // ⑬延長狩り作り替え(2026-07-09・承認事項2の式変更): 狩り窓は金クッキーでは開かない(旧・金で開く/再設定は、
+  // はやて連鎖の金高頻度化で「常時ON(延長無意味)」か「短すぎて窓内討伐ゼロ(延長不発)」の両端にしか倒れず死んでいた)。
+  // 窓は討伐そのものが開く・維持する(下・kill側)。ここでは何もしない。
 
   // 期待値: 交互に即時獲得/ブースト
   sim.goldenAlt ^= 1;
@@ -942,25 +1377,27 @@ function collectGolden(sim, prod) {
   }
 }
 
-function buildRewardOffer(sim, level) {
+function buildRewardOffer(sim, level, typeId) {
   const r = sim.run;
-  const baseCount = 1 + Math.floor(level / P.reward.lvPerCount);
-  const deepBonus = Math.pow(P.rw.deepPursuitReward, sim.opt.disableReward === 'deepPursuit' ? 0 : (r.perks.deepPursuit || 0));
+  // 鉄焼きガード等: 種類による報酬レベル加算(ゲームの rewardLvAdd と同じ)
+  const lvAdd = (P.mtype && P.mtype.rewardLvAdd && P.mtype.rewardLvAdd[typeId]) || 0;
+  // 討伐連鎖(第12次D): 報酬レベル +floor(rewardCoef×連鎖数)
+  const chainLv = P.chain ? Math.floor(P.chain.rewardCoef * chainCount(sim)) : 0;
+  const baseCount = 1 + Math.floor((level + lvAdd + chainLv) / P.reward.lvPerCount);
+  const deepBonus = Math.pow(P.rw.deepPursuitReward, rwOff(sim, 'deepPursuit') ? 0 : (r.perks.deepPursuit || 0));
   const penalty = Math.max(0, r.huntFocusRewardPenalty || 0);
   const count = Math.max(1,
     Math.floor(baseCount * (1 + skillEffect(sim, 'rewardBonus')) * deepBonus)
     + Math.max(0, Math.floor(r.nextRewardCountBonus || 0)) - penalty);
   r.huntFocusRewardPenalty = 0;
-  const choiceLimit = P.reward.choiceBase + Math.max(0, Math.floor(skillEffect(sim, 'rewardChoices')));
+  // ステージボス: 選択肢+1(種類仕様・第9次)
+  const bossBonus = typeId === 'boss' ? ((P.mtype && P.mtype.bossChoiceBonus) || 0) : 0;
+  const choiceLimit = P.reward.choiceBase + bossBonus + Math.max(0, Math.floor(skillEffect(sim, 'rewardChoices')));
 
   const unlockedPerks = REWARD_POOL.filter(x => rewardUnlockedFn(sim, x));
-  const ownedUps = UPGRADES.filter(u => r.upgrades[u.id] > 0 && upgradeUnlocked(sim, u));
+  // モンスター報酬に「固定で設備強化(upgrade)が1枠入る」仕様は撤廃(2026-07-08 ユーザー決定)。
+  // 報酬は報酬プール(perk)のみから決定的ローテーションで選ぶ。
   const offer = [];
-  if (ownedUps.length > 0) {
-    const u = ownedUps[sim.upRotIdx % ownedUps.length]; sim.upRotIdx++;
-    offer.push({ kind: 'upgrade', id: u.id, count });
-  }
-  // 残りは決定的ローテーションで選ぶ(期待値近似)
   const pool = unlockedPerks.map(x => ({ kind: 'perk', id: x.id, category: x.category, count }));
   for (let k = 0; k < pool.length && offer.length < choiceLimit; k++) {
     const c = pool[(sim.rotIdx + k) % pool.length];
@@ -970,42 +1407,61 @@ function buildRewardOffer(sim, level) {
   return offer;
 }
 
-function applyReward(sim, choice) {
+function applyReward(sim, choice, typeId) {
   const r = sim.run;
   const cat = choice.kind === 'perk'
     ? (REWARD_POOL.find(x => x.id === choice.id) || {}).category || 'equipment'
     : 'equipment';
+  // モンスター種類×報酬相性(第9次): 増分 = max(1, floor(基本量 × 相性倍率))
+  const aff = affinityOf(sim, typeId || 'normal', cat);
+  const count = Math.max(1, Math.floor(choice.count * aff));
   if (choice.kind === 'perk') {
     if (sim.firstPerk[choice.id] === undefined) sim.firstPerk[choice.id] = sim.t;
-    r.perks[choice.id] += choice.count;
-    if (choice.id === 'huntFocus') r.huntFocusLv = (r.huntFocusLv || 0) + choice.count;
+    r.perks[choice.id] += count;
+    if (choice.id === 'huntFocus' && !rwOff(sim, 'huntFocus')) r.huntFocusLv = (r.huntFocusLv || 0) + count;
   } else {
-    r.upgradePerks[choice.id] += choice.count;
+    r.upgradePerks[choice.id] += count;
   }
-  r.rewardCategoryCounts[cat] = (r.rewardCategoryCounts[cat] || 0) + choice.count;
+  r.rewardCategoryCounts[cat] = (r.rewardCategoryCounts[cat] || 0) + count;
+  r.rewardByType[typeId || 'normal'] = (r.rewardByType[typeId || 'normal'] || 0) + count;
 }
 
 function defeatMonster(sim, mon) {
   const r = sim.run;
-  r.kills++;
-  // 異世界接続網 段階2: 狩り窓中の討伐で窓を延長(完全放置は窓中に討伐を寄せられず延長なし: 条件⑬)
-  if (resActive(sim, 'portalNetwork') && resStage2(sim, 'portalNetwork') && sim.t < r.portalHuntUntil
-    && sim.opt.idleTiming !== 'huntExtend') {
-    r.portalHuntUntil += P.res2.huntExtendSec;
+  const typeId = mon.typeId || 'normal';
+  const M = P.mtype;
+  // こつぶ群れ=3体分(討伐数・報酬イベントとも)。ボスは討伐周期をリセット
+  const units = (M && M.rewardEvents && M.rewardEvents[typeId]) || 1;
+  r.kills += units;
+  r.killsByType[typeId] = (r.killsByType[typeId] || 0) + units;
+  if (typeId === 'boss') r.killsSinceBoss = 0; else r.killsSinceBoss += units;
+  // はやての運び屋: 撃破すると次の金クッキーが早く来る
+  if (typeId === 'speedy' && M) r.nextGoldenSpawnMultiplier *= M.speedyGoldenCut;
+  // 異世界接続網 段階2: 延長狩り(⑬・2026-07-09 作り替え)= 討伐のリズムを保つと狩り窓が続く。
+  // 討伐のたびに窓を「今+huntExtendSec」まで張り直す(討伐間隔<huntExtendSec なら窓が途切れない)。
+  // 完全放置は張り直しに気づかない=窓なし。金クッキー非依存なので常時ON/不発の両端に倒れない。
+  if (resActive(sim, 'portalNetwork') && resStage2(sim, 'portalNetwork') && !idleOn(sim, 'huntExtend')) {
+    r.portalHuntUntil = Math.max(r.portalHuntUntil, sim.t + P.res2.huntExtendSec);
   }
-  if (!r.quotaFailed) r.quotaMonsterKills++;
-  const chainPrepLv = sim.opt.disableReward === 'chainPrep' ? 0 : (r.perks.chainPrep || 0);
+  if (!r.quotaFailed) r.quotaMonsterKills += units;
+  // 討伐連鎖(第12次D): breakSec以内の連続討伐で+units(こつぶ群れ=3体分)、途切れたら振出し
+  if (P.chain) {
+    r.chainN = (sim.t - r.chainLastT) <= chainBreakSec(sim) ? r.chainN + units : units;
+    r.chainLastT = sim.t;
+    if (r.chainN > r.chainMax) r.chainMax = r.chainN;
+  }
+  const chainPrepLv = rwOff(sim, 'chainPrep') ? 0 : (r.perks.chainPrep || 0);
   if (chainPrepLv > 0) {
     r.nextMonsterSpawnMultiplier *= Math.exp(-chainPrepLv * P.rw.chainPrepSpawn);
     r.nextMonsterHpMultiplier *= Math.pow(P.rw.chainPrepHp, chainPrepLv);
   }
-  const beastScentLv = sim.opt.disableReward === 'beastScent' ? 0 : (r.perks.beastScent || 0);
+  const beastScentLv = rwOff(sim, 'beastScent') ? 0 : (r.perks.beastScent || 0);
   if (beastScentLv > 0) r.nextGoldenSpawnMultiplier *= Math.exp(-beastScentLv * P.rw.beastScent);
 
   const focusLv = r.huntFocusLv || 0;
   let bonus = 0;
   if (focusLv > 0) { bonus += 1; r.huntFocusLv = 0; }
-  const mutationLv = sim.opt.disableReward === 'goldenBeastMutation' ? 0 : (r.perks.goldenBeastMutation || 0);
+  const mutationLv = rwOff(sim, 'goldenBeastMutation') ? 0 : (r.perks.goldenBeastMutation || 0);
   if (mutationLv > 0 && goldenBoostActive(sim)) {
     // 期待値: 確率を蓄積して1超えで+1
     const chance = 1 - Math.exp(-(P.rw.mutationBase + mutationLv * P.rw.mutationPerLv));
@@ -1013,10 +1469,14 @@ function defeatMonster(sim, mon) {
   }
   r.nextRewardCountBonus += bonus;
 
-  const offer = buildRewardOffer(sim, mon.level);
-  r.nextRewardCountBonus = 0;
-  const pick = sim.strat.pickReward(sim, offer);
-  if (pick) applyReward(sim, pick);
+  // 種類ごとの報酬イベント(こつぶ群れは1体ずつ×3回。相性は1体あたりで適用)
+  r.lastKillType = typeId; // 報酬選択画面に「種類と相性倍率」が表示される(方針はこれを見て選べる)
+  for (let ev = 0; ev < units; ev++) {
+    const offer = buildRewardOffer(sim, mon.level, typeId);
+    if (ev === 0) r.nextRewardCountBonus = 0;
+    const pick = sim.strat.pickReward(sim, offer);
+    if (pick) applyReward(sim, pick, typeId);
+  }
 }
 
 // ================= 転生処理 =================
@@ -1034,14 +1494,28 @@ function cheapestUnownedSkillCost(sim) {
   if (bestAny !== Infinity) return bestAny;
   return null;
 }
+// 転生に必要な所持クッキー(2026-07-08 ゲーム仕様: 10のべき乗・転生ごとに前回より大)。
+// 必要量 = 10^(costExp0 + costStep×これまでの転生回数)。prestigeRuns は転生完了ごとに+1されるので、
+// 次の転生の必要量は毎回きっちり costStep 桁ぶん大きくなる。
+function prestigeCostOf(sim) {
+  // 転生のクッキー必要量(2026-07-09 ユーザー・ゲーム仕様変更): 初回転生=500万(firstCost)、
+  // 以降は10のべき乗で増加(10^7, 10^8, 10^9…)。初回だけ500万の固定値、2回目以降は 10^(costExp0+costStep×回数)。
+  const pc = P.prestige || {};
+  const runs = sim.prestigeRuns || 0;
+  if (runs === 0) return pc.firstCost != null ? pc.firstCost : 5e6;
+  const exp = (pc.costExp0 != null ? pc.costExp0 : 6) + (pc.costStep != null ? pc.costStep : 1) * runs;
+  return Math.pow(10, exp);
+}
 function doPrestige(sim) {
   const r = sim.run;
-  // 転生には所持クッキー100万の消費が必要
-  if (r.cookies < 1000000) return false;
+  // 転生には「10のべき乗・前回より大」の所持クッキー消費が必要(prestigeCostOf)
+  const cost = prestigeCostOf(sim);
+  if (r.cookies < cost) return false;
   const gain = prestigeGainOf(r.runCookies);
   if (gain <= 0) return false;
   const nextCostAt = cheapestUnownedSkillCost(sim); // ⑭: 購入前の次スキル最安
-  r.cookies -= 1000000;
+  const onHandCookies = r.cookies; // 転生時の所持クッキー(コスト控除前・第0回コスト再算定用=diag_prestige0.js)
+  r.cookies -= cost;
   sim.prestige += gain;
   sim.prestigeTotal += gain;
   sim.prestigeRuns++;
@@ -1052,9 +1526,10 @@ function doPrestige(sim) {
     startT: r.startT, endT: sim.t,
     duration: sim.t - r.startT,
     runCookies: r.runCookies,
+    prestigeCookies: onHandCookies,
     quotaHold: r.quotaHoldSeconds,
     maxStage: r.maxStage,
-    kills: r.kills, golden: r.goldenTaken,
+    kills: r.kills, golden: r.goldenTaken, chainMax: r.chainMax,
     gain,
     researchBought: Object.keys(r.research).filter(k => r.research[k]),
     stages2: Object.keys(r.research2).filter(k => r.research2[k]),
@@ -1064,7 +1539,10 @@ function doPrestige(sim) {
     perks: Object.assign({}, r.perks),
     upgradePerkTotal: Object.values(r.upgradePerks).reduce((a, b) => a + b, 0),
     upCounts: Object.assign({}, r.upgrades),
-    nextSkillCost: nextCostAt, gainToNext: nextCostAt ? gain / nextCostAt : null
+    nextSkillCost: nextCostAt, gainToNext: nextCostAt ? gain / nextCostAt : null,
+    critAtBuy: r.critAtBuy, critEnd: r.critNow, critMax: r.critMax,
+    killsByType: Object.assign({}, r.killsByType), rewardByType: Object.assign({}, r.rewardByType),
+    measure: finalizeMeasure(r)
   });
 
   // スキル購入(戦略の優先順で、買えるだけ)
@@ -1091,6 +1569,11 @@ function doPrestige(sim) {
   sim.runs[sim.runs.length - 1].skillsBought = bought.length;
   sim.runs[sim.runs.length - 1].skillIds = bought;
   sim._fx = {}; sim._fxHas = {}; sim._stT = -1; sim._bkT = -1;
+
+  // 提案8: 今周回の天井を持ち越す(次周回の層の試練の相対基準)。表示層数は絶対累積のまま。
+  sim.prevMaxStage = r.maxStage;
+  // 提案9: 今周回の長さを持ち越す(次周回の到達連動ノルマの進行比の分母)。
+  sim.prevDuration = sim.t - r.startT;
 
   // 新周回
   sim.run = newRun(sim);
@@ -1126,6 +1609,21 @@ function advanceTick(sim, strategy) {
   {
     sim.t += dt;
     if (sim.hourly && sim.t % 60 === 0) sim.hourly.push(sim.totalCookies);
+    // ⑬タイミング(B案・2026-07-09 ユーザー承認): 同一トラジェクトリの per-tick 稼ぎ力の幾何平均(=時間平均の稼ぎ率)を
+    // 記録。opt-timing/idle-timing の2本でこれを比べると、per-run 効率(転生回数変動でカオス化)を使わず、
+    // かつ全効果と比較した「操作の巧拙」を測れる。60秒ごとに1標本(コスト削減)。timing sim でのみ有効。
+    if (sim.opt.trackTickPower && sim.t % 60 === 0) {
+      const ep = earningPowerSafe(sim);
+      if (ep > 0 && Number.isFinite(ep)) {
+        const lg = Math.log(ep);
+        sim._tpS = (sim._tpS || 0) + lg; sim._tpN = (sim._tpN || 0) + 1;
+        // ⑬タイミングを「取得周回以降」窓で測るため per-tick 稼ぎ力を周回インデックス別にも積算(2026-07-09 ユーザー承認B)。
+        const ri = sim.runs.length; // 現在進行中の周回のidx(push前=runs.length)
+        if (!sim._tpByRun) sim._tpByRun = [];
+        const b = sim._tpByRun[ri] || (sim._tpByRun[ri] = { s: 0, n: 0 });
+        b.s += lg; b.n++;
+      }
+    }
     if (sim.debugTrace && sim.runs.length === sim.opt.debugRunIdx) {
       const rr = sim.run;
       sim.debugTrace.push({ t: sim.t, el: sim.t - rr.startT, c: rr.runCookies, boosts: rr.boosts.length, bm: goldenBoostMultiplier(sim), mon: !!rr.monster, kills: rr.kills, gold: rr.goldenTaken });
@@ -1136,6 +1634,14 @@ function advanceTick(sim, strategy) {
     r.afterheats = r.afterheats.filter(a => a.until > sim.t);
     const prod = computeProd(sim);
     sim._lastProd = prod; // ㉑判定用: 直近の生産値
+    // ㉓(会心1%開始)用: 研究取得直後/転生時点/周回最大の会心率を記録
+    if (prod.critChance > 0) {
+      if (r.critAtBuy === undefined) r.critAtBuy = prod.critChance;
+      r.critNow = prod.critChance;
+      if (prod.critChance > r.critMax) r.critMax = prod.critChance;
+    }
+    // 各回の期待値測定(①②③⑨⑫⑬): 3秒ごとにサンプル。機能込み÷機能抜きの稼ぎ力を対数平均
+    if (sim.opt.measure && sim.t % 3 === 0) measureTick(sim);
     let ahM = 1;
     for (const a of r.afterheats) if (sim.t >= a.from) ahM *= a.mult;
 
@@ -1155,11 +1661,11 @@ function advanceTick(sim, strategy) {
       let hits = tapRate * dt;
       let dealt = hits * dmg * (1 + (r.huntFocusLv || 0)) + firstBonus;
       // 甘噛み回収
-      const biteLv = sim.opt.disableReward === 'biteRecovery' ? 0 : (r.perks.biteRecovery || 0);
+      const biteLv = rwOff(sim, 'biteRecovery') ? 0 : (r.perks.biteRecovery || 0);
       if (biteLv > 0) {
         const rawRec = dmg * clickNow * P.rw.biteRecovery * biteLv * hits;
-        const softLine = Math.max(1, cpsNow * 2);
-        earn(sim, rawRec / (1 + rawRec / softLine) + Math.log1p(rawRec / softLine) * softLine * 0.08);
+        const softLine = Math.max(1, cpsNow * 30); // ③死に報酬対策(第12次P): 回収の天井を cps×2→×30 に引き上げ、総クッキーに効く量へ
+        earn(sim, rawRec / (1 + rawRec / softLine) + Math.log1p(rawRec / softLine) * softLine * 0.4);
       }
       r.monster.hp -= dealt;
       tapsForCookies = 0;
@@ -1182,8 +1688,11 @@ function advanceTick(sim, strategy) {
       }
     }
 
-    // 収入
-    earn(sim, cpsNow * dt + clickNow * tapsForCookies * dt);
+    // 収入(各ジャンル直送: そのジャンルへ投資したプレイヤーだけ効く独立収入を加算=㉘の各主役を後半も立たせる)
+    const dirBase = prod.cps + prod.clickEV * (r.monster ? 0 : tapRate);
+    const directAll = equipDirectIncome(sim, dirBase) + goldenDirectIncome(sim, dirBase)
+      + huntDirectIncome(sim, dirBase) + tapDirectIncome(sim, dirBase) + bankDirectIncome(sim, dirBase);
+    earn(sim, cpsNow * dt + clickNow * tapsForCookies * dt + directAll * dt);
 
     // 銀行クリック配当 段階2: 複利利息。キャップ撤廃: 硬い min(利息, 毎秒生産×2) を
     // 漸近逓減式 raw/(1+raw/soft) に置換(暴走防止。softは段3で最高層に応じ無限に伸びる)
@@ -1208,17 +1717,18 @@ function advanceTick(sim, strategy) {
       r.bhCharge += Math.sqrt(bh) * dt;
       const maxUses = resStage3(sim, 'blackHoleCompression') ? 3 : 2;
       if (r.bhCharge >= P.res2.bhChargeFull && r.bhUses < maxUses && sim.t >= r.bhBoostUntil) {
-        // タイミング(条件⑬): 最適操作は満タンで即発動 / 完全放置は気づくまで遅延
-        if (r.bhReadyAt == null) r.bhReadyAt = sim.t + (sim.opt.idleTiming === 'bhCharge' ? P.timing.bhIdleDelay : 0);
-        if (sim.t >= r.bhReadyAt) {
-          let mult = 1 + P.res2.bhBoostCoef * Math.sqrt(bh) / 10;
-          if (resStage3(sim, 'blackHoleCompression')) mult *= 1 + P.res2.bhBoostStageCoef * r.maxStage;
-          r.bhBoostMult = mult;
-          r.bhBoostUntil = sim.t + P.res2.bhBoostDur;
-          r.bhCharge = 0;
-          r.bhUses++;
-          r.bhReadyAt = null;
-        }
+        // タイミング(条件⑬・2026-07-09 作り替え=承認事項2の式変更): 最適操作=満タンで狙って放出(全力)/
+        // 完全放置=自動で放出されるが効率が落ちる(bhIdleEff倍の増分)。旧・遅延方式(放置は気づくまでbhIdleDelay秒)は
+        // 「発動が周回内に収まるか」の二値で枝分かれ比が〜1.0か>2に二極化し帯[1.05,2.0]に安定して入らないため、
+        // ⑬で安定合格している熟成(matureIdleMul)と同じ「放置=効率減」型へ統一。
+        let mult = 1 + P.res2.bhBoostCoef * Math.sqrt(bh) / 10;
+        if (resStage3(sim, 'blackHoleCompression')) mult *= 1 + P.res2.bhBoostStageCoef * r.maxStage;
+        if (idleOn(sim, 'bhCharge')) mult = 1 + (mult - 1) * (P.timing.bhIdleEff != null ? P.timing.bhIdleEff : 0.5);
+        r.bhBoostMult = mult;
+        r.bhBoostUntil = sim.t + P.res2.bhBoostDur;
+        r.bhCharge = 0;
+        r.bhUses++;
+        r.bhReadyAt = null;
       }
     }
 
@@ -1239,11 +1749,14 @@ function advanceTick(sim, strategy) {
         const met = quota !== null && r.runCookies >= quota;
         if (met && !r.quotaFailed) {
           const level = monsterLevel(sim);
-          const maxHp = Math.max(40, Math.floor(monsterHpValue(sim, level) * (r.nextMonsterHpMultiplier || 1)));
+          const typeId = pickMonsterType(sim);
+          const tHp = (P.mtype && P.mtype.hpMul && P.mtype.hpMul[typeId]) || 1;
+          const tStay = (P.mtype && P.mtype.stayMul && P.mtype.stayMul[typeId]) || 1;
+          const maxHp = Math.max(40, Math.floor(monsterHpValue(sim, level) * tHp * (r.nextMonsterHpMultiplier || 1)));
           r.nextMonsterHpMultiplier = 1;
           r.monster = {
-            level, hp: maxHp, maxHp,
-            stayLeft: monsterStayMs(sim) / 1000,
+            typeId, level, hp: maxHp, maxHp,
+            stayLeft: monsterStayMs(sim) * tStay / 1000,
             goldenChainMultiplier: r.goldenChainReady ? 1 + (r.perks.goldenChain || 0) * effRw(sim, 'goldenChain') : 1,
             goldenFirstHitReady: r.goldenFirstHitReady,
             firstHitUsed: !r.goldenFirstHitReady
@@ -1255,20 +1768,25 @@ function advanceTick(sim, strategy) {
       }
     }
 
-    // ノルマ判定(時間ノルマ+追跡ノルマ)
+    // ノルマ判定(本来のノルマのみ。追跡ノルマは廃止=2026-07-06 ユーザー決定、T3a/T3bはノルマ係数で作る)
     if (!r.quotaFailed) {
-      const quota = monsterQuotaRequired(sim);
+      let quota = monsterQuotaRequired(sim);
       const el = elapsed(sim);
-      // 追跡ノルマ: 成長が停滞すると chase が追いつき未達になる(⑧)
-      let chaseFail = false;
-      // act: チェイス発動遅延(周回前半は追わない。ゲームは総プレイ時間スケールの「維持フェーズ」タイマーで実装)
-      // 2段階帯域: 初転生後は Y=1440+8√x スケールで発動(⑦の維持時間帯域と揃える)
-      const chaseAct = P.quota.chase && P.quota.chase.act ? P.quota.chase.act * bandY(sim.prestigeRuns > 0, r.startT) : 0;
-      if (P.quota.chase && el > Math.max(P.quota.graceSec, chaseAct)) {
-        r.chase = Math.max(r.chase * Math.pow(10, r.chaseTheta * dt), r.runCookies * Math.pow(10, -P.quota.chase.m));
-        if (r.runCookies < r.chase) chaseFail = true;
+      // 到達連動ノルマ(提案9): 進行比 ρ=周回内経過秒/max(前回周回長,reachMinSec) が ρ* を越えたら未達。
+      // 層ゲージ(quotaAtElapsed)には触れず、ここでの未達判定にだけ到達項を上乗せする(max)。
+      // runCookies×reachCoef×ρ^reachPow と runCookies を比べる=クッキー桁に依存せず ρ で未達位置が決まる。
+      // 進行を層比でなく時間比にする(未達で層が凍結するため層比は序盤に寄る=第12次H実測)。
+      if (quota !== null && quota > 0 && P.quota.reachCoef) {
+        let denom = Math.max(sim.prevDuration || 0, P.quota.reachMinSec || 0);
+        // reachMaxSec>0 のとき denom を上限クランプ(直前が極端に長い→短い周回で reach 未発火を防ぐ)。
+        if (P.quota.reachMaxSec) denom = Math.min(denom, P.quota.reachMaxSec);
+        if (denom > 0) {
+          const rho = el / denom;
+          const reach = r.runCookies * P.quota.reachCoef * Math.pow(rho, P.quota.reachPow);
+          if (reach > quota) quota = reach;
+        }
       }
-      if ((quota !== null && quota > 0 && r.runCookies < quota) || chaseFail) {
+      if (quota !== null && quota > 0 && r.runCookies < quota) {
         r.quotaFailed = true;
         r.quotaFailAt = el; // 未達に転じた経過秒(条件⑧用)
         if (r.monster) { r.monster = null; }
@@ -1310,6 +1828,7 @@ function takeSnapshot(sim) {
   return structuredClone({
     t: sim.t, prestige: sim.prestige, prestigeTotal: sim.prestigeTotal,
     prestigeRuns: sim.prestigeRuns, totalCookies: sim.totalCookies,
+    prevMaxStage: sim.prevMaxStage, prevDuration: sim.prevDuration,
     skills: sim.skills, rotIdx: sim.rotIdx, upRotIdx: sim.upRotIdx, goldenAlt: sim.goldenAlt,
     firstResearchBuy: sim.firstResearchBuy, firstPerk: sim.firstPerk, firstStageBuy: sim.firstStageBuy,
     run: sim.run
@@ -1322,6 +1841,8 @@ function replayRun(strategy, snap, opts, capSec) {
   const s = structuredClone(snap);
   sim.t = s.t; sim.prestige = s.prestige; sim.prestigeTotal = s.prestigeTotal;
   sim.prestigeRuns = s.prestigeRuns; sim.totalCookies = s.totalCookies;
+  sim.prevMaxStage = s.prevMaxStage || 0;
+  sim.prevDuration = s.prevDuration || 0;
   sim.skills = s.skills; sim.rotIdx = s.rotIdx; sim.upRotIdx = s.upRotIdx; sim.goldenAlt = s.goldenAlt;
   sim.firstResearchBuy = s.firstResearchBuy; sim.firstPerk = s.firstPerk; sim.firstStageBuy = s.firstStageBuy;
   sim.run = s.run;
@@ -1368,6 +1889,8 @@ function simulate(strategy, opts) {
     gainSeries: (sim.opt.trackGain && r.quotaFailAt != null) ? r.gainSeries : undefined,
     perks: Object.assign({}, r.perks),
     upgradePerkTotal: Object.values(r.upgradePerks).reduce((a, b) => a + b, 0),
+    critAtBuy: r.critAtBuy, critEnd: r.critNow, critMax: r.critMax,
+    killsByType: Object.assign({}, r.killsByType), rewardByType: Object.assign({}, r.rewardByType),
     skillsBought: 0, skillIds: []
   });
   return sim;
@@ -1380,16 +1903,25 @@ function tryBuyUpgrade(sim, u, budgetRatio) {
   if (cost > sim.run.cookies) return false;
   sim.run.cookies -= cost;
   sim.run.upgrades[u.id]++;
+  // まとめ買い割増: 熱量を減衰させてから+1
+  {
+    const r2 = sim.run;
+    const sg = r2.surge[u.id] || (r2.surge[u.id] = { h: 0, t: sim.t });
+    sg.h = sg.h * Math.pow(0.5, (sim.t - sg.t) / Math.max(1, P.upSurge.halfSec)) + 1;
+    sg.t = sim.t;
+  }
   if (!sim.everUpgrade[u.id]) {
     sim.everUpgrade[u.id] = true;
     sim.unlockEvents.push({ t: sim.t, kind: 'upgrade', id: u.id });
-    // 条件㉑(新設備の存在感): その方針で初めて買った瞬間(全プレイ通しの初回)の
-    // 「1個の基礎毎秒生産」対「その時点の実CPS(研究・スキル込み)」を記録
-    // 【仮】クリック設備はタップ1回の基礎値 vs 実クリック力で比較 / 金ブースト等の一時倍率は除く(baseCps)
+    // 条件㉑(新設備の存在感): 初めて買った瞬間の「その1台の実生産(系列・熟練など固有能力込み、
+    // 研究・スキル倍率も自然に通る)」を、購入直前の実CPSと比較する。Δ生産方式(2026-07-06 解釈更新):
+    // Δ = 購入後の生産 − 購入直前の生産。判定は Δ ≥ 購入直前CPS × 1/5(runner側)
     if (sim._lastProd) {
       if (!sim.presenceChecks) sim.presenceChecks = [];
-      const ref = u.type === 'click' ? sim._lastProd.baseClick : sim._lastProd.baseCps;
-      sim.presenceChecks.push({ runIdx: sim.runs.length, t: sim.t, id: u.id, base: u.value, ref });
+      const before = u.type === 'click' ? sim._lastProd.baseClick : sim._lastProd.baseCps;
+      const after = computeProd(sim);
+      const av = u.type === 'click' ? after.baseClick : after.baseCps;
+      sim.presenceChecks.push({ runIdx: sim.runs.length, t: sim.t, id: u.id, delta: Math.max(0, av - before), ref: before });
     }
   }
   return true;
@@ -1437,7 +1969,7 @@ function upgradeUnitMult(sim, u) {
   const i = UPIDX[u.id];
   const owned = r.upgrades[u.id];
   const upPerkPower = 1 + skillEffect(sim, 'upgradePerkPower')
-    + (r.perks.crushedMill * (sim.opt.disableReward === 'crushedMill' ? 0 : P.rw.crushedMill))
+    + (r.perks.crushedMill * (rwOff(sim, 'crushedMill') ? 0 : P.rw.crushedMill))
     + rewardCategoryBonus(sim, 'equipment');
   const boostRate = Math.max(P.upPerk.floor, P.upPerk.base - i * P.upPerk.slope) * upPerkPower;
   const personal = 1 + (r.upgradePerks[u.id] || 0) * boostRate;
@@ -1483,7 +2015,7 @@ function bestEfficiency(sim, prod, typeFilter) {
 
 module.exports = {
   P, UPGRADES, RESEARCH, REWARD_POOL, SKILL_NODES, SKILL_BY_ID,
-  simulate, prestigeGainOf, skillCostOf, upgradeCost, researchCostOf,
+  simulate, prestigeGainOf, prestigeCostOf, skillCostOf, upgradeCost, researchCostOf,
   tryBuyUpgrade, tryBuyResearch, bestEfficiency, visibleUpgrades, quotaAtElapsed,
   isUtilitySkill, buildSkillValues, skillRank, skillRiders, trunc2sig, q5, q5cost,
   tryBuyResearchStage, researchStageCostOf, researchStageUnlocked,

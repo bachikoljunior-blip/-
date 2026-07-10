@@ -7,7 +7,12 @@ module.exports = {
   //  1ラング=コスト比1.62 ⇔ クッキー比 1.62^(1/0.08)=10^2.6(④の2.0桁+ノイズ余裕0.6桁)
   //  ⑤: クッキー×100 ⇔ PT×100^0.08=1.44(帯域[1,100]内で平坦寄り=ユーザー確認済みの逓減形)
   // pB=11: 第0回(±2e6クッキー)の獲得PT≈16 → core(コスト13)が⑭帯[1,3]で買える水準
-  prestige: { pA: 0, pD1: 200000, pB: 11, pD2: 10000, pG: 0.075, pMin: 10000 },
+  // 転生に必要な所持クッキー(2026-07-09 ユーザー・ゲーム仕様変更):
+  //   初回転生 = firstCost(=500万)。2回目以降 = 10^(costExp0 + costStep×転生回数) で「10のべき乗」かつ増加。
+  //   実値: 第0回=5,000,000 / 第1回=10^7 / 第2回=10^8 / 第3回=10^9 …(costExp0=6,costStep=1)。
+  //   firstCost だけ500万の固定値で、以降はきっちり10のべき乗ぶん増える(前回より必ず大)。costStep は調整項目。
+  //   ※旧・第0回コスト再算定ルール(costExp0=floor(log10(最小所持)))は本仕様変更で上書き=初回は500万固定。
+  prestige: { pA: 0, pD1: 200000, pB: 11, pD2: 10000, pG: 0.075, pMin: 10000, firstCost: 5000000, costExp0: 6, costStep: 1 },
 
   // ---- スキルコスト: 手設計順の等比ラダー cost_k = C0 * rho^k ----
   // 2026-07-06 第8次: ⑲=隣接ノード比≤10倍(edgeCap)。rho=1.57(1ラング=クッキー1.57^(1/0.075)≈2.6桁)。
@@ -35,7 +40,7 @@ module.exports = {
     visibleMs: 10000,
     instantCoef: 4,
     multBase: 2.6,
-    powerPerLv: 0.25, powerLvHalf: 60, rateLvHalf: 80,
+    powerPerLv: 0.45, powerLvHalf: 60, rateLvHalf: 80,
     amountPerLv: 0.45, amountLvHalf: 45,
     boostBase: 9000,
     boostExtraCap: 26000, boostExtraHalf: 60000,
@@ -53,7 +58,8 @@ module.exports = {
     lvEarlyDiv: 92,
     lvLateDiv: 320, lvLatePow: 1.22,
     dmgSqrtCoef: 0.45,
-    ratePerLv: 0.09
+    ratePerLv: 0.09,
+    rateKillBonus: 0.35, rateKillHalf: 4
   },
 
   // ---- ノルマ ----
@@ -65,17 +71,79 @@ module.exports = {
     w2: 2.20, w2T: 600, w2D: 240, w2P: 2.25,
     w3: 9.00, w3T: 840, w3D: 300, w3P: 2.65,
     ctrlMul: 3.0, ctrlDiv: 1.8,
-    gaugeR: 1.9,
-    // 追跡ノルマ(⑧): chase=runCookies×10^-m を下限に毎秒10^θ倍で追い上げ。θ=m/(c×(120+8√総経過秒))
-    chase: { m: 1.0, c: 0.02, act: 0.5 } // 発動遅延型: 経過>act×(120+8√総経過)で作動、θ=m/(c×同)。維持=帯域中盤で未達→押し込み→転生(⑦⑧)
+    // ノルマ層ゲージ(2026-07-06 ユーザー確定仕様・第9次): ゲージは「現時点のその回の総クッキーが
+    // 何秒先のノルマまで達成できるか」の先行秒数 L のみを変数として貯まる。
+    // 層kの必要ゲージ秒 = gaugeSec × gaugeGrow^(k-1)(層進行式。gaugeSec/gaugeGrow は調整項目)
+    gaugeSec: 45, gaugeGrow: 1.45,
+    // 層の上限(オーバーフロー防止・第9次): 通常の転生周回は最大でも約190層で到達しないため
+    // 遊びには一切影響しない。ツリー完成後の超長時間放置(総クッキーが浮動小数上限に近づく)でのみ作用。
+    gaugeMaxLayer: 400,
+    // 追跡ノルマ(旧⑧)は廃止(2026-07-06 ユーザー決定)。未達(T3a/T3b)は本来のノルマ係数
+    // (baseCoef/basePow/base2Coef/base2Pow/w1〜w3P/ctrlMul/ctrlDiv)+後半成長の減速で作る。
+    // 層の試練(2026-07-07 ユーザー採用・0-2提案4 / 第12次H 提案8で新規開拓層基準へ相対化): 発火せず無害の resting 値。
+    trialCoef: 0.08, trialStartLayer: 10,
+    // ---- 到達連動ノルマ(第12次H・提案9・ユーザー承認) ----
+    // T3a を全周回・後半に置くための機構。層ゲージ(quotaAtElapsed=時間関数)には一切触れず、未達判定にだけ
+    // 「到達項」を足す: 未達 = runCookies < max(従来ノルマ, runCookies×reachCoef×ρ^reachPow)。
+    // ρ = 今回の周回内経過秒 ÷ max(前回周回の長さ prevDuration, reachMinSec)(=各周回の進行を前回長で正規化)。
+    // runCookies が両辺で相殺 → 実質「ρ が ρ*=(1/reachCoef)^(1/reachPow) を越えたら未達」。絶対クッキー桁に非依存。
+    // 層比でなく時間比にした理由: 未達で層が凍結するため層比は序盤に寄る&層が崩壊する(第12次H実測)。
+    // reachCoef=20, reachPow=10 → ρ*≈0.74(前回周回長の約7.4割の時点で未達)。序盤は runCookies<従来ノルマ側が勝ち従来挙動。
+    // minSec=600 は掃引で確定(1200だと周回の短い方針=S3が ρ* に届かず取りこぼす。600で S3 21→44/47)。第12次H実測。
+    // reachMaxSec=denom の上限クランプ(0=無効)。直前が極端に長い→短い周回で reach が未発火=T3a取りこぼし、を防ぐ。
+    // 6000 で確定(sweep_maxsec.js で T3a と T3b を同時掃引): T3a全体 86→88%・S10 18/23@34% → 25/26@62%、
+    // かつ T3b を維持(5000だと reach が早発して S8/S10 の T3b が落ちる。6000で S8 T3b40・S10 T3b17 を回復)。4000以下は位置が頭へ崩れる。
+    reachCoef: 20, reachPow: 10, reachMinSec: 600, reachMaxSec: 6000
   },
+
+  // ---- 設備直送生産(第12次J・提案A・ユーザー承認 2026-07-07) ----
+  // ㉘(a)対策: 設備収入(cps)は後半に自前の複利倍率を持たず、金クッキー・討伐報酬の複利成長に
+  // 追い越されて設備シェアが0%へ減衰する(bake が主役30%を保てない)。そこで生産設備に
+  // 「最高層に比例した直接クッキー収入」を新設する。この収入は金ブースト・討伐報酬の乗算対象外の
+  // 独立加算項=設備固有の稼ぎ口。全生産倍率ではないので㉘の独占も再発しない。
+  // 【第12次J-3・対称の直送収入(ユーザー2026-07-08「オーブンが強すぎるなら他も強く」)】
+  //   直送 = coef × base(cps+タップ) × (ジャンル投資量/ref)^countPow × (最高層-startStage)^stagePow
+  // 各稼ぎ口に、そのジャンルへ投資したプレイヤーだけ強く効く独立収入を用意し、各方針の主役を後半も≥30%に立たせる。
+  // すべて skill→research→効果 でゲート(設備=ovenBatch段2/金=spiceBlend段2/討伐=portalNetwork段2/タップ=fingerTechnique段2)。
+  // coef=0 で各無効。tune で全体最良点を掃引(㉘の各主役≥30%と経済/テンポ非破綻の両立)。調整項目。
+  equipDirect:  { coef: 0.02, stagePow: 0.5, countPow: 2, ref: 100, startStage: 5 }, // 投資量=オーブン所持数
+  goldenDirect: { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5 }, // 投資量=金perk合計(㉘金≥30%へ増幅・huntDirectと同処方=投資連動で金特化の後半周回だけ強く効く)
+  huntDirect:   { coef: 0.07, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5 }, // 投資量=討伐perk合計(㉘討伐≥30%へ増幅・投資連動=狩猟専の周回だけ強く効く。countPow緩め=低投資周回も効く)
+  tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5 }, // 投資量=神の指+強い指/10
+  // 銀行配当(直送・第12次J-3 腐り解消): bankClickDividend研究の独立収入。クリック方針で厚く効かせ①の各回minを満たす。
+  // 全体cps倍率をやめ加算収入へ(他機能のlift希釈を回避)。所持数はlog10で床あり=早い周回でも効く。増加方向のみ。
+  bankDirect:   { coef: 0.34, ownRate: 0.5, savedCoef: 0.05, clickBonus: 1.5, countCoef: 0.9, countPow: 1.5, ref: 150 }, // 投資量=銀行所持数+貯蓄(総クッキー桁)
+  // 研究連動の全生産倍率(第12次L・提案A): 異世界接続網/銀河合成/量子証明が解放されている間、全生産(クリック＋毎秒)に
+  // 一律の倍率を掛ける。floor で研究購入直後から立つ(①の各回min≥1.2)、所持数(log10)と最高層で伸びる。
+  // 【重要】全生産倍率は設備/金/討伐/タップを同率で持ち上げる=㉘の稼ぎ口シェアが不変(相殺)、③/⑨の他機能liftも
+  // 分子分母で相殺(希釈しない)、④⑤も周回比で相殺。加算の直接収入(第12次J-4のresEquipDirect=㉘破壊)や
+  // 一設備だけの倍率(第12次Kのflat床=③希釈)と違い、条件を壊さずに①を立てられる。共鳴((1+r)^n)ではなく線形floor。
+  // これらの研究段3(⑨)も同型の全生産倍率floorで立てる(下 s3Floor)。増加方向のみ。resActive/resStage3 ゲート。
+  // floor のみ(own/stage=0): 研究が解放中は M=1+floor の定数。定数なら③の通し比(報酬あり÷なし)で M が
+  // 分子分母で厳密に相殺=③を希釈しない。own/log10・層項は取得済み設備数/層に依存しトラジェクトリで揺れ、
+  // 末尾数回しか取得しない最弱utility報酬の通し比を崩したため撤去(第12次M診断)。floor=0.25 で①のmin≥1.2に余裕。
+  resGlobal: {
+    portal:  { floor: 0.25, own: 0, stage: 0, s3Floor: 0.06 },
+    galaxy:  { floor: 0.25, own: 0, stage: 0, s3Floor: 0.06 },
+    quantum: { floor: 0.25, own: 0, stage: 0 },
+    factoryS3Floor: 0.06, spiceS3Floor: 0.06, moonS2Floor: 0.06, fingerS3Floor: 0.08
+  },
+
+  // ---- 討伐連鎖(2026-07-07 ユーザー採用・0-2提案1) ----
+  // 最後の討伐から breakSec 以内に次を倒すと連鎖+1(こつぶ群れは3体分)。過ぎたら0、転生でも0。上限なし。
+  // 効果はすべて連鎖数Nに線形(共鳴のような雪だるまにならない):
+  //  prodCoef=全生産×(1+prodCoef×N) / dropCoef=素材ドロップ量×(1+dropCoef×N)(素材は現状ゲームのみ) /
+  //  rewardCoef=報酬レベル+floor(rewardCoef×N)
+  chain: { prodCoef: 0.02, dropCoef: 0.02, rewardCoef: 0.05, breakSec: 90 },
 
   // ---- 研究効果 ----
   // 2026-07-06 第8次: ①(各研究の有効性)で弱かった5研究の「所持数指数」(垂直吸収されない動的項)を強化:
   //  spiceGoldOwn .010→.014(.020はS3金特化が⑤上限超えで暴走: e218/周回16に崩壊) / bankOwn .028→.040, bankSaved 8→10 / galaxyOwn .019→.032 /
   //  quantumRes .30→.38, quantumOwn .019→.032 / antimatterOwn .002→.012, antimatterSkill .032→.045
   res: {
-    fingerBase: 0.30, fingerSqrt: 0.09, fingerCritBase: 2.0, fingerCritGrow: 10.0,
+    // 会心1%開始(2026-07-06 ユーザー承認・第9次): score = 0.01 + 0.045×√強い指 + 0.002×最高到達層。
+    // 取得直後(指0個・層0)でちょうど会心率1.0%。層項は周回内で会心が育つ動的項(①対策も兼ねる)
+    fingerBase: 0.01, fingerSqrt: 0.045, fingerStage: 0.002, fingerCritBase: 2.0, fingerCritGrow: 10.0,
     grandmaSelf: 30, grandmaSup: [0.007, 0.008, 0.009],
     // 2026-07-06 第8次: ⑫(設備の文脈依存性)用に所持数指数を再配分。
     // factory一強(全方針の最効率=工場固定)を解消: oven 0.060→0.067 / spice 0.062→0.071 / factory 0.060→0.057
@@ -83,7 +151,9 @@ module.exports = {
     ovenSelf: 30, ovenOwn: 0.067, ovenStage: 0.012,
     factorySelf: 30, factoryLow: 0.006, factoryOwn: 0.057,
     spiceOwn: 0.071, spiceGold: 15, spiceGoldOwn: 0.014, spiceGoldDur: 30000,
-    portalSelf: 25, portalHuntDur: 20000, portalHuntGrow: 0.0042, portalHuntSpawn: 0.010,
+    // 狩り窓(2026-07-09 ⑬作り替え): 窓は討伐が開く・維持する(金クッキー非関与)。portalHuntDur/Grow は旧・金開窓用=現在未使用(移植時に削除)。
+    // portalHuntSpawnBase=窓に関係ない常時スポーン加速(研究解放中)/ portalHuntSpawn=窓中の追加加速(⑬延長狩りのコントラスト)。
+    portalSelf: 25, portalHuntDur: 5000, portalHuntGrow: 0.0042, portalHuntSpawn: 0.003, portalHuntSpawnBase: 0.007,
     bankOwn: 0.040, bankSaved: 10.0,
     moonBase: 25, moonStage: 0.003, moonOwn: 0.001,
     foldPortal: 0.002, foldMonster: 2.5, foldGold: 8,
@@ -105,17 +175,19 @@ module.exports = {
   // ---- タイミング機能(条件⑬)の最適操作/完全放置モデル ----
   // waveOpt=2/π(山に活動を寄せた正相平均) / waveIdle=1/π(全周期平均)
   // bhIdleDelay=満タン後に放置プレイヤーが気づくまでの遅延秒 / matureIdleMul=放置時の熟成爆発係数
-  timing: { waveOpt: 0.6366, waveIdle: 0.3183, bhIdleDelay: 240, matureIdleMul: 0.5 },
+  timing: { waveOpt: 0.6366, waveIdle: 0.3183, bhIdleDelay: 150, bhIdleEff: 0.5, matureIdleMul: 0.5 },
 
   // ---- 研究コスト ----
-  resCost: {
+  // 第11次(値段割り・D'): weave.js が「1周回に中間目標1件」になるよう再配置した値を
+  // weave_costs.json に保存し、ここで上書き読込する(研究コスト=調整項目・ユーザー確認済み)
+  resCost: Object.assign({
     fingerTechnique: 2500, grandmaCrowd: 12000, ovenBatch: 30000,
     factoryNetwork: 150000, spiceBlend: 400000, portalNetwork: 1200000,
     bankClickDividend: 4000000, moonGlobalYeast: 40000000,
     portalGlobalFold: 400000000, galaxyAssembly: 6000000000,
     blackHoleCompression: 160000000000, quantumProofing: 3200000000000,
     antimatterRecipe: 64000000000000
-  },
+  }, (function () { try { return require('./weave_costs.json').resCost || {}; } catch (e) { return {}; } })()),
 
   // ---- モンスター報酬効果 ----
   rw: {
@@ -127,14 +199,68 @@ module.exports = {
     brandHunt: 0.45,
     beastHeatFerment: 0.05,
     huntingCore: 0.12,
-    biteRecovery: 0.5,
+    biteRecovery: 3,
     crushedMill: 1.5,
     chainPrepSpawn: 0.2, chainPrepHp: 1.032,
+    // 第12次M 再テーマ(増加方向・従来効果は残置): monsterStay/chainPrep とも討伐連鎖の持続窓 breakSec を Lv で延長し、
+    // 連鎖数で全生産×(1+prodCoef×連鎖)に効かせる(飽和/カオス解消)。monsterStay は取得数が多いので per-Lv を小さく。
+    monsterStayChain: 0.25, chainPrepPersist: 0.25, crackedFangKill: 0.000001, brandHuntKill: 0,
+    biteRecoveryKill: 0.0000005, crushedMillProd: 0.03, goldenBeastMutationProd: 0.05, brandHuntProd: 0.1,
     beastScent: 0.5,
     deepPursuitSpawn: 0.045, deepPursuitHp: 1.035, deepPursuitReward: 1.6,
     mutationBase: 0.5, mutationPerLv: 0.1,
-    categoryBonusRate: 0.003, categoryHalf: 400
+    categoryBonusRate: 0.003, categoryHalf: 400,
+    // 第12次K(2026-07-08 ③再テーマ・増加方向のみ): 金報酬トリオ+獣の匂いを飽和しない金の稼ぎ(金即時獲得量=amount)へ
+    // 再テーマ。従来のダメージ/初撃/金出現間隔効果は残置(削除しない)し、金amount倍率への加算を新設(所持Lvに線形=非飽和)。
+    // これで金特化方針で instant lift が立つ(ダメージ飽和次元・通し比較のゆらぎに埋もれない)。
+    goldenChainAmount: 0.50, goldenTargetAmount: 0.55, goldenFirstHitAmount: 0.35, beastScentAmount: 0.30, goldenPowerAmount: 1.0
   },
+
+  // ---- モンスター種類×報酬相性(2026-07-06 ユーザー承認・第9次) ----
+  // 討伐した種類が報酬Lvの増分を決める: 増分 = max(1, floor(基本量 × 相性倍率))。
+  // 出現はゲームと同じ重み(標準50/こつぶ22/鉄焼き14/はやて14)を決定的ローテーションで期待値化。
+  // 黄金獣=金ブースト中に出現枠の35%を置換 / ボス=討伐25体ごと(+選択肢+1)。数値はすべて調整対象。
+  mtype: {
+    weights: { normal: 50, swarm: 22, tank: 14, speedy: 14 },
+    hpMul: { normal: 1, swarm: 0.66, tank: 6, speedy: 0.45, goldenBeast: 2.5, boss: 12 }, // swarm=3体×0.22
+    stayMul: { normal: 1, swarm: 1, tank: 1.5, speedy: 0.55, goldenBeast: 1, boss: 3.75 },
+    rewardEvents: { normal: 1, swarm: 3, tank: 1, speedy: 1, goldenBeast: 1, boss: 1 }, // こつぶは3体分の報酬
+    rewardLvAdd: { tank: 18 },
+    goldenBeastShare: 0.35,
+    bossCycle: 25,
+    speedyGoldenCut: 0.5, // はやて撃破で次の金クッキー間隔×0.5
+    bossChoiceBonus: 1,
+    affinity: {
+      normal: { golden: 1.0, hunt: 1.0, equipment: 1.0, risk: 1.0 },
+      swarm: { golden: 0.6, hunt: 1.6, equipment: 0.8, risk: 1.0 }, // 1体あたり。㉖=行合計4.0(±1.5倍帯内)・狩りピーク(㉕多様性)。③がrobust化したので合計上げでも③非崩壊
+      tank: { golden: 0.5, hunt: 2.0, equipment: 3.5, risk: 1.0 },
+      speedy: { golden: 3.0, hunt: 0.5, equipment: 0.5, risk: 1.5 },
+      goldenBeast: { golden: 3.5, hunt: 1.0, equipment: 0.5, risk: 2.0 },
+      boss: { golden: 4.0, hunt: 4.0, equipment: 4.0, risk: 4.0 }
+    }
+  },
+
+  // ---- 熟練(2026-07-06 ユーザー採用・第11次。スキルで解放) ----
+  // 職人の手(mastery_low)=下位7種 / 工程の極み(mastery_high)=上位9種。
+  // 同じ設備を買うほど1台あたり生産が複利で伸びる(研究不要): ×(1+rate)^所持数。rateは調整項目
+  mastery: { low: 0.003, high: 0.005 },
+
+  // ---- 系列ボーナス(2026-07-06 ユーザー採用・第11次) ----
+  // スキルで解放する上位設備(月面〜反物質)の固有能力(研究不要):
+  // 1台につき「自分より下位の設備の直接生産の合計×coef」を追加生産(系列ぶんの又取りなし)。
+  // 神の指(クリック型)は1台につきクリック力×(1+coef)相当の線形倍率。
+  // → 初購入の瞬間に生産の約coef分をその1台が担う=㉑(基礎生産≥実CPS/5)を全方針で満たす設計
+  lineage: { coef: 0.25 },
+
+  // ---- 段階コストの研究別倍率(第11次・値段割り用) ----
+  // 研究ごとに {s2, s3} を指定(なければ resStageCost の共通倍率)。研究コスト=調整項目(ユーザー確認済み)
+  resStageCostEach: (function () { try { return require('./weave_costs.json').resStageCostEach || {}; } catch (e) { return {}; } })(),
+
+  // ---- まとめ買い割増(2026-07-06 ユーザー採用・第10次) ----
+  // 同じ設備を短時間に連続購入するほど値段に割増がつき、時間で元に戻る。
+  // 割増倍率 = (1+perBuy)^熱量、熱量は購入ごとに+1、halfSec 秒ごとに半減(式・係数とも調整項目)。
+  // 目的: 周回終盤の駆け込み買い(谷)を引き伸ばしつつ、待てば必ず買える=16時間の壁を作らない。
+  upSurge: { perBuy: 0.25, halfSec: 75 },
 
   // ---- アップグレードコスト式 ----  cost = coef * base^basePow * growth^(owned*ownPow)
   // 2026-07-06 第8次: 新帯域(周回25〜90分)へ向けownPow 0.25→0.27(再登坂・開拓の全体減速)、
@@ -159,19 +285,20 @@ module.exports = {
   //  - 重力圧縮 段3: 圧縮×(1-min(0.35,0.001×最高層)) → 圧縮×e^(-0.001×最高層)(負値防止の逓減式)
   res2: {
     comboRate: 0.03, comboWindow: 30,
-    critCpsCoef: 0.00025,
+    critCpsCoef: 0.003,
     supExtra: 0.008, supStageCoef: 0.001,
     ovenBakeMulBake: 1.5, ovenBakeMulOther: 1.2,
+    ovenS3Flat: 0.06, ovenStageCoef: 0.004,
     factoryHiKind: 0.15, factoryStageCoef: 0.0012,
     matureRate: 0.006, aromaDur: 12, spiceStageCoef: 0.0015,
-    huntExtendSec: 2, huntStageCoef: 0.0008,
-    bankIntRate: 0.0012, bankIntCapCps: 2.0, bankCapStageCoef: 0.004,
+    huntExtendSec: 40, huntStageCoef: 0.0008,
+    bankIntRate: 0.004, bankIntCapCps: 8.0, bankCapStageCoef: 0.03,
     moonMarginDiv: 10, moonResCount: 0.05,
     foldKillCoef: 0.002, foldStageCoef: 0.001,
     galaxyBonusCoef: 0.05, galaxySat: 120, galaxyStageCoef: 0.0008,
-    bhChargeFull: 2500, bhBoostCoef: 0.5, bhBoostDur: 60, bhBoostStageCoef: 0.002,
+    bhChargeFull: 2500, bhBoostCoef: 0.25, bhBoostDur: 60, bhBoostStageCoef: 0.002,
     bhCompStageCoef: 0.001,
-    waveAmpBase: 0.5, waveAmpPerRes: 0.05, wavePeriod: 90, waveStageCoef: 0.001,
+    waveAmpBase: 0.30, waveAmpPerRes: 0.05, wavePeriod: 90, waveStageCoef: 0.001,
     antiStageCoef: 0.0008, antiPrestigeCoef: 0.03
   },
 

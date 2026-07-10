@@ -8,16 +8,16 @@ function decMinStep(k) { return 2.6; } // ⑤下限: コスト比2倍 ⇔ pG=0.1
 const RESUME = process.argv.includes('--resume');
 // 押し込み上限: ⑤上限(PT比100倍 ⇔ pG=0.5で4.0桁)内に収める(rung13の初回キャッチアップのみ例外)
 function decMaxStep(k) { return 8; } // ⑤上限: コスト比100倍 ⇔ 15.4桁。周回を伸ばす余地を残して8桁
-const TARGET_FRAC = 0.80;       // 周回時間の狙い(帯域上限Yの内側。維持=チェイス失敗は0.5Y〜0.75Yに来る)
+const TARGET_FRAC = 1.15;       // 周回時間の狙い(値段割りD'対応: スキル+中間目標の2件を各半分≥0.5Yで収めるため周回=1.15Y。⑦は維持時間(チェイス失敗まで)で判定されるため帯域内に留まる)
 const HOURS = Number((process.argv[4] && process.argv[4] !== '--resume') ? process.argv[4] : 30); // 探索は30hで十分。'--resume'がargv[4]でもNaNにしない
 const ITERS = Number(process.argv[2] || 8);
 const STRAT_ID = process.argv[3] || 'S1';
 
-// 帯域式(2026-07-06 確定・2段階): 初転生まで 120+8√x / 初転生後 1440+8√x。runner.js と必ず一致させること
+// 帯域式(2026-07-06 ユーザー承認・第10次): 初転生まで 120+8√x / 初転生後 1440+3√x。runner.js と必ず一致させること
 function makeY(sim) {
   const r0 = sim.runs[0];
   const fp = (r0 && !r0.partial) ? r0.endT : Infinity;
-  return x => (x >= fp ? 1440 : 120) + 8 * Math.sqrt(Math.max(0, x));
+  return x => x >= fp ? 1440 + 3 * Math.sqrt(Math.max(0, x)) : 120 + 8 * Math.sqrt(Math.max(0, x));
 }
 function dec(v) { return Math.log10(Math.max(1, v)); }
 // 転生PT式は params.js から読む(pG=0.50 対応):
@@ -170,7 +170,8 @@ for (let it = 0; it < ITERS; it++) {
   let x100 = 0, x100all = 0, pt2 = 0; const fails = [];
   for (let i = 1; i < full.length; i++) { x100all++; if (full[i].cookies >= 100 * full[i - 1].cookies) x100++; else fails.push(`${full[i-1].idx}->${full[i].idx}(x${(full[i].cookies/full[i-1].cookies).toFixed(0)})`); if (full[i].gain >= 1 * full[i - 1].gain && full[i].gain <= 100 * full[i - 1].gain) pt2++; }
   console.log(`[iter ${it}] runs=${runs.length} band ${ok}/${all} (${holdOkPct}%) x100 ${x100}/${x100all} pt2-100 ${pt2}/${x100all} pace ${pace.ok}/${pace.all} total=${total.toExponential(2)} ${fails.length?'FAIL:'+fails.join(' '):''}`);
-  const score = (x100 === x100all ? 1000 : 0) + ok + pace.ok * 0.5 + pt2 * 0.5 - fails.length * 2;
+  // 採点(第11次): 割合ベース(×100と帯域を同重み+ペース少々)。全達ジャックポットは廃止(周回数が少ない構成が勝ってしまうため)
+  const score = (x100all ? x100 / x100all : 0) * 100 + (all ? ok / all : 0) * 100 + (pace.all ? pace.ok / pace.all : 0) * 30 - fails.length * 3;
   if (!globalThis.__best || score > globalThis.__best.score) globalThis.__best = { score, costs: rungCosts.slice(), ok, x100, x100all };
   if (it === ITERS - 1) {
     for (const { r, x, Y, inBand } of rows) {

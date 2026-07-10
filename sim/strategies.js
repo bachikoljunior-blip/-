@@ -62,9 +62,40 @@ function pickRewardByPriority(priority) {
       const c = offer.find(o => o.kind === 'perk' && o.id === want);
       if (c) return c;
     }
+    // 優先リストに無い枠: まだ1枚も持っていない札(新規解放=所持0)が出ていれば1枚拾う
+    // (プレイヤー視点=新しく解放された報酬は一度は試す)。それ以外は従来どおり先頭。
+    // 旧・offer[0]固定だと新規解放した札(goldenBeastMutation等)が回転任せで取り漏れる問題を解消しつつ、
+    // 既取得の札の配分は変えない(所持数最小へ全面的に寄せると金の複利が暴走し最終周回がInfinity化するため最小限に留める)。
+    const fresh = offer.find(o => o.kind === 'perk' && (sim.run.perks[o.id] || 0) === 0);
+    if (fresh) return fresh;
     const up = offer.find(o => o.kind === 'upgrade');
     if (up) return up;
     return offer[0] || null;
+  };
+}
+// 相性優先(2026-07-06 第9次): 報酬選択画面には「倒した種類と相性倍率」が表示される。
+// 直前に倒した種類の相性が2倍以上のカテゴリに「自分が欲しい札」があれば、それを先に拾う。
+// 「同じ1枠でも実入りが2倍以上になる瞬間はそれを拾うのが得。ただし欲しくない札(反動つきの
+// リスク札など)は相性が良くても取らない」というプレイヤー判断。
+function pickRewardAffinityAware(priority) {
+  const base = pickRewardByPriority(priority);
+  const catOf = {}; G.REWARD_POOL.forEach(r => catOf[r.id] = r.category);
+  return function (sim, offer) {
+    const t = sim.run.lastKillType;
+    const aff = (G.P.mtype && G.P.mtype.affinity && G.P.mtype.affinity[t]) || null;
+    if (aff) {
+      // 自分の優先リストの中で、相性2倍以上のカテゴリに入っている札を優先
+      for (const want of priority) {
+        const c = offer.find(o => o.kind === 'perk' && o.id === want && (aff[catOf[o.id]] || 1) >= 2.0);
+        if (c) return c;
+      }
+      // 設備強化カード(equipment)も相性2倍以上なら拾う(個別強化は反動なし)
+      if ((aff.equipment || 1) >= 2.0) {
+        const up = offer.find(o => o.kind === 'upgrade');
+        if (up) return up;
+      }
+    }
+    return base(sim, offer);
   };
 }
 // 個別強化優先(最上位設備の強化を選ぶ)
@@ -111,7 +142,7 @@ function prestigeWhen(minElapsedSec, gainFactor) {
   // 「この周回の獲得予定PTだけで、次に欲しいスキルのコストに届いたら転生」
   return function (sim) {
     if (sim.t - sim.run.startT < minElapsedSec) return false;
-    if (sim.run.cookies < 1000000) return false; // 転生には100万クッキー必要
+    if (sim.run.cookies < G.prestigeCostOf(sim)) return false; // 転生には所持クッキー(10のべき乗・前回より大)が必要
     const next = cheapestNextSkillCost(sim);
     if (next === null) return false; // ツリー完了後はPTの使い道がないため転生しない
     const gain = G.prestigeGainOf(sim.run.runCookies);
@@ -127,7 +158,7 @@ const STRATEGIES = [
     tapRate: 4, goldenTake: 1,
     pickPolicy: sim => 'bake',
     buy: standardBuy(0.30, 0.25),
-    pickReward: pickRewardByPriority(['beastHeatFerment', 'goldenAmount', 'monsterDamage', 'huntingCore', 'goldenRate', 'monsterRate', 'goldenPower', 'crackedFang', 'monsterStay']),
+    pickReward: pickRewardAffinityAware(['beastHeatFerment', 'goldenAmount', 'monsterDamage', 'huntingCore', 'goldenRate', 'monsterRate', 'goldenPower', 'crackedFang', 'monsterStay']),
     shouldPrestige: prestigeWhen(120, 1.2),
     skillOrder: cheapestFirst
   },
@@ -225,7 +256,7 @@ const STRATEGIES = [
     tapRate: 5, goldenTake: 1,
     pickPolicy: sim => 'balanced',
     buy: standardBuy(0.30, 0.30),
-    pickReward: pickRewardByPriority(['goldenAmount', 'monsterDamage', 'beastHeatFerment', 'goldenRate', 'monsterRate']),
+    pickReward: pickRewardAffinityAware(['goldenAmount', 'monsterDamage', 'beastHeatFerment', 'goldenRate', 'monsterRate']),
     shouldPrestige: prestigeWhen(120, 1.0),
     skillOrder: cheapestFirst
   },
@@ -235,7 +266,7 @@ const STRATEGIES = [
     tapRate: 4, goldenTake: 1,
     pickPolicy: sim => 'bake',
     buy: standardBuy(0.35, 0.25),
-    pickReward: pickRewardByPriority(['huntingCore', 'beastHeatFerment', 'goldenAmount', 'monsterDamage', 'goldenPower', 'goldenRate']),
+    pickReward: pickRewardAffinityAware(['huntingCore', 'beastHeatFerment', 'goldenAmount', 'monsterDamage', 'goldenPower', 'goldenRate']),
     // 転生は「次スキルコストの4倍」を貯めてから(まとめ買い派)。最短600秒。
     shouldPrestige: prestigeWhen(180, 4.0),
     skillOrder: cheapestFirst
@@ -286,7 +317,7 @@ const STRATEGIES = [
       const next = cheapestNextSkillCost(sim);
       if (next === null) return false;
       if ((sim.t - sim.run.startT) < 120) return false;
-      if (sim.run.cookies < 1000000) return false; // 転生には100万クッキー必要
+      if (sim.run.cookies < G.prestigeCostOf(sim)) return false; // 転生には所持クッキー(10のべき乗・前回より大)が必要
       if (sim.run.quotaFailed) return gain >= next * 1.0;
       return gain >= next * 1.5;
     },
@@ -306,7 +337,7 @@ const STRATEGIES = [
       }
       buyAllResearch(sim, 0.50);
     },
-    pickReward: pickRewardByPriority(['goldenAmount', 'huntingCore', 'beastHeatFerment', 'goldenRate', 'monsterDamage']),
+    pickReward: pickRewardAffinityAware(['goldenAmount', 'huntingCore', 'beastHeatFerment', 'goldenRate', 'monsterDamage']),
     shouldPrestige: prestigeWhen(600, 1.2),
     skillOrder: cheapestFirst
   }

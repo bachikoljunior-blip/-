@@ -1,0 +1,77 @@
+=== 期待値方式(24h・各回の稼ぎ力の持ち上げ) ===
+① 研究(各回≥1.2) 9/13
+  OK res:fingerTechnique          S2 min=1.26
+  OK res:grandmaCrowd             S5 min=1.65
+  OK res:ovenBatch                S5 min=5.45
+  OK res:factoryNetwork           S2 min=4.60
+  OK res:spiceBlend               S3 min=5.22
+  NG res:portalNetwork            取得あり・全周回≥1.2に未達(最大幾何平均1.81)
+  NG res:bankClickDividend        取得あり・全周回≥1.2に未達(最大幾何平均1.00)
+  OK res:moonGlobalYeast          S7 min=37.22
+  OK res:portalGlobalFold         S3 min=11.74
+  NG res:galaxyAssembly           取得あり・全周回≥1.2に未達(最大幾何平均1.33)
+  OK res:blackHoleCompression     S7 min=5.00
+  NG res:quantumProofing          取得あり・全周回≥1.2に未達(最大幾何平均1.00)
+  OK res:antimatterRecipe         S7 min=523512.24
+③ 報酬(各回≥1.1) 4/20
+  OK rw:goldenRate                S10 min=2.39
+  NG rw:goldenPower               取得あり・全周回≥1.1に未達(最大幾何平均1.32)
+  OK rw:goldenAmount              S10 min=1.39
+  NG rw:monsterDamage             取得あり・全周回≥1.1に未達(最大幾何平均1.05)
+  NG rw:monsterRate               取得あり・全周回≥1.1に未達(最大幾何平均1.94)
+  NG rw:monsterStay               どの方針も未取得
+  NG rw:goldenChain               取得あり・全周回≥1.1に未達(最大幾何平均1.00)
+  NG rw:crackedFang               どの方針も未取得
+  NG rw:chainPrep                 どの方針も未取得
+  NG rw:huntFocus                 どの方針も未取得
+  NG rw:goldenTarget              取得あり・全周回≥1.1に未達(最大幾何平均1.00)
+  NG rw:goldenFirstHit            どの方針も未取得
+  NG rw:beastScent                取得あり・全周回≥1.1に未達(最大幾何平均1.00)
+  OK rw:beastHeatFerment          S7 min=251.58
+  NG rw:biteRecovery              どの方針も未取得
+  NG rw:crushedMill               どの方針も未取得
+  OK rw:huntingCore               S7 min=959.11
+  NG rw:brandHunt                 どの方針も未取得
+  NG rw:deepPursuit               どの方針も未取得
+  NG rw:goldenBeastMutation       どの方針も未取得
+⑨ 段階(各回≥1.05) 13/23
+  OK stage:spiceBlend:2           S5 min=1.06
+  OK stage:fingerTechnique:2      S2 min=2.14
+  OK stage:grandmaCrowd:2         S3 min=6.01
+  NG stage:bankClickDividend:2    取得あり・全周回≥1.05に未達(最大幾何平均1.00)
+  NG stage:bankClickDividend:3    取得あり・全周回≥1.05に未達(最大幾何平均1.00)
+  OK stage:ovenBatch:2            S9 min=1.20
+  OK stage:ovenBatch:3            S9 min=11.50
+  NG stage:spiceBlend:3           取得あり・全周回≥1.05に未達(最大幾何平均1.00)
+  OK stage:moonGlobalYeast:2      S7 min=6.52
+  OK stage:moonGlobalYeast:3      S3 min=1.45
+  NG stage:portalNetwork:2        取得あり・全周回≥1.05に未達(最大幾何平均1.00)
+  NG stage:factoryNetwork:2       取得あり・全周回≥1.05に未達(最大幾何平均1.58)
+  OK stage:grandmaCrowd:3         S7 min=1.10
+  OK stage:factoryNetwork:3       S4 min=1.12
+  NG stage:fingerTechnique:3      取得あり・全周回≥1.05に未達(最大幾何平均1.00)
+  NG stage:portalNetwork:3        取得あり・全周回≥1.05に未達(最大幾何平均1.00)
+  OK stage:galaxyAssembly:2       S3 min=1.53
+  OK stage:portalGlobalFold:2     S7 min=2.11
+  OK stage:galaxyAssembly:3       S3 min=1.05
+  NG stage:blackHoleCompression:2 取得あり・全周回≥1.05に未達(最大幾何平均1.00)
+  NG stage:blackHoleCompression:3 取得あり・全周回≥1.05に未達(最大幾何平均1.00)
+  NG stage:quantumProofing:2      取得あり・全周回≥1.05に未達(最大幾何平均1.00)
+  OK stage:antimatterRecipe:2     S7 min=1.15
+  NG timing:mature 幾何平均1.000
+  NG timing:huntExtend 幾何平均1.000
+  NG timing:bhCharge 幾何平均1.000
+  NG timing:wave 幾何平均1.000
+⑬ タイミング 0/4
+  NG S1 研究lift[1.00..99.59] 平均3.53
+  NG S2 研究lift[1.00..46.12] 平均4.29
+  NG S3 研究lift[1.00..3273.09] 平均7.00
+  NG S4 研究lift[1.00..91.75] 平均3.63
+  NG S5 研究lift[1.00..35.64] 平均2.74
+  NG S6 研究lift[1.00..147.88] 平均4.05
+  NG S7 研究lift[1.00..709777.87] 平均11.15
+  NG S8 研究lift[1.00..9.95] 平均1.65
+  NG S9 研究lift[1.00..36.13] 平均2.92
+  NG S10 研究lift[1.00..15.71] 平均1.94
+② 一強禁止(方針ごと) 0/10
+⑫ 周回方針の1位が実在: balanced,bake,golden,hunt (4/5)
