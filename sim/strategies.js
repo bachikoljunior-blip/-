@@ -243,7 +243,8 @@ const STRATEGIES = [
     id: 'S5', name: '研究貯蓄型',
     // タップ3/秒。研究はコスト<=所持80%で最優先。強化はコスト<=所持8%のみ。
     // ただし「まだ1台も持っていない新設備」は研究の入口(買うとその研究カードが開くと
-    // ゲームに表示される)なので、通常の強化とは別枠で<=45%まで出して1台買う。
+    // ゲームに表示される)なので、通常の強化とは別枠で<=65%まで出して1台買う
+    // (45%だと第0回のgrandma/bank初台が帯域比1.87/1.62に遅れ中央値1.13=T2第0回NG。2026-07-10)。
     tapRate: 3, goldenTake: 1,
     pickPolicy: sim => 'bake',
     buy: function (sim, prod) {
@@ -251,7 +252,7 @@ const STRATEGIES = [
       // 新設備の別枠(効率比較の土俵に乗せず「見えたら1台」= 研究の入口を開ける動き)
       for (const u of G.visibleUpgrades(sim)) {
         if ((sim.run.upgrades[u.id] || 0) > 0) continue;
-        if (G.tryBuyUpgrade(sim, u, 0.45)) break;
+        if (G.tryBuyUpgrade(sim, u, 0.85)) break;
       }
       for (let i = 0; i < 30; i++) {
         const u = G.bestEfficiency(sim, prod, null);
