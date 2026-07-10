@@ -269,7 +269,9 @@ module.exports = {
   // 同じ設備を短時間に連続購入するほど値段に割増がつき、時間で元に戻る。
   // 割増倍率 = (1+perBuy)^熱量、熱量は購入ごとに+1、halfSec 秒ごとに半減(式・係数とも調整項目)。
   // 目的: 周回終盤の駆け込み買い(谷)を引き伸ばしつつ、待てば必ず買える=16時間の壁を作らない。
-  upSurge: { perBuy: 0.25, halfSec: 75 },
+  // perBuy 0.25→0.45(2026-07-10 第12次R: T1=短周回の谷対策。S3 17→26/47・S1 30→46/47・S8 31→33/45、
+  // S10 28-31維持。halfSecを伸ばす案はS10=30秒間隔の放置型の周回が2時間上限を超えて崩れるため不採用=グリッド実測)
+  upSurge: { perBuy: 0.45, halfSec: 75 },
 
   // ---- アップグレードコスト式 ----  cost = coef * base^basePow * growth^(owned*ownPow)
   // 2026-07-06 第8次: 新帯域(周回25〜90分)へ向けownPow 0.25→0.27(再登坂・開拓の全体減速)、
@@ -313,7 +315,9 @@ module.exports = {
 
   // 新規設備ボーナス(bestEfficiency): 未所持の設備は効率×この倍率で評価=「新しい設備をまず1台試す」
   // 自然なプレイの模型。T2第0回の解放密度と㉑(初購入Δ=低CPS時点で買う)を同時に立てる。調整項目。
-  noveltyBoost: 8,
+  // 8→6(2026-07-10 第12次R: surge0.45とセット。8だと新設備への貯金停滞が長くS5/S7/S8の第0回が帯超え、
+  // 4-5だとS9/S10が帯割れ=グリッド実測。6でS7 0.94・S9 0.58・S10 0.56)
+  noveltyBoost: 6,
 
   // ---- 周回テンポ ----
   tempo: { ramp: 0.105, rampDiv: 420 },
@@ -362,7 +366,8 @@ module.exports = {
       { id: 'dimensionCompass', cost: { bossCore: 1, stardust: 12 } }, // ボス周期−Lv・選択ステージのドロップ×(1+0.05Lv)
       { id: 'masterTray',       cost: { flour: 10, cacao: 8 } }        // 名匠の天板: 全生産×(1+0.06Lv)(2026-07-10ユーザー指示で追加)
     ],
-    eqFx: { whiskPerLv: 0.15, mittPerLv: 0.12, mittCpsPerLv: 0.03, pressPerLv: 0.04, almanacDmgPerLv: 0.06, flaskPerLv: 0.10, compassDropPerLv: 0.05, trayPerLv: 0.06 },
+    // almanacDmgPerLv 0.06→0.08(2026-07-10: masterTray追加の経済移動で⑮の2が1.049に割れたためマージン)
+    eqFx: { whiskPerLv: 0.15, mittPerLv: 0.12, mittCpsPerLv: 0.03, pressPerLv: 0.04, almanacDmgPerLv: 0.08, flaskPerLv: 0.10, compassDropPerLv: 0.05, trayPerLv: 0.06 },
     // 注文ボード(§19: 同時1件・間隔1800×0.85^転生回数・制限240+4√経過秒・必要量/報酬は現在値に相対)
     orders: { intervalBase: 1800, intervalDecay: 0.85, limitBase: 240, limitSqrt: 4,
       needProd: 0.25, needClick: 0.5, needHunt: 0.6, rewardCookie: 10, rewardBoostMul: 2, rewardBoostSec: 120,

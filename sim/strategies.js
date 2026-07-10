@@ -242,17 +242,20 @@ const STRATEGIES = [
   {
     id: 'S5', name: '研究貯蓄型',
     // タップ3/秒。研究はコスト<=所持80%で最優先。強化はコスト<=所持8%のみ。
-    // ただし「まだ1台も持っていない新設備」は<=30%まで出す(設備を買うとその研究カードが
-    // 開くとゲームに表示される=研究最優先だからこそ、研究の入口になる新設備の初台は惜しまない)。
+    // ただし「まだ1台も持っていない新設備」は研究の入口(買うとその研究カードが開くと
+    // ゲームに表示される)なので、通常の強化とは別枠で<=45%まで出して1台買う。
     tapRate: 3, goldenTake: 1,
     pickPolicy: sim => 'bake',
     buy: function (sim, prod) {
       for (const r of G.RESEARCH) buyResearchLine(sim, r.id, 0.80);
+      // 新設備の別枠(効率比較の土俵に乗せず「見えたら1台」= 研究の入口を開ける動き)
+      for (const u of G.visibleUpgrades(sim)) {
+        if ((sim.run.upgrades[u.id] || 0) > 0) continue;
+        if (G.tryBuyUpgrade(sim, u, 0.45)) break;
+      }
       for (let i = 0; i < 30; i++) {
         const u = G.bestEfficiency(sim, prod, null);
-        if (!u) break;
-        const isNew = (sim.run.upgrades[u.id] || 0) === 0;
-        if (!G.tryBuyUpgrade(sim, u, isNew ? 0.30 : 0.08)) break;
+        if (!u || !G.tryBuyUpgrade(sim, u, 0.08)) break;
       }
       buyAllResearch(sim, 0.80);
     },
@@ -283,11 +286,11 @@ const STRATEGIES = [
   },
   {
     id: 'S8', name: '最新設備ラッシュ型',
-    // タップ4/秒。常に可視最上位の設備を狙って貯金(それ以外はコスト<=所持5%のみ)。研究<=20%。
+    // タップ4/秒。常に可視最上位の設備を狙って貯金(それ以外はコスト<=所持5%のみ)。研究<=22%。
     tapRate: 4, goldenTake: 1,
     pickPolicy: sim => 'bake',
     buy: function (sim, prod) {
-      for (const r of G.RESEARCH) buyResearchLine(sim, r.id, 0.20);
+      for (const r of G.RESEARCH) buyResearchLine(sim, r.id, 0.22);
       const vis = G.visibleUpgrades(sim);
       const top = vis[vis.length - 1];
       for (let i = 0; i < 30; i++) {
@@ -298,7 +301,7 @@ const STRATEGIES = [
           if (!u || !G.tryBuyUpgrade(sim, u, 0.05)) break;
         }
       }
-      buyAllResearch(sim, 0.20);
+      buyAllResearch(sim, 0.22);
     },
     pickReward: pickRewardUpgradeFirst(['monsterDamage', 'beastHeatFerment', 'goldenAmount']),
     shouldPrestige: prestigeWhen(150, 1.5),
