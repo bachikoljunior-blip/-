@@ -1395,13 +1395,18 @@ function genreDirect(sim, base, invest, cfg) {
   return cfg.coef * base * raw * Math.pow(s, cfg.stagePow || 0.5);
 }
 // 設備直送: 投資量=オーブン所持数。ゲート=オーブン大量焼成 段階2(スキル auto_3→段階2購入→効果)。
-function equipDirectIncome(sim, base) {
+function equipDirectIncome(sim, base, prod) {
   if (!resStage2(sim, 'ovenBatch')) return 0;
   // 方針係数: ovenBatch段2の早期化(run5〜)+coef0.1 を全方針に等しく効かせると、balanced(4つ≥10%)が
   // 0/32・click(タップ≥30%)が5/25 に崩壊する(実測2026-07-10)。焼成方針だけフルに効き、他方針は
   // 従来規模(×0.2≒旧coef0.02)に留める(bankDirectのclickBonus・ovenBakeMulBake/Otherと同処方)。
   const polM = policyIs(sim, 'bake') ? 1 : (P.equipDirect.otherMul != null ? P.equipDirect.otherMul : 1);
-  return genreDirect(sim, base, sim.run.upgrades.oven || 0, P.equipDirect) * polM;
+  // アンカー=max(base, 金相場)(第12次R続き・anchorGolden=1で有効): 後半周回は金項/討直(金相場=clickEV連動)が
+  // 複利で伸び、base(cps+タップ素点)係留の設直だけが沈む(bake後半 設直30→5-7%・balanced後半 設5-8%の正体)。
+  // huntDirect「戦利品は金相場で売れる」と同型の処方=量産品も金相場で売れる。中盤は base>金相場 なので不変。
+  let anchor = base;
+  if (P.equipDirect.anchorGolden && prod) anchor = Math.max(base, goldenRateValue(sim, prod));
+  return genreDirect(sim, anchor, sim.run.upgrades.oven || 0, P.equipDirect) * polM;
 }
 // 金直送: 投資量=金perk合計。ゲート=香料調合 段階2(スキル golden_1→段階2購入→効果)。
 function goldenDirectIncome(sim, base) {
@@ -1472,7 +1477,7 @@ function earningPower(sim) {
   const tapOrig = prod.clickEV * (r.monster ? 0 : tapRate);
   const base = prod.cps + tapOrig; // 直接生産(モンスター中はタップは討伐へ)
   // タップ直送は base に含める(タップ稼ぎ口へ。incomeParts の tap 抽出でも同額を足す)
-  let power = base + tapDirectIncome(sim, base) + equipDirectIncome(sim, base) + bankDirectIncome(sim, base); // 設備直送→equip / タップ直送→tap / 銀行配当→equip残差
+  let power = base + tapDirectIncome(sim, base) + equipDirectIncome(sim, base, prod) + bankDirectIncome(sim, base); // 設備直送→equip / タップ直送→tap / 銀行配当→equip残差
   // 金クッキー収入率(期待値/秒)+金直送→golden
   if (!(sim._mdChan && sim._mdChan.golden)) {
     power += goldenRateValue(sim, prod) + goldenDirectIncome(sim, base);
@@ -1561,7 +1566,7 @@ function incomeParts(sim, pAll) {
   // 診断用の項別詳細(opt.partsDetail=diag専用。判定には使わない): 4稼ぎ口の中身を
   // cps / タップ素点 / 各直送 / 金項 / kill項 に細分する(㉘後半の設備押し上げの的を特定する道具)
   if (sim.opt.partsDetail) {
-    const eqD = equipDirectIncome(sim, baseCore);
+    const eqD = equipDirectIncome(sim, baseCore, prodCore);
     const bkD = bankDirectIncome(sim, baseCore);
     const tapD = tapDirectIncome(sim, baseCore);
     const gD = goldenDirectIncome(sim, baseCore);
@@ -2103,7 +2108,7 @@ function advanceTick(sim, strategy) {
     // 収入(各ジャンル直送: そのジャンルへ投資したプレイヤーだけ効く独立収入を加算=㉘の各主役を後半も立たせる)
     // 討伐直送のみ金クッキーの期待収入率アンカー(earningPower の計測と同式=計測と実支払いの一致)
     const dirBase = prod.cps + prod.clickEV * (r.monster ? 0 : tapRate);
-    const directAll = equipDirectIncome(sim, dirBase) + goldenDirectIncome(sim, dirBase)
+    const directAll = equipDirectIncome(sim, dirBase, prod) + goldenDirectIncome(sim, dirBase)
       + huntDirectIncome(sim, goldenRateValue(sim, prod)) + tapDirectIncome(sim, dirBase) + bankDirectIncome(sim, dirBase);
     earn(sim, cpsNow * dt + clickNow * tapsForCookies * dt + directAll * dt);
 
