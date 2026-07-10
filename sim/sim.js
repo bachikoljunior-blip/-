@@ -481,8 +481,12 @@ function wsAddMat(sim, id, n) {
   ws.mats[id] = (ws.mats[id] || 0) + n;
   if (!ws.seen[id]) {
     ws.seen[id] = true;
-    // レシピ開示=対応素材の初入手(解放イベント=T2の工房系)
-    if (!ws.everWs['mat:' + id]) { ws.everWs['mat:' + id] = true; sim.unlockEvents.push({ t: sim.t, kind: 'ws', id: 'mat:' + id }); }
+    // 解放イベントは「レシピの開示」(構成素材が全部揃った瞬間)のみ。素材1種ごとの初入手を
+    // イベントにすると計35件が中盤の周回に集中しT2(解放1-3件/周回)を壊す(100h実測でS4 44→36/46等)。
+    for (const rc of P.ws.recipes) {
+      if (ws.everWs['recipe:' + rc.id]) continue;
+      if (wsRecipeSeen(sim, rc)) { ws.everWs['recipe:' + rc.id] = true; sim.unlockEvents.push({ t: sim.t, kind: 'ws', id: 'recipe:' + rc.id }); }
+    }
   }
 }
 function wsCanAfford(sim, cost, mul) {
@@ -554,7 +558,7 @@ function wsAutoPlay(sim) {
     const dur = P.ws.cookDur * (1 + P.ws.eqFx.flaskPerLv * wsEqLv(sim, 'stillFlask'));
     r.buffs[id] = t + dur;
     active++;
-    if (!ws.everWs['dish:' + id]) { ws.everWs['dish:' + id] = true; sim.unlockEvents.push({ t, kind: 'ws', id: 'dish:' + id }); }
+    if (!ws.everWs['dish:' + id]) ws.everWs['dish:' + id] = true; // 解放イベントはレシピ開示時に計上済み(初調理は重複させない)
   }
   // 作成(装備): workshop_2 解放後、好み順にLvを上げる
   if (wsEqUnlocked(sim)) {
@@ -562,10 +566,18 @@ function wsAutoPlay(sim) {
     for (const id of epref) {
       const def = wsEqDefOf(id);
       const lv = (ws.eq[id] || 0);
-      if (lv >= P.ws.eqLvCap) continue;
       const mul = Math.pow(P.ws.eqGrowth, lv);
+      // 限界突破(仕様§10): Lv10以降はボス核(5+3×超過)+虚空糖(10×超過)の追加コストで無限に強化可
+      // =素材(核・虚空糖)の恒久シンク。深層供給と釣り合う(注文の素材セット報酬の価値化も兼ねる)。
+      let extra = null;
+      if (lv >= P.ws.eqLvCap) {
+        const over = lv - P.ws.eqLvCap;
+        extra = { bossCore: 5 + 3 * over, voidSugar: 10 * (over + 1) };
+        if ((ws.mats.bossCore || 0) < extra.bossCore || (ws.mats.voidSugar || 0) < extra.voidSugar) continue;
+      }
       if (!wsCanAfford(sim, def.cost, mul)) continue;
       wsConsume(sim, def.cost, mul);
+      if (extra) { ws.mats.bossCore -= extra.bossCore; ws.mats.voidSugar -= extra.voidSugar; }
       ws.eq[id] = lv + 1;
       if (!ws.everWs['eq:' + id]) { ws.everWs['eq:' + id] = true; sim.unlockEvents.push({ t, kind: 'ws', id: 'eq:' + id }); }
       break; // 1tick1回
@@ -649,13 +661,32 @@ function wsOrderTick(sim, prod) {
       const rk = rkinds[ws.orderRewardRot % 3]; ws.orderRewardRot++;
       if (rk === 'cookie' && !wsOff(sim, 'order:cookie')) earn(sim, prod.cps * o.limit * O.rewardCookie);
       else if (rk === 'materials' && !wsOff(sim, 'order:materials')) {
-        // 素材セットは装備はしご(2.2^Lv)相対でスケール=装備の次の1段を有意に加速する量(定数だと後半無価値=実測1.000)
-        const st = wsStageDef(sim);
-        let minLv = Infinity;
-        for (const e of P.ws.equipment) minLv = Math.min(minLv, (ws.eq[e.id] || 0));
-        const amt = O.rewardMatSet * Math.pow(P.ws.eqGrowth, Math.min(10, minLv === Infinity ? 0 : minLv));
-        wsAddMat(sim, st.c[ws.matRot % st.c.length], amt); ws.matRot++;
-        if (st.r.length) wsAddMat(sim, st.r[0], amt * 0.25);
+        // 素材セット=御用聞き型: 次に作りたい装備(方針の好み順で最初に作れない物)の不足分を補充する。
+        // 「今いるステージの共通素材を定数配る」型は、それが最も余っている素材のため限界価値ゼロ
+        // (核1553個・虚空糖460万在庫でも比1.000=実測)。不足素材を配ってはじめて進行が動く。
+        const epref = WS_EQ_PREF[sim.run.policy] || WS_EQ_PREF.balanced;
+        let granted = 0;
+        for (const id of epref) {
+          if (granted >= (O.rewardItems || 1)) break;
+          const def = wsEqDefOf(id);
+          const lv = ws.eq[id] || 0;
+          const mul = Math.pow(P.ws.eqGrowth, lv) * (P.ws.costMul || 1);
+          const fill = O.rewardFill != null ? O.rewardFill : 0.8;
+          let missingAny = false;
+          for (const k in def.cost) {
+            const need = def.cost[k] * mul;
+            const have = ws.mats[k] || 0;
+            if (have < need) { wsAddMat(sim, k, (need - have) * fill); missingAny = true; }
+          }
+          if (lv >= P.ws.eqLvCap) { // 限界突破ぶんの核・虚空糖の不足も補充対象
+            const over = lv - P.ws.eqLvCap;
+            const needC = 5 + 3 * over, needV = 10 * (over + 1);
+            if ((ws.mats.bossCore || 0) < needC) { wsAddMat(sim, 'bossCore', (needC - (ws.mats.bossCore || 0)) * 0.8); missingAny = true; }
+            if ((ws.mats.voidSugar || 0) < needV) { wsAddMat(sim, 'voidSugar', (needV - (ws.mats.voidSugar || 0)) * 0.8); missingAny = true; }
+          }
+          if (missingAny) granted++;
+        }
+        if (!granted) { const st = wsStageDef(sim); wsAddMat(sim, st.c[ws.matRot % st.c.length], O.rewardMatSet); ws.matRot++; }
       } else if (rk === 'boost' && !wsOff(sim, 'order:boost')) {
         sim.run.boosts.push({ mult: O.rewardBoostMul, until: t + O.rewardBoostSec });
       }
@@ -862,8 +893,11 @@ function bakeEVRaw(sim) {
   const crispyDmg = (1.08 + P.ws.eqFx.mittPerLv * wsEqLv(sim, 'ovenMitt')) * powerMul; // 断熱オーブン手袋: こんがり+0.05Lv
   const crispyStay = lg(oven, B.crispyStay);
   const burntHp = lg(stage, B.burntHp);
+  // 断熱オーブン手袋: 火加減の安定=焼き上がり生産の底上げ(こんがりのダメージ経路はワンパン時代に
+  // 二値しきい値で死ぬ=⑮の2で1.000実測。③crackedFangと同根の「経路を総クッキーへ繋ぐ」処方)
+  const mittCps = 1 + (P.ws.eqFx.mittCpsPerLv || 0) * wsEqLv(sim, 'ovenMitt');
   return {
-    cps: (w.soft * 1 + w.good * goodCps + w.crispy * 1 + w.burnt * burntCps) / W,
+    cps: mittCps * (w.soft * 1 + w.good * goodCps + w.crispy * 1 + w.burnt * burntCps) / W,
     golden: (w.soft * softGold + (W - w.soft) * 1) / W,
     dmg: (w.crispy * crispyDmg + (W - w.crispy) * 1) / W,
     stay: (w.crispy * crispyStay + (W - w.crispy) * 1) / W,
