@@ -28,8 +28,8 @@
 **ブランチ**: `claude/handoff-12q-continuation-ko900k`(push済み。`claude/handoff-12q-continuation-trgjp2` の後継=このブランチが正)。
 **ユーザー指示(2026-07-10・重要)**: 「指定しているのは**合格条件・調整項目・プレイ方針の決め方**だけ。それ以外(式・アンカー・計測の内部・進め方)は自分の考えでやり方を変えてよい。既存のやり方にとらわれず早く達成すること」。旧運用の「1チャネルずつ・毎回全検証」は必須でない=まとめて動かして最後に一括検証でよい。
 
-**この回(第12次R2)の主戦果 = ㉘稼ぎ口 128→186/230(56%→81%・全検証済み)**
-(balanced 10→36/48・bake 23→46/47・click 24→30/48・hunt 29→34/43・golden 42→40/44):
+**この回(第12次R2)の主戦果 = ㉘稼ぎ口 128→201/228(56%→88%・全検証済み)**
+(balanced 10→44/48・bake 23→46/47・click 24→38/48・hunt 29→33/42・golden 42→40/43):
 1. **Rの残作業(1)「chain.prodCoefグリッド」は空振りと決着**: 0.020/0.016/0.014/0.010の100h実測で
    ㉘合計62→61-62(balanced10/48不変)と完全フラット。**第12次JのattributionでchainMは全稼ぎ口共有=シェア相殺**
    のため効かない(R-7の「chainが討伐由来に計上」は誤り=それはliftの話)。prodCoef=0.02据え置き。
@@ -51,8 +51,18 @@
      (**otherMulOfヘルパでスカラー/方針別マップ両対応に**): click/balanced中盤の金直16-22%・討直の圧迫を除去。
      huntも金直を絞ると討シェアが立ち29→34/43(②改34不変)。
      bakeに効かせると②改40→30/−15に崩れる(C1/C2b実測)ため方針別マップが必須。
+   - `tapDirect.anchorGolden=0.5`(**神指登場前だけ** max(base, 0.5×金相場)アンカー=「上位設備が出るまでの
+     下位投資(指)の換金」): **balanced中盤run25-32の打4-8%→14-18%で36→44/48・click30→38/48**。
+     常時適用は神指時代の打が85-88%に爆発しbalanced後半全滅(E2/E3実測)=神指0の間だけが唯一の両立形。
+   - `tapDirect.otherMul={golden:0.6,default:1}`: golden後半の打33-41%を絞り金≥30%へ(40-41/43)。
    - **不採用と実測根拠**: hd0.15全方針一律(bake②改−15でbalanced/click+1ずつ=割に合わない)/tapDirect.satMax(上記)/
-     chain.prodCoef削減(上記)/bankDirect増(click中盤の銀18-25%をさらに膨らませ㉘悪化・①bankとの綱引き)。
+     chain.prodCoef削減(上記)/bankDirect増(click中盤の銀18-25%をさらに膨らませ㉘悪化・①bankとの綱引き)/
+     **portalNetwork段2前倒し(1e26)**=hunt(a)+1のみで②改34→22崩壊(後半討71-82%独走)。satMax同時絞りが前提なら再考余地。
+6. **1段目研究コストを設備の解放順に並べ替え(ユーザー指示 2026-07-10)**: 逆転はbankClickDividendの1箇所のみ
+   (8.16e17がspiceRack/portalより高い)。bank=4.59e12/spiceBlend=1.98e15/portalNetwork=8.16e17に入れ替え
+   (weave時間軸上の位置=T2の1周回1目標設計は不変)。**段階2/3の実コストは倍率の逆補正で完全維持**
+   (bank s2実3.918e33/spice s2実1.510e23/portal s2実2.836e66=変更前と一致)。副作用なしを全検証で確認。
+   ①bankの最大幾何は1.29→1.38に改善(bank研究が早まった効果)。**移植時: resync_research_costs.js で index.html へ再同期**。
 4. **副作用の検証(ag015時点のフル実測)**: baseline100h=④91%・T3a/T3b86%維持・**T1 83→86%**(370/430)・
    T2解放92%・第0回9/10(S5のみ)。expect36h=**⑨19→20/20に改善**・⑬4/4・③utility12/12維持・
    ①bank12/13(1.30・既存)・③monsterRate(1.16・既存)は不変=Q方針どおり最終盤にまとめてマージン固定。
@@ -61,17 +71,23 @@
    `node tune_r.js '{"huntDirect":{"otherMul":0.15}}' 100 balanced,hunt`=任意パラメータ上書きでincome判定を速見。
    `node sweep_chain.js 0.014 100`=chain.prodCoefグリッド(歴史)。
 
-**最終検証(全完了・results/_income_12r8_final.txt / _expect_12r8_final.txt / _baseline_12r8_final.txt +
-_tune_hunt_gom.txt)**: **㉘186/230(81%)**・②改137/182(基準140・−3)・baseline=T1 86%・④91%・
-T3a/T3b86%・T2解放92%・第0回9/10(S5のみ)・expect=⑨20/20(19から改善)・⑬4/4・③19/20・①12/13
-(際どい2件=①bank1.29/③rate1.15は既存のまま=Q方針どおり最終盤にまとめてマージン固定)・
-**⑫4/5(clickの1位周回が出現・欠けはgoldenに入れ替わり=同数)**。
+**最終検証(全完了・results/_income_12r9_final2.txt / _expect_12r9_final2.txt / _baseline_12r9_final2.txt。
+研究コスト並べ替え+全採用ノブ込み)**: **㉘201/228(88%)**・②改135/180(基準140・−5=採用トレードの範囲)・
+baseline=T1 86%(S9は48/48満点)・④91%・T3a/T3b86%・T2解放92%・第0回9/10(S5のみ)・
+expect=⑨20/20・⑬4/4・③19/20(rate1.16既存)・①12/13(bank最大幾何1.38に改善も1周回<1.2残存=
+Q方針どおり最終盤にまとめてマージン固定)・**⑫4/5(balanced,bake,click,hunt。欠け=golden)**。
 
-**残作業(優先順)**: (1) ㉘の残NG44周回=balanced序盤・中盤の残り(打<10%のrun28-32型)・click中盤の深い周回
-(run32型=打直の投資が薄い)・golden4周回・hunt序盤(討<30%) → (2) ②改の残り(click後半の打52-67%・hunt後半の
-討50-64%=各主役直送のsatMax/係数調整余地) → (3) T1残り(S3の谷27/47・S10の交互振動25/47) →
+**要承認の保留提案(2026-07-10 提示済み・未回答)**: ㉘のbalanced判定対象を「いずれかの主役研究1つ以上」から
+「4直送ゲート研究(ovenBatch段2/spiceBlend段2/portalNetwork段2/fingerTechnique段2)がすべて解放済みの周回」へ
+(run1/3=討伐経済の存在前の構造NGを判定外に。効果+2-4周回)。承認されるまで現行定義で判定を続ける。
+
+**残作業(優先順)**: (1) ㉘の残NG27周回=balanced序盤4(討7-8%=上記提案と重なる)・click中盤の深い数周回
+(run32型=打直の投資が薄い)・golden3・hunt序盤6-9(討25-30%=portalNetwork段2前倒し+huntDirect.satMax絞りのセットが候補) →
+(2) ②改の残り(click後半の打52-67%・hunt後半の討50-64%=各主役直送のsatMax/係数調整余地。㉘とのトレード注意) →
+(3) T1残り(S3の谷25-27/47・S10の交互振動25/47=層の試練の天井持ち越し平滑化が候補) →
 (4) ㉑序盤4設備(factory@run0 x0.05等) → (5) ⑫goldenの1位周回復元+①bank/③rateのマージン固定(経済確定後の最後に) →
-(6) S5第0回(1.13)・S7 T2解放15/23 → (7) 全緑後にindex.htmlへ移植(anchorGolden/scarce/otherMulマップ/clickBonusを含む)。
+(6) S5第0回(1.13)・S7 T2解放15/23 → (7) 全緑後にindex.htmlへ移植(anchorGolden×2/scarce/otherMulマップ/clickBonus/
+研究コスト並べ替え=resync_research_costs.js を含む)。
 
 ---
 ### ★★★★ 第12次R(2026-07-10)の引き継ぎ ★★★★(歴史記録)
