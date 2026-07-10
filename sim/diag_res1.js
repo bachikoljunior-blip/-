@@ -12,8 +12,7 @@ for (const s of STRATEGIES) {
   const sim = G.simulate(s, { hours, measure: true });
   const rows = [];
   for (const r of sim.runs) {
-    if (r.partial || !r.measure || r.measure.lift[key] == null) continue;
-    if (!(r.research && r.research[rid])) continue; // 取得周回のみ
+    if (r.partial || !r.measure || r.measure.lift[key] == null) continue; // lift記録あり=取得周回
     rows.push(`  run${String(r.idx).padStart(2)} lift=${r.measure.lift[key].toFixed(3)}${r.measure.lift[key] < 1.2 ? '  <-- NG' : ''}`);
   }
   if (rows.length) { console.log(`--- ${s.id} ${s.name} (${rows.length}周回取得)`); rows.forEach(x => console.log(x)); }
