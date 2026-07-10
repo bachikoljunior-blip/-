@@ -59,7 +59,8 @@ module.exports = {
     lvLateDiv: 320, lvLatePow: 1.22,
     dmgSqrtCoef: 0.45,
     ratePerLv: 0.09,
-    rateKillBonus: 0.35, rateKillHalf: 4
+    rateKillBonus: 0.35, rateKillHalf: 4,
+    satKps: 2.0 // 討伐頻度の飽和半価点(2026-07-10): kill項の1体価値逓減。高テンポ期の討伐56-63%独走を[30,52]帯へ(balanced序盤0.02-0.05体/秒はほぼ線形)
   },
 
   // ---- ノルマ ----
@@ -106,9 +107,9 @@ module.exports = {
   // 各稼ぎ口に、そのジャンルへ投資したプレイヤーだけ強く効く独立収入を用意し、各方針の主役を後半も≥30%に立たせる。
   // すべて skill→research→効果 でゲート(設備=ovenBatch段2/金=spiceBlend段2/討伐=portalNetwork段2/タップ=fingerTechnique段2)。
   // coef=0 で各無効。tune で全体最良点を掃引(㉘の各主役≥30%と経済/テンポ非破綻の両立)。調整項目。
-  equipDirect:  { coef: 0.02, stagePow: 0.5, countPow: 2, ref: 100, startStage: 5 }, // 投資量=オーブン所持数(0.05はbake中盤の設備19-29%をほぼ動かせず=中盤は金の時代現象が根本、と実測 2026-07-10)
-  goldenDirect: { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5 }, // 投資量=金perk合計(㉘金≥30%へ増幅・huntDirectと同処方=投資連動で金特化の後半周回だけ強く効く)
-  huntDirect:   { coef: 0.22, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 25 }, // 投資量=討伐perk合計8種(㉘討伐≥30%へ増幅・投資連動=狩猟専の周回だけ強く効く)。ベース=金クッキー期待収入率(金経済連動)。satMax=高投資周回(perk1000+)の独走を飽和で抑え②改と両立
+  equipDirect:  { coef: 0.06, stagePow: 0.5, countPow: 2, ref: 100, startStage: 5, satMax: 25, otherMul: 0.2 }, // 投資量=オーブン所持数。coef0.05無効の正体はゲート(ovenBatch段2コスト=run15相当)。段2コスト前倒しとセットで増幅(2026-07-10)。satMax=独走防止。otherMul=焼成方針以外は従来規模(全方針等倍だとbalanced0/32・click5/25に崩壊=実測)
+  goldenDirect: { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 10 }, // 投資量=金perk合計(㉘金≥30%へ増幅・huntDirectと同処方=投資連動で金特化の後半周回だけ強く効く)
+  huntDirect:   { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 15, otherMul: 0.3 }, // 投資量=討伐perk合計8種(㉘討伐≥30%へ増幅・投資連動=狩猟専の周回だけ強く効く)。ベース=金クッキー期待収入率(金経済連動)。satMax=高投資周回(perk1000+)の独走を飽和で抑え②改と両立
   tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5 }, // 投資量=神の指+強い指/10
   // 銀行配当(直送・第12次J-3 腐り解消): bankClickDividend研究の独立収入。クリック方針で厚く効かせ①の各回minを満たす。
   // 全体cps倍率をやめ加算収入へ(他機能のlift希釈を回避)。所持数はlog10で床あり=早い周回でも効く。増加方向のみ。
@@ -254,7 +255,15 @@ module.exports = {
 
   // ---- 段階コストの研究別倍率(第11次・値段割り用) ----
   // 研究ごとに {s2, s3} を指定(なければ resStageCost の共通倍率)。研究コスト=調整項目(ユーザー確認済み)
-  resStageCostEach: (function () { try { return require('./weave_costs.json').resStageCostEach || {}; } catch (e) { return {}; } })(),
+  resStageCostEach: (function () {
+    let m = {}; try { m = require('./weave_costs.json').resStageCostEach || {}; } catch (e) { }
+    // ㉘bake対策(2026-07-10): weave(値段割りD')は ovenBatch段2 を run15相当(コスト~e43)に置くが、
+    // bake代表(S1)の主役エンジン(大量焼成倍率+設備直送ゲート)が金ゲート(spiceBlend段2=run7相当)に
+    // 12周回遅れ、中盤(run4-14)の設備19-29%NGの構造要因になる。主役の特殊経済は早期に開く=
+    // 実コスト~1e8(run4-5相当・30000×3333)へ前倒し(研究コスト=調整項目)。
+    m.ovenBatch = Object.assign({}, m.ovenBatch, { s2: 1000 }); // 実コスト3e7=run3-4相当(3333=1e8だとS1のrun4だけゲートが間に合わずNG)
+    return m;
+  })(),
 
   // ---- まとめ買い割増(2026-07-06 ユーザー採用・第10次) ----
   // 同じ設備を短時間に連続購入するほど値段に割増がつき、時間で元に戻る。
@@ -287,7 +296,7 @@ module.exports = {
     comboRate: 0.03, comboWindow: 30,
     critCpsCoef: 0.003,
     supExtra: 0.008, supStageCoef: 0.001,
-    ovenBakeMulBake: 1.5, ovenBakeMulOther: 1.2,
+    ovenBakeMulBake: 1.7, ovenBakeMulOther: 1.2,
     ovenS3Flat: 0.06, ovenStageCoef: 0.004,
     factoryHiKind: 0.15, factoryStageCoef: 0.0012,
     matureRate: 0.006, aromaDur: 12, spiceStageCoef: 0.0015,

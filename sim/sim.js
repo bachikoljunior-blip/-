@@ -51,8 +51,12 @@ const RES_EQUIP = {
   galaxyAssembly: 'galaxyFactory', blackHoleCompression: 'blackHoleMixer',
   quantumProofing: 'quantumBakery', antimatterRecipe: 'antimatterOven'
 };
+// ovenBatch段2の解放=auto_1(2026-07-10 ㉘bake対策): cheapestFirst系の方針はスキルを毎周回1個ずつ
+// 段順に買うため、旧auto_3ゲートだと bake代表(S1)の主役エンジン(設備直送+大量焼成倍率)が run14まで
+// 解禁されず、金ゲート(golden_1=run2→spiceBlend段2=run7)に12周回先行される=中盤の金50-59%支配・
+// 設備19-29%NG(run4-14)の構造要因。主役の特殊経済は各系統の入口スキルで開く。
 const RES_STAGE2 = {
-  fingerTechnique: 'click_2', grandmaCrowd: 'auto_2', ovenBatch: 'auto_3',
+  fingerTechnique: 'click_2', grandmaCrowd: 'auto_2', ovenBatch: 'auto_1',
   factoryNetwork: 'auto_4', spiceBlend: 'golden_1', portalNetwork: 'monster_3',
   bankClickDividend: 'economy_2', moonGlobalYeast: 'upgrade_time', portalGlobalFold: 'upgrade_singularity',
   galaxyAssembly: 'upgrade_universe', blackHoleCompression: 'upgrade_singularity',
@@ -1066,7 +1070,11 @@ function genreDirect(sim, base, invest, cfg) {
 // 設備直送: 投資量=オーブン所持数。ゲート=オーブン大量焼成 段階2(スキル auto_3→段階2購入→効果)。
 function equipDirectIncome(sim, base) {
   if (!resStage2(sim, 'ovenBatch')) return 0;
-  return genreDirect(sim, base, sim.run.upgrades.oven || 0, P.equipDirect);
+  // 方針係数: ovenBatch段2の早期化(run5〜)+coef0.1 を全方針に等しく効かせると、balanced(4つ≥10%)が
+  // 0/32・click(タップ≥30%)が5/25 に崩壊する(実測2026-07-10)。焼成方針だけフルに効き、他方針は
+  // 従来規模(×0.2≒旧coef0.02)に留める(bankDirectのclickBonus・ovenBakeMulBake/Otherと同処方)。
+  const polM = policyIs(sim, 'bake') ? 1 : (P.equipDirect.otherMul != null ? P.equipDirect.otherMul : 1);
+  return genreDirect(sim, base, sim.run.upgrades.oven || 0, P.equipDirect) * polM;
 }
 // 金直送: 投資量=金perk合計。ゲート=香料調合 段階2(スキル golden_1→段階2購入→効果)。
 function goldenDirectIncome(sim, base) {
@@ -1087,7 +1095,10 @@ function huntDirectIncome(sim, base) {
   // monsterRate を大量に拾う中盤周回で投資量0=直送不発(㉘hunt run18-27 の25-29%NGの原因)。
   const inv = (r.perks.monsterDamage || 0) + (r.perks.crackedFang || 0) + (r.perks.beastHeatFerment || 0) + (r.perks.huntingCore || 0)
     + (r.perks.monsterRate || 0) + (r.perks.monsterStay || 0) + (r.perks.biteRecovery || 0) + (r.perks.brandHunt || 0);
-  return genreDirect(sim, base, inv, P.huntDirect);
+  // 方針係数: 非hunt方針の後半周回(報酬解禁スキル後=hunt perk投資が勝手に貯まる)で討伐直送が主役を
+  // 押し退ける(bake S1 run25-29 討39-46%・balanced S6 run24-28 討33-53%=実測2026-07-10)のを抑える。
+  const polM = policyIs(sim, 'hunt') ? 1 : (P.huntDirect.otherMul != null ? P.huntDirect.otherMul : 1);
+  return genreDirect(sim, base, inv, P.huntDirect) * polM;
 }
 // タップ直送: 投資量=クリック系(神の指+強い指/10)。ゲート=指先の型 段階2(スキル click_2→段階2購入→効果)。
 function tapDirectIncome(sim, base) {
@@ -1163,7 +1174,13 @@ function earningPower(sim) {
     // ※クリック火力(clickEV×タップ率)アンカーは3時代(中盤+5-13pt/高投資期+0/爆発期+20-40pt)を
     //   分離できず②改を壊すと実測済み。kill価値項(全方針一律)の増幅も S3 の金シェア崩壊で不可(実測)。
     const huntAnchor = goldenRateValue(sim, prod);
-    power += killsPerSec * base * KILL_VALUE_SEC + huntDirectIncome(sim, huntAnchor);
+    // 討伐頻度の飽和(2026-07-10・分解定義の細部=仮置き裁量): 高テンポ時は1体あたり価値が逓減する
+    // (戦利品の限界価値)。kill項が killsPerSec×KVS で線形だと最高テンポ期(0.7-1.0体/秒)に討伐が
+    // 56-63%へ独走し②改(ジャンルlift±1.5帯=上限~52%)を壊す。2乗型: 1次型(x/(1+x/K))は中位帯
+    // (0.3-0.6体/秒=討30-50%の合格周回)まで削って hunt 40→17/43 に崩壊(実測)。2乗型は
+    // 中位帯≤10%減・最高帯~30%減で分離できる。低テンポ(balanced序盤0.02-0.05体/秒)は無傷。
+    const kpsSat = P.monster.satKps > 0 ? killsPerSec / (1 + Math.pow(killsPerSec / P.monster.satKps, 2)) : killsPerSec;
+    power += kpsSat * base * KILL_VALUE_SEC + huntDirectIncome(sim, huntAnchor);
   }
   return power;
 }
