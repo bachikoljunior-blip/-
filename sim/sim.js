@@ -1413,12 +1413,15 @@ function equipDirectIncome(sim, base, prod) {
 function goldenDirectIncome(sim, base) {
   if (!resStage2(sim, 'spiceBlend')) return 0;
   const r = sim.run;
+  // 方針係数(第12次R続き・hunt/equipのotherMulと同型): 非golden方針の中盤で金直16-18%が
+  // click打<30%・balanced打<10%を圧迫する対策。otherMul=1(既定)で従来どおり。
+  const polM = policyIs(sim, 'golden') ? 1 : (P.goldenDirect.otherMul != null ? P.goldenDirect.otherMul : 1);
   // 投資量=goldenカテゴリperk合計(全7種)。旧3種(amount/power/rate)だと、goldenTarget/FirstHit等の
   // ON/OFF比が金直送に乗らず、huntDirect増幅の希釈で③instantの中央値が1.1を割る(1.02〜1.10に低下)。
   // huntDirect(hunt全8種)と対称の処方=金特化(S3)の後半周回の金シェア(㉘)も同時に立つ。
   const inv = (r.perks.goldenAmount || 0) + (r.perks.goldenPower || 0) + (r.perks.goldenRate || 0)
     + (r.perks.goldenChain || 0) + (r.perks.goldenTarget || 0) + (r.perks.goldenFirstHit || 0) + (r.perks.beastScent || 0);
-  return genreDirect(sim, base, inv, P.goldenDirect);
+  return genreDirect(sim, base, inv, P.goldenDirect) * polM;
 }
 // 討伐直送: 投資量=討伐perk合計。ゲート=異世界接続網 段階2(スキル monster_3→段階2購入→効果)。
 function huntDirectIncome(sim, base) {
@@ -1438,7 +1441,10 @@ function tapDirectIncome(sim, base) {
   if (!resStage2(sim, 'fingerTechnique')) return 0;
   const r = sim.run;
   const inv = (r.upgrades.godFinger || 0) + (r.upgrades.finger || 0) * 0.1;
-  return genreDirect(sim, base, inv, P.tapDirect);
+  // 方針係数(第12次R続き・bankDirectのclickBonusと同型): click方針の中盤は銀/金直/討直に打が
+  // 圧迫され打<30%が続く(S2 run21-32)。主役方針だけ厚くする増加方向の係数。clickBonus=1(既定)で従来どおり。
+  const polM = policyIs(sim, 'click') ? (P.tapDirect.clickBonus || 1) : 1;
+  return genreDirect(sim, base, inv, P.tapDirect) * polM;
 }
 // 銀行配当(直送・第12次J-3 腐り解消): 銀行の所持数と貯蓄(総クッキー桁)で毎秒生産へ加算する独立収入。
 // ゲート=銀行クリック配当研究(resActive=①測定トグル対応)。クリック方針で厚く効く(既存の×1.08と整合)。
@@ -1514,7 +1520,13 @@ function earningPower(sim) {
     // (0.3-0.6体/秒=討30-50%の合格周回)まで削って hunt 40→17/43 に崩壊(実測)。2乗型は
     // 中位帯≤10%減・最高帯~30%減で分離できる。低テンポ(balanced序盤0.02-0.05体/秒)は無傷。
     const kpsSat = P.monster.satKps > 0 ? killsPerSec / (1 + Math.pow(killsPerSec / P.monster.satKps, 2)) : killsPerSec;
-    power += kpsSat * base * KILL_VALUE_SEC + huntDirectIncome(sim, huntAnchor);
+    // 希少プレミアム(第12次R続き・分解定義の細部=KVS5→7/satKpsと同じ裁量枠): 討伐が稀な時期(序盤の
+    // 出現間隔律速)は1体のperk/戦利品の相対価値が大きい=1体あたり価値を低テンポほど増幅する。
+    // balanced序盤(kps0.00-0.05)の討伐3-9%<10%と hunt序盤の討28%<30%の底上げ用。高テンポ帯(0.3+)は
+    // ほぼ等倍で②改の[30,52]帯・satKpsの分離を保つ。scarceBonus=0で無効。
+    const scarceM = (P.monster.scarceBonus || 0) > 0
+      ? 1 + P.monster.scarceBonus / (1 + killsPerSec / (P.monster.scarceHalf || 0.05)) : 1;
+    power += kpsSat * base * KILL_VALUE_SEC * scarceM + huntDirectIncome(sim, huntAnchor);
   }
   return power;
 }
