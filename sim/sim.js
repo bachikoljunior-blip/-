@@ -1394,13 +1394,27 @@ function genreDirect(sim, base, invest, cfg) {
   if (cfg.satMax > 0) raw = raw / (1 + raw / cfg.satMax);
   return cfg.coef * base * raw * Math.pow(s, cfg.stagePow || 0.5);
 }
+// 方針係数の解決(第12次R続き): otherMul はスカラー(従来)または方針別マップ
+// (例 {click:0.15, balanced:0.15, default:0.3})。主役方針は常に1。マップ化の動機=
+// hd0.15はclick/balancedに+1ずつ効くがbakeの②改を−15壊す(C1実測)=方針ごとに最適値が違う。
+function otherMulOf(sim, cfg, mainPol) {
+  if (policyIs(sim, mainPol)) return 1;
+  const om = cfg.otherMul;
+  if (om == null) return 1;
+  if (typeof om === 'object') {
+    const pol = sim.run.policy;
+    if (pol != null && om[pol] != null) return om[pol];
+    return om.default != null ? om.default : 1;
+  }
+  return om;
+}
 // 設備直送: 投資量=オーブン所持数。ゲート=オーブン大量焼成 段階2(スキル auto_3→段階2購入→効果)。
 function equipDirectIncome(sim, base, prod) {
   if (!resStage2(sim, 'ovenBatch')) return 0;
   // 方針係数: ovenBatch段2の早期化(run5〜)+coef0.1 を全方針に等しく効かせると、balanced(4つ≥10%)が
   // 0/32・click(タップ≥30%)が5/25 に崩壊する(実測2026-07-10)。焼成方針だけフルに効き、他方針は
   // 従来規模(×0.2≒旧coef0.02)に留める(bankDirectのclickBonus・ovenBakeMulBake/Otherと同処方)。
-  const polM = policyIs(sim, 'bake') ? 1 : (P.equipDirect.otherMul != null ? P.equipDirect.otherMul : 1);
+  const polM = otherMulOf(sim, P.equipDirect, 'bake');
   // アンカー=max(base, anchorGolden×金相場)(第12次R続き): 後半周回は金項/討直(金相場=clickEV連動)が
   // 複利で伸び、base(cps+タップ素点)係留の設直だけが沈む(bake後半 設直30→5-7%・balanced後半 設5-8%の正体)。
   // huntDirect「戦利品は金相場で売れる」と同型の処方=量産品も金相場で売れる。中盤は base>金相場 なので不変。
@@ -1415,7 +1429,7 @@ function goldenDirectIncome(sim, base) {
   const r = sim.run;
   // 方針係数(第12次R続き・hunt/equipのotherMulと同型): 非golden方針の中盤で金直16-18%が
   // click打<30%・balanced打<10%を圧迫する対策。otherMul=1(既定)で従来どおり。
-  const polM = policyIs(sim, 'golden') ? 1 : (P.goldenDirect.otherMul != null ? P.goldenDirect.otherMul : 1);
+  const polM = otherMulOf(sim, P.goldenDirect, 'golden');
   // 投資量=goldenカテゴリperk合計(全7種)。旧3種(amount/power/rate)だと、goldenTarget/FirstHit等の
   // ON/OFF比が金直送に乗らず、huntDirect増幅の希釈で③instantの中央値が1.1を割る(1.02〜1.10に低下)。
   // huntDirect(hunt全8種)と対称の処方=金特化(S3)の後半周回の金シェア(㉘)も同時に立つ。
@@ -1433,7 +1447,7 @@ function huntDirectIncome(sim, base) {
     + (r.perks.monsterRate || 0) + (r.perks.monsterStay || 0) + (r.perks.biteRecovery || 0) + (r.perks.brandHunt || 0);
   // 方針係数: 非hunt方針の後半周回(報酬解禁スキル後=hunt perk投資が勝手に貯まる)で討伐直送が主役を
   // 押し退ける(bake S1 run25-29 討39-46%・balanced S6 run24-28 討33-53%=実測2026-07-10)のを抑える。
-  const polM = policyIs(sim, 'hunt') ? 1 : (P.huntDirect.otherMul != null ? P.huntDirect.otherMul : 1);
+  const polM = otherMulOf(sim, P.huntDirect, 'hunt');
   return genreDirect(sim, base, inv, P.huntDirect) * polM;
 }
 // タップ直送: 投資量=クリック系(神の指+強い指/10)。ゲート=指先の型 段階2(スキル click_2→段階2購入→効果)。
