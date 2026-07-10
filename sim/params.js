@@ -59,7 +59,7 @@ module.exports = {
     lvLateDiv: 320, lvLatePow: 1.22,
     dmgSqrtCoef: 0.45,
     ratePerLv: 0.09,
-    rateKillBonus: 0.35, rateKillHalf: 4,
+    rateKillBonus: 0.5, rateKillHalf: 4, // 0.35→0.5(2026-07-10 novelty導入で③monsterRateの中央値が1.1を割れ=専用の討伐手数ボーナスで回復)
     satKps: 2.0 // 討伐頻度の飽和半価点(2026-07-10): kill項の1体価値逓減。高テンポ期の討伐56-63%独走を[30,52]帯へ(balanced序盤0.02-0.05体/秒はほぼ線形)
   },
 
@@ -310,6 +310,10 @@ module.exports = {
     waveAmpBase: 0.30, waveAmpPerRes: 0.05, wavePeriod: 90, waveStageCoef: 0.001,
     antiStageCoef: 0.0008, antiPrestigeCoef: 0.03
   },
+
+  // 新規設備ボーナス(bestEfficiency): 未所持の設備は効率×この倍率で評価=「新しい設備をまず1台試す」
+  // 自然なプレイの模型。T2第0回の解放密度と㉑(初購入Δ=低CPS時点で買う)を同時に立てる。調整項目。
+  noveltyBoost: 8,
 
   // ---- 周回テンポ ----
   tempo: { ramp: 0.105, rampDiv: 420 },

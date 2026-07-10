@@ -7,11 +7,11 @@ const P = require('./params.js');
 const UPGRADES = [
   { id: 'finger', type: 'click', value: 1, base: 0.0506, growth: 1.32 },
   { id: 'grandma', type: 'cps', value: 1, base: 40, growth: 1.30 },
-  { id: 'oven', type: 'cps', value: 8, base: 520, growth: 1.35 },
-  { id: 'factory', type: 'cps', value: 45, base: 7200, growth: 1.37 },
-  { id: 'bank', type: 'cps', value: 260, base: 78000, growth: 1.39 },
-  { id: 'spiceRack', type: 'cps', value: 780, base: 320000, growth: 1.40 },
-  { id: 'portal', type: 'cps', value: 1600, base: 980000, growth: 1.41 },
+  { id: 'oven', type: 'cps', value: 8, base: 390, growth: 1.35 },
+  { id: 'factory', type: 'cps', value: 45, base: 2600, growth: 1.37 },
+  { id: 'bank', type: 'cps', value: 260, base: 18000, growth: 1.39 },
+  { id: 'spiceRack', type: 'cps', value: 780, base: 72000, growth: 1.40 },
+  { id: 'portal', type: 'cps', value: 1600, base: 260000, growth: 1.41 },
   { id: 'moonBakery', type: 'cps', value: 9800, base: 12500000, growth: 1.43 },
   { id: 'timeOven', type: 'cps', value: 65000, base: 180000000, growth: 1.45 },
   { id: 'galaxyFactory', type: 'cps', value: 450000, base: 2800000000, growth: 1.47 },
@@ -579,7 +579,7 @@ function wsAutoPlay(sim) {
       wsConsume(sim, def.cost, mul);
       if (extra) { ws.mats.bossCore -= extra.bossCore; ws.mats.voidSugar -= extra.voidSugar; }
       ws.eq[id] = lv + 1;
-      if (!ws.everWs['eq:' + id]) { ws.everWs['eq:' + id] = true; sim.unlockEvents.push({ t, kind: 'ws', id: 'eq:' + id }); }
+      if (!ws.everWs['eq:' + id]) ws.everWs['eq:' + id] = true; // 作成は進行であって「解放」ではない(解放イベントはworkshop_2スキルとレシピ開示が担う=T2の1-3件帯を守る)
       break; // 1tick1回
     }
   }
@@ -691,7 +691,7 @@ function wsOrderTick(sim, prod) {
         sim.run.boosts.push({ mult: O.rewardBoostMul, until: t + O.rewardBoostSec });
       }
       sim.run.ordersDone[rk] = (sim.run.ordersDone[rk] || 0) + 1;
-      if (!ws.everWs['order:' + rk]) { ws.everWs['order:' + rk] = true; sim.unlockEvents.push({ t, kind: 'ws', id: 'order:' + rk }); }
+      if (!ws.everWs['order:' + rk]) ws.everWs['order:' + rk] = true; // 注文報酬種も「解放」ではない(ボード自体の解放=order_boardスキル)
       ws.order = null;
       ws.orderNextT = t + O.intervalBase * Math.pow(O.intervalDecay, sim.prestigeRuns);
     } else if (t - o.startT > o.limit) {
@@ -2375,7 +2375,12 @@ function bestEfficiency(sim, prod, typeFilter) {
   for (const u of visibleUpgrades(sim)) {
     if (typeFilter && u.type !== typeFilter) continue;
     const cost = upgradeCost(sim, u);
-    const val = (u.value * upgradeUnitMult(sim, u)) / cost;
+    let val = (u.value * upgradeUnitMult(sim, u)) / cost;
+    // 新規設備ボーナス(2026-07-10・T2第0回/㉑対策): 自然なプレイヤーは新しく見えた設備を
+    // まず1台試す。純効率だけだと、会心研究で指が・報酬の個別強化がgrandma(唯一のcps設備)に
+    // 集中して新設備を45分〜買わない(第0回の解放イベントが4-5件に痩せる=実測)。
+    // 未所持設備の効率を×noveltyで評価=見えたら早めに1台(2台目以降は素の効率)。
+    if ((sim.run.upgrades[u.id] || 0) === 0 && P.noveltyBoost > 1) val *= P.noveltyBoost;
     if (val > bestVal) { bestVal = val; best = u; }
   }
   return best;
