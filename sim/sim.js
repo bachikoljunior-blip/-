@@ -1005,7 +1005,9 @@ function goldenAmountMultiplier(sim) {
   const trio = (rwOff(sim, 'goldenChain') ? 0 : (r.perks.goldenChain || 0)) * (P.rw.goldenChainAmount || 0)
     + (rwOff(sim, 'goldenTarget') ? 0 : (r.perks.goldenTarget || 0)) * (P.rw.goldenTargetAmount || 0)
     + (rwOff(sim, 'goldenFirstHit') ? 0 : (r.perks.goldenFirstHit || 0)) * (P.rw.goldenFirstHitAmount || 0)
-    + (rwOff(sim, 'beastScent') ? 0 : (r.perks.beastScent || 0)) * (P.rw.beastScentAmount || 0);
+    + (rwOff(sim, 'beastScent') ? 0 : (r.perks.beastScent || 0)) * (P.rw.beastScentAmount || 0)
+    // goldenPower も同パターンで即時獲得量へ相乗り(2026-07-09・③instantが1.05-1.09を彷徨う恒久対策。ブースト側効果は残置・増加方向のみ)
+    + (rwOff(sim, 'goldenPower') ? 0 : (r.perks.goldenPower || 0)) * (P.rw.goldenPowerAmount || 0);
   return 1 + lv * P.golden.amountPerLv + skillEffect(sim, 'goldenAmount')
     + rewardCategoryBonus(sim, 'golden') + (policyIs(sim, 'golden') ? 0.10 : 0) + trio;
 }
@@ -1033,7 +1035,7 @@ function goldenBoostDurationMs(sim) {
 // やり直し比較(replay)を廃止し、各tickで「機能込みの瞬間稼ぎ力 ÷ 機能抜きの瞬間稼ぎ力」を測って
 // 周回平均(対数平均)を取る。同じ状態を2通り評価するだけなので、分かれ道のズレが原理的に発生しない。
 // 稼ぎ力 = 直接生産 + 金クッキー収入率 + 討伐報酬(投資)価値率 の合成。すべて現在状態から式で算出。
-const KILL_VALUE_SEC = 5;   // 討伐1体の価値を「生産◯秒ぶん」で近似(投資=将来の報酬・強化。channel重み)。㉘討伐由来を早い周回tickから底上げ(4→5)。金/設備specialistは巻き込まず、⑬は1機能が帯落ちする副作用あり(要監視)
+const KILL_VALUE_SEC = 7;   // 討伐1体の価値を「生産◯秒ぶん」で近似。㉘: balancedの序盤討伐シェア(4-9%)を≥10%へ底上げ(5→7)。③⑨⑬は枝分かれrobust化済みで非干渉
 // earningPower は副作用のある関数(monsterStayMs 等が next*Multiplier をリセット)を呼ぶため、
 // 揮発フィールドを退避・復元して純粋化する(測定が実シミュの状態を壊さないように)
 function earningPowerSafe(sim) {
@@ -1715,17 +1717,18 @@ function advanceTick(sim, strategy) {
       r.bhCharge += Math.sqrt(bh) * dt;
       const maxUses = resStage3(sim, 'blackHoleCompression') ? 3 : 2;
       if (r.bhCharge >= P.res2.bhChargeFull && r.bhUses < maxUses && sim.t >= r.bhBoostUntil) {
-        // タイミング(条件⑬): 最適操作は満タンで即発動 / 完全放置は気づくまで遅延
-        if (r.bhReadyAt == null) r.bhReadyAt = sim.t + (idleOn(sim, 'bhCharge') ? P.timing.bhIdleDelay : 0);
-        if (sim.t >= r.bhReadyAt) {
-          let mult = 1 + P.res2.bhBoostCoef * Math.sqrt(bh) / 10;
-          if (resStage3(sim, 'blackHoleCompression')) mult *= 1 + P.res2.bhBoostStageCoef * r.maxStage;
-          r.bhBoostMult = mult;
-          r.bhBoostUntil = sim.t + P.res2.bhBoostDur;
-          r.bhCharge = 0;
-          r.bhUses++;
-          r.bhReadyAt = null;
-        }
+        // タイミング(条件⑬・2026-07-09 作り替え=承認事項2の式変更): 最適操作=満タンで狙って放出(全力)/
+        // 完全放置=自動で放出されるが効率が落ちる(bhIdleEff倍の増分)。旧・遅延方式(放置は気づくまでbhIdleDelay秒)は
+        // 「発動が周回内に収まるか」の二値で枝分かれ比が〜1.0か>2に二極化し帯[1.05,2.0]に安定して入らないため、
+        // ⑬で安定合格している熟成(matureIdleMul)と同じ「放置=効率減」型へ統一。
+        let mult = 1 + P.res2.bhBoostCoef * Math.sqrt(bh) / 10;
+        if (resStage3(sim, 'blackHoleCompression')) mult *= 1 + P.res2.bhBoostStageCoef * r.maxStage;
+        if (idleOn(sim, 'bhCharge')) mult = 1 + (mult - 1) * (P.timing.bhIdleEff != null ? P.timing.bhIdleEff : 0.5);
+        r.bhBoostMult = mult;
+        r.bhBoostUntil = sim.t + P.res2.bhBoostDur;
+        r.bhCharge = 0;
+        r.bhUses++;
+        r.bhReadyAt = null;
       }
     }
 

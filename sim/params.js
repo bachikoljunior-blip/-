@@ -40,7 +40,7 @@ module.exports = {
     visibleMs: 10000,
     instantCoef: 4,
     multBase: 2.6,
-    powerPerLv: 0.25, powerLvHalf: 60, rateLvHalf: 80,
+    powerPerLv: 0.45, powerLvHalf: 60, rateLvHalf: 80,
     amountPerLv: 0.45, amountLvHalf: 45,
     boostBase: 9000,
     boostExtraCap: 26000, boostExtraHalf: 60000,
@@ -107,12 +107,12 @@ module.exports = {
   // すべて skill→research→効果 でゲート(設備=ovenBatch段2/金=spiceBlend段2/討伐=portalNetwork段2/タップ=fingerTechnique段2)。
   // coef=0 で各無効。tune で全体最良点を掃引(㉘の各主役≥30%と経済/テンポ非破綻の両立)。調整項目。
   equipDirect:  { coef: 0.02, stagePow: 0.5, countPow: 2, ref: 100, startStage: 5 }, // 投資量=オーブン所持数
-  goldenDirect: { coef: 0.012, stagePow: 0.5, countPow: 2, ref: 30,  startStage: 5 }, // 投資量=金perk合計
+  goldenDirect: { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5 }, // 投資量=金perk合計(㉘金≥30%へ増幅・huntDirectと同処方=投資連動で金特化の後半周回だけ強く効く)
   huntDirect:   { coef: 0.07, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5 }, // 投資量=討伐perk合計(㉘討伐≥30%へ増幅・投資連動=狩猟専の周回だけ強く効く。countPow緩め=低投資周回も効く)
   tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5 }, // 投資量=神の指+強い指/10
   // 銀行配当(直送・第12次J-3 腐り解消): bankClickDividend研究の独立収入。クリック方針で厚く効かせ①の各回minを満たす。
   // 全体cps倍率をやめ加算収入へ(他機能のlift希釈を回避)。所持数はlog10で床あり=早い周回でも効く。増加方向のみ。
-  bankDirect:   { coef: 0.22, ownRate: 0.5, savedCoef: 0.05, clickBonus: 1.5, countCoef: 0.9, countPow: 1.5, ref: 150 }, // 投資量=銀行所持数+貯蓄(総クッキー桁)
+  bankDirect:   { coef: 0.34, ownRate: 0.5, savedCoef: 0.05, clickBonus: 1.5, countCoef: 0.9, countPow: 1.5, ref: 150 }, // 投資量=銀行所持数+貯蓄(総クッキー桁)
   // 研究連動の全生産倍率(第12次L・提案A): 異世界接続網/銀河合成/量子証明が解放されている間、全生産(クリック＋毎秒)に
   // 一律の倍率を掛ける。floor で研究購入直後から立つ(①の各回min≥1.2)、所持数(log10)と最高層で伸びる。
   // 【重要】全生産倍率は設備/金/討伐/タップを同率で持ち上げる=㉘の稼ぎ口シェアが不変(相殺)、③/⑨の他機能liftも
@@ -175,7 +175,7 @@ module.exports = {
   // ---- タイミング機能(条件⑬)の最適操作/完全放置モデル ----
   // waveOpt=2/π(山に活動を寄せた正相平均) / waveIdle=1/π(全周期平均)
   // bhIdleDelay=満タン後に放置プレイヤーが気づくまでの遅延秒 / matureIdleMul=放置時の熟成爆発係数
-  timing: { waveOpt: 0.6366, waveIdle: 0.3183, bhIdleDelay: 240, matureIdleMul: 0.5 },
+  timing: { waveOpt: 0.6366, waveIdle: 0.3183, bhIdleDelay: 150, bhIdleEff: 0.5, matureIdleMul: 0.5 },
 
   // ---- 研究コスト ----
   // 第11次(値段割り・D'): weave.js が「1周回に中間目標1件」になるよう再配置した値を
@@ -213,7 +213,7 @@ module.exports = {
     // 第12次K(2026-07-08 ③再テーマ・増加方向のみ): 金報酬トリオ+獣の匂いを飽和しない金の稼ぎ(金即時獲得量=amount)へ
     // 再テーマ。従来のダメージ/初撃/金出現間隔効果は残置(削除しない)し、金amount倍率への加算を新設(所持Lvに線形=非飽和)。
     // これで金特化方針で instant lift が立つ(ダメージ飽和次元・通し比較のゆらぎに埋もれない)。
-    goldenChainAmount: 0.30, goldenTargetAmount: 0.30, goldenFirstHitAmount: 0.35, beastScentAmount: 0.30
+    goldenChainAmount: 0.50, goldenTargetAmount: 0.55, goldenFirstHitAmount: 0.35, beastScentAmount: 0.30, goldenPowerAmount: 1.0
   },
 
   // ---- モンスター種類×報酬相性(2026-07-06 ユーザー承認・第9次) ----
