@@ -1,0 +1,82 @@
+戦略: S1 バランス効率型
+種別      ID                        各回比[min..max] 中央値(幾何平均)   必要   中央値判定   ±3倍判定(全回)
+research  fingerTechnique            [1.05..1.66] 中央値1.24 (1.27) x15回  x1.2  OK
+research  grandmaCrowd               [0.90..1.74] 中央値1.18 (1.21) x15回  x1.2  NG(中央値<1.2)
+research  ovenBatch                  [0.49..3.33] 中央値1.39 (1.35) x15回  x1.2  OK
+research  factoryNetwork             [0.85..1.06] 中央値1.01 (0.99) x13回  x1.2  NG(中央値<1.2)
+research  spiceBlend                 [0.89..1.04] 中央値1.03 (1.01) x13回  x1.2  NG(中央値<1.2)
+research  portalNetwork              [1.00..1.43] 中央値1.04 (1.10) x13回  x1.2  NG(中央値<1.2)
+research  bankClickDividend          [0.93..1.03] 中央値1.00 (1.00) x13回  x1.2  NG(中央値<1.2)
+research  moonGlobalYeast            [2.01..3.47] 中央値2.64 (2.64) x2回  x1.2  OK
+research  portalGlobalFold           [1.16..3.40] 中央値1.85 (1.94) x13回  x1.2  OK
+research  galaxyAssembly             (未使用: 比=1.0)  x1.2  NG  -
+research  blackHoleCompression       (未使用: 比=1.0)  x1.2  NG  -
+research  quantumProofing            (未使用: 比=1.0)  x1.2  NG  -
+research  antimatterRecipe           (未使用: 比=1.0)  x1.2  NG  -
+②(中央値同士の±3倍・平均1.30): 9/9 全研究OK
+研究: 中央値OK 4/13 / ±3倍(各回) 15/15周回
+reward    goldenRate                 [1.03..1.93] 中央値1.27 (1.35) x14回  x1.1  OK
+reward    goldenPower                (未使用: 比=1.0)  x1.1  NG  -
+reward    goldenAmount               [1.00..1.24] 中央値1.01 (1.03) x13回  x1.1  NG(中央値<1.1)
+reward    monsterDamage              [1.00..1.25] 中央値1.05 (1.07) x14回  x1.1  NG(中央値<1.1)
+reward    monsterRate                (未使用: 比=1.0)  x1.1  NG  -
+reward    monsterStay                (未使用: 比=1.0)  x1.1  NG  -
+reward    goldenChain                (未使用: 比=1.0)  x1.1  NG  -
+reward    crackedFang                (未使用: 比=1.0)  x1.1  NG  -
+reward    chainPrep                  (未使用: 比=1.0)  x1.1  NG  -
+reward    huntFocus                  (未使用: 比=1.0)  x1.1  NG  -
+reward    goldenTarget               (未使用: 比=1.0)  x1.1  NG  -
+reward    goldenFirstHit             (未使用: 比=1.0)  x1.1  NG  -
+reward    beastScent                 (未使用: 比=1.0)  x1.1  NG  -
+reward    beastHeatFerment           (未使用: 比=1.0)  x1.1  NG  -
+reward    biteRecovery               (未使用: 比=1.0)  x1.1  NG  -
+reward    crushedMill                (未使用: 比=1.0)  x1.1  NG  -
+reward    huntingCore                (未使用: 比=1.0)  x1.1  NG  -
+reward    brandHunt                  (未使用: 比=1.0)  x1.1  NG  -
+reward    deepPursuit                (未使用: 比=1.0)  x1.1  NG  -
+reward    goldenBeastMutation        (未使用: 比=1.0)  x1.1  NG  -
+報酬: 中央値OK 1/20 / ±3倍(各回) 14/14周回
+stage     fingerTechnique:2          [1.10..1.32] 中央値1.19 (1.20) x8回  x1.05  OK
+stage     fingerTechnique:3          (未使用: 比=1.0)  x1.05  NG  -
+stage     grandmaCrowd:2             [0.81..1.04] 中央値1.03 (0.96) x5回  x1.05  NG(中央値<1.05)
+stage     grandmaCrowd:3             (未使用: 比=1.0)  x1.05  NG  -
+stage     ovenBatch:2                [1.02..1.02] 中央値1.02 (1.02) x1回  x1.05  NG(中央値<1.05)
+stage     ovenBatch:3                [1.00..1.00] 中央値1.00 (1.00) x1回  x1.05  NG(中央値<1.05)
+stage     factoryNetwork:2           (未使用: 比=1.0)  x1.05  NG  -
+stage     factoryNetwork:3           (未使用: 比=1.0)  x1.05  NG  -
+stage     spiceBlend:2               [0.89..1.06] 中央値1.03 (1.01) x12回  x1.05  NG(中央値<1.05)
+stage     spiceBlend:3               (未使用: 比=1.0)  x1.05  NG  -
+stage     portalNetwork:2            (未使用: 比=1.0)  x1.05  NG  -
+stage     portalNetwork:3            (未使用: 比=1.0)  x1.05  NG  -
+stage     bankClickDividend:2        [0.93..1.03] 中央値1.02 (1.00) x4回  x1.05  NG(中央値<1.05)
+stage     bankClickDividend:3        [0.95..1.00] 中央値1.00 (0.99) x4回  x1.05  NG(中央値<1.05)
+stage     moonGlobalYeast:2          (未使用: 比=1.0)  x1.05  NG  -
+stage     moonGlobalYeast:3          (未使用: 比=1.0)  x1.05  NG  -
+stage     portalGlobalFold:2         (未使用: 比=1.0)  x1.05  NG  -
+stage     portalGlobalFold:3         (未使用: 比=1.0)  x1.05  NG  -
+stage     galaxyAssembly:2           (未使用: 比=1.0)  x1.05  NG  -
+stage     galaxyAssembly:3           (未使用: 比=1.0)  x1.05  NG  -
+stage     blackHoleCompression:2     (未使用: 比=1.0)  x1.05  NG  -
+stage     blackHoleCompression:3     (未使用: 比=1.0)  x1.05  NG  -
+stage     quantumProofing:2          (未使用: 比=1.0)  x1.05  NG  -
+stage     quantumProofing:3          (未使用: 比=1.0)  x1.05  NG  -
+stage     antimatterRecipe:2         (未使用: 比=1.0)  x1.05  NG  -
+stage     antimatterRecipe:3         (未使用: 比=1.0)  x1.05  NG  -
+段階: 中央値OK 1/26 / ±3倍(各回) 8/8周回
+upgrade   finger                     [1.21..168546.80] 中央値1.98 (5.46) x15回  x1.2  OK
+upgrade   grandma                    [1.01..1.69] 中央値1.14 (1.19) x15回  x1.2  NG(中央値<1.2)
+upgrade   oven                       [1.23..1.2404881374270609e+35] 中央値289483194965283904.00 (639762385265356288.00) x15回  x1.2  OK
+upgrade   factory                    [1.02..1.87] 中央値1.12 (1.16) x13回  x1.2  NG(中央値<1.2)
+upgrade   bank                       [0.97..1.00] 中央値1.00 (1.00) x13回  x1.2  NG(中央値<1.2)
+upgrade   spiceRack                  [0.86..1.06] 中央値1.00 (0.99) x13回  x1.2  NG(中央値<1.2)
+upgrade   portal                     [0.91..1.06] 中央値1.00 (1.00) x13回  x1.2  NG(中央値<1.2)
+upgrade   moonBakery                 [0.96..0.99] 中央値0.98 (0.98) x2回  x1.2  NG(中央値<1.2)
+upgrade   timeOven                   (未使用: 比=1.0)  x1.2  NG  -
+upgrade   galaxyFactory              (未使用: 比=1.0)  x1.2  NG  -
+upgrade   blackHoleMixer             (未使用: 比=1.0)  x1.2  NG  -
+upgrade   universeOven               (未使用: 比=1.0)  x1.2  NG  -
+upgrade   godFinger                  (未使用: 比=1.0)  x1.2  NG  -
+upgrade   cookieSingularity          (未使用: 比=1.0)  x1.2  NG  -
+upgrade   quantumBakery              (未使用: 比=1.0)  x1.2  NG  -
+upgrade   antimatterOven             (未使用: 比=1.0)  x1.2  NG  -
+設備: 中央値OK 2/16 / ±3倍(各回) 0/15周回

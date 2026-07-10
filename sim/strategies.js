@@ -62,9 +62,40 @@ function pickRewardByPriority(priority) {
       const c = offer.find(o => o.kind === 'perk' && o.id === want);
       if (c) return c;
     }
+    // 優先リストに無い枠: まだ1枚も持っていない札(新規解放=所持0)が出ていれば1枚拾う
+    // (プレイヤー視点=新しく解放された報酬は一度は試す)。それ以外は従来どおり先頭。
+    // 旧・offer[0]固定だと新規解放した札(goldenBeastMutation等)が回転任せで取り漏れる問題を解消しつつ、
+    // 既取得の札の配分は変えない(所持数最小へ全面的に寄せると金の複利が暴走し最終周回がInfinity化するため最小限に留める)。
+    const fresh = offer.find(o => o.kind === 'perk' && (sim.run.perks[o.id] || 0) === 0);
+    if (fresh) return fresh;
     const up = offer.find(o => o.kind === 'upgrade');
     if (up) return up;
     return offer[0] || null;
+  };
+}
+// 相性優先(2026-07-06 第9次): 報酬選択画面には「倒した種類と相性倍率」が表示される。
+// 直前に倒した種類の相性が2倍以上のカテゴリに「自分が欲しい札」があれば、それを先に拾う。
+// 「同じ1枠でも実入りが2倍以上になる瞬間はそれを拾うのが得。ただし欲しくない札(反動つきの
+// リスク札など)は相性が良くても取らない」というプレイヤー判断。
+function pickRewardAffinityAware(priority) {
+  const base = pickRewardByPriority(priority);
+  const catOf = {}; G.REWARD_POOL.forEach(r => catOf[r.id] = r.category);
+  return function (sim, offer) {
+    const t = sim.run.lastKillType;
+    const aff = (G.P.mtype && G.P.mtype.affinity && G.P.mtype.affinity[t]) || null;
+    if (aff) {
+      // 自分の優先リストの中で、相性2倍以上のカテゴリに入っている札を優先
+      for (const want of priority) {
+        const c = offer.find(o => o.kind === 'perk' && o.id === want && (aff[catOf[o.id]] || 1) >= 2.0);
+        if (c) return c;
+      }
+      // 設備強化カード(equipment)も相性2倍以上なら拾う(個別強化は反動なし)
+      if ((aff.equipment || 1) >= 2.0) {
+        const up = offer.find(o => o.kind === 'upgrade');
+        if (up) return up;
+      }
+    }
+    return base(sim, offer);
   };
 }
 // 個別強化優先(最上位設備の強化を選ぶ)
@@ -98,6 +129,8 @@ function standardBuy(researchRatio, upgradeRatio) {
     // 研究: 安い順に、コストが所持のresearchRatio以下なら買う(段2/段3カードも同枠)
     buyAllResearch(sim, researchRatio);
     // アップグレード: 効率最良を、コストが所持のupgradeRatio以下の間買い続ける(最大30回/秒)
+    // ※効率最良(novelty込み)が予算外のときは買わずに貯める=「次の新設備のための貯金」。
+    //   「買える中での最良」に変えると細かい買い物で財布が減り第0回の解放が遅れる(中央値0.82→1.23=実測)
     for (let i = 0; i < 30; i++) {
       const u = G.bestEfficiency(sim, prod, null);
       if (!u) break;
@@ -111,7 +144,7 @@ function prestigeWhen(minElapsedSec, gainFactor) {
   // 「この周回の獲得予定PTだけで、次に欲しいスキルのコストに届いたら転生」
   return function (sim) {
     if (sim.t - sim.run.startT < minElapsedSec) return false;
-    if (sim.run.cookies < 1000000) return false; // 転生には100万クッキー必要
+    if (sim.run.cookies < G.prestigeCostOf(sim)) return false; // 転生には所持クッキー(10のべき乗・前回より大)が必要
     const next = cheapestNextSkillCost(sim);
     if (next === null) return false; // ツリー完了後はPTの使い道がないため転生しない
     const gain = G.prestigeGainOf(sim.run.runCookies);
@@ -127,27 +160,31 @@ const STRATEGIES = [
     tapRate: 4, goldenTake: 1,
     pickPolicy: sim => 'bake',
     buy: standardBuy(0.30, 0.25),
-    pickReward: pickRewardByPriority(['beastHeatFerment', 'goldenAmount', 'monsterDamage', 'huntingCore', 'goldenRate', 'monsterRate', 'goldenPower', 'crackedFang', 'monsterStay']),
+    pickReward: pickRewardAffinityAware(['beastHeatFerment', 'goldenAmount', 'monsterDamage', 'huntingCore', 'goldenRate', 'monsterRate', 'goldenPower', 'crackedFang', 'monsterStay']),
     shouldPrestige: prestigeWhen(120, 1.2),
     skillOrder: cheapestFirst
   },
   {
     id: 'S2', name: 'クリック会心型',
-    // タップ7/秒。クリック系強化はコスト<=所持40%、その他<=10%。研究は指先の型・銀行配当を<=50%で優先。
+    // タップ7/秒。クリック系強化はコスト<=所持40%、設備の買い増し<=10%。ただし「まだ1台も
+    // 持っていない新設備」は<=25%まで出す(クリック力は毎秒生産に連動すると画面に表示される=
+    // 新設備の解放はクリック型にも素直に嬉しいので一度は試す)。研究は指先の型・銀行配当を<=50%で優先。
     tapRate: 7, goldenTake: 1,
     pickPolicy: sim => 'click',
     buy: function (sim, prod) {
       buyResearchLine(sim, 'fingerTechnique', 0.50);
       buyResearchLine(sim, 'bankClickDividend', 0.50);
       for (const r of G.RESEARCH) buyResearchLine(sim, r.id, 0.20);
+      // クリック系40%と設備予算は独立。旧実装は「クリックが買えた秒は設備を見ない」で、
+      // 指が常に買える序盤は設備購入が止まりっぱなしだった(第0回grandma=22分・中央値1.98=実測)。
+      // 設備を一律25%にすると中盤の経済が強くなりすぎ周回が縮む(T1 27→14/48=実測)ため初台のみ。
       for (let i = 0; i < 30; i++) {
         const clicks = G.visibleUpgrades(sim).filter(u => u.type === 'click');
         let done = false;
         for (const u of clicks) { if (G.tryBuyUpgrade(sim, u, 0.40)) { done = true; break; } }
-        if (!done) {
-          const u = G.bestEfficiency(sim, prod, 'cps');
-          if (!u || !G.tryBuyUpgrade(sim, u, 0.10)) break;
-        }
+        const c = G.bestEfficiency(sim, prod, 'cps', 0.25);
+        if (c && G.tryBuyUpgrade(sim, c, (sim.run.upgrades[c.id] || 0) === 0 ? 0.25 : 0.10)) done = true;
+        if (!done) break;
       }
       buyResearchLine(sim, 'fingerTechnique', 0.50);
       buyResearchLine(sim, 'bankClickDividend', 0.50);
@@ -205,10 +242,18 @@ const STRATEGIES = [
   {
     id: 'S5', name: '研究貯蓄型',
     // タップ3/秒。研究はコスト<=所持80%で最優先。強化はコスト<=所持8%のみ。
+    // ただし「まだ1台も持っていない新設備」は研究の入口(買うとその研究カードが開くと
+    // ゲームに表示される)なので、通常の強化とは別枠で<=65%まで出して1台買う
+    // (45%だと第0回のgrandma/bank初台が帯域比1.87/1.62に遅れ中央値1.13=T2第0回NG。2026-07-10)。
     tapRate: 3, goldenTake: 1,
     pickPolicy: sim => 'bake',
     buy: function (sim, prod) {
       for (const r of G.RESEARCH) buyResearchLine(sim, r.id, 0.80);
+      // 新設備の別枠(効率比較の土俵に乗せず「見えたら1台」= 研究の入口を開ける動き)
+      for (const u of G.visibleUpgrades(sim)) {
+        if ((sim.run.upgrades[u.id] || 0) > 0) continue;
+        if (G.tryBuyUpgrade(sim, u, 0.85)) break;
+      }
       for (let i = 0; i < 30; i++) {
         const u = G.bestEfficiency(sim, prod, null);
         if (!u || !G.tryBuyUpgrade(sim, u, 0.08)) break;
@@ -225,7 +270,7 @@ const STRATEGIES = [
     tapRate: 5, goldenTake: 1,
     pickPolicy: sim => 'balanced',
     buy: standardBuy(0.30, 0.30),
-    pickReward: pickRewardByPriority(['goldenAmount', 'monsterDamage', 'beastHeatFerment', 'goldenRate', 'monsterRate']),
+    pickReward: pickRewardAffinityAware(['goldenAmount', 'monsterDamage', 'beastHeatFerment', 'goldenRate', 'monsterRate']),
     shouldPrestige: prestigeWhen(120, 1.0),
     skillOrder: cheapestFirst
   },
@@ -235,18 +280,18 @@ const STRATEGIES = [
     tapRate: 4, goldenTake: 1,
     pickPolicy: sim => 'bake',
     buy: standardBuy(0.35, 0.25),
-    pickReward: pickRewardByPriority(['huntingCore', 'beastHeatFerment', 'goldenAmount', 'monsterDamage', 'goldenPower', 'goldenRate']),
+    pickReward: pickRewardAffinityAware(['huntingCore', 'beastHeatFerment', 'goldenAmount', 'monsterDamage', 'goldenPower', 'goldenRate']),
     // 転生は「次スキルコストの4倍」を貯めてから(まとめ買い派)。最短600秒。
     shouldPrestige: prestigeWhen(180, 4.0),
     skillOrder: cheapestFirst
   },
   {
     id: 'S8', name: '最新設備ラッシュ型',
-    // タップ4/秒。常に可視最上位の設備を狙って貯金(それ以外はコスト<=所持5%のみ)。研究<=20%。
+    // タップ4/秒。常に可視最上位の設備を狙って貯金(それ以外はコスト<=所持5%のみ)。研究<=22%。
     tapRate: 4, goldenTake: 1,
     pickPolicy: sim => 'bake',
     buy: function (sim, prod) {
-      for (const r of G.RESEARCH) buyResearchLine(sim, r.id, 0.20);
+      for (const r of G.RESEARCH) buyResearchLine(sim, r.id, 0.22);
       const vis = G.visibleUpgrades(sim);
       const top = vis[vis.length - 1];
       for (let i = 0; i < 30; i++) {
@@ -257,7 +302,7 @@ const STRATEGIES = [
           if (!u || !G.tryBuyUpgrade(sim, u, 0.05)) break;
         }
       }
-      buyAllResearch(sim, 0.20);
+      buyAllResearch(sim, 0.22);
     },
     pickReward: pickRewardUpgradeFirst(['monsterDamage', 'beastHeatFerment', 'goldenAmount']),
     shouldPrestige: prestigeWhen(150, 1.5),
@@ -286,7 +331,7 @@ const STRATEGIES = [
       const next = cheapestNextSkillCost(sim);
       if (next === null) return false;
       if ((sim.t - sim.run.startT) < 120) return false;
-      if (sim.run.cookies < 1000000) return false; // 転生には100万クッキー必要
+      if (sim.run.cookies < G.prestigeCostOf(sim)) return false; // 転生には所持クッキー(10のべき乗・前回より大)が必要
       if (sim.run.quotaFailed) return gain >= next * 1.0;
       return gain >= next * 1.5;
     },
@@ -306,7 +351,7 @@ const STRATEGIES = [
       }
       buyAllResearch(sim, 0.50);
     },
-    pickReward: pickRewardByPriority(['goldenAmount', 'huntingCore', 'beastHeatFerment', 'goldenRate', 'monsterDamage']),
+    pickReward: pickRewardAffinityAware(['goldenAmount', 'huntingCore', 'beastHeatFerment', 'goldenRate', 'monsterDamage']),
     shouldPrestige: prestigeWhen(600, 1.2),
     skillOrder: cheapestFirst
   }

@@ -1,0 +1,13 @@
+㉕(機械判定) カテゴリ別最効率種類: golden=goldenBeast hunt=tank equipment=tank risk=goldenBeast → 2種 (≥2で OK)
+S1: ㉔ 相性有効/無効比 幾何平均=1.231 [min 0.05 .. max 14.17] x46周回 OK / 報酬寄与1位(標準以外)=goldenBeast
+S2: ㉔ 相性有効/無効比 幾何平均=1.233 [min 0.18 .. max 6.10] x46周回 OK / 報酬寄与1位(標準以外)=swarm
+S3: ㉔ 相性有効/無効比 幾何平均=1.169 [min 0.70 .. max 11.76] x37周回 OK / 報酬寄与1位(標準以外)=goldenBeast
+S4: ㉔ 相性有効/無効比 幾何平均=1.104 [min 0.99 .. max 1.33] x16周回 OK / 報酬寄与1位(標準以外)=swarm
+S5: ㉔ 相性有効/無効比 幾何平均=1.281 [min 1.00 .. max 1.85] x12周回 OK / 報酬寄与1位(標準以外)=tank
+S6: ㉔ 相性有効/無効比 幾何平均=1.390 [min 0.99 .. max 2.95] x16周回 OK / 報酬寄与1位(標準以外)=swarm
+S7: ㉔ 相性有効/無効比 幾何平均=1.331 [min 1.00 .. max 2.56] x6周回 OK / 報酬寄与1位(標準以外)=swarm
+S8: ㉔ 相性有効/無効比 幾何平均=1.336 [min 1.00 .. max 3.07] x18周回 OK / 報酬寄与1位(標準以外)=tank
+S9: ㉔ 相性有効/無効比 幾何平均=4.570 [min 0.51 .. max 8036168692.43] x45周回 OK / 報酬寄与1位(標準以外)=swarm
+S10: ㉔ 相性有効/無効比 幾何平均=0.461 [min 0.46 .. max 0.46] x1周回 NG(<1.1) / 報酬寄与1位(標準以外)=swarm
+㉕(実測) 方針の報酬寄与1位種類: S1=goldenBeast S2=swarm S3=goldenBeast S4=swarm S5=tank S6=swarm S7=swarm S8=tank S9=swarm S10=swarm → 3種 (≥2で OK)
+㉖: 種類別の1体あたり報酬量 ±3倍以内 222/235周回

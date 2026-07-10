@@ -1,0 +1,82 @@
+=== 期待値方式(24h・各回の稼ぎ力の持ち上げ) ===
+① 研究(各回≥1.2) 12/13
+  OK res:fingerTechnique          S2 min=1.28
+  OK res:grandmaCrowd             S10 min=1.30
+  OK res:ovenBatch                S10 min=3.84
+  OK res:factoryNetwork           S8 min=2.11
+  OK res:spiceBlend               S3 min=9.91
+  OK res:portalNetwork            S6 min=1.27
+  NG res:bankClickDividend        取得あり・全周回≥1.2に未達(最大幾何平均1.33)
+  OK res:moonGlobalYeast          S7 min=37.84
+  OK res:portalGlobalFold         S4 min=10.30
+  OK res:galaxyAssembly           S2 min=1.25
+  OK res:blackHoleCompression     S1 min=5.00
+  OK res:quantumProofing          S7 min=1.25
+  OK res:antimatterRecipe         S4 min=1089437.94
+③-a 報酬instant(中央値≥1.1・2026-07-08) 7/8
+  OK rw:goldenRate                S6 中央値=4.03
+  OK rw:goldenPower               S7 中央値=1.21
+  OK rw:goldenAmount              S10 中央値=2.44
+  NG rw:monsterRate               取得あり・中央値≥1.1に未達(最大幾何平均1.22)
+  OK rw:goldenTarget              S4 中央値=1.58
+  OK rw:goldenFirstHit            S4 中央値=1.32
+  OK rw:beastHeatFerment          S4 中央値=847.61
+  OK rw:huntingCore               S4 中央値=660.49
+③ 報酬utility軸(短い枝分かれ比べ・同一状態から1周回ぶん・総クッキー比の中央値 ≥1.1)
+  OK rw:monsterDamage        S5 中央値比=1.105 (n=12)
+  OK rw:monsterStay          S3 中央値比=1.133 (n=12)
+  OK rw:crackedFang          S4 中央値比=3.742 (n=12)
+  OK rw:brandHunt            S3 中央値比=1.280 (n=2)
+  OK rw:deepPursuit          S3 中央値比=1000000000.000 (n=2)
+  OK rw:chainPrep            S4 中央値比=48933.578 (n=12)
+  OK rw:huntFocus            S7 中央値比=4.367 (n=7)
+  OK rw:biteRecovery         S4 中央値比=9.600 (n=2)
+  OK rw:crushedMill          S3 中央値比=1.309 (n=2)
+  OK rw:goldenBeastMutation  S3 中央値比=1.224 (n=1)
+  OK rw:goldenChain          S3 中央値比=1.255 (n=12)
+  OK rw:beastScent           S3 中央値比=47.707 (n=10)
+③ utility軸 12/12
+③ 報酬 合計 19/20 (instant 7/8 + utility 12/12)
+⑨-a 段階instant(各回≥1.05・⑬タイミング段は除外) 17/17
+  OK stage:ovenBatch:2            S5 min=1.21
+  OK stage:spiceBlend:2           S2 min=1.23
+  OK stage:fingerTechnique:2      S2 min=4.21
+  OK stage:grandmaCrowd:2         S3 min=6.09
+  OK stage:ovenBatch:3            S5 min=1.16
+  OK stage:spiceBlend:3           S1 min=1.06
+  OK stage:moonGlobalYeast:2      S7 min=1.12
+  OK stage:moonGlobalYeast:3      S3 min=1.45
+  OK stage:portalNetwork:2        S9 min=3.27
+  OK stage:factoryNetwork:2       S2 min=1.75
+  OK stage:grandmaCrowd:3         S7 min=1.09
+  OK stage:factoryNetwork:3       S2 min=1.18
+  OK stage:portalNetwork:3        S2 min=1.06
+  OK stage:galaxyAssembly:2       S3 min=1.54
+  OK stage:portalGlobalFold:2     S9 min=2.63
+  OK stage:galaxyAssembly:3       S4 min=1.10
+  OK stage:antimatterRecipe:2     S4 min=1.13
+⑨ 段階whole軸(短い枝分かれ比べ・同一状態から1周回ぶん・総クッキー比の中央値 ≥1.05・利息/余熱)
+  OK stage:bankClickDividend:2    S5 中央値比=1.096 (n=12)
+  NG stage:bankClickDividend:3    S5 中央値比=1.037 (n=12)
+  OK stage:fingerTechnique:3      S3 中央値比=1.201 (n=12)
+⑨ whole軸 2/3
+⑨ 段階 合計 19/20 (instant 17/17 + whole 2/3・⑬タイミング段3件は⑬で判定のため除外)
+⑬ タイミング機能(短い枝分かれ比べ・最適操作/その機能だけ完全放置の1周回総クッキー比の中央値, 要求[1.05,2.00])
+  OK 観測ゆらぎ(量子発酵 段2)             S3=1.125✓(n=3) S4=1.000(n=3) S7=1.125✓(n=2)
+  OK 圧縮チャージ(重力圧縮 段2)            S3=1.000(n=10) S4=1.485✓(n=10) S7=1.428✓(n=5)
+  OK 熟成(香料調合 段2)                S1=1.101✓(n=12) S2=1.279✓(n=12) S3=1.039(n=12) S4=1.099✓(n=12) S5=1.424✓(n=12) S6=1.209✓(n=12) S7=1.227✓(n=12) S9=1.185✓(n=12) S10=1.583✓(n=3)
+  OK 延長狩り(異世界接続網 段2)            S1=1.000(n=12) S2=1.310✓(n=10) S3=1.420✓(n=12) S4=1.001(n=12) S5=1.012(n=9) S6=1.000(n=12) S7=1.000(n=12) S9=1.035(n=12)
+⑬ タイミング 4/4
+参考 討伐連鎖lift: S1 幾何平均2.13 [1.02..4.50] / S2 幾何平均1.98 [1.01..3.51] / S3 幾何平均1.86 [1.02..2.54] / S4 幾何平均3.76 [1.01..13.96] / S5 幾何平均2.15 [1.01..4.04] / S6 幾何平均2.22 [1.02..5.20] / S7 幾何平均2.49 [1.01..4.37] / S8 幾何平均1.01 [1.01..1.01] / S9 幾何平均3.86 [1.01..11.54] / S10 幾何平均2.32 [1.83..2.96]
+  NG S1 研究lift[1.11..115.09] 平均3.85
+  NG S2 研究lift[1.10..284.16] 平均5.50
+  NG S3 研究lift[1.06..243260.49] 平均20.45
+  NG S4 研究lift[1.07..1089437.94] 平均12.52
+  NG S5 研究lift[1.11..113.47] 平均3.56
+  NG S6 研究lift[1.16..104.05] 平均3.68
+  NG S7 研究lift[1.11..999677.19] 平均11.44
+  NG S8 研究lift[1.00..5.74] 平均1.72
+  NG S9 研究lift[1.08..122.31] 平均4.19
+  NG S10 研究lift[1.01..8.54] 平均1.72
+② 一強禁止(方針ごと) 0/10
+⑫ 周回方針の1位が実在: balanced,bake,hunt (3/5)
