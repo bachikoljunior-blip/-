@@ -1188,6 +1188,12 @@ function computeProd(sim) {
     const tm = 1 + (P.ws.eqFx.trayPerLv || 0) * wsEqLv(sim, 'masterTray');
     if (tm !== 1) { click *= tm; cps *= tm; }
   }
+  // 初台ボーナス(㉑対策・静的加算): 所持中だけ効く。購入時CPS基準の固定値なので成長とともに自然消滅。
+  if (sim.presenceBonus) {
+    for (const bid in sim.presenceBonus) {
+      if ((r.upgrades[bid] || 0) > 0) cps += sim.presenceBonus[bid];
+    }
+  }
 
   // 会心(期待値)
   let critEV = 1;
@@ -2391,6 +2397,13 @@ function tryBuyUpgrade(sim, u, budgetRatio) {
       const bp = computeProd(sim);
       sim.run.upgrades[u.id]++;
       const before = u.type === 'click' ? bp.baseClick : bp.baseCps;
+      // 初台ボーナス(第12次R2続き・㉑対策): 中位設備(oven〜portal)の初めての1台に、購入直前CPS×coefの
+      // 生産を持たせる(系列ボーナス「初購入の瞬間に生産の約coef分をその1台が担う」の中位への拡張。
+      // 上位設備は系列ボーナスが既に担うため対象外)。静的加算=経済成長とともに自然に無意味化する。
+      if (P.presence && (P.presence.ids || []).includes(u.id) && u.type !== 'click') {
+        if (!sim.presenceBonus) sim.presenceBonus = {};
+        sim.presenceBonus[u.id] = (P.presence.firstUnitCoef || 0) * Math.max(0, bp.baseCps);
+      }
       const after = computeProd(sim);
       const av = u.type === 'click' ? after.baseClick : after.baseCps;
       sim.presenceChecks.push({ runIdx: sim.runs.length, t: sim.t, id: u.id, delta: Math.max(0, av - before), ref: before });

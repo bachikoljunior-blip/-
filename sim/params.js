@@ -253,6 +253,9 @@ module.exports = {
   // 神の指(クリック型)は1台につきクリック力×(1+coef)相当の線形倍率。
   // → 初購入の瞬間に生産の約coef分をその1台が担う=㉑(基礎生産≥実CPS/5)を全方針で満たす設計
   lineage: { coef: 0.25 },
+  // 初台ボーナス(第12次R2続き・㉑対策): 中位設備の初めての1台に購入直前CPS×coefの生産を持たせる
+  // (系列ボーナスの中位拡張。㉑のNG5種=oven x0.16/factory x0.02-0.05/bank x0.12/spiceRack x0.17/portal x0.15対策)
+  presence: { firstUnitCoef: 0.25, ids: ['oven', 'factory', 'bank', 'spiceRack', 'portal'] },
 
   // ---- 段階コストの研究別倍率(第11次・値段割り用) ----
   // 研究ごとに {s2, s3} を指定(なければ resStageCost の共通倍率)。研究コスト=調整項目(ユーザー確認済み)
