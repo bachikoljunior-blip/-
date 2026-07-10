@@ -1437,14 +1437,18 @@ function huntDirectIncome(sim, base) {
   return genreDirect(sim, base, inv, P.huntDirect) * polM;
 }
 // タップ直送: 投資量=クリック系(神の指+強い指/10)。ゲート=指先の型 段階2(スキル click_2→段階2購入→効果)。
-function tapDirectIncome(sim, base) {
+function tapDirectIncome(sim, base, prod) {
   if (!resStage2(sim, 'fingerTechnique')) return 0;
   const r = sim.run;
   const inv = (r.upgrades.godFinger || 0) + (r.upgrades.finger || 0) * 0.1;
   // 方針係数(第12次R続き・bankDirectのclickBonusと同型): click方針の中盤は銀/金直/討直に打が
   // 圧迫され打<30%が続く(S2 run21-32)。主役方針だけ厚くする増加方向の係数。clickBonus=1(既定)で従来どおり。
   const polM = policyIs(sim, 'click') ? (P.tapDirect.clickBonus || 1) : 1;
-  return genreDirect(sim, base, inv, P.tapDirect) * polM;
+  // アンカー=max(base, anchorGolden×金相場)(equipDirectと同型): balanced中盤の打4-9%<10%(run22-32)の
+  // 底上げ用。タップの技も金相場で換金される処方。anchorGolden=0(既定)で従来どおり。
+  let anchor = base;
+  if ((P.tapDirect.anchorGolden || 0) > 0 && prod) anchor = Math.max(base, P.tapDirect.anchorGolden * goldenRateValue(sim, prod));
+  return genreDirect(sim, anchor, inv, P.tapDirect) * polM;
 }
 // 銀行配当(直送・第12次J-3 腐り解消): 銀行の所持数と貯蓄(総クッキー桁)で毎秒生産へ加算する独立収入。
 // ゲート=銀行クリック配当研究(resActive=①測定トグル対応)。クリック方針で厚く効く(既存の×1.08と整合)。
@@ -1484,7 +1488,7 @@ function earningPower(sim) {
   const tapOrig = prod.clickEV * (r.monster ? 0 : tapRate);
   const base = prod.cps + tapOrig; // 直接生産(モンスター中はタップは討伐へ)
   // タップ直送は base に含める(タップ稼ぎ口へ。incomeParts の tap 抽出でも同額を足す)
-  let power = base + tapDirectIncome(sim, base) + equipDirectIncome(sim, base, prod) + bankDirectIncome(sim, base); // 設備直送→equip / タップ直送→tap / 銀行配当→equip残差
+  let power = base + tapDirectIncome(sim, base, prod) + equipDirectIncome(sim, base, prod) + bankDirectIncome(sim, base); // 設備直送→equip / タップ直送→tap / 銀行配当→equip残差
   // 金クッキー収入率(期待値/秒)+金直送→golden
   if (!(sim._mdChan && sim._mdChan.golden)) {
     power += goldenRateValue(sim, prod) + goldenDirectIncome(sim, base);
@@ -1566,7 +1570,7 @@ function incomeParts(sim, pAll) {
   const prodCore = computeProd(sim);
   const tapOrig = prodCore.clickEV * (r.monster ? 0 : sim.strat.tapRate);
   const baseCore = prodCore.cps + tapOrig;
-  const tapRaw = tapOrig + tapDirectIncome(sim, baseCore); // タップ稼ぎ口=タップ項+タップ直送
+  const tapRaw = tapOrig + tapDirectIncome(sim, baseCore, prodCore); // タップ稼ぎ口=タップ項+タップ直送
   sim._mdChan = null; clear();
   if (!(pAll > 0) || !Number.isFinite(pAll) || !(pCore >= 0) || !Number.isFinite(pCore)) return null;
   const tap = Math.max(0, Math.min(tapRaw, pCore));
@@ -1581,7 +1585,7 @@ function incomeParts(sim, pAll) {
   if (sim.opt.partsDetail) {
     const eqD = equipDirectIncome(sim, baseCore, prodCore);
     const bkD = bankDirectIncome(sim, baseCore);
-    const tapD = tapDirectIncome(sim, baseCore);
+    const tapD = tapDirectIncome(sim, baseCore, prodCore);
     const gD = goldenDirectIncome(sim, baseCore);
     const hD = huntDirectIncome(sim, goldenRateValue(sim, prodCore));
     parts.detail = {
@@ -2122,7 +2126,7 @@ function advanceTick(sim, strategy) {
     // 討伐直送のみ金クッキーの期待収入率アンカー(earningPower の計測と同式=計測と実支払いの一致)
     const dirBase = prod.cps + prod.clickEV * (r.monster ? 0 : tapRate);
     const directAll = equipDirectIncome(sim, dirBase, prod) + goldenDirectIncome(sim, dirBase)
-      + huntDirectIncome(sim, goldenRateValue(sim, prod)) + tapDirectIncome(sim, dirBase) + bankDirectIncome(sim, dirBase);
+      + huntDirectIncome(sim, goldenRateValue(sim, prod)) + tapDirectIncome(sim, dirBase, prod) + bankDirectIncome(sim, dirBase);
     earn(sim, cpsNow * dt + clickNow * tapsForCookies * dt + directAll * dt);
 
     // 銀行クリック配当 段階2: 複利利息。キャップ撤廃: 硬い min(利息, 毎秒生産×2) を
