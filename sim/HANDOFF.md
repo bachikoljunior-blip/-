@@ -28,7 +28,8 @@
 **ブランチ**: `claude/handoff-12q-continuation-ko900k`(push済み。`claude/handoff-12q-continuation-trgjp2` の後継=このブランチが正)。
 **ユーザー指示(2026-07-10・重要)**: 「指定しているのは**合格条件・調整項目・プレイ方針の決め方**だけ。それ以外(式・アンカー・計測の内部・進め方)は自分の考えでやり方を変えてよい。既存のやり方にとらわれず早く達成すること」。旧運用の「1チャネルずつ・毎回全検証」は必須でない=まとめて動かして最後に一括検証でよい。
 
-**この回(第12次R2)の主戦果 = ㉘稼ぎ口 128→187前後/230(56%→81%前後・最終検証中)**:
+**この回(第12次R2)の主戦果 = ㉘稼ぎ口 128→186/230(56%→81%・全検証済み)**
+(balanced 10→36/48・bake 23→46/47・click 24→30/48・hunt 29→34/43・golden 42→40/44):
 1. **Rの残作業(1)「chain.prodCoefグリッド」は空振りと決着**: 0.020/0.016/0.014/0.010の100h実測で
    ㉘合計62→61-62(balanced10/48不変)と完全フラット。**第12次JのattributionでchainMは全稼ぎ口共有=シェア相殺**
    のため効かない(R-7の「chainが討伐由来に計上」は誤り=それはliftの話)。prodCoef=0.02据え置き。
@@ -46,8 +47,9 @@
      低テンポ期ほど討伐1体の価値増幅(1+2/(1+kps/0.02))。**balanced序盤討3-9%→≥10%・hunt序盤28→30%**
      (balanced→35-36・hunt29→34)。half=0.05だとclick中盤の討が+5-8pt膨れ打を圧迫=0.02でkps0.2+をほぼ等倍に。
    - `tapDirect.clickBonus=3`: click中盤の打直×3(click23→30/48)。後半は既に②改NG(打52-67%)なので失うものなし。
-   - `goldenDirect.otherMul={click:0.3,balanced:0.3,default:1}`・`huntDirect.otherMul={click:0.15,balanced:0.15,default:0.3}`
+   - `goldenDirect.otherMul={click:0.3,balanced:0.3,hunt:0.3,default:1}`・`huntDirect.otherMul={click:0.15,balanced:0.15,default:0.3}`
      (**otherMulOfヘルパでスカラー/方針別マップ両対応に**): click/balanced中盤の金直16-22%・討直の圧迫を除去。
+     huntも金直を絞ると討シェアが立ち29→34/43(②改34不変)。
      bakeに効かせると②改40→30/−15に崩れる(C1/C2b実測)ため方針別マップが必須。
    - **不採用と実測根拠**: hd0.15全方針一律(bake②改−15でbalanced/click+1ずつ=割に合わない)/tapDirect.satMax(上記)/
      chain.prodCoef削減(上記)/bankDirect増(click中盤の銀18-25%をさらに膨らませ㉘悪化・①bankとの綱引き)。
@@ -59,13 +61,17 @@
    `node tune_r.js '{"huntDirect":{"otherMul":0.15}}' 100 balanced,hunt`=任意パラメータ上書きでincome判定を速見。
    `node sweep_chain.js 0.014 100`=chain.prodCoefグリッド(歴史)。
 
-**最終検証(このコミット時点で実行中→次セッションは results/_income_12r8_final.txt / _expect_12r8_final.txt /
-_baseline_12r8_final.txt を確認)**: 予測=㉘187前後/230・②改137前後/182(基準140)。
+**最終検証(全完了・results/_income_12r8_final.txt / _expect_12r8_final.txt / _baseline_12r8_final.txt +
+_tune_hunt_gom.txt)**: **㉘186/230(81%)**・②改137/182(基準140・−3)・baseline=T1 86%・④91%・
+T3a/T3b86%・T2解放92%・第0回9/10(S5のみ)・expect=⑨20/20(19から改善)・⑬4/4・③19/20・①12/13
+(際どい2件=①bank1.29/③rate1.15は既存のまま=Q方針どおり最終盤にまとめてマージン固定)・
+**⑫4/5(clickの1位周回が出現・欠けはgoldenに入れ替わり=同数)**。
 
-**残作業(優先順)**: (1) 最終検証の確認→HANDOFFのこの節の数値確定 → (2) ㉘の残NG=click中盤の深い数周回(run32型=
-打直の投資が薄い)・balanced序盤2-3周回・golden3-4周回・hunt後半の②改(討50-64%=hunt自身のsatMax調整余地) →
-(3) T1残り(S3の谷26-27/47・S10の交互振動25/47) → (4) ㉑序盤4設備(factory@run0 x0.05等) →
-(5) ⑫click/golden の1位周回復元(経済確定後の最後に) → (6) S5第0回(1.13)・S7 T2解放15/23 → (7) 全緑後にindex.htmlへ移植。
+**残作業(優先順)**: (1) ㉘の残NG44周回=balanced序盤・中盤の残り(打<10%のrun28-32型)・click中盤の深い周回
+(run32型=打直の投資が薄い)・golden4周回・hunt序盤(討<30%) → (2) ②改の残り(click後半の打52-67%・hunt後半の
+討50-64%=各主役直送のsatMax/係数調整余地) → (3) T1残り(S3の谷27/47・S10の交互振動25/47) →
+(4) ㉑序盤4設備(factory@run0 x0.05等) → (5) ⑫goldenの1位周回復元+①bank/③rateのマージン固定(経済確定後の最後に) →
+(6) S5第0回(1.13)・S7 T2解放15/23 → (7) 全緑後にindex.htmlへ移植(anchorGolden/scarce/otherMulマップ/clickBonusを含む)。
 
 ---
 ### ★★★★ 第12次R(2026-07-10)の引き継ぎ ★★★★(歴史記録)
