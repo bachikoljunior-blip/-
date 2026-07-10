@@ -1552,12 +1552,27 @@ function incomeParts(sim, pAll) {
   sim._mdChan = null; clear();
   if (!(pAll > 0) || !Number.isFinite(pAll) || !(pCore >= 0) || !Number.isFinite(pCore)) return null;
   const tap = Math.max(0, Math.min(tapRaw, pCore));
-  return {
+  const parts = {
     hunt: Math.max(0, pAll - pNoHuntTerm),
     golden: Math.max(0, pNoHuntTerm - pCore),
     tap,
     equip: Math.max(0, pCore - tap)
   };
+  // 診断用の項別詳細(opt.partsDetail=diag専用。判定には使わない): 4稼ぎ口の中身を
+  // cps / タップ素点 / 各直送 / 金項 / kill項 に細分する(㉘後半の設備押し上げの的を特定する道具)
+  if (sim.opt.partsDetail) {
+    const eqD = equipDirectIncome(sim, baseCore);
+    const bkD = bankDirectIncome(sim, baseCore);
+    const tapD = tapDirectIncome(sim, baseCore);
+    const gD = goldenDirectIncome(sim, baseCore);
+    const hD = huntDirectIncome(sim, goldenRateValue(sim, prodCore));
+    parts.detail = {
+      cps: prodCore.cps, tap0: tapOrig, tapD, eqD, bkD,
+      gRate: Math.max(0, parts.golden - gD), gD,
+      killT: Math.max(0, parts.hunt - hD), huntD: hD
+    };
+  }
+  return parts;
 }
 // 1サンプル: 各機能の「稼ぎ力の持ち上げ幅」を対数で積算。周回内キャッシュは都度クリアして正しく再計算
 function measureTick(sim) {
@@ -1602,6 +1617,15 @@ function measureTick(sim) {
         const inc = r._inc || (r._inc = { equip: 0, golden: 0, hunt: 0, tap: 0, n: 0 });
         inc.equip += parts.equip / tot; inc.golden += parts.golden / tot;
         inc.hunt += parts.hunt / tot; inc.tap += parts.tap / tot; inc.n++;
+        if (parts.detail) {
+          const d = parts.detail;
+          const dt = d.cps + d.tap0 + d.tapD + d.eqD + d.bkD + d.gRate + d.gD + d.killT + d.huntD;
+          if (dt > 0 && Number.isFinite(dt)) {
+            const acc = r._incD || (r._incD = { cps: 0, tap0: 0, tapD: 0, eqD: 0, bkD: 0, gRate: 0, gD: 0, killT: 0, huntD: 0, n: 0 });
+            for (const k of Object.keys(d)) acc[k] += d[k] / dt;
+            acc.n++;
+          }
+        }
       }
     }
   }
@@ -1626,7 +1650,12 @@ function finalizeMeasure(run) {
     const i = run._inc;
     income = { equip: i.equip / i.n, golden: i.golden / i.n, hunt: i.hunt / i.n, tap: i.tap / i.n };
   }
-  return { lift, bestPol, income };
+  let incomeDetail = null;
+  if (run._incD && run._incD.n > 0) {
+    const d = run._incD; incomeDetail = {};
+    for (const k of Object.keys(d)) if (k !== 'n') incomeDetail[k] = d[k] / d.n;
+  }
+  return { lift, bestPol, income, incomeDetail };
 }
 // タイミング機能(⑬)の測定: idleTiming を _md ではなく opt で切替えるため別扱い
 const TIMING_KEYS = [
