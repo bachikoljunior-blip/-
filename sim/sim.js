@@ -63,7 +63,7 @@ const RES_STAGE2 = {
   quantumProofing: 'upgrade_antimatter', antimatterRecipe: 'research_analysis'
 };
 const RES_STAGE3 = {
-  fingerTechnique: 'click_4', grandmaCrowd: 'auto_4', ovenBatch: 'bake_temperature',
+  fingerTechnique: 'click_4', grandmaCrowd: 'auto_4', ovenBatch: 'auto_4', // ovenBatch段3ゲート: 焼き加減廃止(2026-07-10 ユーザー指示)に伴い bake_temperature→auto_4 へ付け替え
   factoryNetwork: 'economy_2', spiceBlend: 'golden_3', portalNetwork: 'monster_4',
   bankClickDividend: 'economy_analysis', moonGlobalYeast: 'research_analysis', portalGlobalFold: 'master_final',
   galaxyAssembly: 'upgrade_singularity', blackHoleCompression: 'upgrade_quantum',
@@ -116,7 +116,6 @@ const SKILL_NODES = [
   { id: 'auto_2', cost: 41, prereqs: ['auto_1', 'monster_2'], effects: [['cps', null, 0.10]] },
   { id: 'auto_3', cost: 43, prereqs: ['auto_2', 'monster_2'], effects: [['cps', null, 0.14], ['monsterDamageSkill', null, 0.06]] },
   { id: 'auto_4', cost: 58, prereqs: ['auto_3'], effects: [['cps', null, 0.24], ['all', null, 0.02]] },
-  { id: 'bake_temperature', cost: 69, prereqs: ['auto_3'], effects: [['unlockSystem', 'bakeTemperature']] },
   { id: 'monster_1', cost: 41, prereqs: ['golden_1'], effects: [['monsterRate', null, 0.04]] },
   // 工房(WORKSHOP_SPEC v2 §7・第12次P本シム統合): 素材の嗅覚=素材ドロップ+料理解放/工房の拡張=作成(装備)解放。
   // QoLノード(utilRatio価格)=メインのはしご(rungCosts)を消費しない→既存スキルコストは1つも動かない。
@@ -173,7 +172,7 @@ const SKILL_BY_ID = {}; SKILL_NODES.forEach(s => SKILL_BY_ID[s.id] = s);
 // QoL/解析系ノード: 生産に直接効かないノードは「直前ラングのおまけ価格」
 const UTILITY_SKILLS = new Set([
   'golden_analysis', 'hunt_analysis', 'economy_analysis', 'research_analysis',
-  'order_board', 'bake_temperature', 'reward_synergy', 'reward_1', 'reward_choice_2',
+  'order_board', 'reward_synergy', 'reward_1', 'reward_choice_2',
   'start_1', 'offline_1', 'start_2', 'workshop_1', 'workshop_2'
 ]);
 function isUtilitySkill(id) { return UTILITY_SKILLS.has(id); }
@@ -186,7 +185,7 @@ const SKILL_HAND_ORDER = [
   'click_2', 'golden_2', 'monster_2', 'auto_2', 'economy_2',
   'mastery_low',
   'click_3', 'upgrade_moon', 'auto_3', 'research_1', 'research_remodel', 'economy_analysis', 'order_board',
-  'golden_3', 'golden_analysis', 'upgrade_time', 'research_analysis', 'monster_3', 'hunt_analysis', 'bake_temperature',
+  'golden_3', 'golden_analysis', 'upgrade_time', 'research_analysis', 'monster_3', 'hunt_analysis',
   'auto_4', 'click_4', 'offline_1',
   'upgrade_galaxy', 'mastery_high', 'golden_4', 'start_1', 'monster_4', 'reward_1', 'reward_synergy', 'reward_choice_2', 'start_2',
   'upgrade_blackhole', 'unlock_reward_crackedFang', 'unlock_reward_goldenChain',
@@ -886,43 +885,10 @@ function runTempoRamp(sim) {
   return 1 - P.tempo.ramp * (1 - Math.exp(-s / P.tempo.rampDiv));
 }
 
-// --- 焼き加減(期待値) ---
-const BAKE_NEUTRAL = { cps: 1, golden: 1, dmg: 1, stay: 1, hp: 1 };
-function bakeEV(sim) {
-  if (sim._bkT === sim.t && sim._bkV) return sim._bkV;
-  const v = bakeEVRaw(sim);
-  sim._bkT = sim.t; sim._bkV = v;
-  return v;
-}
-function bakeEVRaw(sim) {
-  if (!hasSkillEffect(sim, 'unlockSystem', 'bakeTemperature')) return BAKE_NEUTRAL;
-  const stage = currentStage(sim);
-  const oven = sim.run.upgrades.oven || 0;
-  const w = { soft: 1, good: 1, crispy: 1, burnt: stage >= 3 ? 0.72 : 0.34 };
-  if (policyIs(sim, 'golden')) w.soft += 0.85;
-  if (policyIs(sim, 'bake')) w.good += 0.85;
-  if (policyIs(sim, 'hunt')) w.crispy += 0.85;
-  if (stage >= 4) w.burnt += 0.30;
-  const W = w.soft + w.good + w.crispy + w.burnt;
-  const B = P.bake || { powerOwn: 0.0018, powerStage: 0.004, burntCps: 0.008, burntOwn: 0.0014, softGold: 0.0010, crispyStay: 0.0012, burntHp: 0.006 };
-  const powerMul = lg(oven, B.powerOwn) * lg(Math.max(0, stage - 1), B.powerStage);
-  const goodCps = 1.06 * powerMul;
-  const burntCps = lg(stage, B.burntCps) * lg(oven, B.burntOwn);
-  const softGold = ir(oven + Math.max(0, stage - 1) * 10, B.softGold);
-  const crispyDmg = (1.08 + P.ws.eqFx.mittPerLv * wsEqLv(sim, 'ovenMitt')) * powerMul; // 断熱オーブン手袋: こんがり+0.05Lv
-  const crispyStay = lg(oven, B.crispyStay);
-  const burntHp = lg(stage, B.burntHp);
-  // 断熱オーブン手袋: 火加減の安定=焼き上がり生産の底上げ(こんがりのダメージ経路はワンパン時代に
-  // 二値しきい値で死ぬ=⑮の2で1.000実測。③crackedFangと同根の「経路を総クッキーへ繋ぐ」処方)
-  const mittCps = 1 + (P.ws.eqFx.mittCpsPerLv || 0) * wsEqLv(sim, 'ovenMitt');
-  return {
-    cps: mittCps * (w.soft * 1 + w.good * goodCps + w.crispy * 1 + w.burnt * burntCps) / W,
-    golden: (w.soft * softGold + (W - w.soft) * 1) / W,
-    dmg: (w.crispy * crispyDmg + (W - w.crispy) * 1) / W,
-    stay: (w.crispy * crispyStay + (W - w.crispy) * 1) / W,
-    hp: (w.burnt * burntHp + (W - w.burnt) * 1) / W
-  };
-}
+// --- 焼き加減システムは廃止(2026-07-10 ユーザー指示。合格条件からも削除) ---
+// 旧実装(bakeEV: ふんわり/こんがり/焦げの期待値乗数 cps/golden/dmg/stay/hp)は git 履歴参照。
+// 断熱オーブン手袋(ovenMitt)の効果は「オーブン生産×(1+mittPerLv×Lv)」へ再係留(computeProd の oven ブロック)。
+// 移植時: index.html から焼き加減UI・スキルノード「焼き加減調整」・RESEARCH_STAGE_MULT等の関連を削除すること。
 
 function purgeBoosts(sim) {
   const r = sim.run;
@@ -942,7 +908,6 @@ function computeProd(sim) {
   const r = sim.run;
   const R = P.res;
   const stage = currentStage(sim);
-  const bake = bakeEV(sim);
 
   const allSkill = skillEffect(sim, 'all');
   const clickSkillMul = 1 + skillEffect(sim, 'click') + allSkill + (policyIs(sim, 'click') ? 0.12 : 0);
@@ -1073,9 +1038,12 @@ function computeProd(sim) {
     const personal = 1 + (r.upgradePerks[u.id] || 0) * boostRate;
     let resM = 1;
     if (u.id === 'grandma' && resActive(sim, 'grandmaCrowd')) resM *= R.grandmaSelf;
+    // 断熱オーブン手袋(焼き加減廃止に伴う再係留・2026-07-10): オーブン生産×(1+mittPerLv×Lv)。
+    // ⑮の2のovenMitt判定経路(旧・こんがり倍率/焼き上がり底上げ)をオーブン直結へ置換=研究非依存で確実に効く。
+    if (u.id === 'oven') resM *= 1 + (P.ws.eqFx.mittPerLv || 0) * wsEqLv(sim, 'ovenMitt');
     if (u.id === 'oven' && resActive(sim, 'ovenBatch')) {
       resM *= R.ovenSelf * lg(capOwn(owned), R.ovenOwn) * lg(Math.max(0, r.maxStage - 1), R.ovenStage) * (policyIs(sim, 'bake') ? 1.10 : 1);
-      // 段階2: 焼き加減連動(こんがり運用で×1.5、それ以外は期待値×1.2)
+      // 段階2: 方針連動(焼成方針×1.5、それ以外×1.2。旧・焼き加減連動=システム廃止で再テーマ、値は不変)
       if (resStage2(sim, 'ovenBatch')) resM *= policyIs(sim, 'bake') ? P.res2.ovenBakeMulBake : P.res2.ovenBakeMulOther;
       // 段階3: 最高到達ノルマ層でオーブンの研究倍率が伸びる(旧・個別強化Lv依存は設備強化報酬撤廃で無効化→層依存へ再設計・増加方向)。
       // 一定の底上げ(flat)+層ランプ。flatは早い周回(層が浅い)でも⑨の各回minを満たす床。両方とも増加方向。
@@ -1161,7 +1129,7 @@ function computeProd(sim) {
   }
 
   let click = clickRaw * bankM * clickSkillMul * prestigeMul * globalRes * killMulAll;
-  let cps = cpsRaw * cpsSkillMul * prestigeMul * globalRes * killMulAll * killMulCps * bake.cps;
+  let cps = cpsRaw * cpsSkillMul * prestigeMul * globalRes * killMulAll * killMulCps;
 
   // クリック変更 案A(指先連動): クリック力 = 従来項 + 毎秒生産×係数×(1+0.02×√強い指)×(1+クリック系スキル効果)
   const CL = P.clickLink;
@@ -1217,7 +1185,7 @@ function computeProd(sim) {
   const boostM = goldenBoostMultiplier(sim) * afterheatMultiplier(sim);
   return {
     baseClick: click, clickEV: click * critEV * boostM, cps: cps * boostM,
-    baseCps: cps, boostM, bake, stage, prestigeMul, critChance: critChanceOut
+    baseCps: cps, boostM, stage, prestigeMul, critChance: critChanceOut
   };
 }
 
@@ -1263,7 +1231,7 @@ function monsterDamage(sim, prod) {
     + Math.sqrt(clickOwned) * (r.perks.brandHunt || 0) * effRw(sim, 'brandHunt')
     + rewardCategoryBonus(sim, 'hunt')
     + (policyIs(sim, 'hunt') ? 0.14 : 0)
-  ) * prod.bake.dmg
+  )
     * (wsBuffActive(sim, 'hunterStew') ? P.ws.fx.stewDmg : 1)
     * (1 + P.ws.eqFx.almanacDmgPerLv * wsEqLv(sim, 'monsterAlmanac'));
   return Math.max(1, Math.ceil(base * mult));
@@ -1277,7 +1245,7 @@ function goldenSpawnFactor(sim) {
     - Math.max(0, skillEffect(sim, 'goldenRate')) * 1.8
     - rewardCategoryBonus(sim, 'golden') * 1.2
     - (policyIs(sim, 'golden') ? 0.12 : 0)
-  ) * runTempoRamp(sim) * bakeEV(sim).golden
+  ) * runTempoRamp(sim)
     * (wsBuffActive(sim, 'mintIce') ? P.ws.fx.mintIceGoldenInt : 1)
     * ((P.ws && wsStageDef(sim).goldenIntMul) || 1);
 }
@@ -1317,7 +1285,6 @@ function monsterHpValue(sim, level) {
   let hp = M.hpBase * Math.pow(M.hpGrowth, Math.max(0, level - 1)) * timePressure;
   hp *= Math.exp(-Math.max(0, skillEffect(sim, 'monsterHpDown')));
   hp *= Math.pow(P.rw.deepPursuitHp, rwOff(sim, 'deepPursuit') ? 0 : (sim.run.perks.deepPursuit || 0));
-  hp *= bakeEV(sim).hp;
   // ステージHP補正(工房統合): S1=×1〜S5=×60・深層=60×4^層
   if (P.ws) {
     const st = wsStageDef(sim);
@@ -1330,7 +1297,7 @@ function monsterStayMs(sim) {
   const rewardLv = rwOff(sim, 'monsterStay') ? 0 : Math.max(0, r.perks.monsterStay || 0);
   const mult = Math.exp(rewardLv * P.monster.stayPerLv + Math.max(0, skillEffect(sim, 'monsterStay')) * 0.12
     + (policyIs(sim, 'hunt') ? 0.10 : 0) + rewardCategoryBonus(sim, 'hunt'))
-    * (r.nextMonsterStayMultiplier || 1) * bakeEV(sim).stay * ((P.ws && wsStageDef(sim).stayMul) || 1);
+    * (r.nextMonsterStayMultiplier || 1) * ((P.ws && wsStageDef(sim).stayMul) || 1);
   r.nextMonsterStayMultiplier = 1;
   return Math.max(4000, P.monster.stayBase * mult);
 }

@@ -83,7 +83,7 @@
 | id | 装備名 | 基本コスト | 効果(Lvスケール) |
 |---|---|---|---|
 | goldenWhisk | 黄金の泡立て器 | butter×10, flour×8 | クリック生産連動係数 ×(1+0.15×Lv) |
-| ovenMitt | 断熱オーブン手袋 | cacao×12, ironShard×2 | 焼き加減「こんがり」倍率 +0.05×Lv |
+| ovenMitt | 断熱オーブン手袋 | cacao×12, ironShard×2 | オーブン生産×(1+0.12×Lv)(焼き加減廃止 2026-07-10 に伴い再係留) |
 | pressExtractor | 香料圧搾機 | spice×14, goldDust×2 | 金ブースト倍率 ×(1+0.04×Lv) |
 | monsterAlmanac | モンスター図鑑 | ironShard×4, silentCore×2 | ドロップ数 +floor(Lv/2)、モンスターダメージ ×(1+0.06×Lv) |
 | stillFlask | 蒸留フラスコ | mint×10, lavaSugar×6 | 料理の効果時間 ×(1+0.10×Lv) |

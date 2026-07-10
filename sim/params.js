@@ -285,8 +285,7 @@ module.exports = {
   // ---- 個別強化(報酬) ----
   upPerk: { base: 0.22, slope: 0.010, floor: 0.055 },
 
-  // ---- 焼き加減(スキル解放機能)の式係数 ----
-  bake: { powerOwn: 0.0018, powerStage: 0.004, burntCps: 0.008, burntOwn: 0.0014, softGold: 0.0010, crispyStay: 0.0012, burntHp: 0.006 },
+  // ---- 焼き加減システムは廃止(2026-07-10 ユーザー指示・合格条件からも削除。旧係数 bake:{...} は git 履歴参照) ----
 
   // ---- 段階式研究(第5次実装) ----
   // 2026-07-05 キャップ全撤廃(WORKSHOP_SPEC 15): min(変数,N)/capv 型の頭打ちを全削除。
@@ -371,7 +370,7 @@ module.exports = {
       { id: 'masterTray',       cost: { flour: 10, cacao: 8 } }        // 名匠の天板: 全生産×(1+0.06Lv)(2026-07-10ユーザー指示で追加)
     ],
     // almanacDmgPerLv 0.06→0.08(2026-07-10: masterTray追加の経済移動で⑮の2が1.049に割れたためマージン)
-    eqFx: { whiskPerLv: 0.15, mittPerLv: 0.12, mittCpsPerLv: 0.03, pressPerLv: 0.04, almanacDmgPerLv: 0.08, flaskPerLv: 0.10, compassDropPerLv: 0.05, trayPerLv: 0.06 },
+    eqFx: { whiskPerLv: 0.15, mittPerLv: 0.12, pressPerLv: 0.04, almanacDmgPerLv: 0.08, flaskPerLv: 0.10, compassDropPerLv: 0.05, trayPerLv: 0.06 }, // mittPerLv=断熱オーブン手袋: オーブン生産×(1+0.12×Lv)(焼き加減廃止で再係留・mittCpsPerLvは統合削除)
     // 注文ボード(§19: 同時1件・間隔1800×0.85^転生回数・制限240+4√経過秒・必要量/報酬は現在値に相対)
     orders: { intervalBase: 1800, intervalDecay: 0.85, limitBase: 240, limitSqrt: 4,
       needProd: 0.25, needClick: 0.5, needHunt: 0.6, rewardCookie: 10, rewardBoostMul: 2, rewardBoostSec: 120,
