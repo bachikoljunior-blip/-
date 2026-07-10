@@ -61,7 +61,7 @@ module.exports = {
     ratePerLv: 0.16, // 0.14→0.16(2026-07-10 第12次R: surge0.45の経済移動で③monsterRate中央値が再び1.1割れ=マージン積み増し)
     rateKillBonus: 0.5, rateKillHalf: 2, // 0.35→0.5(2026-07-10 novelty導入で③monsterRateの中央値が1.1を割れ=専用の討伐手数ボーナスで回復)
     satKps: 2.0, // 討伐頻度の飽和半価点(2026-07-10): kill項の1体価値逓減。高テンポ期の討伐56-63%独走を[30,52]帯へ(balanced序盤0.02-0.05体/秒はほぼ線形)
-    scarceBonus: 0, scarceHalf: 0.05 // 希少プレミアム(第12次R続き・検証中): 低テンポ期ほど討伐1体の価値を増幅(1+bonus/(1+kps/half))。balanced序盤討3-9%・hunt序盤討28%の底上げ用。0で無効
+    scarceBonus: 2, scarceHalf: 0.02 // 希少プレミアム(第12次R続き・2026-07-10採用): 低テンポ期ほど討伐1体の価値を増幅(1+bonus/(1+kps/half))。balanced序盤討3-9%→≥10%・hunt序盤討28→30%(100h実測: balanced25→35-36・hunt29→34)。half0.05はclick中盤の討を+5-8pt膨らませ打を圧迫=0.02でkps0.2+をほぼ等倍に
   },
 
   // ---- ノルマ ----
@@ -109,9 +109,9 @@ module.exports = {
   // すべて skill→research→効果 でゲート(設備=ovenBatch段2/金=spiceBlend段2/討伐=portalNetwork段2/タップ=fingerTechnique段2)。
   // coef=0 で各無効。tune で全体最良点を掃引(㉘の各主役≥30%と経済/テンポ非破綻の両立)。調整項目。
   equipDirect:  { coef: 0.06, stagePow: 0.5, countPow: 2, ref: 100, startStage: 5, satMax: 50, otherMul: 0.2, anchorGolden: 0.15 }, // アンカー=max(base, 0.15×金相場)(第12次R続き・2026-07-10採用): 後半はbase係留の設直だけ沈む(bake後半設直30→5-7%)ため金相場へ部分連動。100h実測: bake(a)23→46/47・②改43→40/47・balanced10→25/48。1.0は設71%独走で②改7/47に崩壊・0.25でも遷移帯が超過=0.15が均衡 // coef 0.11実験は㉘129→125・②改137→131と希釈で逆効果(2026-07-10実測)=0.06に戻し // 投資量=オーブン所持数。coef0.05無効の正体はゲート(ovenBatch段2コスト=run15相当)。段2コスト前倒しとセットで増幅(2026-07-10)。satMax=独走防止 25→50(第12次R: 100h後半周回で設備シェアが討伐/金perk積み上げに沈む=balanced10/48・bake23/47の対策)。otherMul=焼成方針以外は従来規模(全方針等倍だとbalanced0/32・click5/25に崩壊=実測)
-  goldenDirect: { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 10, otherMul: 1 }, // otherMul(第12次R続き・検証中)=非golden方針の金直係数(hunt/equipと同型)。中盤のclick打/balanced打の圧迫対策。1で従来どおり // 投資量=金perk合計(㉘金≥30%へ増幅・huntDirectと同処方=投資連動で金特化の後半周回だけ強く効く)
-  huntDirect:   { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 15, otherMul: 0.3 }, // 投資量=討伐perk合計8種(㉘討伐≥30%へ増幅・投資連動=狩猟専の周回だけ強く効く)。ベース=金クッキー期待収入率(金経済連動)。satMax=高投資周回(perk1000+)の独走を飽和で抑え②改と両立
-  tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5, clickBonus: 1, satMax: 0, anchorGolden: 0 }, // satMax(第12次R続き・検証中)=打直の投資飽和。click後半の打直49-59%独走を②改帯へ畳む(0=無効)。anchorGolden=max(base,係数×金相場)アンカー(equipと同型・balanced中盤打4-9%の底上げ用・0=無効) // 投資量=神の指+強い指/10。clickBonus(第12次R続き・検証中)=click方針だけ厚く(bankDirectと同型・増加方向)。1で従来どおり
+  goldenDirect: { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 10, otherMul: { click: 0.3, balanced: 0.3, default: 1 } }, // otherMul(第12次R続き・2026-07-10採用・方針別マップ)=click/balanced中盤の金直16-22%が打を圧迫する対策。bakeに効かせると②改40→30に崩れる(C2b実測)ためdefault=1 // 投資量=金perk合計(㉘金≥30%へ増幅・huntDirectと同処方=投資連動で金特化の後半周回だけ強く効く)
+  huntDirect:   { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 15, otherMul: { click: 0.15, balanced: 0.15, default: 0.3 } }, // otherMul方針別マップ(2026-07-10): click/balancedは0.15(各+1周回)・bake/goldenは従来0.3(0.15に下げると設が押されbake②改−15=C1実測) // 投資量=討伐perk合計8種(㉘討伐≥30%へ増幅・投資連動=狩猟専の周回だけ強く効く)。ベース=金クッキー期待収入率(金経済連動)。satMax=高投資周回(perk1000+)の独走を飽和で抑え②改と両立
+  tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5, clickBonus: 3, satMax: 0, anchorGolden: 0 }, // clickBonus=3(2026-07-10採用): click中盤(神指0・指のみ=inv100-280)の打直2-12%を×3し打≥30%へ(click23→30/48)。後半(神指1851+)は既に②改NGなので失うものなし。satMaxは中盤/後半のinv比40-100倍を両立できず不採用。anchorGoldenも現状不使用 // 投資量=神の指+強い指/10。clickBonus(第12次R続き・検証中)=click方針だけ厚く(bankDirectと同型・増加方向)。1で従来どおり
   // 銀行配当(直送・第12次J-3 腐り解消): bankClickDividend研究の独立収入。クリック方針で厚く効かせ①の各回minを満たす。
   // 全体cps倍率をやめ加算収入へ(他機能のlift希釈を回避)。所持数はlog10で床あり=早い周回でも効く。増加方向のみ。
   bankDirect:   { coef: 0.42, ownRate: 0.5, savedCoef: 0.05, clickBonus: 1.5, countCoef: 0.9, countPow: 1.5, ref: 150 }, // 投資量=銀行所持数+貯蓄(総クッキー桁)。coef 0.34→0.42(2026-07-10 第12次R: surge経済移動で①bank研究が1.2割れ=マージン)
