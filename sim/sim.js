@@ -1647,6 +1647,8 @@ function measureTick(sim) {
             for (const k of Object.keys(d)) acc[k] += d[k] / dt;
             acc.n++;
           }
+          // 投資量の周回末値(診断用): tapDirect等のsatMax/clickBonusを解析的に決めるための実数
+          r._invLast = { oven: r.upgrades.oven || 0, godFinger: r.upgrades.godFinger || 0, finger: r.upgrades.finger || 0, bank: r.upgrades.bank || 0 };
         }
       }
     }
@@ -1677,7 +1679,7 @@ function finalizeMeasure(run) {
     const d = run._incD; incomeDetail = {};
     for (const k of Object.keys(d)) if (k !== 'n') incomeDetail[k] = d[k] / d.n;
   }
-  return { lift, bestPol, income, incomeDetail };
+  return { lift, bestPol, income, incomeDetail, invLast: run._invLast || null };
 }
 // タイミング機能(⑬)の測定: idleTiming を _md ではなく opt で切替えるため別扱い
 const TIMING_KEYS = [

@@ -19,5 +19,7 @@ for (const r of full) {
   let line = `run${String(r.idx).padStart(2)} dur${String((r.duration / 60).toFixed(0)).padStart(3)}m kills${String(r.kills || 0).padStart(6)} kps${kps} ` +
     `設${(i.equip * 100).toFixed(0)}% 金${(i.golden * 100).toFixed(0)}% 討${(i.hunt * 100).toFixed(0)}% 打${(i.tap * 100).toFixed(0)}%`;
   if (d) line += ` | cps${(d.cps * 100).toFixed(1)} 設直${(d.eqD * 100).toFixed(1)} 銀${(d.bkD * 100).toFixed(1)} 金項${(d.gRate * 100).toFixed(1)} 金直${(d.gD * 100).toFixed(1)} kill${(d.killT * 100).toFixed(1)} 討直${(d.huntD * 100).toFixed(1)} 打素${(d.tap0 * 100).toFixed(1)} 打直${(d.tapD * 100).toFixed(1)}`;
+  const u = r.measure.invLast || {};
+  line += ` | inv: oven${u.oven || 0} 神指${u.godFinger || 0} 指${u.finger || 0} 銀行${u.bank || 0}`;
   console.log(line);
 }
