@@ -1057,7 +1057,11 @@ function genreDirect(sim, base, invest, cfg) {
   if (!cfg || !cfg.coef) return 0;
   const s = Math.max(0, (sim.run.maxStage || 0) - (cfg.startStage || 0));
   if (s <= 0) return 0;
-  return cfg.coef * base * Math.pow(Math.max(0, invest) / (cfg.ref || 1), cfg.countPow || 2) * Math.pow(s, cfg.stagePow || 0.5);
+  // satMax(任意): 投資倍率の飽和上限。高投資周回(perk合計1000+)で直送が独走して②改(ジャンルlift±1.5帯)を
+  // 壊すのを防ぐ。低〜中投資域は raw≪satMax でほぼ線形のまま(㉘の中盤合格を保つ)。
+  let raw = Math.pow(Math.max(0, invest) / (cfg.ref || 1), cfg.countPow || 2);
+  if (cfg.satMax > 0) raw = raw / (1 + raw / cfg.satMax);
+  return cfg.coef * base * raw * Math.pow(s, cfg.stagePow || 0.5);
 }
 // 設備直送: 投資量=オーブン所持数。ゲート=オーブン大量焼成 段階2(スキル auto_3→段階2購入→効果)。
 function equipDirectIncome(sim, base) {
@@ -1068,14 +1072,21 @@ function equipDirectIncome(sim, base) {
 function goldenDirectIncome(sim, base) {
   if (!resStage2(sim, 'spiceBlend')) return 0;
   const r = sim.run;
-  const inv = (r.perks.goldenAmount || 0) + (r.perks.goldenPower || 0) + (r.perks.goldenRate || 0);
+  // 投資量=goldenカテゴリperk合計(全7種)。旧3種(amount/power/rate)だと、goldenTarget/FirstHit等の
+  // ON/OFF比が金直送に乗らず、huntDirect増幅の希釈で③instantの中央値が1.1を割る(1.02〜1.10に低下)。
+  // huntDirect(hunt全8種)と対称の処方=金特化(S3)の後半周回の金シェア(㉘)も同時に立つ。
+  const inv = (r.perks.goldenAmount || 0) + (r.perks.goldenPower || 0) + (r.perks.goldenRate || 0)
+    + (r.perks.goldenChain || 0) + (r.perks.goldenTarget || 0) + (r.perks.goldenFirstHit || 0) + (r.perks.beastScent || 0);
   return genreDirect(sim, base, inv, P.goldenDirect);
 }
 // 討伐直送: 投資量=討伐perk合計。ゲート=異世界接続網 段階2(スキル monster_3→段階2購入→効果)。
 function huntDirectIncome(sim, base) {
   if (!resStage2(sim, 'portalNetwork')) return 0;
   const r = sim.run;
-  const inv = (r.perks.monsterDamage || 0) + (r.perks.crackedFang || 0) + (r.perks.beastHeatFerment || 0) + (r.perks.huntingCore || 0);
+  // 投資量=huntカテゴリperk合計(全8種)。旧4種(damage/fang/ferment/core)だと、S4が優先リスト先頭の
+  // monsterRate を大量に拾う中盤周回で投資量0=直送不発(㉘hunt run18-27 の25-29%NGの原因)。
+  const inv = (r.perks.monsterDamage || 0) + (r.perks.crackedFang || 0) + (r.perks.beastHeatFerment || 0) + (r.perks.huntingCore || 0)
+    + (r.perks.monsterRate || 0) + (r.perks.monsterStay || 0) + (r.perks.biteRecovery || 0) + (r.perks.brandHunt || 0);
   return genreDirect(sim, base, inv, P.huntDirect);
 }
 // タップ直送: 投資量=クリック系(神の指+強い指/10)。ゲート=指先の型 段階2(スキル click_2→段階2購入→効果)。
@@ -1103,6 +1114,18 @@ function bankDirectIncome(sim, base) {
   return cfg.coef * base * ownM
        * (1 + Math.log1p(saved) * (cfg.savedCoef || 0)) * polM;
 }
+// 金クッキーの期待収入率(/秒): 間隔は spawnFactor、1回の価値は即時+ブーストの平均。
+// earningPower の金項の本体。討伐直送(huntDirect)のアンカーにも使う(下記)。
+function goldenRateValue(sim, prod) {
+  const mean = (P.golden.spawnMin + P.golden.spawnMax) / 2;
+  const interval = Math.max(1, mean * goldenSpawnFactor(sim) / 1000);
+  // 即時獲得の計測は実支払い(collectGolden: max(cps, clickEV)×instantCoef×gAM)と同式にする。
+  // 旧: baseClick(会心・ブースト抜き)を参照していたため、会心が育つ後半周回で金の実収入を
+  // critEV×boostM 倍(10-30倍)過小評価し、S3金特化の後半の金シェアが25%へ沈んで見えていた(㉘計測歪み)。
+  const instant = Math.max(prod.cps, prod.clickEV) * P.golden.instantCoef * goldenAmountMultiplier(sim);
+  const boostVal = Math.max(0, goldenMultiplierVal(sim) - 1) * prod.cps * (goldenBoostDurationMs(sim) / 1000);
+  return (instant + boostVal) / 2 / interval;
+}
 function earningPower(sim) {
   const r = sim.run;
   const prod = computeProd(sim);
@@ -1111,13 +1134,9 @@ function earningPower(sim) {
   const base = prod.cps + tapOrig; // 直接生産(モンスター中はタップは討伐へ)
   // タップ直送は base に含める(タップ稼ぎ口へ。incomeParts の tap 抽出でも同額を足す)
   let power = base + tapDirectIncome(sim, base) + equipDirectIncome(sim, base) + bankDirectIncome(sim, base); // 設備直送→equip / タップ直送→tap / 銀行配当→equip残差
-  // 金クッキー収入率(期待値/秒): 間隔は spawnFactor、1回の価値は即時+ブーストの平均。+金直送→golden
+  // 金クッキー収入率(期待値/秒)+金直送→golden
   if (!(sim._mdChan && sim._mdChan.golden)) {
-    const mean = (P.golden.spawnMin + P.golden.spawnMax) / 2;
-    const interval = Math.max(1, mean * goldenSpawnFactor(sim) / 1000);
-    const instant = Math.max(prod.baseCps, prod.baseClick) * P.golden.instantCoef * goldenAmountMultiplier(sim);
-    const boostVal = Math.max(0, goldenMultiplierVal(sim) - 1) * prod.cps * (goldenBoostDurationMs(sim) / 1000);
-    power += (instant + boostVal) / 2 / interval + goldenDirectIncome(sim, base);
+    power += goldenRateValue(sim, prod) + goldenDirectIncome(sim, base);
   }
   // 討伐報酬(投資)価値率: 討伐/秒 × 生産KILL_VALUE_SEC秒ぶん。ダメージ・出現・滞在の報酬がここに効く。+討伐直送→hunt
   if (!(sim._mdChan && sim._mdChan.hunt)) {
@@ -1135,7 +1154,16 @@ function earningPower(sim) {
     const mrLv = rwOff(sim, 'monsterRate') ? 0 : Math.max(0, sim.run.perks.monsterRate || 0);
     const rateTempo = 1 + (P.monster.rateKillBonus || 0) * mrLv / (mrLv + (P.monster.rateKillHalf || 1));
     const killsPerSec = killable / (interval + ttk) * rateTempo;
-    power += killsPerSec * base * KILL_VALUE_SEC + huntDirectIncome(sim, base);
+    // 討伐直送の価値ベース=金クッキーの期待収入率(戦利品は金相場で売れる)。
+    // 金の即時獲得は baseClick(godFinger指数で複利成長)を参照して無限にスケールする一方、討伐テンポは
+    // 出現間隔で頭打ち(ワンパン後 killsPerSec≈1/interval)のため、後半周回で討伐由来シェアが7-9%へ
+    // 構造的に沈む(㉘hunt後半NGの根本)。討伐perkへ投資したプレイヤーの直送収入を金経済と同スケールに
+    // 連動させる: 金が膨らむ局面だけ討伐も釣られて立ち、金が萎む局面(S4 run27-32=killTermだけで討46-54%)
+    // では直送≈0で②改(ジャンルlift±1.5帯)を壊さない。討伐perk合計^1.4連動なので S3金特化(huntInv0)は無傷。
+    // ※クリック火力(clickEV×タップ率)アンカーは3時代(中盤+5-13pt/高投資期+0/爆発期+20-40pt)を
+    //   分離できず②改を壊すと実測済み。kill価値項(全方針一律)の増幅も S3 の金シェア崩壊で不可(実測)。
+    const huntAnchor = goldenRateValue(sim, prod);
+    power += killsPerSec * base * KILL_VALUE_SEC + huntDirectIncome(sim, huntAnchor);
   }
   return power;
 }
@@ -1689,9 +1717,10 @@ function advanceTick(sim, strategy) {
     }
 
     // 収入(各ジャンル直送: そのジャンルへ投資したプレイヤーだけ効く独立収入を加算=㉘の各主役を後半も立たせる)
+    // 討伐直送のみ金クッキーの期待収入率アンカー(earningPower の計測と同式=計測と実支払いの一致)
     const dirBase = prod.cps + prod.clickEV * (r.monster ? 0 : tapRate);
     const directAll = equipDirectIncome(sim, dirBase) + goldenDirectIncome(sim, dirBase)
-      + huntDirectIncome(sim, dirBase) + tapDirectIncome(sim, dirBase) + bankDirectIncome(sim, dirBase);
+      + huntDirectIncome(sim, goldenRateValue(sim, prod)) + tapDirectIncome(sim, dirBase) + bankDirectIncome(sim, dirBase);
     earn(sim, cpsNow * dt + clickNow * tapsForCookies * dt + directAll * dt);
 
     // 銀行クリック配当 段階2: 複利利息。キャップ撤廃: 硬い min(利息, 毎秒生産×2) を
@@ -1916,9 +1945,15 @@ function tryBuyUpgrade(sim, u, budgetRatio) {
     // 条件㉑(新設備の存在感): 初めて買った瞬間の「その1台の実生産(系列・熟練など固有能力込み、
     // 研究・スキル倍率も自然に通る)」を、購入直前の実CPSと比較する。Δ生産方式(2026-07-06 解釈更新):
     // Δ = 購入後の生産 − 購入直前の生産。判定は Δ ≥ 購入直前CPS × 1/5(runner側)
+    // 「購入直前」はこの1台だけを引いた実CPS(所持数を一時-1して再計算)。旧・tick頭の_lastProdを使う方式は
+    // 同一tick内の先行購入(周回頭の再購入ラッシュ等)のΔが混入し、4種同時初購入でΔが全部ほぼ同値になる等
+    // 測定が汚染されていた(第12次P実測: factory/bank/spiceRack/portalのΔが全て≈6.9e5)。
     if (sim._lastProd) {
       if (!sim.presenceChecks) sim.presenceChecks = [];
-      const before = u.type === 'click' ? sim._lastProd.baseClick : sim._lastProd.baseCps;
+      sim.run.upgrades[u.id]--;
+      const bp = computeProd(sim);
+      sim.run.upgrades[u.id]++;
+      const before = u.type === 'click' ? bp.baseClick : bp.baseCps;
       const after = computeProd(sim);
       const av = u.type === 'click' ? after.baseClick : after.baseCps;
       sim.presenceChecks.push({ runIdx: sim.runs.length, t: sim.t, id: u.id, delta: Math.max(0, av - before), ref: before });

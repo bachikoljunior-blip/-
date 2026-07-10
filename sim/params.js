@@ -106,9 +106,9 @@ module.exports = {
   // 各稼ぎ口に、そのジャンルへ投資したプレイヤーだけ強く効く独立収入を用意し、各方針の主役を後半も≥30%に立たせる。
   // すべて skill→research→効果 でゲート(設備=ovenBatch段2/金=spiceBlend段2/討伐=portalNetwork段2/タップ=fingerTechnique段2)。
   // coef=0 で各無効。tune で全体最良点を掃引(㉘の各主役≥30%と経済/テンポ非破綻の両立)。調整項目。
-  equipDirect:  { coef: 0.02, stagePow: 0.5, countPow: 2, ref: 100, startStage: 5 }, // 投資量=オーブン所持数
+  equipDirect:  { coef: 0.02, stagePow: 0.5, countPow: 2, ref: 100, startStage: 5 }, // 投資量=オーブン所持数(0.05はbake中盤の設備19-29%をほぼ動かせず=中盤は金の時代現象が根本、と実測 2026-07-10)
   goldenDirect: { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5 }, // 投資量=金perk合計(㉘金≥30%へ増幅・huntDirectと同処方=投資連動で金特化の後半周回だけ強く効く)
-  huntDirect:   { coef: 0.07, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5 }, // 投資量=討伐perk合計(㉘討伐≥30%へ増幅・投資連動=狩猟専の周回だけ強く効く。countPow緩め=低投資周回も効く)
+  huntDirect:   { coef: 0.22, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 25 }, // 投資量=討伐perk合計8種(㉘討伐≥30%へ増幅・投資連動=狩猟専の周回だけ強く効く)。ベース=金クッキー期待収入率(金経済連動)。satMax=高投資周回(perk1000+)の独走を飽和で抑え②改と両立
   tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5 }, // 投資量=神の指+強い指/10
   // 銀行配当(直送・第12次J-3 腐り解消): bankClickDividend研究の独立収入。クリック方針で厚く効かせ①の各回minを満たす。
   // 全体cps倍率をやめ加算収入へ(他機能のlift希釈を回避)。所持数はlog10で床あり=早い周回でも効く。増加方向のみ。
