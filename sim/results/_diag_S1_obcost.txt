@@ -1,0 +1,35 @@
+run 0 dur=57.9m stage=4 kills=12 golden=57 huntInv=7 goldInv=8 res2=[] inc(設34/金12/討4/タ50) skills+1=core
+run 1 dur=69.0m stage=4 kills=29 golden=69 huntInv=19 goldInv=19 res2=[] inc(設42/金22/討4/タ33) skills+1=click_1
+run 2 dur=51.3m stage=15 kills=90 golden=54 huntInv=86 goldInv=79 res2=[] inc(設35/金28/討9/タ28) skills+1=golden_1
+run 3 dur=85.5m stage=12 kills=68 golden=133 huntInv=45 goldInv=44 res2=[] inc(設35/金41/討5/タ18) skills+1=monster_1
+run 4 dur=71.0m stage=22 kills=185 golden=116 huntInv=271 goldInv=203 res2=[] inc(設22/金52/討9/タ17) skills+1=auto_1
+run 5 dur=48.5m stage=26 kills=161 golden=80 huntInv=173 goldInv=167 res2=[ovenBatch] inc(設41/金33/討10/タ16) skills+1=economy_1
+run 6 dur=61.9m stage=21 kills=103 golden=98 huntInv=87 goldInv=81 res2=[ovenBatch] inc(設50/金29/討9/タ12) skills+1=click_2
+run 7 dur=57.0m stage=29 kills=162 golden=93 huntInv=198 goldInv=140 res2=[ovenBatch,spiceBlend] inc(設51/金27/討9/タ14) skills+1=golden_2
+run 8 dur=68.5m stage=26 kills=142 golden=110 huntInv=137 goldInv=136 res2=[fingerTechnique,ovenBatch,spiceBlend] inc(設51/金30/討8/タ12) skills+1=monster_2
+run 9 dur=70.8m stage=32 kills=193 golden=116 huntInv=232 goldInv=192 res2=[fingerTechnique,ovenBatch,spiceBlend] inc(設46/金35/討7/タ11) skills+1=auto_2
+run10 dur=53.7m stage=41 kills=256 golden=92 huntInv=305 goldInv=263 res2=[fingerTechnique,grandmaCrowd,ovenBatch,spiceBlend] inc(設51/金30/討8/タ11) skills+3=economy_2+economy_analysis+order_board
+run11 dur=66.2m stage=36 kills=175 golden=108 huntInv=166 goldInv=157 res2=[fingerTechnique,grandmaCrowd,ovenBatch,spiceBlend,bankClickDividend] inc(設54/金31/討7/タ9) skills+1=mastery_low
+run12 dur=49.0m stage=48 kills=286 golden=86 huntInv=364 goldInv=316 res2=[fingerTechnique,grandmaCrowd,ovenBatch,spiceBlend,bankClickDividend] inc(設51/金31/討7/タ10) skills+1=click_3
+run13 dur=55.9m stage=41 kills=181 golden=92 huntInv=170 goldInv=172 res2=[fingerTechnique,grandmaCrowd,ovenBatch,spiceBlend,bankClickDividend] inc(設52/金28/討7/タ13) skills+1=upgrade_moon
+run14 dur=35.1m stage=55 kills=243 golden=62 huntInv=228 goldInv=223 res2=[fingerTechnique,grandmaCrowd,ovenBatch,spiceBlend,bankClickDividend] inc(設54/金22/討9/タ15) skills+2=auto_3+bake_temperature
+run15 dur=29.9m stage=50 kills=183 golden=56 huntInv=158 goldInv=146 res2=[fingerTechnique,grandmaCrowd,ovenBatch,spiceBlend,bankClickDividend] inc(設56/金21/討9/タ14) skills+1=research_1
+run16 dur=33.8m stage=45 kills=134 golden=62 huntInv=91 goldInv=92 res2=[fingerTechnique,grandmaCrowd,ovenBatch,spiceBlend,bankClickDividend] inc(設60/金18/討9/タ13) skills+2=research_remodel+research_analysis
+run17 dur=35.2m stage=49 kills=170 golden=66 huntInv=111 goldInv=120 res2=[fingerTechnique,grandmaCrowd,ovenBatch,spiceBlend,bankClickDividend] inc(設59/金20/討9/タ12) skills+1=golden_3
+run18 dur=34.4m stage=55 kills=195 golden=66 huntInv=144 goldInv=156 res2=[fingerTechnique,grandmaCrowd,ovenBatch,spiceBlend,bankClickDividend] inc(設55/金24/討8/タ12) skills+2=upgrade_time+golden_analysis
+run19 dur=34.3m stage=57 kills=197 golden=66 huntInv=167 goldInv=159 res2=[fingerTechnique,grandmaCrowd,ovenBatch,spiceBlend,bankClickDividend,moonGlobalYeast] inc(設54/金26/討8/タ11) skills+1=monster_3
+run20 dur=39.8m stage=57 kills=196 golden=76 huntInv=129 goldInv=144 res2=[fingerTechnique,grandmaCrowd,ovenBatch,spiceBlend,bankClickDividend,moonGlobalYeast] inc(設56/金25/討9/タ10) skills+2=auto_4+hunt_analysis
+run21 dur=20.8m stage=88 kills=353 golden=48 huntInv=278 goldInv=310 res2=[fingerTechnique,grandmaCrowd,ovenBatch,spiceBlend,portalNetwork,bankClickDividend,moonGlobalYeast] inc(設53/金23/討14/タ10) skills+2=click_4+offline_1
+run22 dur=21.9m stage=84 kills=266 golden=48 huntInv=184 goldInv=190 res2=[fingerTechnique,grandmaCrowd,ovenBatch,factoryNetwork,spiceBlend,portalNetwork,bankClickDividend,moonGlobalYeast] inc(設47/金25/討20/タ8) skills+1=upgrade_galaxy
+run23 dur=24.1m stage=88 kills=304 golden=53 huntInv=221 goldInv=222 res2=[fingerTechnique,grandmaCrowd,ovenBatch,factoryNetwork,spiceBlend,portalNetwork,bankClickDividend,moonGlobalYeast] inc(設43/金25/討25/タ7) skills+1=mastery_high
+run24 dur=26.2m stage=94 kills=371 golden=59 huntInv=317 goldInv=295 res2=[fingerTechnique,grandmaCrowd,ovenBatch,factoryNetwork,spiceBlend,portalNetwork,bankClickDividend,moonGlobalYeast] inc(設32/金32/討29/タ6) skills+1=golden_4
+run25 dur=26.0m stage=105 kills=442 golden=118 huntInv=382 goldInv=479 res2=[fingerTechnique,grandmaCrowd,ovenBatch,factoryNetwork,spiceBlend,portalNetwork,bankClickDividend,moonGlobalYeast] inc(設23/金33/討39/タ5) skills+3=monster_4+start_1+start_2
+run26 dur=29.4m stage=105 kills=439 golden=133 huntInv=380 goldInv=466 res2=[fingerTechnique,grandmaCrowd,ovenBatch,factoryNetwork,spiceBlend,portalNetwork,bankClickDividend,moonGlobalYeast] inc(設29/金21/討44/タ5) skills+4=upgrade_blackhole+reward_1+reward_synergy+reward_choice_2
+run27 dur=18.8m stage=132 kills=476 golden=377 huntInv=346 goldInv=878 res2=[fingerTechnique,grandmaCrowd,ovenBatch,factoryNetwork,spiceBlend,portalNetwork,bankClickDividend,moonGlobalYeast] inc(設27/金24/討43/タ6) skills+1=unlock_reward_crackedFang
+run28 dur=22.9m stage=102 kills=281 golden=502 huntInv=84 goldInv=445 res2=[fingerTechnique,grandmaCrowd,ovenBatch,factoryNetwork,spiceBlend,portalNetwork,bankClickDividend,moonGlobalYeast] inc(設22/金27/討46/タ5) skills+1=unlock_reward_goldenChain
+run29 dur=20.9m stage=121 kills=424 golden=442 huntInv=154 goldInv=768 res2=[fingerTechnique,grandmaCrowd,ovenBatch,factoryNetwork,spiceBlend,portalNetwork,bankClickDividend,moonGlobalYeast] inc(設21/金27/討46/タ5) skills+1=upgrade_universe
+run30 dur=23.1m stage=112 kills=366 golden=509 huntInv=129 goldInv=584 res2=[fingerTechnique,grandmaCrowd,ovenBatch,factoryNetwork,spiceBlend,portalNetwork,bankClickDividend,moonGlobalYeast,galaxyAssembly] inc(設19/金26/討50/タ5) skills+1=unlock_reward_chainPrep
+run31 dur=22.0m stage=124 kills=408 golden=491 huntInv=102 goldInv=826 res2=[fingerTechnique,grandmaCrowd,ovenBatch,factoryNetwork,spiceBlend,portalNetwork,bankClickDividend,moonGlobalYeast,galaxyAssembly] inc(設21/金29/討45/タ5) skills+1=unlock_reward_huntFocus
+run32 dur=23.8m stage=118 kills=450 golden=526 huntInv=220 goldInv=661 res2=[fingerTechnique,grandmaCrowd,ovenBatch,factoryNetwork,spiceBlend,portalNetwork,bankClickDividend,moonGlobalYeast,galaxyAssembly] inc(設14/金26/討55/タ4) skills+1=upgrade_godfinger
+run33 dur=16.3m stage=151 kills=484 golden=328 huntInv=222 goldInv=747 res2=[fingerTechnique,grandmaCrowd,ovenBatch,factoryNetwork,spiceBlend,portalNetwork,bankClickDividend,moonGlobalYeast,galaxyAssembly] inc(設14/金16/討51/タ19) skills+1=unlock_reward_goldenTarget
+run34 dur=20.6m stage=116 kills=315 golden=452 huntInv=143 goldInv=343 res2=[fingerTechnique,grandmaCrowd,ovenBatch,factoryNetwork,spiceBlend,portalNetwork,bankClickDividend,moonGlobalYeast,galaxyAssembly] inc(設11/金20/討53/タ17) skills+1=upgrade_singularity
