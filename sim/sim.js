@@ -458,7 +458,14 @@ function wsPickStage(sim) {
   if (pol === 'click') return Math.max(1, Math.min(un, 1 + (sim.prestigeRuns % Math.min(un, 3))));
   if (pol === 'golden') return Math.min(un, Math.max(4, un - 1) <= un ? Math.min(4, un) : un);
   if (pol === 'balanced') return 1 + (sim.prestigeRuns % un);
-  return un; // hunt/bake=最前線
+  // hunt/bake=最前線。ただし深層(S6)は層HPが高く周回序盤の討伐が枯れるため1周おき。
+  // さらに4周に1回は素材遠征(S2=黒鉄の欠片など下位ステージ専属素材の補給。図鑑/手袋の育成が
+  // ironShard 涸れで止まる=実測)。⑯(素材→最適ステージ4分散)の遊び方そのもの。
+  if (un >= 6) {
+    const m = sim.prestigeRuns % 4;
+    return m === 0 ? 6 : m === 1 ? 5 : m === 2 ? Math.min(un, 2 + (sim.prestigeRuns % 8 >= 4 ? 1 : 0)) : 5;
+  }
+  return un;
 }
 function wsBuffActive(sim, id) {
   const r = sim.run;
@@ -479,7 +486,7 @@ function wsAddMat(sim, id, n) {
   }
 }
 function wsCanAfford(sim, cost, mul) {
-  const m = mul || 1;
+  const m = (mul || 1) * (P.ws.costMul || 1);
   const uni = sim.ws.mats.universal || 0; // 万能粉: 任意素材の代替・2倍換算
   let uniNeed = 0;
   for (const k in cost) {
@@ -494,7 +501,7 @@ function wsCanAfford(sim, cost, mul) {
   return true;
 }
 function wsConsume(sim, cost, mul) {
-  const m = mul || 1;
+  const m = (mul || 1) * (P.ws.costMul || 1);
   for (const k in cost) {
     const need = cost[k] * m;
     const have = sim.ws.mats[k] || 0;
@@ -515,7 +522,7 @@ const WS_EQ_PREF = {
   bake: ['ovenMitt', 'stillFlask', 'dimensionCompass', 'monsterAlmanac', 'goldenWhisk', 'pressExtractor'],
   click: ['goldenWhisk', 'stillFlask', 'monsterAlmanac', 'ovenMitt', 'pressExtractor', 'dimensionCompass'],
   golden: ['pressExtractor', 'goldenWhisk', 'stillFlask', 'dimensionCompass', 'ovenMitt', 'monsterAlmanac'],
-  hunt: ['monsterAlmanac', 'dimensionCompass', 'stillFlask', 'pressExtractor', 'goldenWhisk', 'ovenMitt'],
+  hunt: ['monsterAlmanac', 'dimensionCompass', 'ovenMitt', 'stillFlask', 'pressExtractor', 'goldenWhisk'],
   balanced: ['stillFlask', 'monsterAlmanac', 'goldenWhisk', 'ovenMitt', 'pressExtractor', 'dimensionCompass']
 };
 const WS_RECIPE_BY_ID = {}; // params から引く(遅延)
@@ -531,10 +538,14 @@ function wsAutoPlay(sim) {
   if (!wsUnlocked(sim)) return;
   const r = sim.run, ws = sim.ws, t = sim.t;
   // 料理: 好み順に、切れていて作れるものを作る(同時 cookMax 品)
+  // 料理は「手が空いた時に作る」(注意チェック=180秒ごと)。毎tick即再調理だと稼働率が常時100%になり、
+  // 蒸留フラスコ(効果時間延長)が構造的に無価値(⑮の2で1.000=実測)。切れ目の期待値を作る。
+  const cookCheck = (sim.t % 180 === 0) || (sim.t - r.startT <= 1);
   const pref = WS_DISH_PREF[r.policy] || WS_DISH_PREF.balanced;
   let active = 0;
   for (const id in r.buffs) if (r.buffs[id] > t) active++;
   for (const id of pref) {
+    if (!cookCheck) break;
     if (active >= P.ws.cookMax) break;
     if ((r.buffs[id] || 0) > t) continue;
     const rc = wsRecipeOf(id);
@@ -638,8 +649,13 @@ function wsOrderTick(sim, prod) {
       const rk = rkinds[ws.orderRewardRot % 3]; ws.orderRewardRot++;
       if (rk === 'cookie' && !wsOff(sim, 'order:cookie')) earn(sim, prod.cps * o.limit * O.rewardCookie);
       else if (rk === 'materials' && !wsOff(sim, 'order:materials')) {
+        // 素材セットは装備はしご(2.2^Lv)相対でスケール=装備の次の1段を有意に加速する量(定数だと後半無価値=実測1.000)
         const st = wsStageDef(sim);
-        wsAddMat(sim, st.c[ws.matRot % st.c.length], O.rewardMatSet); ws.matRot++;
+        let minLv = Infinity;
+        for (const e of P.ws.equipment) minLv = Math.min(minLv, (ws.eq[e.id] || 0));
+        const amt = O.rewardMatSet * Math.pow(P.ws.eqGrowth, Math.min(10, minLv === Infinity ? 0 : minLv));
+        wsAddMat(sim, st.c[ws.matRot % st.c.length], amt); ws.matRot++;
+        if (st.r.length) wsAddMat(sim, st.r[0], amt * 0.25);
       } else if (rk === 'boost' && !wsOff(sim, 'order:boost')) {
         sim.run.boosts.push({ mult: O.rewardBoostMul, until: t + O.rewardBoostSec });
       }

@@ -206,7 +206,7 @@ module.exports = {
     // 第12次M 再テーマ(増加方向・従来効果は残置): monsterStay/chainPrep とも討伐連鎖の持続窓 breakSec を Lv で延長し、
     // 連鎖数で全生産×(1+prodCoef×連鎖)に効かせる(飽和/カオス解消)。monsterStay は取得数が多いので per-Lv を小さく。
     monsterStayChain: 0.25, chainPrepPersist: 0.25, crackedFangKill: 0.000001, brandHuntKill: 0,
-    biteRecoveryKill: 0.0000005, crushedMillProd: 0.03, goldenBeastMutationProd: 0.05, brandHuntProd: 0.1,
+    biteRecoveryKill: 0.000002, crushedMillProd: 0.03, goldenBeastMutationProd: 0.05, brandHuntProd: 0.1,
     beastScent: 0.5,
     deepPursuitSpawn: 0.045, deepPursuitHp: 1.035, deepPursuitReward: 1.6,
     mutationBase: 0.5, mutationPerLv: 0.1,
@@ -214,7 +214,7 @@ module.exports = {
     // 第12次K(2026-07-08 ③再テーマ・増加方向のみ): 金報酬トリオ+獣の匂いを飽和しない金の稼ぎ(金即時獲得量=amount)へ
     // 再テーマ。従来のダメージ/初撃/金出現間隔効果は残置(削除しない)し、金amount倍率への加算を新設(所持Lvに線形=非飽和)。
     // これで金特化方針で instant lift が立つ(ダメージ飽和次元・通し比較のゆらぎに埋もれない)。
-    goldenChainAmount: 0.50, goldenTargetAmount: 0.55, goldenFirstHitAmount: 0.35, beastScentAmount: 0.30, goldenPowerAmount: 1.0
+    goldenChainAmount: 0.50, goldenTargetAmount: 0.9, goldenFirstHitAmount: 0.7, beastScentAmount: 0.30, goldenPowerAmount: 1.0 // target 0.55→0.9, firstHit 0.35→0.7(2026-07-10 工房統合の経済シフトで中央値1.06/1.00へ低下→即時獲得量ライダーを増幅)
   },
 
   // ---- モンスター種類×報酬相性(2026-07-06 ユーザー承認・第9次) ----
@@ -335,7 +335,7 @@ module.exports = {
     // オーバーキル(残HPの5倍)=レア枠/連続3体(狩り窓)=ボス核+1/余裕率2倍=共通+1/深層=虚空糖
     drops: { base: 1, lvDiv: 6, overkillMul: 5, chainKills: 3, marginThresh: 2, clickFinishDiv: 7, universalRate: 0.8 },
     // 料理(600秒バフ・同時3品・転生で解除。レシピ=対応素材の初入手で開示)
-    cookDur: 600, cookMax: 3,
+    cookDur: 600, cookMax: 3, costMul: 4, // costMul: 素材が豊富すぎると料理が常時100%稼働になり、蒸留フラスコ(持続延長)と注文の素材セット報酬が無価値化(⑮の2/㉙で1.00=実測)。コスト増で稼働率<100%の周回を作る
     recipes: [
       { id: 'butterCookie',    cost: { butter: 5, flour: 3 } },        // 全生産×(1+0.02×最高層)
       { id: 'chocoFondant',    cost: { cacao: 6, butter: 4 } },        // クリック生産連動係数×2
@@ -357,10 +357,10 @@ module.exports = {
       { id: 'stillFlask',       cost: { mint: 10, lavaSugar: 6 } },    // 料理効果時間×(1+0.10Lv)
       { id: 'dimensionCompass', cost: { bossCore: 1, stardust: 12 } }  // ボス周期−Lv・選択ステージのドロップ×(1+0.05Lv)
     ],
-    eqFx: { whiskPerLv: 0.15, mittPerLv: 0.05, pressPerLv: 0.04, almanacDmgPerLv: 0.06, flaskPerLv: 0.10, compassDropPerLv: 0.05 },
+    eqFx: { whiskPerLv: 0.15, mittPerLv: 0.12, pressPerLv: 0.04, almanacDmgPerLv: 0.06, flaskPerLv: 0.10, compassDropPerLv: 0.05 },
     // 注文ボード(§19: 同時1件・間隔1800×0.85^転生回数・制限240+4√経過秒・必要量/報酬は現在値に相対)
     orders: { intervalBase: 1800, intervalDecay: 0.85, limitBase: 240, limitSqrt: 4,
-      needProd: 0.25, needClick: 0.5, needHunt: 0.6, rewardCookie: 0.5, rewardBoostMul: 2, rewardBoostSec: 120,
-      rewardMatSet: 6 }
+      needProd: 0.25, needClick: 0.5, needHunt: 0.6, rewardCookie: 6, rewardBoostMul: 2, rewardBoostSec: 120,
+      rewardMatSet: 50 }
   }
 };
