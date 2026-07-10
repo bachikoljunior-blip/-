@@ -479,13 +479,30 @@ function wsAddMat(sim, id, n) {
   if (!(n > 0)) return;
   const ws = sim.ws;
   ws.mats[id] = (ws.mats[id] || 0) + n;
-  if (!ws.seen[id]) {
-    ws.seen[id] = true;
-    // 解放イベントは「レシピの開示」(構成素材が全部揃った瞬間)のみ。素材1種ごとの初入手を
-    // イベントにすると計35件が中盤の周回に集中しT2(解放1-3件/周回)を壊す(100h実測でS4 44→36/46等)。
-    for (const rc of P.ws.recipes) {
-      if (ws.everWs['recipe:' + rc.id]) continue;
-      if (wsRecipeSeen(sim, rc)) { ws.everWs['recipe:' + rc.id] = true; sim.unlockEvents.push({ t: sim.t, kind: 'ws', id: 'recipe:' + rc.id }); }
+  if (!ws.seen[id]) ws.seen[id] = true;
+}
+// レシピの開示ステージ = 構成素材の入手先ステージの最大(黄金粉・ボス核・万能粉は全ステージ入手可=1)。
+// 開示イベントは「その素材の入手先(ステージ)が拓けた瞬間」に出す=ステージ解放・スキル取得と同一秒に
+// 統合される(T2対策 2026-07-10: 素材の初入手タイミングだと周回中盤に単独イベントとして散らばり、
+// 貯蓄型S7などで解放が4-5件/周回に膨らむ=実測。開示が先・調理は素材が揃ってから、はゲームとして自然)。
+function wsRecipeRevealStage(rc) {
+  let s = 1;
+  for (const k in rc.cost) {
+    let m = 1;
+    for (const st of P.ws.stages) { if ((st.c || []).includes(k) || (st.r || []).includes(k)) { m = st.no; break; } }
+    if (k === 'goldDust' || k === 'bossCore' || k === 'universal') m = 1;
+    s = Math.max(s, m);
+  }
+  return s;
+}
+function wsRevealRecipes(sim) {
+  if (!wsUnlocked(sim)) return;
+  const ws = sim.ws;
+  for (const rc of P.ws.recipes) {
+    if (ws.everWs['recipe:' + rc.id]) continue;
+    if (wsRecipeRevealStage(rc) <= ws.stageUnlocked) {
+      ws.everWs['recipe:' + rc.id] = true;
+      sim.unlockEvents.push({ t: sim.t, kind: 'ws', id: 'recipe:' + rc.id });
     }
   }
 }
@@ -523,11 +540,12 @@ const WS_DISH_PREF = {
   balanced: ['butterCookie', 'mintIce', 'hunterStew']
 };
 const WS_EQ_PREF = {
-  bake: ['ovenMitt', 'stillFlask', 'dimensionCompass', 'monsterAlmanac', 'goldenWhisk', 'pressExtractor'],
-  click: ['goldenWhisk', 'stillFlask', 'monsterAlmanac', 'ovenMitt', 'pressExtractor', 'dimensionCompass'],
-  golden: ['pressExtractor', 'goldenWhisk', 'stillFlask', 'dimensionCompass', 'ovenMitt', 'monsterAlmanac'],
-  hunt: ['monsterAlmanac', 'dimensionCompass', 'ovenMitt', 'stillFlask', 'pressExtractor', 'goldenWhisk'],
-  balanced: ['stillFlask', 'monsterAlmanac', 'goldenWhisk', 'ovenMitt', 'pressExtractor', 'dimensionCompass']
+  // 名匠の天板(全生産)はどの方針にも魅力があるが、主役装備(自分の稼ぎ口を伸ばすもの)の次に育てる
+  bake: ['ovenMitt', 'masterTray', 'stillFlask', 'dimensionCompass', 'monsterAlmanac', 'goldenWhisk', 'pressExtractor'],
+  click: ['goldenWhisk', 'stillFlask', 'masterTray', 'monsterAlmanac', 'ovenMitt', 'pressExtractor', 'dimensionCompass'],
+  golden: ['pressExtractor', 'goldenWhisk', 'masterTray', 'stillFlask', 'dimensionCompass', 'ovenMitt', 'monsterAlmanac'],
+  hunt: ['monsterAlmanac', 'dimensionCompass', 'masterTray', 'ovenMitt', 'stillFlask', 'pressExtractor', 'goldenWhisk'],
+  balanced: ['stillFlask', 'masterTray', 'monsterAlmanac', 'goldenWhisk', 'ovenMitt', 'pressExtractor', 'dimensionCompass']
 };
 const WS_RECIPE_BY_ID = {}; // params から引く(遅延)
 function wsRecipeOf(id) {
@@ -624,6 +642,7 @@ function wsDropMaterials(sim, mon, overkill) {
     if (wsStageNo(sim) === ws.stageUnlocked && ws.stageUnlocked < 6) {
       ws.stageUnlocked++;
       sim.unlockEvents.push({ t: sim.t, kind: 'ws', id: 'stage:' + ws.stageUnlocked });
+      wsRevealRecipes(sim); // 新ステージの素材で作れるレシピを同秒で開示
     } else if (wsStageNo(sim) >= 6) {
       ws.deepLayer++;
     }
@@ -1163,6 +1182,11 @@ function computeProd(sim) {
   if (wsBuffActive(sim, 'butterCookie')) {
     const bm = 1 + P.ws.fx.butterLayerCoef * Math.max(1, r.maxStage);
     click *= bm; cps *= bm;
+  }
+  // 工房装備: 名匠の天板=全生産×(1+trayPerLv×Lv)(永続・転生持ち越し。2026-07-10追加)
+  {
+    const tm = 1 + (P.ws.eqFx.trayPerLv || 0) * wsEqLv(sim, 'masterTray');
+    if (tm !== 1) { click *= tm; cps *= tm; }
   }
 
   // 会心(期待値)
@@ -1919,6 +1943,7 @@ function doPrestige(sim) {
     }
   }
   if (bought.length > 0) sim.unlockEvents.push({ t: sim.t, kind: 'skill', id: bought.join('+'), n: bought.length });
+  wsRevealRecipes(sim); // 工房スキル取得と同秒に、既に拓けているステージのレシピを開示(T2統合)
   sim.runs[sim.runs.length - 1].skillsBought = bought.length;
   sim.runs[sim.runs.length - 1].skillIds = bought;
   sim._fx = {}; sim._fxHas = {}; sim._stT = -1; sim._bkT = -1;
@@ -2372,11 +2397,17 @@ function upgradeUnitMult(sim, u) {
 }
 
 // 効率最良アップグレード(次の1個の増分/コスト、ショップ表示と同じ情報)
-function bestEfficiency(sim, prod, typeFilter) {
+function bestEfficiency(sim, prod, typeFilter, budgetRatio) {
+  // budgetRatio指定時は「いま予算内で買えるものの中での効率最良」(S2のように別予算と並行で
+  // 買い続ける方針用)。無指定は従来どおり全候補の最良1つ=予算外なら買わずに貯める。
+  // 注意: 全方針を budgetRatio 付きに変えると「新設備のための貯金」が消えて第0回の解放が
+  // 全体に遅れる(S1中央値0.82→1.23=実測)。標準の買い方は無指定のままにすること。
   let best = null, bestVal = 0;
+  const budget = budgetRatio ? sim.run.cookies * budgetRatio : Infinity;
   for (const u of visibleUpgrades(sim)) {
     if (typeFilter && u.type !== typeFilter) continue;
     const cost = upgradeCost(sim, u);
+    if (cost > budget) continue;
     let val = (u.value * upgradeUnitMult(sim, u)) / cost;
     // 新規設備ボーナス(2026-07-10・T2第0回/㉑対策): 自然なプレイヤーは新しく見えた設備を
     // まず1台試す。純効率だけだと、会心研究で指が・報酬の個別強化がgrandma(唯一のcps設備)に

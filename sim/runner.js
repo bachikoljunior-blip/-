@@ -856,7 +856,7 @@ if (mode === 'baseline') {
   let ok15 = 0;
   for (const rc of G.P.ws.recipes) ok15 += judge('dish:' + rc.id, '料理:' + rc.id, r => (r.wsDishes || []).includes(rc.id), 1.05);
   for (const eq of G.P.ws.equipment) ok15 += judge('eq:' + eq.id, '装備:' + eq.id, r => ((r.wsEq || {})[eq.id] || 0) > 0, 1.05);
-  console.log(`⑮の2 合計 ${ok15}/13`);
+  console.log(`⑮の2 合計 ${ok15}/${G.P.ws.recipes.length + G.P.ws.equipment.length}`);
   console.log('㉙ 注文ボードの報酬(枝分かれ比べ・稼ぎ比≥1.2)');
   let ok29 = 0;
   for (const rk of ['cookie', 'materials', 'boost']) ok29 += judge('order:' + rk, '注文報酬:' + rk, r => ((r.wsOrders || {})[rk] || 0) > 0, 1.2);

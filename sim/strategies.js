@@ -129,6 +129,8 @@ function standardBuy(researchRatio, upgradeRatio) {
     // 研究: 安い順に、コストが所持のresearchRatio以下なら買う(段2/段3カードも同枠)
     buyAllResearch(sim, researchRatio);
     // アップグレード: 効率最良を、コストが所持のupgradeRatio以下の間買い続ける(最大30回/秒)
+    // ※効率最良(novelty込み)が予算外のときは買わずに貯める=「次の新設備のための貯金」。
+    //   「買える中での最良」に変えると細かい買い物で財布が減り第0回の解放が遅れる(中央値0.82→1.23=実測)
     for (let i = 0; i < 30; i++) {
       const u = G.bestEfficiency(sim, prod, null);
       if (!u) break;
@@ -164,21 +166,25 @@ const STRATEGIES = [
   },
   {
     id: 'S2', name: 'クリック会心型',
-    // タップ7/秒。クリック系強化はコスト<=所持40%、その他<=10%。研究は指先の型・銀行配当を<=50%で優先。
+    // タップ7/秒。クリック系強化はコスト<=所持40%、設備の買い増し<=10%。ただし「まだ1台も
+    // 持っていない新設備」は<=25%まで出す(クリック力は毎秒生産に連動すると画面に表示される=
+    // 新設備の解放はクリック型にも素直に嬉しいので一度は試す)。研究は指先の型・銀行配当を<=50%で優先。
     tapRate: 7, goldenTake: 1,
     pickPolicy: sim => 'click',
     buy: function (sim, prod) {
       buyResearchLine(sim, 'fingerTechnique', 0.50);
       buyResearchLine(sim, 'bankClickDividend', 0.50);
       for (const r of G.RESEARCH) buyResearchLine(sim, r.id, 0.20);
+      // クリック系40%と設備予算は独立。旧実装は「クリックが買えた秒は設備を見ない」で、
+      // 指が常に買える序盤は設備購入が止まりっぱなしだった(第0回grandma=22分・中央値1.98=実測)。
+      // 設備を一律25%にすると中盤の経済が強くなりすぎ周回が縮む(T1 27→14/48=実測)ため初台のみ。
       for (let i = 0; i < 30; i++) {
         const clicks = G.visibleUpgrades(sim).filter(u => u.type === 'click');
         let done = false;
         for (const u of clicks) { if (G.tryBuyUpgrade(sim, u, 0.40)) { done = true; break; } }
-        if (!done) {
-          const u = G.bestEfficiency(sim, prod, 'cps');
-          if (!u || !G.tryBuyUpgrade(sim, u, 0.10)) break;
-        }
+        const c = G.bestEfficiency(sim, prod, 'cps', 0.25);
+        if (c && G.tryBuyUpgrade(sim, c, (sim.run.upgrades[c.id] || 0) === 0 ? 0.25 : 0.10)) done = true;
+        if (!done) break;
       }
       buyResearchLine(sim, 'fingerTechnique', 0.50);
       buyResearchLine(sim, 'bankClickDividend', 0.50);
@@ -236,13 +242,17 @@ const STRATEGIES = [
   {
     id: 'S5', name: '研究貯蓄型',
     // タップ3/秒。研究はコスト<=所持80%で最優先。強化はコスト<=所持8%のみ。
+    // ただし「まだ1台も持っていない新設備」は<=30%まで出す(設備を買うとその研究カードが
+    // 開くとゲームに表示される=研究最優先だからこそ、研究の入口になる新設備の初台は惜しまない)。
     tapRate: 3, goldenTake: 1,
     pickPolicy: sim => 'bake',
     buy: function (sim, prod) {
       for (const r of G.RESEARCH) buyResearchLine(sim, r.id, 0.80);
       for (let i = 0; i < 30; i++) {
         const u = G.bestEfficiency(sim, prod, null);
-        if (!u || !G.tryBuyUpgrade(sim, u, 0.08)) break;
+        if (!u) break;
+        const isNew = (sim.run.upgrades[u.id] || 0) === 0;
+        if (!G.tryBuyUpgrade(sim, u, isNew ? 0.30 : 0.08)) break;
       }
       buyAllResearch(sim, 0.80);
     },

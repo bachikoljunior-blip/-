@@ -359,9 +359,10 @@ module.exports = {
       { id: 'pressExtractor',   cost: { spice: 14, goldDust: 2 } },    // 金ブースト×(1+0.04Lv)
       { id: 'monsterAlmanac',   cost: { ironShard: 4, silentCore: 2 } }, // ドロップ+floor(Lv/2)・ダメージ×(1+0.06Lv)
       { id: 'stillFlask',       cost: { mint: 10, lavaSugar: 6 } },    // 料理効果時間×(1+0.10Lv)
-      { id: 'dimensionCompass', cost: { bossCore: 1, stardust: 12 } }  // ボス周期−Lv・選択ステージのドロップ×(1+0.05Lv)
+      { id: 'dimensionCompass', cost: { bossCore: 1, stardust: 12 } }, // ボス周期−Lv・選択ステージのドロップ×(1+0.05Lv)
+      { id: 'masterTray',       cost: { flour: 10, cacao: 8 } }        // 名匠の天板: 全生産×(1+0.06Lv)(2026-07-10ユーザー指示で追加)
     ],
-    eqFx: { whiskPerLv: 0.15, mittPerLv: 0.12, mittCpsPerLv: 0.03, pressPerLv: 0.04, almanacDmgPerLv: 0.06, flaskPerLv: 0.10, compassDropPerLv: 0.05 },
+    eqFx: { whiskPerLv: 0.15, mittPerLv: 0.12, mittCpsPerLv: 0.03, pressPerLv: 0.04, almanacDmgPerLv: 0.06, flaskPerLv: 0.10, compassDropPerLv: 0.05, trayPerLv: 0.06 },
     // 注文ボード(§19: 同時1件・間隔1800×0.85^転生回数・制限240+4√経過秒・必要量/報酬は現在値に相対)
     orders: { intervalBase: 1800, intervalDecay: 0.85, limitBase: 240, limitSqrt: 4,
       needProd: 0.25, needClick: 0.5, needHunt: 0.6, rewardCookie: 10, rewardBoostMul: 2, rewardBoostSec: 120,
