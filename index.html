@@ -8902,8 +8902,8 @@ function upgradePersonalMultiplier(u) {
 
 function currentQuotaProgressRatio() {
   const quota = monsterQuotaRequired();
-  // 未達後(追撃中)は最後の層で凍結(層1へ落とさない)
-  if (quota === null || quota <= 0) return Math.max(0, Number(state._quotaStageFrozen) || 0);
+  // 未達後は最後の層で凍結(層1へ落とさない)。ノルマ発生前(開始30秒のノルマ0)から先行秒数で貯まる
+  if (quota === null) return Math.max(0, Number(state._quotaStageFrozen) || 0);
   const pr = quotaLayerProgress(quotaLeadSeconds());
   state._quotaStageFrozen = pr;
   return pr;
@@ -9722,7 +9722,7 @@ function renderQuota() {
   const ok = run.gte(quota);
   const diff = run.sub(quota);                          // Decimal
   const gaugeQuota = Math.max(1, quota);
-  const leadSec = quota <= 0 ? 0 : quotaLeadSeconds();
+  const leadSec = rawQuota === null ? 0 : quotaLeadSeconds();
   const progressRatio = currentQuotaProgressRatio();
   const stageDisplay = quotaStageDisplay(progressRatio);
   const underTarget = run.lt(quota);
