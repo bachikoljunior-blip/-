@@ -1458,10 +1458,14 @@ function tapDirectIncome(sim, base, prod) {
   // 方針係数(第12次R続き・bankDirectのclickBonusと同型): click方針の中盤は銀/金直/討直に打が
   // 圧迫され打<30%が続く(S2 run21-32)。主役方針だけ厚くする増加方向の係数。clickBonus=1(既定)で従来どおり。
   const polM = policyIs(sim, 'click') ? (P.tapDirect.clickBonus || 1) : 1;
-  // アンカー=max(base, anchorGolden×金相場)(equipDirectと同型): balanced中盤の打4-9%<10%(run22-32)の
-  // 底上げ用。タップの技も金相場で換金される処方。anchorGolden=0(既定)で従来どおり。
+  // アンカー=max(base, anchorGolden×金相場)(equipDirectと同型)。ただし**神の指(上位クリック設備)登場前だけ**:
+  // balanced中盤(run25-32=神指0・指のみ)の打4-9%<10%の底上げ用=「上位設備が出るまでの下位投資(指)の換金」。
+  // 神指以降は投資複利(raw無飽和)が主役=常時アンカーだと後半打85-88%に爆発しbalanced後半が全滅(E2/E3実測)。
+  // anchorGolden=0(既定)で従来どおり。
   let anchor = base;
-  if ((P.tapDirect.anchorGolden || 0) > 0 && prod) anchor = Math.max(base, P.tapDirect.anchorGolden * goldenRateValue(sim, prod));
+  if ((P.tapDirect.anchorGolden || 0) > 0 && prod && (r.upgrades.godFinger || 0) === 0) {
+    anchor = Math.max(base, P.tapDirect.anchorGolden * goldenRateValue(sim, prod));
+  }
   return genreDirect(sim, anchor, inv, P.tapDirect) * polM;
 }
 // 銀行配当(直送・第12次J-3 腐り解消): 銀行の所持数と貯蓄(総クッキー桁)で毎秒生産へ加算する独立収入。
