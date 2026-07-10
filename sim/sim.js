@@ -1003,6 +1003,8 @@ function computeProd(sim) {
     if (resStage3(sim, 'portalNetwork')) globalRes *= 1 + (RG.portal.s3Floor || 0);
     if (resStage3(sim, 'galaxyAssembly')) globalRes *= 1 + (RG.galaxy.s3Floor || 0);
     if (resStage3(sim, 'factoryNetwork')) globalRes *= 1 + (RG.factoryS3Floor || 0);
+    // オーブン大量焼成 段3(⑨): オーブン寄与が薄い外れ周回で min<1.05 に落ちるため全生産floorで下支え(月面段2と同処方)
+    if (resStage3(sim, 'ovenBatch')) globalRes *= 1 + (RG.ovenS3Floor || 0);
     if (resStage3(sim, 'spiceBlend')) globalRes *= 1 + (RG.spiceS3Floor || 0);
     // 指先の型 段3(⑨whole=会心の余熱): 会心/クリック依存で取得方針(S6等)に効果が出ないため、
     // 取得中だけの全生産floorで総クッキーに繋ぐ(2026-07-09 ユーザー承認A・枝分かれmeasureで判定)。既存の余熱effectは残置。

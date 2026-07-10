@@ -58,8 +58,8 @@ module.exports = {
     lvEarlyDiv: 92,
     lvLateDiv: 320, lvLatePow: 1.22,
     dmgSqrtCoef: 0.45,
-    ratePerLv: 0.09,
-    rateKillBonus: 0.5, rateKillHalf: 4, // 0.35→0.5(2026-07-10 novelty導入で③monsterRateの中央値が1.1を割れ=専用の討伐手数ボーナスで回復)
+    ratePerLv: 0.14,
+    rateKillBonus: 0.5, rateKillHalf: 2, // 0.35→0.5(2026-07-10 novelty導入で③monsterRateの中央値が1.1を割れ=専用の討伐手数ボーナスで回復)
     satKps: 2.0 // 討伐頻度の飽和半価点(2026-07-10): kill項の1体価値逓減。高テンポ期の討伐56-63%独走を[30,52]帯へ(balanced序盤0.02-0.05体/秒はほぼ線形)
   },
 
@@ -127,7 +127,7 @@ module.exports = {
     portal:  { floor: 0.25, own: 0, stage: 0, s3Floor: 0.06 },
     galaxy:  { floor: 0.25, own: 0, stage: 0, s3Floor: 0.06 },
     quantum: { floor: 0.25, own: 0, stage: 0 },
-    factoryS3Floor: 0.06, spiceS3Floor: 0.06, moonS2Floor: 0.06, fingerS3Floor: 0.08
+    factoryS3Floor: 0.06, spiceS3Floor: 0.06, moonS2Floor: 0.06, fingerS3Floor: 0.08, ovenS3Floor: 0.06
   },
 
   // ---- 討伐連鎖(2026-07-07 ユーザー採用・0-2提案1) ----
@@ -154,7 +154,7 @@ module.exports = {
     spiceOwn: 0.071, spiceGold: 15, spiceGoldOwn: 0.014, spiceGoldDur: 30000,
     // 狩り窓(2026-07-09 ⑬作り替え): 窓は討伐が開く・維持する(金クッキー非関与)。portalHuntDur/Grow は旧・金開窓用=現在未使用(移植時に削除)。
     // portalHuntSpawnBase=窓に関係ない常時スポーン加速(研究解放中)/ portalHuntSpawn=窓中の追加加速(⑬延長狩りのコントラスト)。
-    portalSelf: 25, portalHuntDur: 5000, portalHuntGrow: 0.0042, portalHuntSpawn: 0.003, portalHuntSpawnBase: 0.007,
+    portalSelf: 25, portalHuntDur: 5000, portalHuntGrow: 0.0042, portalHuntSpawn: 0.002, portalHuntSpawnBase: 0.007,
     bankOwn: 0.040, bankSaved: 10.0,
     moonBase: 25, moonStage: 0.003, moonOwn: 0.001,
     foldPortal: 0.002, foldMonster: 2.5, foldGold: 8,
@@ -297,7 +297,7 @@ module.exports = {
     critCpsCoef: 0.003,
     supExtra: 0.008, supStageCoef: 0.001,
     ovenBakeMulBake: 1.7, ovenBakeMulOther: 1.2,
-    ovenS3Flat: 0.06, ovenStageCoef: 0.004,
+    ovenS3Flat: 0.06, ovenStageCoef: 0.008,
     factoryHiKind: 0.15, factoryStageCoef: 0.0012,
     matureRate: 0.006, aromaDur: 12, spiceStageCoef: 0.0015,
     huntExtendSec: 40, huntStageCoef: 0.0008,
@@ -307,7 +307,7 @@ module.exports = {
     galaxyBonusCoef: 0.05, galaxySat: 120, galaxyStageCoef: 0.0008,
     bhChargeFull: 2500, bhBoostCoef: 0.25, bhBoostDur: 60, bhBoostStageCoef: 0.002,
     bhCompStageCoef: 0.001,
-    waveAmpBase: 0.30, waveAmpPerRes: 0.05, wavePeriod: 90, waveStageCoef: 0.001,
+    waveAmpBase: 0.45, waveAmpPerRes: 0.05, wavePeriod: 90, waveStageCoef: 0.001,
     antiStageCoef: 0.0008, antiPrestigeCoef: 0.03
   },
 
