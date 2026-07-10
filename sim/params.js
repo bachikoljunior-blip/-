@@ -83,7 +83,7 @@ module.exports = {
     // 追跡ノルマ(旧⑧)は廃止(2026-07-06 ユーザー決定)。未達(T3a/T3b)は本来のノルマ係数
     // (baseCoef/basePow/base2Coef/base2Pow/w1〜w3P/ctrlMul/ctrlDiv)+後半成長の減速で作る。
     // 層の試練(2026-07-07 ユーザー採用・0-2提案4 / 第12次H 提案8で新規開拓層基準へ相対化): 発火せず無害の resting 値。
-    trialCoef: 0.08, trialStartLayer: 10,
+    trialCoef: 0.08, trialStartLayer: 10, trialFloorRuns: 1, // trialFloorRuns=2で天井持ち越しを直近2周回のmaxに平滑化(第12次R2続き・T1 S10の交互振動対策・検証中)
     // ---- 到達連動ノルマ(第12次H・提案9・ユーザー承認) ----
     // T3a を全周回・後半に置くための機構。層ゲージ(quotaAtElapsed=時間関数)には一切触れず、未達判定にだけ
     // 「到達項」を足す: 未達 = runCookies < max(従来ノルマ, runCookies×reachCoef×ρ^reachPow)。

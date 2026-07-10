@@ -2021,7 +2021,12 @@ function doPrestige(sim) {
   sim._fx = {}; sim._fxHas = {}; sim._stT = -1; sim._bkT = -1;
 
   // 提案8: 今周回の天井を持ち越す(次周回の層の試練の相対基準)。表示層数は絶対累積のまま。
-  sim.prevMaxStage = r.maxStage;
+  // 平滑化(第12次R2続き・T1 S10対策): trialFloorRuns=2なら直近2周回のmax。S10は軽い周回(深層)と
+  // 重い周回(浅層150-250m=T1超過)の交互振動を作る=重い周回にも前々回の高い天井(試練フリー帯)を
+  // 残して軽い周回の挙動へ収束させる。1(既定相当)=従来どおり前回のみ。
+  const tfr = (P.quota.trialFloorRuns || 1);
+  sim.prevMaxStage = tfr >= 2 ? Math.max(r.maxStage, sim._prevMaxStage1 || 0) : r.maxStage;
+  sim._prevMaxStage1 = r.maxStage;
   // 提案9: 今周回の長さを持ち越す(次周回の到達連動ノルマの進行比の分母)。
   sim.prevDuration = sim.t - r.startT;
 
