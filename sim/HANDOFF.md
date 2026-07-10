@@ -36,7 +36,12 @@
   (⑮の2の判定経路を維持)。P.bake/mittCpsPerLv削除。**移植時: index.htmlから焼き加減UI・「焼き加減調整」ノードを削除**。
 - **㉑対策=初台ボーナス採用**: 中位5設備(oven/factory/bank/spiceRack/portal)の初めての1台に
   購入直前CPS×0.25の生産(P.presence)。**㉑全方針16/16満点**(baseline実測)。系列ボーナスの中位拡張・静的加算で自然消滅。
-- 上記込みの最終検証=results/_baseline/_income/_expect_12r11_nobake.txt(⑮の2は `node runner.js ws "" 24`)。
+- **廃止込みの最終検証(全完了)**: ㉘**202/228(89%)**・②改127/180(hunt−4/bake−3/click−1=廃止に伴う境界移動・
+  最終盤マージン枠で回収)・**㉑全方針16/16満点**・**⑮の2 14/14満点**(ovenMitt再係留2.313✓・frostCakeは
+  frostGauge0.85→0.7で1.080✓)・**㉙3/3**・⑨20/20・⑬4/4・③19/20・①12/13・⑫4/5(欠け=golden)・
+  T1 88%・④91%・⑤97%・T2解放92%・第0回9/10・T3a 88%・T3b 87%。
+  results/_baseline/_income/_expect_12r11_nobake.txt・_ws_12r12_frost07.txt・_baseline_12r12_frost07.txt。
+  ※frostGauge0.7でS10の周回リズムが変化(47→31周回・比率は同水準)。
 
 **この回(第12次R2)の主戦果 = ㉘稼ぎ口 128→201/228(56%→88%・全検証済み)**
 (balanced 10→44/48・bake 23→46/47・click 24→38/48・hunt 29→33/42・golden 42→40/43):
