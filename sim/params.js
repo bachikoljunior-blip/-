@@ -116,13 +116,13 @@ module.exports = {
   // 各稼ぎ口に、そのジャンルへ投資したプレイヤーだけ強く効く独立収入を用意し、各方針の主役を後半も≥30%に立たせる。
   // すべて skill→research→効果 でゲート(設備=ovenBatch段2/金=spiceBlend段2/討伐=portalNetwork段2/タップ=fingerTechnique段2)。
   // coef=0 で各無効。tune で全体最良点を掃引(㉘の各主役≥30%と経済/テンポ非破綻の両立)。調整項目。
-  equipDirect:  { coef: 0.06, stagePow: 0.5, countPow: 2, ref: 100, startStage: 5, satMax: 50, otherMul: 0.2, anchorGolden: 0.15 }, // アンカー=max(base, 0.15×金相場)(第12次R続き・2026-07-10採用): 後半はbase係留の設直だけ沈む(bake後半設直30→5-7%)ため金相場へ部分連動。100h実測: bake(a)23→46/47・②改43→40/47・balanced10→25/48。1.0は設71%独走で②改7/47に崩壊・0.25でも遷移帯が超過=0.15が均衡 // coef 0.11実験は㉘129→125・②改137→131と希釈で逆効果(2026-07-10実測)=0.06に戻し // 投資量=オーブン所持数。coef0.05無効の正体はゲート(ovenBatch段2コスト=run15相当)。段2コスト前倒しとセットで増幅(2026-07-10)。satMax=独走防止 25→50(第12次R: 100h後半周回で設備シェアが討伐/金perk積み上げに沈む=balanced10/48・bake23/47の対策)。otherMul=焼成方針以外は従来規模(全方針等倍だとbalanced0/32・click5/25に崩壊=実測)
+  equipDirect:  { coef: 0.06, stagePow: 0.5, countPow: 2, ref: 70, startStage: 5, satMax: 50, otherMul: 0.2, anchorGolden: 0.15 }, // ref 100→70(2026-07-11 R5: surge減速で台数rampが遅れ設備シェアが沈む→投資係数の基準台数を引き下げ。bake㉘31→42/49・②改47/49実測) // アンカー=max(base, 0.15×金相場)(第12次R続き・2026-07-10採用): 後半はbase係留の設直だけ沈む(bake後半設直30→5-7%)ため金相場へ部分連動。100h実測: bake(a)23→46/47・②改43→40/47・balanced10→25/48。1.0は設71%独走で②改7/47に崩壊・0.25でも遷移帯が超過=0.15が均衡 // coef 0.11実験は㉘129→125・②改137→131と希釈で逆効果(2026-07-10実測)=0.06に戻し // 投資量=オーブン所持数。coef0.05無効の正体はゲート(ovenBatch段2コスト=run15相当)。段2コスト前倒しとセットで増幅(2026-07-10)。satMax=独走防止 25→50(第12次R: 100h後半周回で設備シェアが討伐/金perk積み上げに沈む=balanced10/48・bake23/47の対策)。otherMul=焼成方針以外は従来規模(全方針等倍だとbalanced0/32・click5/25に崩壊=実測)
   goldenDirect: { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 10, otherMul: { click: 0.3, balanced: 0.3, hunt: 0.3, default: 1 } }, // otherMul(第12次R続き・2026-07-10採用・方針別マップ)=click/balanced中盤の金直16-22%が打を圧迫する対策+huntは金直を絞ると討シェアが立ち29→34/43(C1a実測・②改34不変)。bakeに効かせると②改40→30に崩れる(C2b実測)ためdefault=1 // 投資量=金perk合計(㉘金≥30%へ増幅・huntDirectと同処方=投資連動で金特化の後半周回だけ強く効く)
   // 実績研究の固定コスト表(2026-07-11「コストはゲーム内で固定して」): build_ms_costs.js が
   // 10方針100hの測定から各研究の初回購入額(中央値・丸めq5)を焼き込む。無い間は動的フォールバック。
   msResearch: { costTable: (function () { try { return require('./ms_costs.json'); } catch (e) { return null; } })() },
 
-  huntDirect:   { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 15, otherMul: { click: 0.15, balanced: 0.15, default: 0.3 }, peddlerFrac: 0.02 }, // otherMul方針別マップ(2026-07-10): click/balancedは0.15(各+1周回)・bake/goldenは従来0.3(0.15に下げると設が押されbake②改−15=C1実測) // 投資量=討伐perk合計8種(㉘討伐≥30%へ増幅・投資連動=狩猟専の周回だけ強く効く)。ベース=金クッキー期待収入率(金経済連動)。satMax=高投資周回(perk1000+)の独走を飽和で抑え②改と両立
+  huntDirect:   { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 15, otherMul: { click: 0.15, balanced: 0.15, golden: 0.6, default: 0.3 }, peddlerFrac: 0.02 }, // otherMul.golden 0.6追加(2026-07-11 ②改golden: NG周回の共通形=討伐2-4%が幾何平均を崩す→金を絞らず討伐を立てる。②改10→16/44・(a)44→42/44) // otherMul方針別マップ(2026-07-10): click/balancedは0.15(各+1周回)・bake/goldenは従来0.3(0.15に下げると設が押されbake②改−15=C1実測) // 投資量=討伐perk合計8種(㉘討伐≥30%へ増幅・投資連動=狩猟専の周回だけ強く効く)。ベース=金クッキー期待収入率(金経済連動)。satMax=高投資周回(perk1000+)の独走を飽和で抑え②改と両立
   tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5, clickBonus: 3, satMax: 0, anchorGolden: 0.5, stallFrac: 0.05, otherMul: { golden: 0.6, default: 1 } }, // clickBonus=3(2026-07-10採用): click中盤(神指0・指のみ=inv100-280)の打直2-12%を×3し打≥30%へ(click23→30/48)。後半(神指1851+)は既に②改NGなので失うものなし。satMaxは中盤/後半のinv比40-100倍を両立できず不採用。anchorGolden=0.5(採用)=**神指登場前だけ**max(base,0.5×金相場)(balanced中盤run25-32の打4-8%→14-18%で36→44/48。常時適用は後半打85%爆発=E2/E3実測)。otherMul.golden=0.6(採用)=golden後半の打圧迫を絞り41/44 // 投資量=神の指+強い指/10。clickBonus(第12次R続き・検証中)=click方針だけ厚く(bankDirectと同型・増加方向)。1で従来どおり
   // 銀行配当(直送・第12次J-3 腐り解消): bankClickDividend研究の独立収入。クリック方針で厚く効かせ①の各回minを満たす。
   // 全体cps倍率をやめ加算収入へ(他機能のlift希釈を回避)。所持数はlog10で床あり=早い周回でも効く。増加方向のみ。
@@ -267,7 +267,7 @@ module.exports = {
   lineage: { coef: 0.25 },
   // 初台ボーナス(第12次R2続き・㉑対策): 中位設備の初めての1台に購入直前CPS×coefの生産を持たせる
   // (系列ボーナスの中位拡張。㉑のNG5種=oven x0.16/factory x0.02-0.05/bank x0.12/spiceRack x0.17/portal x0.15対策)
-  presence: { firstUnitCoef: 0.25, ids: ['oven', 'factory', 'bank', 'spiceRack', 'portal'] },
+  presence: { firstUnitCoef: 0.25, ids: ['oven', 'factory', 'bank', 'spiceRack', 'portal', 'galaxyFactory', 'blackHoleMixer', 'universeOven', 'cookieSingularity', 'quantumBakery'] }, // 上位4種を追加(2026-07-11 ㉑S8: 最新設備ラッシュ型のrun23-34初購入でΔ比0.22-0.94=系列ボーナスだけでは不足。静的加算=成長で自然無意味化は同じ)
 
   // ---- 段階コストの研究別倍率(第11次・値段割り用) ----
   // 研究ごとに {s2, s3} を指定(なければ resStageCost の共通倍率)。研究コスト=調整項目(ユーザー確認済み)

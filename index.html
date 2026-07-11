@@ -6310,10 +6310,10 @@ const STAGE_MATERIALS = {
 };
 
 // 初台ボーナス(条件㉑対策・第12次R2): 中位設備の生涯で初めての1台に、購入直前の基礎CPS×0.25の
-// 生産を持たせる(静的加算・転生持ち越し)。上位設備は系列ボーナスが既に「初購入の瞬間に生産の一部を担う」ため対象外。
-// 購入時CPS基準の固定値なので、経済成長とともに自然に無意味化する。
+// 生産を持たせる(静的加算・転生持ち越し)。購入時CPS基準の固定値なので、経済成長とともに自然に無意味化する。
+// 上位4種を追加(sim同期2026-07-11 ㉑: 最新設備ラッシュ買いだと系列ボーナスだけでは初台Δが実CPS×1/5に届かない実測)
 const PRESENCE_FIRST_UNIT_COEF = 0.25;
-const PRESENCE_UPGRADE_IDS = ["oven", "factory", "bank", "spiceRack", "portal"];
+const PRESENCE_UPGRADE_IDS = ["oven", "factory", "bank", "spiceRack", "portal", "galaxyFactory", "blackHoleMixer", "universeOven", "cookieSingularity", "quantumBakery"];
 
 let state = freshState();
 let buyMode = "1";
