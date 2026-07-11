@@ -1572,7 +1572,8 @@ function huntDirectIncome(sim, base) {
   // 押し退ける(bake S1 run25-29 討39-46%・balanced S6 run24-28 討33-53%=実測2026-07-10)のを抑える。
   const polM = otherMulOf(sim, P.huntDirect, 'hunt');
   // モンスター図鑑: 弱点を知る=討伐の実入り増(2026-07-11 再係留: 研究インフレでダメージ飽和=図鑑の限界価値ゼロのため直送へ効かせる)
-  const almanacM = 1 + (P.ws.eqFx.almanacHuntPerLv || 0) * wsEqLv(sim, 'monsterAlmanac');
+  // 上限cap(同日): 無上限だと高Lvで全方針の後半討伐が×3-5に膨れ㉘bake 40→16/48に崩壊(almanac=0で37/48復帰と実測)
+  const almanacM = 1 + Math.min((P.ws.eqFx.almanacHuntPerLv || 0) * wsEqLv(sim, 'monsterAlmanac'), P.ws.eqFx.almanacHuntMax || 0.5);
   return genreDirect(sim, base, inv, P.huntDirect) * polM * gateM * almanacM;
 }
 // タップ直送: 投資量=クリック系(神の指+強い指/10)。ゲート=指先の型 段階2(スキル click_2→段階2購入→効果)。

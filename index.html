@@ -6213,7 +6213,7 @@ const EQUIPMENT = [
   { id: "goldenWhisk", name: "黄金の泡立て器", cost: { butter: 10, flour: 8 }, effect: lv => `クリックの生産連動係数 ×${(1 + 0.15 * lv).toFixed(2)}` },
   { id: "ovenMitt", name: "断熱オーブン手袋", cost: { cacao: 12, ironShard: 2 }, effect: lv => `オーブン生産 ×${(1 + 0.12 * lv).toFixed(2)}` },
   { id: "pressExtractor", name: "香料圧搾機", cost: { spice: 14, goldDust: 2 }, effect: lv => `金ブースト倍率 ×${(1 + 0.04 * lv).toFixed(2)}` },
-  { id: "monsterAlmanac", name: "モンスター図鑑", cost: { ironShard: 4, silentCore: 2 }, effect: lv => `素材ドロップ +${(0.5 * lv).toFixed(1)}個、モンスターダメージ ×${(1 + 0.15 * lv).toFixed(2)}、行商の買い取り ×${(1 + 0.12 * lv).toFixed(2)}` },
+  { id: "monsterAlmanac", name: "モンスター図鑑", cost: { ironShard: 4, silentCore: 2 }, effect: lv => `素材ドロップ +${(0.5 * lv).toFixed(1)}個、モンスターダメージ ×${(1 + 0.15 * lv).toFixed(2)}、行商の買い取り ×${(1 + Math.min(0.05 * lv, 0.5)).toFixed(2)}` },
   { id: "stillFlask", name: "蒸留フラスコ", cost: { mint: 10, lavaSugar: 6 }, effect: lv => `料理の効果時間 ×${(1 + 0.10 * lv).toFixed(2)}` },
   { id: "dimensionCompass", name: "次元コンパス", cost: { bossCoreAny: 1, stardust: 12 }, effect: lv => `ボス化に必要な討伐数 -${lv}、選択中ステージの素材ドロップ ×${(1 + 0.05 * lv).toFixed(2)}` },
   { id: "masterTray", name: "名匠の天板", cost: { flour: 10, cacao: 8 }, effect: lv => `全生産 ×${(1 + 0.06 * lv).toFixed(2)}` }
@@ -9910,7 +9910,7 @@ function huntPeddlerCps() {
   if (inv <= 0) return 0;
   const frac = (state.research.portalNetwork && resStage2("portalNetwork")) ? 1.0 : 0.02; // sim同期(peddlerFrac)
   const goldenOne = Math.max(100, currentCps() * 2.5, currentClickPower() * 2.5);
-  const almanacM = 1 + 0.12 * equipLv("monsterAlmanac"); // モンスター図鑑: 弱点を知る=買い取り増(sim同期2026-07-11)
+  const almanacM = 1 + Math.min(0.05 * equipLv("monsterAlmanac"), 0.5); // モンスター図鑑: 弱点を知る=買い取り増(上限+50%・sim同期2026-07-11)
   return goldenOne * PEDDLER_COEF * 20 * frac * inv * Math.sqrt(1 + maxQuotaStage()) * almanacM;
 }
 
@@ -11935,7 +11935,7 @@ const EQUIP_FORMULA = {
   goldenWhisk: "クリックの生産連動係数が ×(1 + 0.15×Lv)。",
   ovenMitt: "オーブンの生産が ×(1 + 0.12×Lv)。",
   pressExtractor: "金ブースト倍率が ×(1 + 0.04×Lv)。",
-  monsterAlmanac: "素材ドロップ +0.5×Lv個、モンスターダメージ ×(1 + 0.15×Lv)、行商の買い取り ×(1 + 0.12×Lv)。",
+  monsterAlmanac: "素材ドロップ +0.5×Lv個、モンスターダメージ ×(1 + 0.15×Lv)、行商の買い取り ×(1 + 0.05×Lv、上限+50%)。",
   stillFlask: "料理の効果時間が ×(1 + 0.10×Lv)。",
   dimensionCompass: "ボス化に必要な討伐数 −Lv、選択中ステージの素材ドロップ ×(1 + 0.05×Lv)。",
   masterTray: "全生産(設備・クリック)が ×(1 + 0.06×Lv)。"
