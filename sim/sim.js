@@ -1391,7 +1391,7 @@ const MILESTONE_RESEARCH = (() => {
   const add = (id, trig, fx, costSec) => list.push({ id, trig, fx, costSec });
   // --- 実績系(第0回から) ---
   // 設備の熟練 I〜IV: 10/40/120/300台で その設備の生産×1.5(クリック設備はタップ×1.35)
-  const eqTiers = [[10, 30], [40, 90], [120, 240], [300, 600]];
+  const eqTiers = [[10, 150], [40, 450], [120, 1200], [300, 3000]];
   for (const u of UPGRADES) {
     eqTiers.forEach(([n, cs], ti) => {
       const fx = u.type === 'click' ? { click: 1.35 } : { up: { [u.id]: 1.5 } };
@@ -1399,20 +1399,20 @@ const MILESTONE_RESEARCH = (() => {
     });
   }
   // 討伐実績 8段(周回内): 効果はダメージ/出現/滞在/HP/ドロップのローテ
-  const killTiers = [[10, 20, { hunt: 1.3 }], [25, 40, { spawn: 0.85 }], [50, 80, { stay: 1.2 }], [100, 160, { hunt: 1.3 }],
-    [200, 320, { hp: 0.75 }], [400, 600, { dropAdd: 1 }], [800, 900, { hunt: 1.3 }], [1600, 1200, { stay: 1.2 }]];
+  const killTiers = [[10, 100, { hunt: 1.3 }], [25, 200, { spawn: 0.85 }], [50, 400, { stay: 1.2 }], [100, 800, { hunt: 1.3 }],
+    [200, 1600, { hp: 0.75 }], [400, 3000, { dropAdd: 1 }], [800, 4500, { hunt: 1.3 }], [1600, 6000, { stay: 1.2 }]];
   killTiers.forEach(([n, cs, fx], i) => add('ms_kills_k' + (i + 1), sim => (sim.run.msKills || 0) >= n, fx, cs));
   // 金クッキー実績 6段(周回内)
-  const goldTiers = [[5, 20], [15, 60], [40, 150], [100, 400], [250, 800], [600, 1500]];
+  const goldTiers = [[5, 100], [15, 300], [40, 750], [100, 2000], [250, 4000], [600, 7500]];
   goldTiers.forEach(([n, cs], i) => add('ms_golden_g' + (i + 1), sim => (sim.run.msGoldens || 0) >= n, { golden: 1.3 }, cs));
   // タップ実績 6段(周回内)
-  const tapTiers = [[300, 15], [1000, 40], [3000, 120], [8000, 300], [20000, 700], [50000, 1500]];
+  const tapTiers = [[300, 75], [1000, 200], [3000, 600], [8000, 1500], [20000, 3500], [50000, 7500]];
   tapTiers.forEach(([n, cs], i) => add('ms_taps_p' + (i + 1), sim => (sim.run.msTaps || 0) >= n, { click: 1.4 }, cs));
   // ノルマ層実績 6段(周回内)
-  const stageTiers = [[5, 30], [15, 90], [30, 200], [60, 400], [100, 800], [150, 1500]];
+  const stageTiers = [[5, 150], [15, 450], [30, 1000], [60, 2000], [100, 4000], [150, 7500]];
   stageTiers.forEach(([n, cs], i) => add('ms_stage_s' + (i + 1), sim => (sim.run.maxStage || 0) >= n, { all: 1.15 }, cs));
   // 転生実績 4段(通算)
-  const prTiers = [[2, 60], [5, 120], [10, 300], [20, 600]];
+  const prTiers = [[2, 300], [5, 600], [10, 1500], [20, 3000]];
   prTiers.forEach(([n, cs], i) => add('ms_prestige_r' + (i + 1), sim => (sim.prestigeRuns || 0) >= n, { all: 1.2 }, cs));
   // --- スキル解放研究(スキルを取ると出る研究カード) ---
   // 各スキル1本「応用」+生産系ノードに2本目「奥義」。効果は系統のテーマ・コストは5段のはしごでばらける。
@@ -1428,7 +1428,7 @@ const MILESTONE_RESEARCH = (() => {
     if (id.startsWith('start_') || id === 'offline_1' || id === 'endless_oven') return { all: 1.05 };
     return { all: 1.1 }; // core/master/その他
   };
-  const csLadder = [20, 60, 180, 500, 1400];
+  const csLadder = [100, 300, 900, 2500, 7000]; // ×5拡幅(2026-07-11: T1対策=カードを周回全体に散らす)
   SKILL_NODES.forEach((n, i) => {
     add('msk_' + n.id, sim => !!sim.skills[n.id], branchFx(n.id), csLadder[i % 5]);
     const t = Object.keys(branchFx(n.id))[0];
