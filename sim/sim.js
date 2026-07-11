@@ -110,16 +110,23 @@ const SKILL_NODES = [
   { id: 'click_2', cost: 41, prereqs: ['click_1'], effects: [['click', null, 0.10]] },
   { id: 'click_3', cost: 43, prereqs: ['click_2', 'golden_2'], effects: [['click', null, 0.14], ['goldenAmount', null, 0.06]] },
   { id: 'click_4', cost: 58, prereqs: ['click_3', 'auto_4'], effects: [['click', null, 0.24], ['all', null, 0.02]] },
-  { id: 'golden_1', cost: 41, prereqs: ['click_1'], effects: [['goldenRate', null, 0.04]] },
+  { id: 'golden_1', cost: 41, prereqs: ['core'], effects: [['goldenRate', null, 0.04]] },
+  // 方針入口の増幅スキル(第12次R4・ユーザー承認 2026-07-11「効果増幅のスキルは承認不要で追加してよい」):
+  // 各周回方針の主役効果を素直に増幅する固定値ノード。fixed=生産系の幾何はしご(nodeM)にもfxスケールにも
+  // 割り込まない生の値(既存46ラングの経済を一切動かさない)。値段はQoL枠(utilRatio×入口)=はしご非消費。
+  { id: 'click_amp', cost: 15, prereqs: ['click_1'], fixed: true, effects: [['click', null, 0.75]] },
+  { id: 'golden_amp', cost: 15, prereqs: ['golden_1'], fixed: true, effects: [['goldenAmount', null, 0.50]] },
+  { id: 'monster_amp', cost: 15, prereqs: ['monster_1'], fixed: true, effects: [['monsterDamageSkill', null, 0.60]] },
+  { id: 'auto_amp', cost: 15, prereqs: ['auto_1'], fixed: true, effects: [['cps', null, 0.75]] },
   { id: 'golden_2', cost: 43, prereqs: ['golden_1'], effects: [['goldenAmount', null, 0.15]] },
   { id: 'golden_3', cost: 47, prereqs: ['golden_2'], effects: [['goldenPower', null, 0.35]] },
   { id: 'golden_analysis', cost: 66, prereqs: ['golden_3'], effects: [['unlockSystem', 'goldenAnalysis']] },
   { id: 'golden_4', cost: 78, prereqs: ['golden_3'], effects: [['goldenRate', null, 0.08], ['goldenAmount', null, 0.25]] },
-  { id: 'auto_1', cost: 40, prereqs: ['monster_1'], effects: [['cps', null, 0.06]] },
+  { id: 'auto_1', cost: 40, prereqs: ['core'], effects: [['cps', null, 0.06]] },
   { id: 'auto_2', cost: 41, prereqs: ['auto_1', 'monster_2'], effects: [['cps', null, 0.10]] },
   { id: 'auto_3', cost: 43, prereqs: ['auto_2', 'monster_2'], effects: [['cps', null, 0.14], ['monsterDamageSkill', null, 0.06]] },
   { id: 'auto_4', cost: 58, prereqs: ['auto_3'], effects: [['cps', null, 0.24], ['all', null, 0.02]] },
-  { id: 'monster_1', cost: 41, prereqs: ['golden_1'], effects: [['monsterRate', null, 0.04]] },
+  { id: 'monster_1', cost: 41, prereqs: ['core'], effects: [['monsterRate', null, 0.04]] },
   // 工房(WORKSHOP_SPEC v2 §7・第12次P本シム統合): 素材の嗅覚=素材ドロップ+料理解放/工房の拡張=作成(装備)解放。
   // QoLノード(utilRatio価格)=メインのはしご(rungCosts)を消費しない→既存スキルコストは1つも動かない。
   { id: 'workshop_1', cost: 15, prereqs: ['monster_1'], effects: [['unlockSystem', 'workshop1']] },
@@ -176,7 +183,9 @@ const SKILL_BY_ID = {}; SKILL_NODES.forEach(s => SKILL_BY_ID[s.id] = s);
 const UTILITY_SKILLS = new Set([
   'golden_analysis', 'hunt_analysis', 'economy_analysis', 'research_analysis',
   'order_board', 'reward_synergy', 'reward_1', 'reward_choice_2',
-  'start_1', 'offline_1', 'start_2', 'workshop_1', 'workshop_2'
+  'start_1', 'offline_1', 'start_2', 'workshop_1', 'workshop_2',
+  // 方針入口の増幅ノード(第12次R4): 価格ははしご非消費のおまけ価格。効果は固定値(fixed)
+  'click_amp', 'golden_amp', 'monster_amp', 'auto_amp'
 ]);
 function isUtilitySkill(id) { return UTILITY_SKILLS.has(id); }
 
@@ -184,7 +193,7 @@ function isUtilitySkill(id) { return UTILITY_SKILLS.has(id); }
 const SKILL_HAND_ORDER = [
   // 2026-07-06 第8次 ⑲対応v3: 取得順(=コストはしご順)。全ツリー辺のメインラング差≤5。
   // 設備解放: 月面=r12(7種設備の壁dec40を跨ぐ前)、時空=r17、以降約3ラングごとに第16種(r40)まで。
-  'core', 'click_1', 'golden_1', 'monster_1', 'workshop_1', 'workshop_2', 'auto_1', 'economy_1',
+  'core', 'click_1', 'click_amp', 'golden_1', 'golden_amp', 'monster_1', 'monster_amp', 'workshop_1', 'workshop_2', 'auto_1', 'auto_amp', 'economy_1',
   'click_2', 'golden_2', 'monster_2', 'auto_2', 'economy_2',
   'mastery_low',
   'click_3', 'upgrade_moon', 'auto_3', 'research_1', 'research_remodel', 'economy_analysis', 'order_board',
@@ -296,6 +305,13 @@ function buildSkillValues() {
     const hasAll = types.includes('all');
     const hasCps = types.includes('cps');
     const hasClick = types.includes('click');
+    // fixedノード(第12次R4・方針入口の増幅): 幾何はしご(nodeM)にもfx倍率にも割り込まず、生の値を量子化して使う。
+    // Sall/Scps/Sclick(はしごの累積)にも加算しない=既存ノードの割り当て値が1つも動かない。
+    if (n.fixed) {
+      for (const e of n.effects) { if (typeof e[2] === 'number') vals[e[0]] = (vals[e[0]] || 0) + q5(e[2]); }
+      SKILL_VALUES[n.id] = vals;
+      continue;
+    }
     for (const e of n.effects) {
       const t = e[0];
       if (typeof e[2] !== 'number') continue;
@@ -1317,6 +1333,13 @@ function goldenAmountMultiplier(sim) {
   return 1 + lv * P.golden.amountPerLv + skillEffect(sim, 'goldenAmount')
     + rewardCategoryBonus(sim, 'golden') + (policyIs(sim, 'golden') ? 0.10 : 0) + trio;
 }
+// 序盤ブースト(第12次R4): 金の即時獲得の序盤倍率。転生回数で減衰(支払いと計測の両方に掛ける=同式性)。
+function goldenEarlyMul(sim) {
+  const m = P.golden.earlyMul || 1;
+  if (m <= 1) return 1;
+  const half = P.golden.earlyHalfRuns || 1.5;
+  return 1 + (m - 1) * Math.pow(0.5, (sim.prestigeRuns || 0) / half);
+}
 function goldenMultiplierVal(sim) {
   const r = sim.run;
   const lv = satLv(rwOff(sim, 'goldenPower') ? 0 : r.perks.goldenPower, P.golden.powerLvHalf);
@@ -1478,6 +1501,7 @@ function goldenRateValue(sim, prod) {
   // 旧: baseClick(会心・ブースト抜き)を参照していたため、会心が育つ後半周回で金の実収入を
   // critEV×boostM 倍(10-30倍)過小評価し、S3金特化の後半の金シェアが25%へ沈んで見えていた(㉘計測歪み)。
   const instant = Math.max(prod.cps, prod.clickEV) * P.golden.instantCoef * goldenAmountMultiplier(sim)
+    * goldenEarlyMul(sim)
     * ((P.ws && wsStageDef(sim).goldenGain) || 1);
   const boostVal = Math.max(0, goldenMultiplierVal(sim) - 1) * prod.cps * (goldenBoostDurationMs(sim) / 1000);
   return (instant + boostVal) / 2 / interval;
@@ -1789,6 +1813,7 @@ function collectGolden(sim, prod) {
   sim.goldenAlt ^= 1;
   if (sim.goldenAlt === 1) {
     earn(sim, Math.max(100, prod.cps * P.golden.instantCoef, prod.clickEV * P.golden.instantCoef) * goldenAmountMultiplier(sim)
+      * goldenEarlyMul(sim)
       * ((P.ws && wsStageDef(sim).goldenGain) || 1));
   } else {
     const mult = goldenMultiplierVal(sim);

@@ -763,8 +763,10 @@ if (mode === 'baseline') {
     if (id.startsWith('start_') || id === 'offline_1') return 'util';
     return 'master';
   };
-  const ENTRANCE = new Set(['core>click_1', 'click_1>golden_1', 'golden_1>monster_1', 'monster_1>auto_1', 'auto_1>economy_1',
-    // 第2輪も同じ物語順の鎖(タップ→金→狩り→自動→経済)
+  // 第12次R4(ユーザー指示 2026-07-11): 分岐炉心(core=周回方針の解放)から各方針の入口スキルへ直接分岐
+  // (会心タップ=click_1 / 金色=golden_1 / 狩猟=monster_1 / 焼成=auto_1)。旧・物語順の一本鎖は廃止。
+  const ENTRANCE = new Set(['core>click_1', 'core>golden_1', 'core>monster_1', 'core>auto_1', 'auto_1>economy_1',
+    // 第2輪は物語順の鎖(金→狩り→自動)
     'golden_2>monster_2', 'monster_2>auto_2']);
   const BRIDGES = { // 相乗り橋(両系統の効果や仕組み上の依存を持つ辺)
     'golden_2>click_3': 'click_3は金獲得効果を併せ持つ',
