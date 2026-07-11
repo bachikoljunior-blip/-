@@ -9969,7 +9969,7 @@ function currentCps() {
 // タップ=指先の型 段階2(屋台スキルで先行5%)/ 銀行=銀行クリック配当研究。
 // 旧・屋台/行商の簡易式(タップ力×0.05×20×√層 / 金相場×0.002×20×枚数×√層)を置換=sim(判定基準)と同じ経済に。
 const DIRECT_CFG = {
-  equip:  { coef: 0.06, stagePow: 0.5, countPow: 2,   ref: 70,  startStage: 5, satMax: 50, otherMul: 0.2, anchorGolden: 0.15 },
+  equip:  { coef: 0.06, stagePow: 0.5, countPow: 2,   ref: 70,  startStage: 5, satMax: 50, otherMul: { click: 0.08, default: 0.2 }, anchorGolden: 0.15 },
   golden: { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 10, otherMul: { click: 0.3, balanced: 0.3, hunt: 0.3, default: 1 } },
   hunt:   { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 15, otherMul: { click: 0.15, balanced: 0.15, golden: 0.9, default: 0.3 }, peddlerFrac: 0.06 },
   tap:    { coef: 0.01, stagePow: 0.5, countPow: 2,   ref: 20,  startStage: 5, clickBonus: 3, satMax: 0, anchorGolden: 0.5, stallFrac: 0.05, otherMul: { golden: 0.6, balanced: 4.0, default: 1 } },
