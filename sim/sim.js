@@ -1446,10 +1446,15 @@ function tryBuyMilestones(sim, prod) {
     if (r.ms.bought[m.id]) continue;
     if (!m.trig(sim)) continue;
     const costSec = m.costSec != null ? m.costSec : ((P.msResearch && P.msResearch.costSec != null) ? P.msResearch.costSec : 30);
-    const cost = Math.max(100, (prod ? prod.cps : 0) * costSec);
+    // コストはゲーム内で固定(2026-07-11 ユーザー指示): 完成版測定の焼き込み表(ms_costs.json)を優先。
+    // 表に無いidだけ動的式(=表の生成にも使う)。丸め規則はビルド時に適用済み。
+    const fixed = P.msResearch && P.msResearch.costTable && P.msResearch.costTable[m.id];
+    const cost = fixed != null ? fixed : Math.max(100, (prod ? prod.cps : 0) * costSec);
     if (r.cookies < cost) continue;
     r.cookies -= cost;
     r.ms.bought[m.id] = true;
+    if (!sim.msCostLog) sim.msCostLog = {};
+    if (!sim.msCostLog[m.id]) sim.msCostLog[m.id] = cost; // 初回購入時の支払額(固定コスト表の生成用)
     if (m.fx.up) for (const k in m.fx.up) r.ms.up[k] = (r.ms.up[k] || 1) * m.fx.up[k];
     if (m.fx.click) r.ms.click *= m.fx.click;
     if (m.fx.cps) r.ms.cps = (r.ms.cps || 1) * m.fx.cps;
@@ -2079,10 +2084,11 @@ function prestigeCostOf(sim) {
   // テーブルが無い/範囲を超えた場合は同じ式の動的計算にフォールバック(=テーブル生成にも使う)。
   const pc = P.prestige || {};
   const runs = sim.prestigeRuns || 0;
-  if (runs === 0) return pc.firstCost != null ? pc.firstCost : 5e6;
   const table = pc.costTable || [];
-  // 対応: 第n回(prestigeRuns=n)の必要量 = 完成版測定で「第n回が転生した時点の毎秒×500」の10べき切捨て(table[n])
+  // 対応: 第n回(prestigeRuns=n)の必要量 = 固定テーブル(10のべき乗)。初回(table[0])も調整対象
+  // (2026-07-11 ユーザー「必要転生クッキーは10のべきじょうで初回も含めて調整していい」)。
   if (table[runs] != null) return table[runs];
+  if (runs === 0) return pc.firstCost != null ? pc.firstCost : 5e6;
   const base = Math.max(1, (sim.lastPrestigeCps || 0) * (pc.costCpsMul != null ? pc.costCpsMul : 500));
   const cost = Math.pow(10, Math.floor(Math.log10(base)));
   return Math.max(pc.firstCost != null ? pc.firstCost : 5e6, cost);
