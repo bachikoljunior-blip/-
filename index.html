@@ -7469,37 +7469,100 @@ function buyMilestone(id) {
   saveGame(); updateTopOnly(); renderActiveTab();
 }
 
-// 実績研究の描画(研究タブ末尾の独立セクション。トリガ未達成は非表示=恒常ルール5)
+// 実績研究カードの絵(専用絵は無いので、関連する既存アセットを流用する)
+function msArtOf(ms) {
+  const id = ms.id;
+  if (id.startsWith("msk2_")) return (ASSETS.skills || {})[id.slice(5)] || null;
+  if (id.startsWith("msk_")) return (ASSETS.skills || {})[id.slice(4)] || null;
+  const m = id.match(/^ms_(.+)_t\d+$/);
+  if (m && (ASSETS.upgrades || {})[m[1]]) return ASSETS.upgrades[m[1]];
+  if (id.startsWith("ms_kills_")) return (ASSETS.monsters && ASSETS.monsters.normal) || ASSETS.objects.cookieMonster;
+  if (id.startsWith("ms_golden_")) return ASSETS.objects.goldenCookie;
+  if (id.startsWith("ms_taps_")) return ASSETS.objects.cookie;
+  if (id.startsWith("ms_stage_")) return (ASSETS.screens || {}).play || null;
+  if (id.startsWith("ms_prestige_")) return (ASSETS.screens || {}).prestige || null;
+  return null;
+}
+
+// 実績研究の描画(研究タブ末尾の独立セクション)。
+// 他の購入欄(研究カード)と同じ artCard 形式で、コストの安い順に並べる。
+// 実績を解除する前もカードを出して「実績の内容(解放条件)」を表示し、効果は伏せる。
+// 解除(トリガ達成)後は効果とコストを開示して購入できるようにする。
 function appendMilestonePanel(box) {
-  const old = box.querySelector(".msResearchPanel");
-  if (old) old.remove();
-  const avail = debugMode ? MILESTONE_RESEARCH.filter(m => !msBought(m.id)) : MILESTONE_RESEARCH.filter(m => !msBought(m.id) && m.trig());
+  const unbought = MILESTONE_RESEARCH.filter(m => !msBought(m.id));
+  const avail = debugMode ? unbought : unbought.filter(m => m.trig());
+  const locked = debugMode ? [] : unbought.filter(m => !m.trig());
   const owned = MILESTONE_RESEARCH.filter(m => msBought(m.id));
-  if (!avail.length && !owned.length) return;
-  const wrap = document.createElement("div");
-  wrap.className = "msResearchPanel";
-  const head = document.createElement("div");
-  head.className = "desc";
-  head.style.margin = "10px 4px 4px";
-  head.textContent = "実績研究 — 実績や設備の数で解放。買ったらこの周回ずっと有効(転生で買い直し)";
-  wrap.appendChild(head);
-  avail.forEach(m => {
-    const btn = document.createElement("button");
-    btn.className = "item";
-    const cost = msResearchCost(m);
-    btn.innerHTML = `<b>${m.name}</b><div class="price">${fmt(cost)} クッキー</div><div class="desc">${m.fxText}</div><div class="desc">解放条件: ${m.cond}(達成済み)</div>`;
-    btn.classList.toggle("canBuy", state.cookies.gte(cost) && !pausedForSkillChoice());
-    addTap(btn, () => buyMilestone(m.id));
-    wrap.appendChild(btn);
-  });
-  if (owned.length) {
-    const d = document.createElement("div");
-    d.className = "desc";
-    d.style.margin = "6px 4px";
-    d.textContent = "取得済みの実績研究: " + owned.map(m => m.name + "(" + m.fxText + ")").join(" / ");
-    wrap.appendChild(d);
+
+  let wrap = box.querySelector(".msResearchPanel");
+  if (!avail.length && !locked.length && !owned.length) { if (wrap) wrap.remove(); return; }
+
+  const byCost = (a, b) => msResearchCost(a) - msResearchCost(b);
+  avail.sort(byCost);
+  locked.sort(byCost);
+
+  // 並び(達成済み→未達成、各コスト順)が変わったときだけDOMを作り直す。
+  // それ以外のフレームは、購入可否とコスト表示の更新だけを行う(毎秒の全再構築を避ける)
+  const sig = avail.map(m => m.id).join(",") + "|" + locked.map(m => m.id).join(",") + "|" + owned.length;
+  if (!wrap || wrap.dataset.sig !== sig) {
+    if (wrap) wrap.remove();
+    wrap = document.createElement("div");
+    wrap.className = "msResearchPanel";
+    wrap.dataset.sig = sig;
+
+    const head = document.createElement("div");
+    head.className = "desc";
+    head.style.margin = "10px 4px 4px";
+    head.textContent = "実績研究 — 実績や設備の数で解放。買ったらこの周回ずっと有効(転生で買い直し)";
+    wrap.appendChild(head);
+
+    avail.forEach(m => {
+      const btn = document.createElement("button");
+      btn.className = "item artCard";
+      btn.dataset.msId = m.id;
+      setArtImage(btn, msArtOf(m));
+      addTap(btn, () => buyMilestone(m.id));
+      wrap.appendChild(btn);
+    });
+
+    // 未達成: 実績の内容(解放条件)は見せる。効果とコストは解除まで伏せる
+    locked.forEach(m => {
+      const btn = document.createElement("button");
+      btn.className = "item artCard artSilhouette researchLocked";
+      btn.dataset.msLockedId = m.id;
+      setArtImage(btn, msArtOf(m));
+      btn.disabled = true;
+      btn.innerHTML = `
+        <b>${m.name}</b>
+        <div class="desc">実績: ${m.cond}</div>
+        <div class="desc">達成すると効果とコストが開示され、購入できるようになる</div>
+      `;
+      wrap.appendChild(btn);
+    });
+
+    if (owned.length) {
+      const d = document.createElement("div");
+      d.className = "desc";
+      d.style.margin = "6px 4px";
+      d.textContent = "取得済みの実績研究: " + owned.map(m => m.name + "(" + m.fxText + ")").join(" / ");
+      wrap.appendChild(d);
+    }
+    box.appendChild(wrap);
   }
-  box.appendChild(wrap);
+
+  // 達成済みカードの中身(コスト・購入可否)は毎回更新する
+  wrap.querySelectorAll("[data-ms-id]").forEach(btn => {
+    const m = MILESTONE_RESEARCH.find(x => x.id === btn.dataset.msId);
+    if (!m) return;
+    const cost = msResearchCost(m);
+    btn.classList.toggle("canBuy", state.cookies.gte(cost) && !pausedForSkillChoice());
+    btn.innerHTML = `
+      <b>${m.name}</b>
+      <div class="price">${fmtCost(cost)} クッキー</div>
+      <div class="desc">${m.fxText}</div>
+      <div class="desc">実績: ${m.cond}(達成済み)</div>
+    `;
+  });
 }
 
 const RES_STAGE2 = {
