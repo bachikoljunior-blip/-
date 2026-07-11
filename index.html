@@ -6213,7 +6213,7 @@ const EQUIPMENT = [
   { id: "goldenWhisk", name: "黄金の泡立て器", cost: { butter: 10, flour: 8 }, effect: lv => `クリックの生産連動係数 ×${(1 + 0.15 * lv).toFixed(2)}` },
   { id: "ovenMitt", name: "断熱オーブン手袋", cost: { cacao: 12, ironShard: 2 }, effect: lv => `オーブン生産 ×${(1 + 0.12 * lv).toFixed(2)}` },
   { id: "pressExtractor", name: "香料圧搾機", cost: { spice: 14, goldDust: 2 }, effect: lv => `金ブースト倍率 ×${(1 + 0.04 * lv).toFixed(2)}` },
-  { id: "monsterAlmanac", name: "モンスター図鑑", cost: { ironShard: 4, silentCore: 2 }, effect: lv => `素材ドロップ +${Math.floor(lv / 2)}個、モンスターダメージ ×${(1 + 0.15 * lv).toFixed(2)}` },
+  { id: "monsterAlmanac", name: "モンスター図鑑", cost: { ironShard: 4, silentCore: 2 }, effect: lv => `素材ドロップ +${(0.5 * lv).toFixed(1)}個、モンスターダメージ ×${(1 + 0.15 * lv).toFixed(2)}、行商の買い取り ×${(1 + 0.12 * lv).toFixed(2)}` },
   { id: "stillFlask", name: "蒸留フラスコ", cost: { mint: 10, lavaSugar: 6 }, effect: lv => `料理の効果時間 ×${(1 + 0.10 * lv).toFixed(2)}` },
   { id: "dimensionCompass", name: "次元コンパス", cost: { bossCoreAny: 1, stardust: 12 }, effect: lv => `ボス化に必要な討伐数 -${lv}、選択中ステージの素材ドロップ ×${(1 + 0.05 * lv).toFixed(2)}` },
   { id: "masterTray", name: "名匠の天板", cost: { flour: 10, cacao: 8 }, effect: lv => `全生産 ×${(1 + 0.06 * lv).toFixed(2)}` }
@@ -7955,7 +7955,9 @@ function createOrderSnapshot(id) {
     stage: currentQuotaStageNumber(),
     need: orderNeedFor(picked),
     limitMs,
-    rewardCookies: Math.floor(currentCps() * (limitMs / 1000) * 50), // ×0.5→×25(R4・sim同期: 序盤金ブースト後の収入基準に対する相対価値の回復)
+    // 報酬の基準をcps→周回の平均稼ぎ率へ(sim同期2026-07-11): 設備生産が収入の数%しかない方針で
+    // cps基準の報酬は誤差になるため。制限時間×0.6ぶんの平均稼ぎを一括で貰う。
+    rewardCookies: Math.floor(Math.max(currentCps(), state.runCookies.div(Math.max(60, quotaElapsedSeconds())).toNumberClamped(1e300)) * (limitMs / 1000) * 0.6),
     progress: 0,
     createdAt: Date.now(),
     expiresAt: Date.now() + limitMs,
@@ -8000,7 +8002,7 @@ function orderProgressRatio(order) {
 function orderRewardText(order) {
   const def = orderDef(order.id);
   if (def.id === "ovenOrder" || def.id === "clickOrder") return `クッキー +${fmt(Math.max(1, Number(order.rewardCookies) || 0))}`;
-  if (def.id === "monsterOrder" || def.id === "spiceOrder") return workshopTabUnlocked() ? "作りたい装備の不足素材を補充(最大3種)" : `クッキー +${fmt(Math.max(1, Number(order.rewardCookies) || 0))}`;
+  if (def.id === "monsterOrder" || def.id === "spiceOrder") return workshopTabUnlocked() ? "作りたい装備の不足素材を補充(不足分×1.25・最大4種)" : `クッキー +${fmt(Math.max(1, Number(order.rewardCookies) || 0))}`;
   return "毎秒生産 x2(120秒)";
 }
 
@@ -8035,24 +8037,26 @@ function applyOrderReward(order) {
   }
 
   if (def.id === "monsterOrder" || def.id === "spiceOrder") {
-    // 素材セット=御用聞き型(sim同期): 「次に作りたいのに素材が足りない装備」の不足分を補充する(最大3種)。
+    // 素材セット=御用聞き型(sim同期): 「次に作りたいのに素材が足りない装備」の不足分を補充する(最大4種)。
     // ステージ共通素材の固定配布は最も余っている素材になりがちで実利がない(sim実測)ため置き換え。
+    // 不足分×1.25・最大4種(sim同期2026-07-11: ㉙materials 1.142→1.2乗せのマージン)
     if (workshopTabUnlocked()) {
       let granted = 0;
       const gifts = [];
       for (const eq of EQUIPMENT) {
-        if (granted >= 3) break;
+        if (granted >= 4) break;
         const lv = equipLv(eq.id);
         if (lv >= equipMaxLv(eq.id)) continue;
         const cost = equipmentCost(eq, lv);
         let filledAny = false;
         for (const matId in cost) {
-          if (granted >= 3) break;
+          if (granted >= 4) break;
           if (matId === "bossCoreAny") continue; // 核は恒久シンク=注文では配らない
           const deficit = Math.ceil(Number(cost[matId]) || 0) - materialCount(matId);
           if (deficit > 0) {
-            gainMaterial(matId, deficit);
-            gifts.push(`${getMaterial(matId).name} +${deficit}`);
+            const give = Math.ceil(deficit * 1.25);
+            gainMaterial(matId, give);
+            gifts.push(`${getMaterial(matId).name} +${give}`);
             granted++; filledAny = true;
           }
         }
@@ -8922,7 +8926,7 @@ function grantMonsterDrops(typeId, level, overkill) {
 
       // 通常撃破: ステージ基本素材1個+クリックとどめ+1(とどめは常にタップ)+図鑑/記録/ステージ加算
       const baseId = dropMaterialIdFor(stageNo, typeId);
-      gain(baseId, qty(2 + Math.floor(equipLv("monsterAlmanac") / 2) + (stage.dropAdd || 0) + killRecordDropBonus(typeId) + msMulOf("dropAdd"))); // 実績研究(素材の目利き)
+      gain(baseId, qty(2 + 0.5 * equipLv("monsterAlmanac") + (stage.dropAdd || 0) + killRecordDropBonus(typeId) + msMulOf("dropAdd"))); // 図鑑+0.5/Lv(旧floor(Lv/2)はLv1で0=sim同期2026-07-11)+実績研究(素材の目利き)
 
       // 金ブースト中に撃破: 黄金粉(唯一の入手経路)
       if (goldenBoostActive()) gain("goldDust", qty(1));
@@ -9892,7 +9896,8 @@ function huntPeddlerCps() {
   if (inv <= 0) return 0;
   const frac = (state.research.portalNetwork && resStage2("portalNetwork")) ? 1.0 : 0.02; // sim同期(peddlerFrac)
   const goldenOne = Math.max(100, currentCps() * 2.5, currentClickPower() * 2.5);
-  return goldenOne * PEDDLER_COEF * 20 * frac * inv * Math.sqrt(1 + maxQuotaStage());
+  const almanacM = 1 + 0.12 * equipLv("monsterAlmanac"); // モンスター図鑑: 弱点を知る=買い取り増(sim同期2026-07-11)
+  return goldenOne * PEDDLER_COEF * 20 * frac * inv * Math.sqrt(1 + maxQuotaStage()) * almanacM;
 }
 
 function earn(amount) {
@@ -11914,9 +11919,9 @@ function codexWorkshopHtml() {
 // 装備の「式(Lvごとの伸び方)」をゲーム内の言葉で説明する
 const EQUIP_FORMULA = {
   goldenWhisk: "クリックの生産連動係数が ×(1 + 0.15×Lv)。",
-  ovenMitt: "モンスターへのダメージが +0.05×Lv。",
+  ovenMitt: "オーブンの生産が ×(1 + 0.12×Lv)。",
   pressExtractor: "金ブースト倍率が ×(1 + 0.04×Lv)。",
-  monsterAlmanac: "素材ドロップ +（Lv÷2の切り捨て）個、モンスターダメージ ×(1 + 0.06×Lv)。",
+  monsterAlmanac: "素材ドロップ +0.5×Lv個、モンスターダメージ ×(1 + 0.15×Lv)、行商の買い取り ×(1 + 0.12×Lv)。",
   stillFlask: "料理の効果時間が ×(1 + 0.10×Lv)。",
   dimensionCompass: "ボス化に必要な討伐数 −Lv、選択中ステージの素材ドロップ ×(1 + 0.05×Lv)。",
   masterTray: "全生産(設備・クリック)が ×(1 + 0.06×Lv)。"

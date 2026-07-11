@@ -637,7 +637,8 @@ function wsDropMaterials(sim, mon, overkill) {
   dropMul *= 1 + (P.chain ? P.chain.dropCoef * chainCount(sim) : 0);
   dropMul *= 1 + P.ws.eqFx.compassDropPerLv * wsEqLv(sim, 'dimensionCompass');
   if (wsBuffActive(sim, 'voidTart')) dropMul *= P.ws.fx.voidDrop;
-  const per = (D.base + Math.floor(Math.sqrt(lv) / D.lvDiv) + Math.floor(wsEqLv(sim, 'monsterAlmanac') / 2)) * dropMul;
+  // 図鑑の素材ボーナス: 旧floor(Lv/2)はLv1で0=効果ゼロ。連続値へ(2026-07-11 ⑮の2比1.000の修復)
+  const per = (D.base + Math.floor(Math.sqrt(lv) / D.lvDiv) + (P.ws.eqFx.almanacDropPerLv || 0) * wsEqLv(sim, 'monsterAlmanac')) * dropMul;
   // 共通素材(ステージ基本): 決定的ローテーション
   const cList = st.c;
   const cPick = cList[ws.matRot % cList.length]; ws.matRot++;
@@ -703,7 +704,12 @@ function wsOrderTick(sim, prod) {
       // 達成: 報酬(種別ローテ)。㉙=各報酬の稼ぎ比≥1.2 の判定対象
       const rkinds = ['cookie', 'materials', 'boost'];
       const rk = rkinds[ws.orderRewardRot % 3]; ws.orderRewardRot++;
-      if (rk === 'cookie' && !wsOff(sim, 'order:cookie')) earn(sim, prod.cps * o.limit * O.rewardCookie);
+      if (rk === 'cookie' && !wsOff(sim, 'order:cookie')) {
+        // 報酬の基準をcps→周回の平均稼ぎ率へ(2026-07-11): 設備生産が収入の数%しかない方針で
+        // cps基準の報酬は誤差(㉙cookie比1.009実測)。制限時間×rewardCookieぶんの平均稼ぎを一括で貰う。
+        const avgRate = Math.max(prod.cps, sim.run.runCookies / Math.max(60, t - sim.run.startT));
+        earn(sim, avgRate * o.limit * O.rewardCookie);
+      }
       else if (rk === 'materials' && !wsOff(sim, 'order:materials')) {
         // 素材セット=御用聞き型: 次に作りたい装備(方針の好み順で最初に作れない物)の不足分を補充する。
         // 「今いるステージの共通素材を定数配る」型は、それが最も余っている素材のため限界価値ゼロ
@@ -1564,7 +1570,9 @@ function huntDirectIncome(sim, base) {
   // 方針係数: 非hunt方針の後半周回(報酬解禁スキル後=hunt perk投資が勝手に貯まる)で討伐直送が主役を
   // 押し退ける(bake S1 run25-29 討39-46%・balanced S6 run24-28 討33-53%=実測2026-07-10)のを抑える。
   const polM = otherMulOf(sim, P.huntDirect, 'hunt');
-  return genreDirect(sim, base, inv, P.huntDirect) * polM * gateM;
+  // モンスター図鑑: 弱点を知る=討伐の実入り増(2026-07-11 再係留: 研究インフレでダメージ飽和=図鑑の限界価値ゼロのため直送へ効かせる)
+  const almanacM = 1 + (P.ws.eqFx.almanacHuntPerLv || 0) * wsEqLv(sim, 'monsterAlmanac');
+  return genreDirect(sim, base, inv, P.huntDirect) * polM * gateM * almanacM;
 }
 // タップ直送: 投資量=クリック系(神の指+強い指/10)。ゲート=指先の型 段階2(スキル click_2→段階2購入→効果)。
 function tapDirectIncome(sim, base, prod) {
