@@ -88,7 +88,7 @@ module.exports = {
     // 追跡ノルマ(旧⑧)は廃止(2026-07-06 ユーザー決定)。未達(T3a/T3b)は本来のノルマ係数
     // (baseCoef/basePow/base2Coef/base2Pow/w1〜w3P/ctrlMul/ctrlDiv)+後半成長の減速で作る。
     // 層の試練(2026-07-07 ユーザー採用・0-2提案4 / 第12次H 提案8で新規開拓層基準へ相対化): 発火せず無害の resting 値。
-    trialCoef: 0.08, trialStartLayer: 10, trialFloorRuns: 2, // trialFloorRuns=2で天井持ち越しを直近2周回のmaxに平滑化(第12次R2続き・T1 S10の交互振動対策・検証中)
+    trialCoef: 0, trialStartLayer: 10, trialFloorRuns: 2, // 層の試練は廃止(2026-07-11 ユーザー指示「ノルマ層でノルマ加速するのやめて」= trialCoef 0.08→0で無効化。機構は休眠)
     // ---- 到達連動ノルマ(第12次H・提案9・ユーザー承認) ----
     // T3a を全周回・後半に置くための機構。層ゲージ(quotaAtElapsed=時間関数)には一切触れず、未達判定にだけ
     // 「到達項」を足す: 未達 = runCookies < max(従来ノルマ, runCookies×reachCoef×ρ^reachPow)。
@@ -100,7 +100,7 @@ module.exports = {
     // reachMaxSec=denom の上限クランプ(0=無効)。直前が極端に長い→短い周回で reach が未発火=T3a取りこぼし、を防ぐ。
     // 6000 で確定(sweep_maxsec.js で T3a と T3b を同時掃引): T3a全体 86→88%・S10 18/23@34% → 25/26@62%、
     // かつ T3b を維持(5000だと reach が早発して S8/S10 の T3b が落ちる。6000で S8 T3b40・S10 T3b17 を回復)。4000以下は位置が頭へ崩れる。
-    reachCoef: 40, reachPow: 10, reachMinSec: 600, reachMaxSec: 6000, reachEmaAlpha: 0.35
+    reachCoef: 2.0, reachPow: 10, reachMinSec: 600, reachMaxSec: 6000, reachEmaAlpha: 0.35
   },
 
   // ---- 設備直送生産(第12次J・提案A・ユーザー承認 2026-07-07) ----

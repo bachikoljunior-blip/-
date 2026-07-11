@@ -7373,13 +7373,14 @@ const MILESTONE_RESEARCH = (() => {
   });
   list.push({ id: "ms_finger_25", name: "指の鍛錬", cond: "強い指 25本", trig: () => (state.upgrades.finger || 0) >= 25, fxText: "タップ生産 ×2", fx: { click: 2 } });
   list.push({ id: "ms_godFinger_10", name: "神指の目覚め", cond: "神の指 10本", trig: () => (state.upgrades.godFinger || 0) >= 10, fxText: "タップ生産 ×2", fx: { click: 2 } });
-  list.push({ id: "ms_kills_25", name: "狩りの心得", cond: "累計討伐 25体", trig: () => (state.msKills || 0) >= 25, fxText: "モンスターダメージ ×1.5", fx: { hunt: 1.5 } });
-  list.push({ id: "ms_kills_100", name: "狩りの極意", cond: "累計討伐 100体", trig: () => (state.msKills || 0) >= 100, fxText: "モンスターダメージ ×2", fx: { hunt: 2 } });
-  list.push({ id: "ms_golden_10", name: "金運の兆し", cond: "金クッキー累計 10枚", trig: () => (state.msGoldens || 0) >= 10, fxText: "金クッキー即時獲得 ×1.5", fx: { golden: 1.5 } });
-  list.push({ id: "ms_golden_50", name: "金運の確信", cond: "金クッキー累計 50枚", trig: () => (state.msGoldens || 0) >= 50, fxText: "金クッキー即時獲得 ×2", fx: { golden: 2 } });
-  list.push({ id: "ms_taps_1000", name: "千本タップ", cond: "累計タップ 1,000回", trig: () => (state.msTaps || 0) >= 1000, fxText: "タップ生産 ×2", fx: { click: 2 } });
-  list.push({ id: "ms_stage_10", name: "深層の知恵", cond: "ノルマ第10層に到達(通算)", trig: () => maxQuotaStageEverSafe() >= 10, fxText: "全生産 ×1.5", fx: { all: 1.5 } });
-  list.push({ id: "ms_stage_50", name: "深淵の悟り", cond: "ノルマ第50層に到達(通算)", trig: () => maxQuotaStageEverSafe() >= 50, fxText: "全生産 ×2", fx: { all: 2 } });
+  // 実績トリガは「その周回内」のカウント(2026-07-11 ユーザー指示)
+  list.push({ id: "ms_kills_25", name: "狩りの心得", cond: "この周回で討伐 25体", trig: () => (state.msKills || 0) >= 25, fxText: "モンスターダメージ ×1.5", fx: { hunt: 1.5 } });
+  list.push({ id: "ms_kills_100", name: "狩りの極意", cond: "この周回で討伐 100体", trig: () => (state.msKills || 0) >= 100, fxText: "モンスターダメージ ×2", fx: { hunt: 2 } });
+  list.push({ id: "ms_golden_10", name: "金運の兆し", cond: "この周回で金クッキー 10枚", trig: () => (state.msGoldens || 0) >= 10, fxText: "金クッキー即時獲得 ×1.5", fx: { golden: 1.5 } });
+  list.push({ id: "ms_golden_50", name: "金運の確信", cond: "この周回で金クッキー 50枚", trig: () => (state.msGoldens || 0) >= 50, fxText: "金クッキー即時獲得 ×2", fx: { golden: 2 } });
+  list.push({ id: "ms_taps_1000", name: "千本タップ", cond: "この周回でタップ 1,000回", trig: () => (state.msTaps || 0) >= 1000, fxText: "タップ生産 ×2", fx: { click: 2 } });
+  list.push({ id: "ms_stage_10", name: "深層の知恵", cond: "この周回でノルマ第10層に到達", trig: () => maxQuotaStage() >= 10, fxText: "全生産 ×1.5", fx: { all: 1.5 } });
+  list.push({ id: "ms_stage_50", name: "深淵の悟り", cond: "この周回でノルマ第50層に到達", trig: () => maxQuotaStage() >= 50, fxText: "全生産 ×2", fx: { all: 2 } });
   list.push({ id: "ms_prestige_5", name: "輪廻の巧者", cond: "転生 5回", trig: () => (Number(state.prestigeRuns) || 0) >= 5, fxText: "全生産 ×1.5", fx: { all: 1.5 } });
   const sk = (skillId, id, name, fxText, fx) => list.push({ id, name, cond: "スキル「" + skillNameOf(skillId) + "」を取得", trig: () => hasSkill(skillId), fxText, fx });
   sk("click_amp", "ms_skill_click_amp", "速射の稽古", "タップ生産 ×1.5", { click: 1.5 });
@@ -7392,7 +7393,7 @@ const MILESTONE_RESEARCH = (() => {
   sk("order_board", "ms_skill_order_board", "上得意", "全生産 ×1.2", { all: 1.2 });
   return list;
 })();
-function skillNameOf(id) { const n = SKILL_TREE.find(x => x.id === id); return n ? n.name : id; }
+function skillNameOf(id) { const n = SKILL_NODES.find(x => x.id === id); return n ? n.name : id; }
 function maxQuotaStageEverSafe() { return Math.max(1, Math.floor(Number(state.maxQuotaStageEver) || 0), maxQuotaStage()); }
 function msBought(id) { return !!((state.msResearch || {})[id]); }
 function msMulOf(kind, upId) {
@@ -9903,7 +9904,7 @@ function chainProductionMultiplier() {
 // 新しく潜った分」にだけ効かせる。再登坂(前回天井までの登り直し)は試練ゼロ=タダで、新フロンティア開拓
 // (周回後半)で初めて試練が立ち上がる → 未達位置が後半へ移る。層数の表示(maxQuotaStage)は絶対累積のまま
 // (前回基準で1から数え直さない・ユーザー指示)。相対化するのはこの指数計算だけ。
-const QUOTA_TRIAL_COEF = 0.08;
+const QUOTA_TRIAL_COEF = 0; // 層の試練は廃止(2026-07-11 ユーザー指示「ノルマ層でノルマ加速するのやめて」。0で倍率は常に1=バッジの試練表示も消える)
 const QUOTA_TRIAL_START_LAYER = 10;
 function quotaTrialMultiplier() {
   const floor = (state.prevMaxQuotaStage || 0) + QUOTA_TRIAL_START_LAYER;
@@ -9915,7 +9916,7 @@ function quotaTrialMultiplier() {
 // 未達 = runCookies < max(従来ノルマ, runCookies×REACH_COEF×ρ^REACH_POW)。
 // ρ = 周回内経過秒 ÷ max(前回周回の長さ prevDuration, REACH_MIN_SEC)。runCookies が相殺 → 実質
 // 「ρ が ρ*=(1/REACH_COEF)^(1/REACH_POW)≈0.80 を越えたら未達」。絶対クッキー桁に非依存。sim と同式。
-const REACH_COEF = 40; // 20→40(R3・sim同期): ρ*=0.74→0.69(未達位置を少し前へ=EMA平滑化とセット)
+const REACH_COEF = 2.0; // 40→2.0(R5・sim同期): ρ*=0.93=未達を周回の終盤(93%)に。T3b「早い方針は維持85%以上」(2026-07-11)と両立する位置
 const REACH_POW = 10;
 const REACH_MIN_SEC = 600;
 const REACH_MAX_SEC = 6000; // denom(前回周回長)の上限クランプ(0=無効)。直前が極端に長い→短い周回で reach 未発火を防ぐ。
@@ -13569,10 +13570,7 @@ function prestigeReset() {
   const keepBossKills = { ...(state.bossKills || {}) };
   const keepTotalPlaySec = Math.max(0, Number(state.totalPlaySec) || 0);
   const keepMaxQuotaStageEver = Math.max(1, Math.floor(Number(state.maxQuotaStageEver) || 1));
-  // 実績研究: 累計カウンタは転生を跨いで永続(購入状態 msResearch はリセット=買い直し)
-  const keepMsKills = Math.max(0, Math.floor(Number(state.msKills) || 0));
-  const keepMsGoldens = Math.max(0, Math.floor(Number(state.msGoldens) || 0));
-  const keepMsTaps = Math.max(0, Math.floor(Number(state.msTaps) || 0));
+  // 実績研究: トリガは「その周回だけ」(2026-07-11)=カウンタも購入状態も転生でリセット(持ち越さない)
   // 提案8(第12次H): 今周回の天井を次周回の層の試練の相対基準として持ち越す。表示層数は絶対累積のまま。
   // 層の試練の天井持ち越し=直近2周回のmax(R3・trialFloorRuns=2相当・sim同期)
   const keepPrevMaxQuotaStage = Math.max(maxQuotaStage(), Math.floor(Number(state._prevMaxStage1) || 0));
@@ -13615,7 +13613,6 @@ function prestigeReset() {
   state.bossKills = keepBossKills;
   state.totalPlaySec = keepTotalPlaySec;
   state.maxQuotaStageEver = keepMaxQuotaStageEver;
-  state.msKills = keepMsKills; state.msGoldens = keepMsGoldens; state.msTaps = keepMsTaps;
   state.prevMaxQuotaStage = keepPrevMaxQuotaStage;
   state._prevMaxStage1 = keepPrevMaxStage1;
   state.prevDuration = keepPrevDuration;

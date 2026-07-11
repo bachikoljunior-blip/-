@@ -106,8 +106,11 @@ function summarize(sim) {
   let failOk = 0;
   for (const r of full) if (r.quotaFailAt != null && r.quotaFailAt < r.duration) failOk++;
   // T3b(維持時間半分): ノルマを維持できていた時間 ≥ その周回の長さの半分
+  // T3b(2026-07-11 ユーザー決定): 早いプレイ方針のみ判定・しきい値=周回時間の85%以上
   let t3bOk = 0;
-  for (const r of full) if (r.quotaHold >= 0.5 * r.duration) t3bOk++;
+  for (const r of full) if (r.quotaHold >= 0.85 * r.duration) t3bOk++;
+  const durs = full.map(r => r.duration).sort((a, b) => a - b);
+  const medianDur = durs.length ? durs[durs.length >> 1] : Infinity;
   // 参考指標(合否に使わない): 旧⑥解放間隔の帯域適合
   let paceOk = 0, paceAll = 0;
   const yC2 = yC;
@@ -137,7 +140,7 @@ function summarize(sim) {
     if (ratio >= 1) prOk++;
     if (!prWorst || ratio < prWorst.ratio) prWorst = { id: c.id, runIdx: c.runIdx, ratio };
   }
-  return { total, runs: sim.runs.length, doubleOk, doubleAll, gainOk, t1Ok, t1All, t2Ok, t2All, t2Run0, t3bOk, paceOk, paceAll, events: ev.length, fullT, failOk, failAll: full.length, pwOk, pwAll, durOk, durAll, prOk, prAll, prWorst };
+  return { total, runs: sim.runs.length, doubleOk, doubleAll, gainOk, t1Ok, t1All, t2Ok, t2All, t2Run0, t3bOk, medianDur, paceOk, paceAll, events: ev.length, fullT, failOk, failAll: full.length, pwOk, pwAll, durOk, durAll, prOk, prAll, prWorst };
 }
 
 function runBaseline(hours, only) {
@@ -153,12 +156,18 @@ function runBaseline(hours, only) {
 }
 
 function printBaseline(results) {
-  console.log('ID  名称              周回数 総クッキー   ④x100  ⑤PT1-100 T1周回時間 T2解放≥1 T2第0回 T3a未達先 T3b維持半分 ⑭PT≥1 ㉑存在感 全解放 | 参考: 旧⑥ペース 旧㉒単調増');
+  // T3bの判定対象=早いプレイ方針(2026-07-11 ユーザー決定「ノルマ維持の条件は早いプレイ方針で達成できてればいい・85%以上」)。
+  // 「早い」の線引き【仮】: 方針ごとの周回時間の中央値が、全方針の中央値以下のもの。遅い方針は(対象外)。
+  const meds = results.map(r => r.sum.medianDur).filter(x => Number.isFinite(x)).sort((a, b) => a - b);
+  const cutoff = meds.length ? meds[meds.length >> 1] : Infinity;
+  console.log('ID  名称              周回数 総クッキー   ④x100  ⑤PT1-100 T1周回時間 T2解放≥1 T2第0回 T3a未達先 T3b維持85%(早い方針のみ) ⑭PT≥1 ㉑存在感 全解放 | 参考: 旧⑥ペース 旧㉒単調増');
   for (const r of results) {
     const fullT = r.sum.fullT === Infinity ? '未' : fmtT(r.sum.fullT);
     const t2r0 = r.sum.t2Run0 ? `${r.sum.t2Run0.ok ? 'OK' : 'NG'}(中央値${r.sum.t2Run0.med.toFixed(2)})` : '-';
+    const fast = r.sum.medianDur <= cutoff;
+    const t3bText = fast ? `${r.sum.t3bOk}/${r.sum.failAll}` : `(対象外:${r.sum.t3bOk}/${r.sum.failAll})`;
     console.log(
-      `${r.s.id.padEnd(3)} ${r.s.name.padEnd(14)} ${String(r.sum.runs).padStart(4)}  ${fmtN(r.sum.total).padStart(10)}  ${r.sum.doubleOk}/${r.sum.doubleAll}   ${r.sum.gainOk}/${r.sum.doubleAll}   ${r.sum.t1Ok}/${r.sum.t1All}   ${r.sum.t2Ok}/${r.sum.t2All}  ${t2r0}  ${r.sum.failOk}/${r.sum.failAll}  ${r.sum.t3bOk}/${r.sum.failAll}  ${r.sum.pwOk}/${r.sum.pwAll}  ${r.sum.prOk}/${r.sum.prAll}  ${fullT} | ${r.sum.paceOk}/${r.sum.paceAll} ${r.sum.durOk}/${r.sum.durAll}  (${r.ms}ms)` +
+      `${r.s.id.padEnd(3)} ${r.s.name.padEnd(14)} ${String(r.sum.runs).padStart(4)}  ${fmtN(r.sum.total).padStart(10)}  ${r.sum.doubleOk}/${r.sum.doubleAll}   ${r.sum.gainOk}/${r.sum.doubleAll}   ${r.sum.t1Ok}/${r.sum.t1All}   ${r.sum.t2Ok}/${r.sum.t2All}  ${t2r0}  ${r.sum.failOk}/${r.sum.failAll}  ${t3bText}  ${r.sum.pwOk}/${r.sum.pwAll}  ${r.sum.prOk}/${r.sum.prAll}  ${fullT} | ${r.sum.paceOk}/${r.sum.paceAll} ${r.sum.durOk}/${r.sum.durAll}  (${r.ms}ms)` +
       (r.sum.prWorst && r.sum.prWorst.ratio < 1 ? `  ㉑最悪: ${r.sum.prWorst.id}@run${r.sum.prWorst.runIdx} x${r.sum.prWorst.ratio.toFixed(2)}` : '')
     );
   }

@@ -372,7 +372,6 @@ function newSim(strategy, opts) {
     t: 0,                       // 総経過秒
     // 永続
     prestige: 0, prestigeTotal: 0, prestigeRuns: 0, totalCookies: 0,
-    msKills: 0, msGoldens: 0, msTaps: 0, everMaxStage: 0, // マイルストーン研究(第12次R5)の累計実績
     prevMaxStage: 0,            // 提案8: 前回周回の最高到達層(=再登坂の天井)。層の試練を新規開拓層基準へ相対化するのに使う。層数の表示・カウント(run.maxStage)は絶対累積のまま不変更。
     prevDuration: 0,            // 提案9(到達連動ノルマ): 前回周回の長さ(秒)。未達判定の進行比 ρ=経過秒/前回長 の分母。
     skills: {},
@@ -1391,13 +1390,14 @@ const MILESTONE_RESEARCH = (() => {
   list.push({ id: 'ms_finger_25', trig: sim => (sim.run.upgrades.finger || 0) >= 25, fx: { click: 2 } });
   list.push({ id: 'ms_godFinger_10', trig: sim => (sim.run.upgrades.godFinger || 0) >= 10, fx: { click: 2 } });
   // 実績系(累計・転生を跨ぐ)
-  list.push({ id: 'ms_kills_25', trig: sim => (sim.msKills || 0) >= 25, fx: { hunt: 1.5 } });
-  list.push({ id: 'ms_kills_100', trig: sim => (sim.msKills || 0) >= 100, fx: { hunt: 2 } });
-  list.push({ id: 'ms_golden_10', trig: sim => (sim.msGoldens || 0) >= 10, fx: { golden: 1.5 } });
-  list.push({ id: 'ms_golden_50', trig: sim => (sim.msGoldens || 0) >= 50, fx: { golden: 2 } });
-  list.push({ id: 'ms_taps_1000', trig: sim => (sim.msTaps || 0) >= 1000, fx: { click: 2 } });
-  list.push({ id: 'ms_stage_10', trig: sim => (sim.everMaxStage || 0) >= 10, fx: { all: 1.5 } });
-  list.push({ id: 'ms_stage_50', trig: sim => (sim.everMaxStage || 0) >= 50, fx: { all: 2 } });
+  // 実績トリガは「その周回内」のカウント(2026-07-11 ユーザー指示「実績で解放はその回だけで考えて」)
+  list.push({ id: 'ms_kills_25', trig: sim => (sim.run.msKills || 0) >= 25, fx: { hunt: 1.5 } });
+  list.push({ id: 'ms_kills_100', trig: sim => (sim.run.msKills || 0) >= 100, fx: { hunt: 2 } });
+  list.push({ id: 'ms_golden_10', trig: sim => (sim.run.msGoldens || 0) >= 10, fx: { golden: 1.5 } });
+  list.push({ id: 'ms_golden_50', trig: sim => (sim.run.msGoldens || 0) >= 50, fx: { golden: 2 } });
+  list.push({ id: 'ms_taps_1000', trig: sim => (sim.run.msTaps || 0) >= 1000, fx: { click: 2 } });
+  list.push({ id: 'ms_stage_10', trig: sim => (sim.run.maxStage || 0) >= 10, fx: { all: 1.5 } });
+  list.push({ id: 'ms_stage_50', trig: sim => (sim.run.maxStage || 0) >= 50, fx: { all: 2 } });
   list.push({ id: 'ms_prestige_5', trig: sim => (sim.prestigeRuns || 0) >= 5, fx: { all: 1.5 } });
   // スキル解放系(「スキルでの研究解放もたんと」)
   const sk = (id, fx) => list.push({ id: 'ms_skill_' + id, trig: sim => !!sim.skills[id], fx });
@@ -1870,7 +1870,7 @@ function earn(sim, amount) {
 }
 
 function collectGolden(sim, prod) {
-  sim.msGoldens = (sim.msGoldens || 0) + 1; // マイルストーン研究(第12次R5): 累計金取得
+  sim.run.msGoldens = (sim.run.msGoldens || 0) + 1; // マイルストーン研究(第12次R5): その周回の金取得数
   const r = sim.run;
   r.goldenTaken++;
   // 香料調合 段階2: 風味の熟成(前回の金からの経過秒で、全生産の短時間バーストが決まる)
@@ -1981,7 +1981,7 @@ function defeatMonster(sim, mon) {
     r.portalHuntUntil = Math.max(r.portalHuntUntil, sim.t + P.res2.huntExtendSec);
   }
   if (!r.quotaFailed) r.quotaMonsterKills += units;
-  sim.msKills = (sim.msKills || 0) + units; // マイルストーン研究(第12次R5): 累計討伐
+  r.msKills = (r.msKills || 0) + units; // マイルストーン研究(第12次R5): その周回の討伐数
   // 討伐連鎖(第12次D): breakSec以内の連続討伐で+units(こつぶ群れ=3体分)、途切れたら振出し
   if (P.chain) {
     r.chainN = (sim.t - r.chainLastT) <= chainBreakSec(sim) ? r.chainN + units : units;
@@ -2251,7 +2251,7 @@ function advanceTick(sim, strategy) {
     const directAll = equipDirectIncome(sim, dirBase, prod) + goldenDirectIncome(sim, dirBase)
       + huntDirectIncome(sim, goldenRateValue(sim, prod)) + tapDirectIncome(sim, dirBase, prod) + bankDirectIncome(sim, dirBase, prod);
     earn(sim, cpsNow * dt + clickNow * tapsForCookies * dt + directAll * dt);
-    sim.msTaps = (sim.msTaps || 0) + tapsForCookies * dt; // マイルストーン研究(第12次R5): 累計タップ
+    r.msTaps = (r.msTaps || 0) + tapsForCookies * dt; // マイルストーン研究(第12次R5): その周回のタップ数
     tryBuyMilestones(sim, prod); // 同: 解放条件を満たした即効研究を自動購入(常に手が届く安さのモデル)
 
     // 銀行クリック配当 段階2: 複利利息。キャップ撤廃: 硬い min(利息, 毎秒生産×2) を
@@ -2356,7 +2356,6 @@ function advanceTick(sim, strategy) {
     }
     const st = currentStage(sim);
     if (st > r.maxStage) r.maxStage = st;
-    if (st > (sim.everMaxStage || 0)) sim.everMaxStage = st; // マイルストーン研究(第12次R5)
 
     // 条件⑧用: 「いま転生した場合の獲得PT」の毎秒系列を記録
     if (sim.opt.trackGain) {
@@ -2390,7 +2389,7 @@ function takeSnapshot(sim) {
     t: sim.t, prestige: sim.prestige, prestigeTotal: sim.prestigeTotal,
     prestigeRuns: sim.prestigeRuns, totalCookies: sim.totalCookies,
     prevMaxStage: sim.prevMaxStage, prevDuration: sim.prevDuration,
-    msKills: sim.msKills, msGoldens: sim.msGoldens, msTaps: sim.msTaps, everMaxStage: sim.everMaxStage, everMs: sim.everMs || {},
+    everMs: sim.everMs || {},
     skills: sim.skills, rotIdx: sim.rotIdx, upRotIdx: sim.upRotIdx, goldenAlt: sim.goldenAlt,
     firstResearchBuy: sim.firstResearchBuy, firstPerk: sim.firstPerk, firstStageBuy: sim.firstStageBuy,
     ws: sim.ws,
@@ -2406,7 +2405,7 @@ function replayRun(strategy, snap, opts, capSec) {
   sim.prestigeRuns = s.prestigeRuns; sim.totalCookies = s.totalCookies;
   sim.prevMaxStage = s.prevMaxStage || 0;
   sim.prevDuration = s.prevDuration || 0;
-  sim.msKills = s.msKills || 0; sim.msGoldens = s.msGoldens || 0; sim.msTaps = s.msTaps || 0; sim.everMaxStage = s.everMaxStage || 0; sim.everMs = s.everMs || {};
+  sim.everMs = s.everMs || {};
   sim.skills = s.skills; sim.rotIdx = s.rotIdx; sim.upRotIdx = s.upRotIdx; sim.goldenAlt = s.goldenAlt;
   sim.firstResearchBuy = s.firstResearchBuy; sim.firstPerk = s.firstPerk; sim.firstStageBuy = s.firstStageBuy;
   if (s.ws) sim.ws = s.ws;
