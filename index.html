@@ -6547,6 +6547,11 @@ function ensureState() {
   // ==== 第7次 新要素の正規化(旧セーブはデフォルト補完) ====
   state.maxQuotaStage = Math.max(1, Math.floor(Number(state.maxQuotaStage) || 1));
   state.maxQuotaStageEver = Math.max(1, Math.floor(Number(state.maxQuotaStageEver) || 1), state.maxQuotaStage);
+  // 実績研究(2026-07-11): 累計カウンタと購入状態
+  state.msKills = Math.max(0, Math.floor(Number(state.msKills) || 0));
+  state.msGoldens = Math.max(0, Math.floor(Number(state.msGoldens) || 0));
+  state.msTaps = Math.max(0, Math.floor(Number(state.msTaps) || 0));
+  state.msResearch = state.msResearch && typeof state.msResearch === "object" ? state.msResearch : {};
   // 提案8(第12次H): 前回周回の天井(層の試練の相対基準)。旧セーブは0補完。
   state.prevMaxQuotaStage = Math.max(0, Math.floor(Number(state.prevMaxQuotaStage) || 0));
   // 提案9(第12次H): 前回周回の長さ(到達連動ノルマの進行比の分母)。旧セーブは0補完。
@@ -7353,6 +7358,101 @@ const RES_EQUIP = {
   eventHorizon: "blackHoleMixer", cosmicConvection: "universeOven",
   singularityFlow: "cookieSingularity", annihilationCore: "antimatterOven"
 };
+// ==== 実績研究(マイルストーン研究・2026-07-11 ユーザー指示) ====
+// 「第0回から研究を盛り沢山に。効果は永続の単純倍率(後で腐ってもよい)。設備数や実績・スキルで解放」。
+// コストは解放時点の毎秒生産×30秒ぶん(常に手が届く)。転生で買い直し(実績トリガは累計なので次周回もすぐ出る)。
+const MILESTONE_RESEARCH = (() => {
+  const eqName = id => (UPGRADES.find(u => u.id === id) || { name: id }).name;
+  const list = [];
+  UPGRADES.forEach(u => {
+    if (u.type !== "cps") return;
+    list.push({ id: "ms_" + u.id + "_25", name: eqName(u.id) + "の熟練", cond: u.id === "grandma" || u.id === "oven" ? eqName(u.id) + " 25台" : eqName(u.id) + " 25台", trig: () => (state.upgrades[u.id] || 0) >= 25, fxText: eqName(u.id) + "の生産 ×2", fx: { up: { [u.id]: 2 } } });
+  });
+  ["grandma", "oven", "factory", "bank", "spiceRack"].forEach(id => {
+    list.push({ id: "ms_" + id + "_100", name: eqName(id) + "の極み", cond: eqName(id) + " 100台", trig: () => (state.upgrades[id] || 0) >= 100, fxText: eqName(id) + "の生産 ×3", fx: { up: { [id]: 3 } } });
+  });
+  list.push({ id: "ms_finger_25", name: "指の鍛錬", cond: "強い指 25本", trig: () => (state.upgrades.finger || 0) >= 25, fxText: "タップ生産 ×2", fx: { click: 2 } });
+  list.push({ id: "ms_godFinger_10", name: "神指の目覚め", cond: "神の指 10本", trig: () => (state.upgrades.godFinger || 0) >= 10, fxText: "タップ生産 ×2", fx: { click: 2 } });
+  list.push({ id: "ms_kills_25", name: "狩りの心得", cond: "累計討伐 25体", trig: () => (state.msKills || 0) >= 25, fxText: "モンスターダメージ ×1.5", fx: { hunt: 1.5 } });
+  list.push({ id: "ms_kills_100", name: "狩りの極意", cond: "累計討伐 100体", trig: () => (state.msKills || 0) >= 100, fxText: "モンスターダメージ ×2", fx: { hunt: 2 } });
+  list.push({ id: "ms_golden_10", name: "金運の兆し", cond: "金クッキー累計 10枚", trig: () => (state.msGoldens || 0) >= 10, fxText: "金クッキー即時獲得 ×1.5", fx: { golden: 1.5 } });
+  list.push({ id: "ms_golden_50", name: "金運の確信", cond: "金クッキー累計 50枚", trig: () => (state.msGoldens || 0) >= 50, fxText: "金クッキー即時獲得 ×2", fx: { golden: 2 } });
+  list.push({ id: "ms_taps_1000", name: "千本タップ", cond: "累計タップ 1,000回", trig: () => (state.msTaps || 0) >= 1000, fxText: "タップ生産 ×2", fx: { click: 2 } });
+  list.push({ id: "ms_stage_10", name: "深層の知恵", cond: "ノルマ第10層に到達(通算)", trig: () => maxQuotaStageEverSafe() >= 10, fxText: "全生産 ×1.5", fx: { all: 1.5 } });
+  list.push({ id: "ms_stage_50", name: "深淵の悟り", cond: "ノルマ第50層に到達(通算)", trig: () => maxQuotaStageEverSafe() >= 50, fxText: "全生産 ×2", fx: { all: 2 } });
+  list.push({ id: "ms_prestige_5", name: "輪廻の巧者", cond: "転生 5回", trig: () => (Number(state.prestigeRuns) || 0) >= 5, fxText: "全生産 ×1.5", fx: { all: 1.5 } });
+  const sk = (skillId, id, name, fxText, fx) => list.push({ id, name, cond: "スキル「" + skillNameOf(skillId) + "」を取得", trig: () => hasSkill(skillId), fxText, fx });
+  sk("click_amp", "ms_skill_click_amp", "速射の稽古", "タップ生産 ×1.5", { click: 1.5 });
+  sk("golden_amp", "ms_skill_golden_amp", "金箔の目利き", "金クッキー即時獲得 ×1.3", { golden: 1.3 });
+  sk("monster_amp", "ms_skill_monster_amp", "追撃の型", "モンスターダメージ ×1.5", { hunt: 1.5 });
+  sk("auto_amp", "ms_skill_auto_amp", "火吹きの呼吸", "全生産 ×1.3", { all: 1.3 });
+  sk("click_stall", "ms_skill_click_stall", "屋台の看板", "タップ生産 ×1.5", { click: 1.5 });
+  sk("monster_peddler", "ms_skill_monster_peddler", "行商の人脈", "モンスターダメージ ×1.5", { hunt: 1.5 });
+  sk("workshop_1", "ms_skill_workshop_1", "素材の目利き", "討伐の素材ドロップ +1個", { dropAdd: 1 });
+  sk("order_board", "ms_skill_order_board", "上得意", "全生産 ×1.2", { all: 1.2 });
+  return list;
+})();
+function skillNameOf(id) { const n = SKILL_TREE.find(x => x.id === id); return n ? n.name : id; }
+function maxQuotaStageEverSafe() { return Math.max(1, Math.floor(Number(state.maxQuotaStageEver) || 0), maxQuotaStage()); }
+function msBought(id) { return !!((state.msResearch || {})[id]); }
+function msMulOf(kind, upId) {
+  let m = kind === "dropAdd" ? 0 : 1;
+  const b = state.msResearch || {};
+  for (const ms of MILESTONE_RESEARCH) {
+    if (!b[ms.id]) continue;
+    if (kind === "up") { if (ms.fx.up && ms.fx.up[upId]) m *= ms.fx.up[upId]; }
+    else if (kind === "dropAdd") { if (ms.fx.dropAdd) m += ms.fx.dropAdd; }
+    else if (ms.fx[kind]) m *= ms.fx[kind];
+  }
+  return m;
+}
+function msResearchCost(ms) { return Math.max(100, Math.floor(currentCps() * 30)); }
+function buyMilestone(id) {
+  const ms = MILESTONE_RESEARCH.find(m => m.id === id);
+  if (!ms || msBought(id) || !ms.trig()) return;
+  const cost = msResearchCost(ms);
+  if (state.cookies.lt(cost)) { showMessage("クッキーが足りない"); return; }
+  state.cookies = state.cookies.sub(cost);
+  state.msResearch = state.msResearch && typeof state.msResearch === "object" ? state.msResearch : {};
+  state.msResearch[id] = true;
+  playSound("research");
+  showMessage(`実績研究「${ms.name}」: ${ms.fxText}`);
+  saveGame(); updateTopOnly(); renderActiveTab();
+}
+
+// 実績研究の描画(研究タブ末尾の独立セクション。トリガ未達成は非表示=恒常ルール5)
+function appendMilestonePanel(box) {
+  const old = box.querySelector(".msResearchPanel");
+  if (old) old.remove();
+  const avail = debugMode ? MILESTONE_RESEARCH.filter(m => !msBought(m.id)) : MILESTONE_RESEARCH.filter(m => !msBought(m.id) && m.trig());
+  const owned = MILESTONE_RESEARCH.filter(m => msBought(m.id));
+  if (!avail.length && !owned.length) return;
+  const wrap = document.createElement("div");
+  wrap.className = "msResearchPanel";
+  const head = document.createElement("div");
+  head.className = "desc";
+  head.style.margin = "10px 4px 4px";
+  head.textContent = "実績研究 — 実績や設備の数で解放。買ったらこの周回ずっと有効(転生で買い直し)";
+  wrap.appendChild(head);
+  avail.forEach(m => {
+    const btn = document.createElement("button");
+    btn.className = "item";
+    const cost = msResearchCost(m);
+    btn.innerHTML = `<b>${m.name}</b><div class="price">${fmt(cost)} クッキー</div><div class="desc">${m.fxText}</div><div class="desc">解放条件: ${m.cond}(達成済み)</div>`;
+    btn.classList.toggle("canBuy", state.cookies.gte(cost) && !pausedForSkillChoice());
+    addTap(btn, () => buyMilestone(m.id));
+    wrap.appendChild(btn);
+  });
+  if (owned.length) {
+    const d = document.createElement("div");
+    d.className = "desc";
+    d.style.margin = "6px 4px";
+    d.textContent = "取得済みの実績研究: " + owned.map(m => m.name + "(" + m.fxText + ")").join(" / ");
+    wrap.appendChild(d);
+  }
+  box.appendChild(wrap);
+}
+
 const RES_STAGE2 = {
   fingerTechnique: "click_2", grandmaCrowd: "auto_2", ovenBatch: "auto_3",
   factoryNetwork: "auto_4", spiceBlend: "golden_1", portalNetwork: "monster_3",
@@ -8764,7 +8864,7 @@ function grantMonsterDrops(typeId, level, overkill) {
 
       // 通常撃破: ステージ基本素材1個+クリックとどめ+1(とどめは常にタップ)+図鑑/記録/ステージ加算
       const baseId = dropMaterialIdFor(stageNo, typeId);
-      gain(baseId, qty(2 + Math.floor(equipLv("monsterAlmanac") / 2) + (stage.dropAdd || 0) + killRecordDropBonus(typeId)));
+      gain(baseId, qty(2 + Math.floor(equipLv("monsterAlmanac") / 2) + (stage.dropAdd || 0) + killRecordDropBonus(typeId) + msMulOf("dropAdd"))); // 実績研究(素材の目利き)
 
       // 金ブースト中に撃破: 黄金粉(唯一の入手経路)
       if (goldenBoostActive()) gain("goldDust", qty(1));
@@ -9305,6 +9405,7 @@ function researchUpgradeMultiplier(u) {
   if (u.id === "grandma" && state.research.grandmaCrowd) m *= 9;
   if (u.id === "oven" && state.research.ovenBatch) m *= 9 * ovenStageMultiplier();
   if (u.id === "oven") m *= 1 + 0.12 * equipLv("ovenMitt"); // 断熱オーブン手袋(焼き加減廃止で再係留・sim同期)
+  m *= msMulOf("up", u.id); // 実績研究(設備の熟練/極み)
   if (u.id === "factory" && state.research.factoryNetwork) m *= 9 * factoryNetworkMultiplier();
   if (u.id === "spiceRack" && state.research.spiceBlend) m *= spiceRackMultiplier();
   if (u.id === "portal" && state.research.portalNetwork) m *= 9;
@@ -9479,7 +9580,7 @@ function monsterDamageMultiplier(mon) {
     + categoryBonus
     + policyBonus
     + ovenMittBonus
-  ) * bakeMonsterDamageMultiplier()
+  ) * bakeMonsterDamageMultiplier() * msMulOf("hunt") // 実績研究(狩り)
     * (dishActive("hunterStew") ? 1.5 : 1)         // 狩人のシチュー
     * (1 + 0.10 * equipLv("monsterAlmanac"))       // モンスター図鑑
     * killRecordDamageMultiplier((currentMonster && currentMonster.typeId) || "normal"); // 討伐記録
@@ -9487,10 +9588,11 @@ function monsterDamageMultiplier(mon) {
 
 
 function goldenAmountMultiplier() {
+  const msG = msMulOf("golden"); // 実績研究(金運)
   const gaLv = Math.max(0, state.perks.goldenAmount) / (1 + Math.max(0, state.perks.goldenAmount) / 45);
   // ステージ補正: チョコレート火山は金クッキー獲得×1.10
   return (1 + gaLv * 0.45 + skillEffect("goldenAmount") + rewardCategoryBonus("golden") + (runPolicyIs("golden") ? 0.10 : 0))
-    * (currentStageInfo().goldenGainMul || 1);
+    * (currentStageInfo().goldenGainMul || 1) * msG;
 }
 
 function goldenSpawnFactor() {
@@ -9659,6 +9761,8 @@ function baseClickPower() {
   v *= dishProductionMultiplier();
   v *= equipProductionMultiplier(); // 名匠の天板
 
+  v *= msMulOf("click") * msMulOf("all"); // 実績研究(タップ系・全生産系)
+
   // 案A: 従来項+生産連動項
   v += productionLinkClickPower();
 
@@ -9696,6 +9800,8 @@ function baseCps() {
   v *= orderTempCpsMultiplier();
   v *= dishProductionMultiplier(); // 料理: バタークッキー生地
   v *= equipProductionMultiplier(); // 装備: 名匠の天板
+
+  v *= msMulOf("all"); // 実績研究(全生産系)
 
   // 初台ボーナス(㉑対策): 所持中だけ効く静的加算(購入時CPS基準の固定値のため成長とともに自然消滅)
   v += presenceBonusCps();
@@ -10962,6 +11068,7 @@ function updateTopOnly() {
 }
 
 function tapCookie() {
+  state.msTaps = (Number(state.msTaps) || 0) + 1; // 実績研究: 累計タップ
   if (pausedForSkillChoice()) {
     openSkillChoiceScreen();
     return;
@@ -12490,7 +12597,8 @@ function renderResearch() {
 
   if (list.length === 0 && lockedList.length === 0 && stageCards.length === 0 && !showBhGauge && ownedList.length === 0) {
     box.innerHTML = `<div class="desc">研究はまだない</div>`;
-    appendResearchAnalysisPanel(box);
+    appendMilestonePanel(box);
+  appendResearchAnalysisPanel(box);
     return;
   }
 
@@ -12645,6 +12753,7 @@ function renderResearch() {
     `;
   });
 
+  appendMilestonePanel(box);
   appendResearchAnalysisPanel(box);
 }
 
@@ -13460,6 +13569,10 @@ function prestigeReset() {
   const keepBossKills = { ...(state.bossKills || {}) };
   const keepTotalPlaySec = Math.max(0, Number(state.totalPlaySec) || 0);
   const keepMaxQuotaStageEver = Math.max(1, Math.floor(Number(state.maxQuotaStageEver) || 1));
+  // 実績研究: 累計カウンタは転生を跨いで永続(購入状態 msResearch はリセット=買い直し)
+  const keepMsKills = Math.max(0, Math.floor(Number(state.msKills) || 0));
+  const keepMsGoldens = Math.max(0, Math.floor(Number(state.msGoldens) || 0));
+  const keepMsTaps = Math.max(0, Math.floor(Number(state.msTaps) || 0));
   // 提案8(第12次H): 今周回の天井を次周回の層の試練の相対基準として持ち越す。表示層数は絶対累積のまま。
   // 層の試練の天井持ち越し=直近2周回のmax(R3・trialFloorRuns=2相当・sim同期)
   const keepPrevMaxQuotaStage = Math.max(maxQuotaStage(), Math.floor(Number(state._prevMaxStage1) || 0));
@@ -13502,6 +13615,7 @@ function prestigeReset() {
   state.bossKills = keepBossKills;
   state.totalPlaySec = keepTotalPlaySec;
   state.maxQuotaStageEver = keepMaxQuotaStageEver;
+  state.msKills = keepMsKills; state.msGoldens = keepMsGoldens; state.msTaps = keepMsTaps;
   state.prevMaxQuotaStage = keepPrevMaxQuotaStage;
   state._prevMaxStage1 = keepPrevMaxStage1;
   state.prevDuration = keepPrevDuration;
@@ -14390,6 +14504,7 @@ function collectGoldenCookie() {
 
   if (!state.codex || typeof state.codex !== "object") state.codex = {};
   state.codex.goldenSeen = true;
+  state.msGoldens = (Number(state.msGoldens) || 0) + 1; // 実績研究: 累計金取得
 
   if ((state.perks.goldenChain || 0) > 0) {
     state.goldenChainReady = true;
@@ -14800,6 +14915,7 @@ function hitMonster(id) {
 function defeatMonster(id) {
   const mon = findMonster(id);
   if (!mon) return;
+  state.msKills = (Number(state.msKills) || 0) + 1; // 実績研究: 累計討伐
 
   const defeatedLevel = mon.level;
   const defeatedTypeId = mon.typeId || "normal";

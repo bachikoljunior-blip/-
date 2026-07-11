@@ -372,6 +372,7 @@ function newSim(strategy, opts) {
     t: 0,                       // 総経過秒
     // 永続
     prestige: 0, prestigeTotal: 0, prestigeRuns: 0, totalCookies: 0,
+    msKills: 0, msGoldens: 0, msTaps: 0, everMaxStage: 0, // マイルストーン研究(第12次R5)の累計実績
     prevMaxStage: 0,            // 提案8: 前回周回の最高到達層(=再登坂の天井)。層の試練を新規開拓層基準へ相対化するのに使う。層数の表示・カウント(run.maxStage)は絶対累積のまま不変更。
     prevDuration: 0,            // 提案9(到達連動ノルマ): 前回周回の長さ(秒)。未達判定の進行比 ρ=経過秒/前回長 の分母。
     skills: {},
@@ -647,6 +648,7 @@ function wsDropMaterials(sim, mon, overkill) {
   // ノルマ余裕率2倍以上で撃破: 共通+1
   const quota = Math.max(1, quotaAtElapsed(sim, sim.t - r.startT));
   if (r.runCookies >= D.marginThresh * quota) commonN += units;
+  commonN += ((r.ms && r.ms.dropAdd) || 0) * units; // マイルストーン研究(第12次R5): 素材ドロップ+n
   wsAddMat(sim, cPick, commonN);
   // 金ブースト中に撃破=黄金粉(唯一の経路)
   if (goldenBoostActive(sim)) wsAddMat(sim, 'goldDust', units);
@@ -935,8 +937,10 @@ function computeProd(sim) {
   const stage = currentStage(sim);
 
   const allSkill = skillEffect(sim, 'all');
-  const clickSkillMul = 1 + skillEffect(sim, 'click') + allSkill + (policyIs(sim, 'click') ? 0.12 : 0);
-  const cpsSkillMul = 1 + skillEffect(sim, 'cps') + allSkill + (policyIs(sim, 'bake') ? 0.12 : 0);
+  const msC = (r.ms && r.ms.click) || 1; // マイルストーン研究(第12次R5): タップ系
+  const msA = (r.ms && r.ms.all) || 1;   // 同: 全生産系
+  const clickSkillMul = (1 + skillEffect(sim, 'click') + allSkill + (policyIs(sim, 'click') ? 0.12 : 0)) * msC * msA;
+  const cpsSkillMul = (1 + skillEffect(sim, 'cps') + allSkill + (policyIs(sim, 'bake') ? 0.12 : 0)) * msA;
   const prestigeMul = 1 + allSkill;
 
   // 研究: グローバル
@@ -1121,7 +1125,8 @@ function computeProd(sim) {
     } else if (hasSkillEffect(sim, 'unlockSystem', 'masteryHigh')) {
       mastMul = Math.pow(1 + P.mastery.high, owned);
     }
-    let contrib = owned * u.value * personal * resM * supM * mastMul;
+    const msMul = (r.ms && r.ms.up && r.ms.up[u.id]) || 1; // マイルストーン研究(第12次R5)
+    let contrib = owned * u.value * personal * resM * supM * mastMul * msMul;
     // 星屑パフェ: バフ中購入分は×1.25(所持数比で期待値化)
     const pfN = (r.parfaitUps && !wsOff(sim, 'dish:stardustParfait')) ? (r.parfaitUps[u.id] || 0) : 0;
     if (pfN > 0 && owned > 0) contrib *= 1 + (P.ws.fx.parfaitProdMul - 1) * Math.min(1, pfN / owned);
@@ -1258,7 +1263,8 @@ function monsterDamage(sim, prod) {
     + (policyIs(sim, 'hunt') ? 0.14 : 0)
   )
     * (wsBuffActive(sim, 'hunterStew') ? P.ws.fx.stewDmg : 1)
-    * (1 + P.ws.eqFx.almanacDmgPerLv * wsEqLv(sim, 'monsterAlmanac'));
+    * (1 + P.ws.eqFx.almanacDmgPerLv * wsEqLv(sim, 'monsterAlmanac'))
+    * ((r.ms && r.ms.hunt) || 1); // マイルストーン研究(第12次R5)
   return Math.max(1, Math.ceil(base * mult));
 }
 
@@ -1336,8 +1342,9 @@ function goldenAmountMultiplier(sim) {
     + (rwOff(sim, 'beastScent') ? 0 : (r.perks.beastScent || 0)) * (P.rw.beastScentAmount || 0)
     // goldenPower も同パターンで即時獲得量へ相乗り(2026-07-09・③instantが1.05-1.09を彷徨う恒久対策。ブースト側効果は残置・増加方向のみ)
     + (rwOff(sim, 'goldenPower') ? 0 : (r.perks.goldenPower || 0)) * (P.rw.goldenPowerAmount || 0);
-  return 1 + lv * P.golden.amountPerLv + skillEffect(sim, 'goldenAmount')
-    + rewardCategoryBonus(sim, 'golden') + (policyIs(sim, 'golden') ? 0.10 : 0) + trio;
+  return (1 + lv * P.golden.amountPerLv + skillEffect(sim, 'goldenAmount')
+    + rewardCategoryBonus(sim, 'golden') + (policyIs(sim, 'golden') ? 0.10 : 0) + trio)
+    * ((sim.run.ms && sim.run.ms.golden) || 1); // マイルストーン研究(第12次R5)
 }
 // 序盤ブースト(第12次R4): 金の即時獲得の序盤倍率。転生回数で減衰(支払いと計測の両方に掛ける=同式性)。
 function goldenEarlyMul(sim) {
@@ -1370,6 +1377,58 @@ function goldenBoostDurationMs(sim) {
 // ==== 各回の期待値方式(第12次・2026-07-06 ユーザー採用): 同一周回内で「稼ぎ力」を測る ====
 // やり直し比較(replay)を廃止し、各tickで「機能込みの瞬間稼ぎ力 ÷ 機能抜きの瞬間稼ぎ力」を測って
 // 周回平均(対数平均)を取る。同じ状態を2通り評価するだけなので、分かれ道のズレが原理的に発生しない。
+// ==== マイルストーン研究(第12次R5・2026-07-11 ユーザー指示「第0回から研究追加して盛り沢山に。
+// その場で効く(=永続の単純倍率・後で腐ってもよい=①等の腐り判定対象外とユーザー明言)。
+// 設備数とか実績とかで解放」) ====
+// 解放トリガ: その周回の設備所持数 / 累計実績(討伐・金・タップ・最高層・転生回数) / スキル取得。
+// コスト=解放時点の毎秒生産×msCostSec秒ぶん(常に手が届く=全プレイヤーが即買いする安さのため自動購入でモデル化)。
+// 効果は正の単純倍率のみ(共鳴型は禁止のまま)。周回リセットで買い直し(実績系トリガは累計なので次周回もすぐ出る)。
+const MILESTONE_RESEARCH = (() => {
+  const list = [];
+  const cpsUps = UPGRADES.filter(u => u.type === 'cps');
+  for (const u of cpsUps) list.push({ id: 'ms_' + u.id + '_25', trig: sim => (sim.run.upgrades[u.id] || 0) >= 25, fx: { up: { [u.id]: 2 } } });
+  for (const id of ['grandma', 'oven', 'factory', 'bank', 'spiceRack']) list.push({ id: 'ms_' + id + '_100', trig: sim => (sim.run.upgrades[id] || 0) >= 100, fx: { up: { [id]: 3 } } });
+  list.push({ id: 'ms_finger_25', trig: sim => (sim.run.upgrades.finger || 0) >= 25, fx: { click: 2 } });
+  list.push({ id: 'ms_godFinger_10', trig: sim => (sim.run.upgrades.godFinger || 0) >= 10, fx: { click: 2 } });
+  // 実績系(累計・転生を跨ぐ)
+  list.push({ id: 'ms_kills_25', trig: sim => (sim.msKills || 0) >= 25, fx: { hunt: 1.5 } });
+  list.push({ id: 'ms_kills_100', trig: sim => (sim.msKills || 0) >= 100, fx: { hunt: 2 } });
+  list.push({ id: 'ms_golden_10', trig: sim => (sim.msGoldens || 0) >= 10, fx: { golden: 1.5 } });
+  list.push({ id: 'ms_golden_50', trig: sim => (sim.msGoldens || 0) >= 50, fx: { golden: 2 } });
+  list.push({ id: 'ms_taps_1000', trig: sim => (sim.msTaps || 0) >= 1000, fx: { click: 2 } });
+  list.push({ id: 'ms_stage_10', trig: sim => (sim.everMaxStage || 0) >= 10, fx: { all: 1.5 } });
+  list.push({ id: 'ms_stage_50', trig: sim => (sim.everMaxStage || 0) >= 50, fx: { all: 2 } });
+  list.push({ id: 'ms_prestige_5', trig: sim => (sim.prestigeRuns || 0) >= 5, fx: { all: 1.5 } });
+  // スキル解放系(「スキルでの研究解放もたんと」)
+  const sk = (id, fx) => list.push({ id: 'ms_skill_' + id, trig: sim => !!sim.skills[id], fx });
+  sk('click_amp', { click: 1.5 }); sk('golden_amp', { golden: 1.3 }); sk('monster_amp', { hunt: 1.5 }); sk('auto_amp', { all: 1.3 });
+  sk('click_stall', { click: 1.5 }); sk('monster_peddler', { hunt: 1.5 });
+  sk('workshop_1', { dropAdd: 1 }); sk('order_board', { all: 1.2 });
+  return list;
+})();
+// 未購入で条件を満たしたものを自動購入(コスト=cps×msCostSec。安さゆえ全プレイヤー即買いのモデル)
+function tryBuyMilestones(sim, prod) {
+  const r = sim.run;
+  if (!r.ms) r.ms = { up: {}, click: 1, cps: 1, all: 1, golden: 1, hunt: 1, dropAdd: 0, bought: {} };
+  const costSec = (P.msResearch && P.msResearch.costSec != null) ? P.msResearch.costSec : 30;
+  for (const m of MILESTONE_RESEARCH) {
+    if (r.ms.bought[m.id]) continue;
+    if (!m.trig(sim)) continue;
+    const cost = Math.max(100, (prod ? prod.cps : 0) * costSec);
+    if (r.cookies < cost) continue;
+    r.cookies -= cost;
+    r.ms.bought[m.id] = true;
+    if (m.fx.up) for (const k in m.fx.up) r.ms.up[k] = (r.ms.up[k] || 1) * m.fx.up[k];
+    if (m.fx.click) r.ms.click *= m.fx.click;
+    if (m.fx.all) r.ms.all *= m.fx.all;
+    if (m.fx.golden) r.ms.golden *= m.fx.golden;
+    if (m.fx.hunt) r.ms.hunt *= m.fx.hunt;
+    if (m.fx.dropAdd) r.ms.dropAdd += m.fx.dropAdd;
+    if (!sim.everMs) sim.everMs = {};
+    if (!sim.everMs[m.id]) { sim.everMs[m.id] = true; sim.unlockEvents.push({ t: sim.t, kind: 'research', id: m.id }); } // 解放イベントは初回のみ(買い直しはT2の「新規解放」に数えない)
+  }
+}
+
 // 稼ぎ力 = 直接生産 + 金クッキー収入率 + 討伐報酬(投資)価値率 の合成。すべて現在状態から式で算出。
 // 討伐1体の価値を「生産◯秒ぶん」で近似。㉘: balancedの序盤討伐シェア(4-9%)を≥10%へ底上げ(5→7)。③⑨⑬は枝分かれrobust化済みで非干渉。
 // 第12次R3: params駆動化(P.monster.killValueSec・既定7)= ㉘hunt序盤(直送ゲート前の討25-28%)を経済側で立てる調整をtune_rで振るため。
@@ -1811,6 +1870,7 @@ function earn(sim, amount) {
 }
 
 function collectGolden(sim, prod) {
+  sim.msGoldens = (sim.msGoldens || 0) + 1; // マイルストーン研究(第12次R5): 累計金取得
   const r = sim.run;
   r.goldenTaken++;
   // 香料調合 段階2: 風味の熟成(前回の金からの経過秒で、全生産の短時間バーストが決まる)
@@ -1921,6 +1981,7 @@ function defeatMonster(sim, mon) {
     r.portalHuntUntil = Math.max(r.portalHuntUntil, sim.t + P.res2.huntExtendSec);
   }
   if (!r.quotaFailed) r.quotaMonsterKills += units;
+  sim.msKills = (sim.msKills || 0) + units; // マイルストーン研究(第12次R5): 累計討伐
   // 討伐連鎖(第12次D): breakSec以内の連続討伐で+units(こつぶ群れ=3体分)、途切れたら振出し
   if (P.chain) {
     r.chainN = (sim.t - r.chainLastT) <= chainBreakSec(sim) ? r.chainN + units : units;
@@ -2190,6 +2251,8 @@ function advanceTick(sim, strategy) {
     const directAll = equipDirectIncome(sim, dirBase, prod) + goldenDirectIncome(sim, dirBase)
       + huntDirectIncome(sim, goldenRateValue(sim, prod)) + tapDirectIncome(sim, dirBase, prod) + bankDirectIncome(sim, dirBase, prod);
     earn(sim, cpsNow * dt + clickNow * tapsForCookies * dt + directAll * dt);
+    sim.msTaps = (sim.msTaps || 0) + tapsForCookies * dt; // マイルストーン研究(第12次R5): 累計タップ
+    tryBuyMilestones(sim, prod); // 同: 解放条件を満たした即効研究を自動購入(常に手が届く安さのモデル)
 
     // 銀行クリック配当 段階2: 複利利息。キャップ撤廃: 硬い min(利息, 毎秒生産×2) を
     // 漸近逓減式 raw/(1+raw/soft) に置換(暴走防止。softは段3で最高層に応じ無限に伸びる)
@@ -2293,6 +2356,7 @@ function advanceTick(sim, strategy) {
     }
     const st = currentStage(sim);
     if (st > r.maxStage) r.maxStage = st;
+    if (st > (sim.everMaxStage || 0)) sim.everMaxStage = st; // マイルストーン研究(第12次R5)
 
     // 条件⑧用: 「いま転生した場合の獲得PT」の毎秒系列を記録
     if (sim.opt.trackGain) {
@@ -2326,6 +2390,7 @@ function takeSnapshot(sim) {
     t: sim.t, prestige: sim.prestige, prestigeTotal: sim.prestigeTotal,
     prestigeRuns: sim.prestigeRuns, totalCookies: sim.totalCookies,
     prevMaxStage: sim.prevMaxStage, prevDuration: sim.prevDuration,
+    msKills: sim.msKills, msGoldens: sim.msGoldens, msTaps: sim.msTaps, everMaxStage: sim.everMaxStage, everMs: sim.everMs || {},
     skills: sim.skills, rotIdx: sim.rotIdx, upRotIdx: sim.upRotIdx, goldenAlt: sim.goldenAlt,
     firstResearchBuy: sim.firstResearchBuy, firstPerk: sim.firstPerk, firstStageBuy: sim.firstStageBuy,
     ws: sim.ws,
@@ -2341,6 +2406,7 @@ function replayRun(strategy, snap, opts, capSec) {
   sim.prestigeRuns = s.prestigeRuns; sim.totalCookies = s.totalCookies;
   sim.prevMaxStage = s.prevMaxStage || 0;
   sim.prevDuration = s.prevDuration || 0;
+  sim.msKills = s.msKills || 0; sim.msGoldens = s.msGoldens || 0; sim.msTaps = s.msTaps || 0; sim.everMaxStage = s.everMaxStage || 0; sim.everMs = s.everMs || {};
   sim.skills = s.skills; sim.rotIdx = s.rotIdx; sim.upRotIdx = s.upRotIdx; sim.goldenAlt = s.goldenAlt;
   sim.firstResearchBuy = s.firstResearchBuy; sim.firstPerk = s.firstPerk; sim.firstStageBuy = s.firstStageBuy;
   if (s.ws) sim.ws = s.ws;

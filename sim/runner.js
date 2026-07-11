@@ -74,9 +74,9 @@ function summarize(sim) {
     t1All++;
     if (r.duration >= 1200 && r.duration <= 7200) t1Ok++;
   }
-  // T2(解放テンポ): 初転生後の各周回で新規解放1〜3件(同一秒は統合済み。スキルは転生時に自然に1件)。
-  // 周回への帰属は [startT, endT)(転生時のスキル取得はその周回の頭に数える)。
-  // 第0回のみ従来の間隔中央値判定: 間隔y÷帯域Y(120+8√x)の中央値が[0.5, 1]【中央値の取り方は仮】
+  // T2(解放テンポ・2026-07-11 ユーザー決定「解放条件は上限だけにして、下限はなくていい」=待たされる時間だけ判定):
+  // 初転生後の各周回で新規解放1件以上(件数の上限3は撤廃=盛り沢山OK)。
+  // 第0回は間隔y÷帯域Y(120+8√x)の中央値が ≤1 のみ(速い側0.5は撤廃)。
   let t2Ok = 0, t2All = 0, t2Run0 = null;
   {
     const r0 = full[0];
@@ -91,7 +91,7 @@ function summarize(sim) {
       if (ratios.length) {
         ratios.sort((a, b) => a - b);
         const med = ratios[Math.floor(ratios.length / 2)];
-        t2Run0 = { med, ok: med >= 0.5 && med <= 1 };
+        t2Run0 = { med, ok: med <= 1 };
       }
     }
     for (let i = 1; i < full.length; i++) {
@@ -99,7 +99,7 @@ function summarize(sim) {
       if (r.startT >= fullT) continue;
       const n = ev.filter(e => e.t >= r.startT && e.t < r.endT).length;
       t2All++;
-      if (n >= 1 && n <= 3) t2Ok++;
+      if (n >= 1) t2Ok++;
     }
   }
   // T3a(未達が先): どの転生も、その周回内でノルマ未達が起きた後に行われる
@@ -118,12 +118,13 @@ function summarize(sim) {
     paceAll++;
     if (y >= 0.5 * Y && y <= Y) paceOk++;
   }
-  // 条件⑭: 各周回の獲得PT ÷ 次の未取得スキル最安コスト(転生時点・購入前) ∈ [1.0, 3.0]
+  // ⑭(2026-07-11 ユーザー決定): 下限のみ=獲得PT÷次のスキル最安コスト ≥1.0(上限3.0は撤廃。
+  // 「転生ポイント一個以上にはしてね」=転生したら必ず次のスキルが1個は買える)
   let pwOk = 0, pwAll = 0;
   for (const r of full) {
     if (r.gainToNext == null) continue;
     pwAll++;
-    if (r.gainToNext >= 1.0 && r.gainToNext <= 3.0) pwOk++;
+    if (r.gainToNext >= 1.0) pwOk++;
   }
   // 参考指標(合否に使わない): 旧㉒周回時間の単調増加
   let durOk = 0, durAll = 0;
@@ -152,7 +153,7 @@ function runBaseline(hours, only) {
 }
 
 function printBaseline(results) {
-  console.log('ID  名称              周回数 総クッキー   ④x100  ⑤PT1-100 T1周回時間 T2解放1-3 T2第0回 T3a未達先 T3b維持半分 ⑭購買力 ㉑存在感 全解放 | 参考: 旧⑥ペース 旧㉒単調増');
+  console.log('ID  名称              周回数 総クッキー   ④x100  ⑤PT1-100 T1周回時間 T2解放≥1 T2第0回 T3a未達先 T3b維持半分 ⑭PT≥1 ㉑存在感 全解放 | 参考: 旧⑥ペース 旧㉒単調増');
   for (const r of results) {
     const fullT = r.sum.fullT === Infinity ? '未' : fmtT(r.sum.fullT);
     const t2r0 = r.sum.t2Run0 ? `${r.sum.t2Run0.ok ? 'OK' : 'NG'}(中央値${r.sum.t2Run0.med.toFixed(2)})` : '-';
