@@ -11998,7 +11998,7 @@ const PERK_FORMULA = {
   huntingCore: "毎秒生産 ×(1 + その周回の撃破数 × 0.18×Lv)（撃破1体ごとに +18%×Lv）。",
   brandHunt: "所持しているタップ系設備の数が多いほど、モンスターへのダメージが上がる。",
   deepPursuit: "モンスターの出現が速くHPも上がるが、報酬Lvも増えやすくなる（Lvごとに強まる）。",
-  goldenBeastMutation: "金ブースト中に撃破すると、確率 1 − e^(−(0.5 + 0.1×Lv)) で報酬Lv+1（Lvが高いほど確率の上がりは緩やか）。"
+  goldenBeastMutation: "金ブースト中に撃破すると、確率 1 − e^(−(0.9 + 0.18×Lv)) で報酬Lv+1（Lvが高いほど確率の上がりは緩やか）。"
 };
 
 function codexMonsterRewardHtml() {
@@ -15061,7 +15061,7 @@ function defeatMonster(id) {
   let message = focusLv > 0 ? "狩猟集中成功：報酬Lv+1" : "撃破";
 
   if (mutationLv > 0 && goldenBoostActive()) {
-    const chance = 1 - Math.exp(-(0.5 + mutationLv * 0.1));
+    const chance = 1 - Math.exp(-(0.9 + mutationLv * 0.18)); // 0.5/0.1→0.9/0.18(sim同期2026-07-11 ③)
 
     if (Math.random() < chance) {
       state.nextRewardCountBonus += 1;
