@@ -388,7 +388,7 @@ module.exports = {
     eqFx: { whiskPerLv: 0.15, mittPerLv: 0.12, pressPerLv: 0.04, almanacDmgPerLv: 0.15, almanacDropPerLv: 0.5, almanacHuntPerLv: 0.12, flaskPerLv: 0.10, compassDropPerLv: 0.05, trayPerLv: 0.06 }, // mittPerLv=断熱オーブン手袋: オーブン生産×(1+0.12×Lv)(焼き加減廃止で再係留・mittCpsPerLvは統合削除) / almanacDrop/Hunt=図鑑の再係留(2026-07-11: 研究インフレでダメージ飽和=一撃のため図鑑の限界価値ゼロ(⑮の2比1.000実測)→素材+0.5/Lv(旧floor(Lv/2)はLv1で0)+討伐直送×(1+0.12Lv)を追加)
     // 注文ボード(§19: 同時1件・間隔1800×0.85^転生回数・制限240+4√経過秒・必要量/報酬は現在値に相対)
     orders: { intervalBase: 1800, intervalDecay: 0.85, limitBase: 240, limitSqrt: 4,
-      needProd: 0.25, needClick: 0.5, needHunt: 0.6, rewardCookie: 240, rewardBoostMul: 2, rewardBoostSec: 120,
+      needProd: 0.25, needClick: 0.5, needHunt: 0.6, rewardCookie: 300, rewardBoostMul: 2, rewardBoostSec: 120,
       rewardMatSet: 80, rewardFill: 1.25, rewardItems: 4 }
       // rewardCookie 50→0.3(2026-07-11: 基準をcps→直近稼ぎ率EMA(時定数90秒)へ変更。cps基準は設備生産が
       // 収入の数%しかない方針で誤差(㉙比1.009実測)・周回平均基準は指数成長で終盤レートの数百分の一(比1.021実測)。

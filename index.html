@@ -7893,22 +7893,22 @@ function orderTimeLimitMs() {
   return (240 + 4 * Math.sqrt(Math.max(0, state.totalPlaySec || 0))) * 1000;
 }
 
-// 注文報酬cookie(sim同期2026-07-11 確定形): 「今この瞬間のペース×240秒ぶん」を一括で貰う。
+// 注文報酬cookie(sim同期2026-07-11 確定形): 「今この瞬間のペース×300秒ぶん」を一括で貰う。
 // 基準=直近1秒の実獲得(金ブースト・討伐・タップ込みの実フロー)。cps基準や平滑化した平均は、
 // 周回終盤の急成長時に瞬間値の数十分の一へ潰れて報酬が誤差になるため(ブースト報酬と同じ瞬間フロー基準)。
 function orderCookieReward(limitMs) {
   const rate = Decimal.max(D(Math.max(1, currentCps())), state.lastSecondEarn || D(0));
-  return rate.mul(240);
+  return rate.mul(300);
 }
 
 const ORDER_DEFS = [
-  { id: "ovenOrder", name: "追加焼成", target: "buyUpgrade", targetId: "oven", unit: "個", desc: "オーブンを増やす", rewardName: "クッキー(今のペース×240秒ぶん)" },
+  { id: "ovenOrder", name: "追加焼成", target: "buyUpgrade", targetId: "oven", unit: "個", desc: "オーブンを増やす", rewardName: "クッキー(今のペース×300秒ぶん)" },
   { id: "monsterOrder", name: "討伐依頼", target: "monster", unit: "体", desc: "モンスターを倒す", rewardName: "素材セット" },
   { id: "goldenOrder", name: "金粉納品", target: "golden", unit: "回", desc: "金クッキーを取る", rewardName: "毎秒生産×2(120秒)" },
   { id: "quotaOrder", name: "安定焼成", target: "quotaHold", unit: "秒", desc: "ノルマ達成状態を維持する", rewardName: "毎秒生産×2(120秒)" },
   { id: "researchOrder", name: "研究依頼", target: "buyResearch", unit: "件", desc: "研究を買う", rewardName: "毎秒生産×2(120秒)" },
   { id: "spiceOrder", name: "香料仕入れ", target: "buyUpgrade", targetId: "spiceRack", unit: "個", desc: "香料棚を増やす", rewardName: "素材セット" },
-  { id: "clickOrder", name: "手ごね依頼", target: "click", unit: "回", desc: "クッキーをタップする", rewardName: "クッキー(今のペース×240秒ぶん)" }
+  { id: "clickOrder", name: "手ごね依頼", target: "click", unit: "回", desc: "クッキーをタップする", rewardName: "クッキー(今のペース×300秒ぶん)" }
 ];
 
 function orderDef(id) {
@@ -8015,8 +8015,8 @@ function orderProgressRatio(order) {
 
 function orderRewardText(order) {
   const def = orderDef(order.id);
-  if (def.id === "ovenOrder" || def.id === "clickOrder") return `クッキー +${fmt(orderCookieReward(order.limitMs))}(今のペース×240秒ぶん・達成時に再計算)`;
-  if (def.id === "monsterOrder" || def.id === "spiceOrder") return workshopTabUnlocked() ? "作りたい装備の不足素材を補充(不足分×1.25・最大4種)" : `クッキー +${fmt(orderCookieReward(order.limitMs))}(今のペース×240秒ぶん・達成時に再計算)`;
+  if (def.id === "ovenOrder" || def.id === "clickOrder") return `クッキー +${fmt(orderCookieReward(order.limitMs))}(今のペース×300秒ぶん・達成時に再計算)`;
+  if (def.id === "monsterOrder" || def.id === "spiceOrder") return workshopTabUnlocked() ? "作りたい装備の不足素材を補充(不足分×1.25・最大4種)" : `クッキー +${fmt(orderCookieReward(order.limitMs))}(今のペース×300秒ぶん・達成時に再計算)`;
   return "毎秒生産 x2(120秒)";
 }
 
@@ -8039,7 +8039,7 @@ function orderSpiceMultiplier() {
   return Date.now() < (state.orderTempSpiceUntil || 0) ? Math.max(1, state.orderTempSpiceMultiplier || 1) : 1;
 }
 
-// v4 §19: 報酬は相対型のみ — クッキー(今のペース×240秒)/素材セット(不足補充×1.25)/毎秒生産×2(120秒)
+// v4 §19: 報酬は相対型のみ — クッキー(今のペース×300秒)/素材セット(不足補充×1.25)/毎秒生産×2(120秒)
 function applyOrderReward(order) {
   const def = orderDef(order.id);
   if (!state.codex || typeof state.codex !== "object") state.codex = {};

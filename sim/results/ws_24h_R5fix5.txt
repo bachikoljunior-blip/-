@@ -10,3 +10,12 @@
   OK 装備:ovenMitt              S4 中央値比=1.152 (n=10)
   OK 装備:pressExtractor        S3 中央値比=300.694 (n=10)
   OK 装備:monsterAlmanac        S4 中央値比=10.849 (n=10)
+  OK 装備:stillFlask            S3 中央値比=1.635 (n=10)
+  OK 装備:dimensionCompass      S3 中央値比=1.080 (n=10)
+  OK 装備:masterTray            S3 中央値比=10.036 (n=10)
+⑮の2 合計 14/14
+㉙ 注文ボードの報酬(枝分かれ比べ・稼ぎ比≥1.2)
+  OK 注文報酬:cookie              S1 中央値比=1.209 (n=9)
+  OK 注文報酬:materials           S9 中央値比=1.379 (n=10)
+  OK 注文報酬:boost               S7 中央値比=1.559 (n=10)
+㉙ 合計 3/3
