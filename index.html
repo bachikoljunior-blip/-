@@ -14888,11 +14888,11 @@ function defeatMonster(id) {
   const dropText = grantMonsterDrops(defeatedTypeId, defeatedLevel, Boolean(mon.overkill));
   if (dropText) message += ` / ${dropText}`;
 
-  // 討伐連鎖: 2連鎖以上のときだけ表示(全生産に効いていることが分かるように)。
-  // クッキーの上あたりにも数秒間出す(2026-07-11 ユーザー指示)
+  // 討伐連鎖: 2連鎖以上のときだけトーストに追記。
+  // クッキー上のチェイン表示は、報酬モーダルの裏で消えてしまわないよう
+  // 「報酬を選択した後」に出す(chooseReward側で表示。2026-07-11 ユーザー指示)
   if (chainCount() >= 2) {
     message += ` / 連鎖 ×${chainCount()}(全生産+${Math.round(CHAIN_PROD_COEF * chainCount() * 100)}%)`;
-    showChainIndicator();
   }
 
   playSound("golden");
@@ -15230,6 +15230,9 @@ function chooseReward(choice) {
 
   $("rewardModal").style.display = "none";
   finishQuotaPause();
+
+  // 討伐連鎖のチェイン表示は報酬選択後に出す(モーダルの裏で3秒消化されるのを防ぐ)
+  if (chainCount() >= 2) showChainIndicator();
 
   playSound("reward");
   showMessage(`報酬を獲得：${choice.name} +${gained}${affMul !== 1 ? `(相性×${affMul})` : ""}`);
