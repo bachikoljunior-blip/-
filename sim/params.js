@@ -12,7 +12,7 @@ module.exports = {
   //   実値: 第0回=5,000,000 / 第1回=10^7 / 第2回=10^8 / 第3回=10^9 …(costExp0=6,costStep=1)。
   //   firstCost だけ500万の固定値で、以降はきっちり10のべき乗ぶん増える(前回より必ず大)。costStep は調整項目。
   //   ※旧・第0回コスト再算定ルール(costExp0=floor(log10(最小所持)))は本仕様変更で上書き=初回は500万固定。
-  prestige: { pA: 0, pD1: 200000, pB: 11, pD2: 10000, pG: 0.075, pMin: 10000, firstCost: 5000000, costExp0: 6, costStep: 1 },
+  prestige: { pA: 0, pD1: 200000, pB: 11, pD2: 10000, pG: 0.075, pMin: 10000, firstCost: 5000000, costCpsMul: 500, costExp0: 6, costStep: 1 },
 
   // ---- スキルコスト: 手設計順の等比ラダー cost_k = C0 * rho^k ----
   // 2026-07-06 第8次: ⑲=隣接ノード比≤10倍(edgeCap)。rho=1.57(1ラング=クッキー1.57^(1/0.075)≈2.6桁)。
@@ -375,10 +375,10 @@ module.exports = {
       { id: 'masterTray',       cost: { flour: 10, cacao: 8 } }        // 名匠の天板: 全生産×(1+0.06Lv)(2026-07-10ユーザー指示で追加)
     ],
     // almanacDmgPerLv 0.06→0.08(2026-07-10: masterTray追加の経済移動で⑮の2が1.049に割れたためマージン)
-    eqFx: { whiskPerLv: 0.15, mittPerLv: 0.12, pressPerLv: 0.04, almanacDmgPerLv: 0.10, flaskPerLv: 0.10, compassDropPerLv: 0.05, trayPerLv: 0.06 }, // mittPerLv=断熱オーブン手袋: オーブン生産×(1+0.12×Lv)(焼き加減廃止で再係留・mittCpsPerLvは統合削除)
+    eqFx: { whiskPerLv: 0.15, mittPerLv: 0.12, pressPerLv: 0.04, almanacDmgPerLv: 0.15, flaskPerLv: 0.10, compassDropPerLv: 0.05, trayPerLv: 0.06 }, // mittPerLv=断熱オーブン手袋: オーブン生産×(1+0.12×Lv)(焼き加減廃止で再係留・mittCpsPerLvは統合削除)
     // 注文ボード(§19: 同時1件・間隔1800×0.85^転生回数・制限240+4√経過秒・必要量/報酬は現在値に相対)
     orders: { intervalBase: 1800, intervalDecay: 0.85, limitBase: 240, limitSqrt: 4,
-      needProd: 0.25, needClick: 0.5, needHunt: 0.6, rewardCookie: 25, rewardBoostMul: 2, rewardBoostSec: 120,
+      needProd: 0.25, needClick: 0.5, needHunt: 0.6, rewardCookie: 50, rewardBoostMul: 2, rewardBoostSec: 120,
       rewardMatSet: 80, rewardFill: 1.0, rewardItems: 3 }
   }
 };

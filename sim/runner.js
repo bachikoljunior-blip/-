@@ -106,9 +106,9 @@ function summarize(sim) {
   let failOk = 0;
   for (const r of full) if (r.quotaFailAt != null && r.quotaFailAt < r.duration) failOk++;
   // T3b(維持時間半分): ノルマを維持できていた時間 ≥ その周回の長さの半分
-  // T3b(2026-07-11 ユーザー決定): 早いプレイ方針のみ判定・しきい値=周回時間の85%以上
+  // T3b(2026-07-11 ユーザー決定・改2): 早いプレイ方針のみ判定・維持時間が周回時間の±20%以内(実質≥80%)
   let t3bOk = 0;
-  for (const r of full) if (r.quotaHold >= 0.85 * r.duration) t3bOk++;
+  for (const r of full) if (r.quotaHold >= 0.8 * r.duration) t3bOk++;
   const durs = full.map(r => r.duration).sort((a, b) => a - b);
   const medianDur = durs.length ? durs[durs.length >> 1] : Infinity;
   // 参考指標(合否に使わない): 旧⑥解放間隔の帯域適合
@@ -160,7 +160,7 @@ function printBaseline(results) {
   // 「早い」の線引き【仮】: 方針ごとの周回時間の中央値が、全方針の中央値以下のもの。遅い方針は(対象外)。
   const meds = results.map(r => r.sum.medianDur).filter(x => Number.isFinite(x)).sort((a, b) => a - b);
   const cutoff = meds.length ? meds[meds.length >> 1] : Infinity;
-  console.log('ID  名称              周回数 総クッキー   ④x100  ⑤PT1-100 T1周回時間 T2解放≥1 T2第0回 T3a未達先 T3b維持85%(早い方針のみ) ⑭PT≥1 ㉑存在感 全解放 | 参考: 旧⑥ペース 旧㉒単調増');
+  console.log('ID  名称              周回数 総クッキー   ④x100  ⑤PT1-100 T1周回時間 T2解放≥1 T2第0回 T3a未達先 T3b維持±20%(早い方針) ⑭PT≥1 ㉑存在感 全解放 | 参考: 旧⑥ペース 旧㉒単調増');
   for (const r of results) {
     const fullT = r.sum.fullT === Infinity ? '未' : fmtT(r.sum.fullT);
     const t2r0 = r.sum.t2Run0 ? `${r.sum.t2Run0.ok ? 'OK' : 'NG'}(中央値${r.sum.t2Run0.med.toFixed(2)})` : '-';

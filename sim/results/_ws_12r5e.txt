@@ -1,0 +1,6 @@
+⑮の2 工房の制作項目(枝分かれ比べ・中央値≥1.05)
+  OK 料理:butterCookie          S6 中央値比=84.391 (n=10)
+  OK 料理:chocoFondant          S2 中央値比=152.355 (n=10)
+  OK 料理:mintIce               S6 中央値比=2.783 (n=10)
+  OK 料理:hunterStew            S6 中央値比=36.227 (n=10)
+  OK 料理:frostCake             S8 中央値比=1.180 (n=10)

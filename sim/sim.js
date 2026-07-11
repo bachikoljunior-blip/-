@@ -371,7 +371,7 @@ function newSim(strategy, opts) {
     opt: Object.assign({ disableResearch: null, disableReward: null, disableStage: null, disableUpgrade: null, disableAffinity: false, idleTiming: null, trackGain: false, trackTickPower: false, hours: 100 }, opts || {}),
     t: 0,                       // 総経過秒
     // 永続
-    prestige: 0, prestigeTotal: 0, prestigeRuns: 0, totalCookies: 0,
+    prestige: 0, prestigeTotal: 0, prestigeRuns: 0, totalCookies: 0, lastPrestigeCps: 0,
     prevMaxStage: 0,            // 提案8: 前回周回の最高到達層(=再登坂の天井)。層の試練を新規開拓層基準へ相対化するのに使う。層数の表示・カウント(run.maxStage)は絶対累積のまま不変更。
     prevDuration: 0,            // 提案9(到達連動ノルマ): 前回周回の長さ(秒)。未達判定の進行比 ρ=経過秒/前回長 の分母。
     skills: {},
@@ -2036,13 +2036,15 @@ function cheapestUnownedSkillCost(sim) {
 // 必要量 = 10^(costExp0 + costStep×これまでの転生回数)。prestigeRuns は転生完了ごとに+1されるので、
 // 次の転生の必要量は毎回きっちり costStep 桁ぶん大きくなる。
 function prestigeCostOf(sim) {
-  // 転生のクッキー必要量(2026-07-09 ユーザー・ゲーム仕様変更): 初回転生=500万(firstCost)、
-  // 以降は10のべき乗で増加(10^7, 10^8, 10^9…)。初回だけ500万の固定値、2回目以降は 10^(costExp0+costStep×回数)。
+  // 転生のクッキー必要量(2026-07-11 ユーザー仕様変更): 初回転生=500万(firstCost)。
+  // 2回目以降=「前回転生した時点の毎秒生産 × costCpsMul(500)」を10のべき乗に切り捨て
+  // (10のべき乗ルールを保ったまま、プレイヤーの実ペースに追随する動的コスト)。
   const pc = P.prestige || {};
   const runs = sim.prestigeRuns || 0;
   if (runs === 0) return pc.firstCost != null ? pc.firstCost : 5e6;
-  const exp = (pc.costExp0 != null ? pc.costExp0 : 6) + (pc.costStep != null ? pc.costStep : 1) * runs;
-  return Math.pow(10, exp);
+  const base = Math.max(1, (sim.lastPrestigeCps || 0) * (pc.costCpsMul != null ? pc.costCpsMul : 500));
+  const cost = Math.pow(10, Math.floor(Math.log10(base)));
+  return Math.max(pc.firstCost != null ? pc.firstCost : 5e6, cost);
 }
 function doPrestige(sim) {
   const r = sim.run;
@@ -2053,6 +2055,7 @@ function doPrestige(sim) {
   if (gain <= 0) return false;
   const nextCostAt = cheapestUnownedSkillCost(sim); // ⑭: 購入前の次スキル最安
   const onHandCookies = r.cookies; // 転生時の所持クッキー(コスト控除前・第0回コスト再算定用=diag_prestige0.js)
+  sim.lastPrestigeCps = computeProd(sim).cps; // 転生コスト式(2026-07-11): 次回コスト=この時点の毎秒×500の10べき切捨て
   r.cookies -= cost;
   sim.prestige += gain;
   sim.prestigeTotal += gain;
@@ -2389,7 +2392,7 @@ function takeSnapshot(sim) {
     t: sim.t, prestige: sim.prestige, prestigeTotal: sim.prestigeTotal,
     prestigeRuns: sim.prestigeRuns, totalCookies: sim.totalCookies,
     prevMaxStage: sim.prevMaxStage, prevDuration: sim.prevDuration,
-    everMs: sim.everMs || {},
+    everMs: sim.everMs || {}, lastPrestigeCps: sim.lastPrestigeCps || 0,
     skills: sim.skills, rotIdx: sim.rotIdx, upRotIdx: sim.upRotIdx, goldenAlt: sim.goldenAlt,
     firstResearchBuy: sim.firstResearchBuy, firstPerk: sim.firstPerk, firstStageBuy: sim.firstStageBuy,
     ws: sim.ws,
@@ -2405,7 +2408,7 @@ function replayRun(strategy, snap, opts, capSec) {
   sim.prestigeRuns = s.prestigeRuns; sim.totalCookies = s.totalCookies;
   sim.prevMaxStage = s.prevMaxStage || 0;
   sim.prevDuration = s.prevDuration || 0;
-  sim.everMs = s.everMs || {};
+  sim.everMs = s.everMs || {}; sim.lastPrestigeCps = s.lastPrestigeCps || 0;
   sim.skills = s.skills; sim.rotIdx = s.rotIdx; sim.upRotIdx = s.upRotIdx; sim.goldenAlt = s.goldenAlt;
   sim.firstResearchBuy = s.firstResearchBuy; sim.firstPerk = s.firstPerk; sim.firstStageBuy = s.firstStageBuy;
   if (s.ws) sim.ws = s.ws;
