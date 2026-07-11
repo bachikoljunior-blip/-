@@ -1,0 +1,25 @@
+=== 期待値方式(36h・各回の稼ぎ力の持ち上げ) ===
+① 研究(各回≥1.2) 13/13
+  OK res:fingerTechnique          S2 min=1.45
+  OK res:grandmaCrowd             S7 min=1.26
+  OK res:ovenBatch                S10 min=1.24
+  OK res:factoryNetwork           S2 min=1.90
+  OK res:spiceBlend               S3 min=6.13
+  OK res:portalNetwork            S8 min=1.27
+  OK res:bankClickDividend        S2 min=1.26
+  OK res:moonGlobalYeast          S7 min=40.70
+  OK res:portalGlobalFold         S3 min=7.49
+  OK res:galaxyAssembly           S1 min=1.25
+  OK res:blackHoleCompression     S10 min=5.00
+  OK res:quantumProofing          S1 min=1.25
+  OK res:antimatterRecipe         S8 min=920981207397.43
+③-a 報酬instant(中央値≥1.1・2026-07-08) 8/8
+  OK rw:goldenRate                S4 中央値=5.83
+  OK rw:goldenPower               S7 中央値=1.33
+  OK rw:goldenAmount              S9 中央値=8.12
+  OK rw:monsterRate               S9 中央値=1.36
+  OK rw:goldenTarget              S2 中央値=2.25
+  OK rw:goldenFirstHit            S4 中央値=1.53
+  OK rw:beastHeatFerment          S9 中央値=1505.60
+  OK rw:huntingCore               S9 中央値=1243.75
+③ 報酬utility軸(短い枝分かれ比べ・同一状態から1周回ぶん・総クッキー比の中央値 ≥1.1)
