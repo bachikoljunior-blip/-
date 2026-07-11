@@ -378,7 +378,7 @@ module.exports = {
     eqFx: { whiskPerLv: 0.15, mittPerLv: 0.12, pressPerLv: 0.04, almanacDmgPerLv: 0.10, flaskPerLv: 0.10, compassDropPerLv: 0.05, trayPerLv: 0.06 }, // mittPerLv=断熱オーブン手袋: オーブン生産×(1+0.12×Lv)(焼き加減廃止で再係留・mittCpsPerLvは統合削除)
     // 注文ボード(§19: 同時1件・間隔1800×0.85^転生回数・制限240+4√経過秒・必要量/報酬は現在値に相対)
     orders: { intervalBase: 1800, intervalDecay: 0.85, limitBase: 240, limitSqrt: 4,
-      needProd: 0.25, needClick: 0.5, needHunt: 0.6, rewardCookie: 15, rewardBoostMul: 2, rewardBoostSec: 120,
-      rewardMatSet: 50, rewardFill: 1.0, rewardItems: 3 }
+      needProd: 0.25, needClick: 0.5, needHunt: 0.6, rewardCookie: 25, rewardBoostMul: 2, rewardBoostSec: 120,
+      rewardMatSet: 80, rewardFill: 1.0, rewardItems: 3 }
   }
 };
