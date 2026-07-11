@@ -705,10 +705,11 @@ function wsOrderTick(sim, prod) {
       const rkinds = ['cookie', 'materials', 'boost'];
       const rk = rkinds[ws.orderRewardRot % 3]; ws.orderRewardRot++;
       if (rk === 'cookie' && !wsOff(sim, 'order:cookie')) {
-        // 報酬=所持クッキー×rewardCookie(2026-07-11 確定形): 収入レート基準(cps→平均→EMA)はどれも
-        // 「周回中盤の達成だと終盤レートの数百分の一の価値」に潰れる(㉙比1.009→1.021→1.15止まり実測)。
-        // 富に比例した注入は指数成長下で達成タイミングに依らず複利で残る(boost×2が通るのと同じ時間不変性)。
-        earn(sim, Math.max(prod.cps * 60, (sim.run.cookies || 0) * O.rewardCookie));
+        // 報酬=「今この瞬間のペース×rewardCookie秒ぶん」(2026-07-11 確定形)。基準の変遷:
+        // cps基準1.009→周回平均1.021→EMA基準1.08-1.15(超成長でEMAが瞬間値の1/30に遅延)→
+        // 所持×45% 1.028(所持は使い切りで薄い)→直近1秒の実獲得×秒数(boost報酬と同じ瞬間フロー基準)。
+        const rate = Math.max(prod.cps, sim.run.lastTickEarn || 0);
+        earn(sim, rate * O.rewardCookie);
       }
       else if (rk === 'materials' && !wsOff(sim, 'order:materials')) {
         // 素材セット=御用聞き型: 次に作りたい装備(方針の好み順で最初に作れない物)の不足分を補充する。
@@ -2229,6 +2230,9 @@ function advanceTick(sim, strategy) {
       r0._emaLastCookies = r0.runCookies;
       const A = Math.exp(-1 / 90);
       r0.earnEma = (r0.earnEma || 0) * A + Math.max(0, dEarn) * (1 - A);
+      // 直近1秒の実獲得(=瞬間ペース)。末期の超成長(1桁/6秒)ではEMAが瞬間値の1/30以下に遅延するため、
+      // 注文報酬cookieの基準はこちらを使う(2026-07-11 ㉙実測: EMA基準は比1.08-1.15止まり)
+      r0.lastTickEarn = Math.max(0, dEarn);
     }
     // ⑬タイミング(B案・2026-07-09 ユーザー承認): 同一トラジェクトリの per-tick 稼ぎ力の幾何平均(=時間平均の稼ぎ率)を
     // 記録。opt-timing/idle-timing の2本でこれを比べると、per-run 効率(転生回数変動でカオス化)を使わず、

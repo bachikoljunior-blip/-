@@ -287,7 +287,10 @@ module.exports = {
   // 目的: 周回終盤の駆け込み買い(谷)を引き伸ばしつつ、待てば必ず買える=16時間の壁を作らない。
   // perBuy 0.25→0.45(2026-07-10 第12次R: T1=短周回の谷対策。S3 17→26/47・S1 30→46/47・S8 31→33/45、
   // S10 28-31維持。halfSecを伸ばす案はS10=30秒間隔の放置型の周回が2時間上限を超えて崩れるため不採用=グリッド実測)
-  upSurge: { perBuy: 0.5, halfSec: 75 },
+  upSurge: { perBuy: 0.9, halfSec: 120 }, // 0.5/75→0.9/120(2026-07-11 T1再ペーシング): 研究200本経済の末期成長は
+  // 1桁/6秒の購入テンポ律速=転生コスト・PT梯子の桁レバーが無力(+3桁で周回時間が1秒も動かないと実測)。
+  // まとめ買い割増こそが成長率レバー。掃引: 0.5/75(S3 15/48・S1 33/48)→0.8/75(28・47)→0.9/120(S3 46/48・S1 48/48)。
+  // 第0回はS3 3982s・S1 2715s=2時間帯内。
 
   // ---- アップグレードコスト式 ----  cost = coef * base^basePow * growth^(owned*ownPow)
   // 2026-07-06 第8次: 新帯域(周回25〜90分)へ向けownPow 0.25→0.27(再登坂・開拓の全体減速)、
@@ -385,7 +388,7 @@ module.exports = {
     eqFx: { whiskPerLv: 0.15, mittPerLv: 0.12, pressPerLv: 0.04, almanacDmgPerLv: 0.15, almanacDropPerLv: 0.5, almanacHuntPerLv: 0.12, flaskPerLv: 0.10, compassDropPerLv: 0.05, trayPerLv: 0.06 }, // mittPerLv=断熱オーブン手袋: オーブン生産×(1+0.12×Lv)(焼き加減廃止で再係留・mittCpsPerLvは統合削除) / almanacDrop/Hunt=図鑑の再係留(2026-07-11: 研究インフレでダメージ飽和=一撃のため図鑑の限界価値ゼロ(⑮の2比1.000実測)→素材+0.5/Lv(旧floor(Lv/2)はLv1で0)+討伐直送×(1+0.12Lv)を追加)
     // 注文ボード(§19: 同時1件・間隔1800×0.85^転生回数・制限240+4√経過秒・必要量/報酬は現在値に相対)
     orders: { intervalBase: 1800, intervalDecay: 0.85, limitBase: 240, limitSqrt: 4,
-      needProd: 0.25, needClick: 0.5, needHunt: 0.6, rewardCookie: 0.45, rewardBoostMul: 2, rewardBoostSec: 120,
+      needProd: 0.25, needClick: 0.5, needHunt: 0.6, rewardCookie: 240, rewardBoostMul: 2, rewardBoostSec: 120,
       rewardMatSet: 80, rewardFill: 1.25, rewardItems: 4 }
       // rewardCookie 50→0.3(2026-07-11: 基準をcps→直近稼ぎ率EMA(時定数90秒)へ変更。cps基準は設備生産が
       // 収入の数%しかない方針で誤差(㉙比1.009実測)・周回平均基準は指数成長で終盤レートの数百分の一(比1.021実測)。
