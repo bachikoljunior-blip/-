@@ -1,0 +1,21 @@
+⑮の2 工房の制作項目(枝分かれ比べ・中央値≥1.05)
+  OK 料理:butterCookie          S3 中央値比=142.549 (n=10)
+  NG 料理:chocoFondant          どの方針も未使用
+  OK 料理:mintIce               S3 中央値比=3.253 (n=10)
+  OK 料理:hunterStew            S4 中央値比=2.214 (n=9)
+  NG 料理:frostCake             S5 中央値比=1.019 (n=6)
+  OK 料理:stardustParfait       S7 中央値比=16.385 (n=10)
+  OK 料理:voidTart              S4 中央値比=2.650 (n=10)
+  OK 装備:goldenWhisk           S4 中央値比=24.811 (n=10)
+  OK 装備:ovenMitt              S4 中央値比=3.931 (n=10)
+  OK 装備:pressExtractor        S4 中央値比=179.856 (n=10)
+  OK 装備:monsterAlmanac        S9 中央値比=1.292 (n=10)
+  OK 装備:stillFlask            S3 中央値比=1.127 (n=10)
+  OK 装備:dimensionCompass      S9 中央値比=1.336 (n=10)
+  OK 装備:masterTray            S4 中央値比=69.363 (n=10)
+⑮の2 合計 12/14
+㉙ 注文ボードの報酬(枝分かれ比べ・稼ぎ比≥1.2)
+  OK 注文報酬:cookie              S5 中央値比=1.695 (n=3)
+  OK 注文報酬:materials           S3 中央値比=1.366 (n=10)
+  OK 注文報酬:boost               S3 中央値比=1.510 (n=10)
+㉙ 合計 3/3

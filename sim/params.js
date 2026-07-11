@@ -307,7 +307,7 @@ module.exports = {
     factoryHiKind: 0.15, factoryStageCoef: 0.0012,
     matureRate: 0.006, aromaDur: 12, spiceStageCoef: 0.0015,
     huntExtendSec: 40, huntStageCoef: 0.0008,
-    bankIntRate: 0.004, bankIntCapCps: 8.0, bankCapStageCoef: 0.08,
+    bankIntRate: 0.005, bankIntCapCps: 8.0, bankCapStageCoef: 0.08,
     moonMarginDiv: 10, moonResCount: 0.05,
     foldKillCoef: 0.002, foldStageCoef: 0.001,
     galaxyBonusCoef: 0.05, galaxySat: 120, galaxyStageCoef: 0.0008,
@@ -350,7 +350,7 @@ module.exports = {
     cookDur: 600, cookMax: 3, costMul: 4, // costMul: 素材が豊富すぎると料理が常時100%稼働になり、蒸留フラスコ(持続延長)と注文の素材セット報酬が無価値化(⑮の2/㉙で1.00=実測)。コスト増で稼働率<100%の周回を作る
     recipes: [
       { id: 'butterCookie',    cost: { butter: 5, flour: 3 } },        // 全生産×(1+0.02×最高層)
-      { id: 'chocoFondant',    cost: { cacao: 6, butter: 4 } },        // クリック生産連動係数×2
+      { id: 'chocoFondant',    cost: { cacao: 4, butter: 3 } },        // クリック生産連動係数×2
       { id: 'mintIce',         cost: { mint: 6, frostSugar: 3 } },     // 金出現間隔×0.75
       { id: 'hunterStew',      cost: { ironShard: 2, spice: 4 } },     // モンスター間隔×0.75・ダメージ×1.5
       { id: 'frostCake',       cost: { frostSugar: 5, silentCore: 1 } }, // ノルマゲージ増加×0.85
@@ -371,7 +371,7 @@ module.exports = {
       { id: 'masterTray',       cost: { flour: 10, cacao: 8 } }        // 名匠の天板: 全生産×(1+0.06Lv)(2026-07-10ユーザー指示で追加)
     ],
     // almanacDmgPerLv 0.06→0.08(2026-07-10: masterTray追加の経済移動で⑮の2が1.049に割れたためマージン)
-    eqFx: { whiskPerLv: 0.15, mittPerLv: 0.12, pressPerLv: 0.04, almanacDmgPerLv: 0.08, flaskPerLv: 0.10, compassDropPerLv: 0.05, trayPerLv: 0.06 }, // mittPerLv=断熱オーブン手袋: オーブン生産×(1+0.12×Lv)(焼き加減廃止で再係留・mittCpsPerLvは統合削除)
+    eqFx: { whiskPerLv: 0.15, mittPerLv: 0.12, pressPerLv: 0.04, almanacDmgPerLv: 0.10, flaskPerLv: 0.10, compassDropPerLv: 0.05, trayPerLv: 0.06 }, // mittPerLv=断熱オーブン手袋: オーブン生産×(1+0.12×Lv)(焼き加減廃止で再係留・mittCpsPerLvは統合削除)
     // 注文ボード(§19: 同時1件・間隔1800×0.85^転生回数・制限240+4√経過秒・必要量/報酬は現在値に相対)
     orders: { intervalBase: 1800, intervalDecay: 0.85, limitBase: 240, limitSqrt: 4,
       needProd: 0.25, needClick: 0.5, needHunt: 0.6, rewardCookie: 10, rewardBoostMul: 2, rewardBoostSec: 120,
