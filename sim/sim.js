@@ -939,7 +939,7 @@ function computeProd(sim) {
   const msC = (r.ms && r.ms.click) || 1; // マイルストーン研究(第12次R5): タップ系
   const msA = (r.ms && r.ms.all) || 1;   // 同: 全生産系
   const clickSkillMul = (1 + skillEffect(sim, 'click') + allSkill + (policyIs(sim, 'click') ? 0.12 : 0)) * msC * msA;
-  const cpsSkillMul = (1 + skillEffect(sim, 'cps') + allSkill + (policyIs(sim, 'bake') ? 0.12 : 0)) * msA;
+  const cpsSkillMul = (1 + skillEffect(sim, 'cps') + allSkill + (policyIs(sim, 'bake') ? 0.12 : 0)) * msA * ((r.ms && r.ms.cps) || 1);
   const prestigeMul = 1 + allSkill;
 
   // 研究: グローバル
@@ -1384,48 +1384,75 @@ function goldenBoostDurationMs(sim) {
 // コスト=解放時点の毎秒生産×msCostSec秒ぶん(常に手が届く=全プレイヤーが即買いする安さのため自動購入でモデル化)。
 // 効果は正の単純倍率のみ(共鳴型は禁止のまま)。周回リセットで買い直し(実績系トリガは累計なので次周回もすぐ出る)。
 const MILESTONE_RESEARCH = (() => {
+  // 第12次R5続き4(2026-07-11 ユーザー指示「第0回研究とスキル解放研究で100ずつぐらい、コストもばらけさせて」):
+  // 実績系(設備数・周回内実績)≈94本+スキル解放研究≈112本の生成器。コストは「解放時点の毎秒生産×costSec秒ぶん」で
+  // 20秒(即買い)〜1500秒(貯金目標)にばらける。効果はすべて永続の単純倍率(腐り判定対象外=ユーザー明言)。
   const list = [];
-  const cpsUps = UPGRADES.filter(u => u.type === 'cps');
-  for (const u of cpsUps) list.push({ id: 'ms_' + u.id + '_25', trig: sim => (sim.run.upgrades[u.id] || 0) >= 25, fx: { up: { [u.id]: 2 } } });
-  for (const id of ['grandma', 'oven', 'factory', 'bank', 'spiceRack']) list.push({ id: 'ms_' + id + '_100', trig: sim => (sim.run.upgrades[id] || 0) >= 100, fx: { up: { [id]: 3 } } });
-  list.push({ id: 'ms_finger_25', trig: sim => (sim.run.upgrades.finger || 0) >= 25, fx: { click: 2 } });
-  list.push({ id: 'ms_godFinger_10', trig: sim => (sim.run.upgrades.godFinger || 0) >= 10, fx: { click: 2 } });
-  // 実績系(累計・転生を跨ぐ)
-  // 実績トリガは「その周回内」のカウント(2026-07-11 ユーザー指示「実績で解放はその回だけで考えて」)
-  list.push({ id: 'ms_kills_25', trig: sim => (sim.run.msKills || 0) >= 25, fx: { hunt: 1.5 } });
-  list.push({ id: 'ms_kills_100', trig: sim => (sim.run.msKills || 0) >= 100, fx: { hunt: 2 } });
-  list.push({ id: 'ms_golden_10', trig: sim => (sim.run.msGoldens || 0) >= 10, fx: { golden: 1.5 } });
-  list.push({ id: 'ms_golden_50', trig: sim => (sim.run.msGoldens || 0) >= 50, fx: { golden: 2 } });
-  list.push({ id: 'ms_taps_1000', trig: sim => (sim.run.msTaps || 0) >= 1000, fx: { click: 2 } });
-  list.push({ id: 'ms_stage_10', trig: sim => (sim.run.maxStage || 0) >= 10, fx: { all: 1.5 } });
-  list.push({ id: 'ms_stage_50', trig: sim => (sim.run.maxStage || 0) >= 50, fx: { all: 2 } });
-  list.push({ id: 'ms_prestige_5', trig: sim => (sim.prestigeRuns || 0) >= 5, fx: { all: 1.5 } });
-  // モンスター関連(2026-07-11 ユーザー指示「研究はモンスター関連の効果も追加して」)
-  list.push({ id: 'ms_kills_50', trig: sim => (sim.run.msKills || 0) >= 50, fx: { spawn: 0.8 } });   // 群れの気配: 出現間隔×0.8
-  list.push({ id: 'ms_stage_20', trig: sim => (sim.run.maxStage || 0) >= 20, fx: { stay: 1.3 } });   // 足止めの罠: 滞在×1.3
-  list.push({ id: 'ms_kills_200', trig: sim => (sim.run.msKills || 0) >= 200, fx: { hp: 0.7 } });    // 弱点看破: HP×0.7
-  list.push({ id: 'ms_kills_75', trig: sim => (sim.run.msKills || 0) >= 75, fx: { dropAdd: 1 } });   // 戦利品の嗅覚: ドロップ+1
-  // スキル解放系(「スキルでの研究解放もたんと」)
-  const sk = (id, fx) => list.push({ id: 'ms_skill_' + id, trig: sim => !!sim.skills[id], fx });
-  sk('click_amp', { click: 1.5 }); sk('golden_amp', { golden: 1.3 }); sk('monster_amp', { hunt: 1.5 }); sk('auto_amp', { all: 1.3 });
-  sk('click_stall', { click: 1.5 }); sk('monster_peddler', { hunt: 1.5 });
-  sk('workshop_1', { dropAdd: 1 }); sk('order_board', { all: 1.2 });
+  const add = (id, trig, fx, costSec) => list.push({ id, trig, fx, costSec });
+  // --- 実績系(第0回から) ---
+  // 設備の熟練 I〜IV: 10/40/120/300台で その設備の生産×1.5(クリック設備はタップ×1.35)
+  const eqTiers = [[10, 30], [40, 90], [120, 240], [300, 600]];
+  for (const u of UPGRADES) {
+    eqTiers.forEach(([n, cs], ti) => {
+      const fx = u.type === 'click' ? { click: 1.35 } : { up: { [u.id]: 1.5 } };
+      add('ms_' + u.id + '_t' + (ti + 1), sim => (sim.run.upgrades[u.id] || 0) >= n, fx, cs);
+    });
+  }
+  // 討伐実績 8段(周回内): 効果はダメージ/出現/滞在/HP/ドロップのローテ
+  const killTiers = [[10, 20, { hunt: 1.3 }], [25, 40, { spawn: 0.85 }], [50, 80, { stay: 1.2 }], [100, 160, { hunt: 1.3 }],
+    [200, 320, { hp: 0.75 }], [400, 600, { dropAdd: 1 }], [800, 900, { hunt: 1.3 }], [1600, 1200, { stay: 1.2 }]];
+  killTiers.forEach(([n, cs, fx], i) => add('ms_kills_k' + (i + 1), sim => (sim.run.msKills || 0) >= n, fx, cs));
+  // 金クッキー実績 6段(周回内)
+  const goldTiers = [[5, 20], [15, 60], [40, 150], [100, 400], [250, 800], [600, 1500]];
+  goldTiers.forEach(([n, cs], i) => add('ms_golden_g' + (i + 1), sim => (sim.run.msGoldens || 0) >= n, { golden: 1.3 }, cs));
+  // タップ実績 6段(周回内)
+  const tapTiers = [[300, 15], [1000, 40], [3000, 120], [8000, 300], [20000, 700], [50000, 1500]];
+  tapTiers.forEach(([n, cs], i) => add('ms_taps_p' + (i + 1), sim => (sim.run.msTaps || 0) >= n, { click: 1.4 }, cs));
+  // ノルマ層実績 6段(周回内)
+  const stageTiers = [[5, 30], [15, 90], [30, 200], [60, 400], [100, 800], [150, 1500]];
+  stageTiers.forEach(([n, cs], i) => add('ms_stage_s' + (i + 1), sim => (sim.run.maxStage || 0) >= n, { all: 1.15 }, cs));
+  // 転生実績 4段(通算)
+  const prTiers = [[2, 60], [5, 120], [10, 300], [20, 600]];
+  prTiers.forEach(([n, cs], i) => add('ms_prestige_r' + (i + 1), sim => (sim.prestigeRuns || 0) >= n, { all: 1.2 }, cs));
+  // --- スキル解放研究(スキルを取ると出る研究カード) ---
+  // 各スキル1本「応用」+生産系ノードに2本目「奥義」。効果は系統のテーマ・コストは5段のはしごでばらける。
+  const branchFx = id => {
+    if (id.startsWith('click_') || id === 'upgrade_godfinger') return { click: 1.3 };
+    if (id.startsWith('golden_')) return { golden: 1.25 };
+    if (id.startsWith('monster_') || id === 'hunt_analysis' || id.startsWith('unlock_reward_')) return { hunt: 1.3 };
+    if (id.startsWith('auto_') || id.startsWith('upgrade_')) return { cps: 1.3 };
+    if (id.startsWith('economy_') || id === 'order_board') return { cps: 1.2 };
+    if (id.startsWith('research_')) return { all: 1.08 };
+    if (id.startsWith('reward_')) return { hunt: 1.2 };
+    if (id.startsWith('workshop_')) return { dropAdd: 1 };
+    if (id.startsWith('start_') || id === 'offline_1' || id === 'endless_oven') return { all: 1.05 };
+    return { all: 1.1 }; // core/master/その他
+  };
+  const csLadder = [20, 60, 180, 500, 1400];
+  SKILL_NODES.forEach((n, i) => {
+    add('msk_' + n.id, sim => !!sim.skills[n.id], branchFx(n.id), csLadder[i % 5]);
+    const t = Object.keys(branchFx(n.id))[0];
+    if (t === 'click' || t === 'cps' || t === 'golden' || t === 'hunt') {
+      add('msk2_' + n.id, sim => !!sim.skills[n.id], branchFx(n.id), csLadder[(i + 2) % 5] * 3);
+    }
+  });
   return list;
 })();
 // 未購入で条件を満たしたものを自動購入(コスト=cps×msCostSec。安さゆえ全プレイヤー即買いのモデル)
 function tryBuyMilestones(sim, prod) {
   const r = sim.run;
   if (!r.ms) r.ms = { up: {}, click: 1, cps: 1, all: 1, golden: 1, hunt: 1, dropAdd: 0, bought: {} };
-  const costSec = (P.msResearch && P.msResearch.costSec != null) ? P.msResearch.costSec : 30;
   for (const m of MILESTONE_RESEARCH) {
     if (r.ms.bought[m.id]) continue;
     if (!m.trig(sim)) continue;
+    const costSec = m.costSec != null ? m.costSec : ((P.msResearch && P.msResearch.costSec != null) ? P.msResearch.costSec : 30);
     const cost = Math.max(100, (prod ? prod.cps : 0) * costSec);
     if (r.cookies < cost) continue;
     r.cookies -= cost;
     r.ms.bought[m.id] = true;
     if (m.fx.up) for (const k in m.fx.up) r.ms.up[k] = (r.ms.up[k] || 1) * m.fx.up[k];
     if (m.fx.click) r.ms.click *= m.fx.click;
+    if (m.fx.cps) r.ms.cps = (r.ms.cps || 1) * m.fx.cps;
     if (m.fx.all) r.ms.all *= m.fx.all;
     if (m.fx.golden) r.ms.golden *= m.fx.golden;
     if (m.fx.hunt) r.ms.hunt *= m.fx.hunt;

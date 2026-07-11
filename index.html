@@ -6411,7 +6411,7 @@ function freshState() {
     awaitingSkillChoice: false,
     skillChoiceStartCount: 0,
     seenPrestigeUnlockNotice: false,
-    prestigeUnlockedEver: false, // 所持クッキーが初めて500万を超えたら立つ、転生解放のラッチ
+    prestigeUnlockedEver: false, // 所持クッキーが初めて1億を超えたら立つ、転生解放のラッチ
 
     upgrades,
     research,
@@ -7363,40 +7363,69 @@ const RES_EQUIP = {
 // 「第0回から研究を盛り沢山に。効果は永続の単純倍率(後で腐ってもよい)。設備数や実績・スキルで解放」。
 // コストは解放時点の毎秒生産×30秒ぶん(常に手が届く)。転生で買い直し(実績トリガは累計なので次周回もすぐ出る)。
 const MILESTONE_RESEARCH = (() => {
+  // 2026-07-11 ユーザー指示「第0回研究とスキル解放研究で100ずつぐらい、コストもばらけさせて」:
+  // 実績系≈94本+スキル解放研究≈112本の生成器(sim同期)。コスト=解放時点の毎秒生産×costSec秒ぶん
+  // (20秒=即買い〜1500秒=貯金目標)。効果は永続の単純倍率。転生で買い直し。
   const eqName = id => (UPGRADES.find(u => u.id === id) || { name: id }).name;
+  const ROMA = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
   const list = [];
+  const add = (id, name, cond, trig, fxText, fx, costSec) => list.push({ id, name, cond, trig, fxText, fx, costSec });
+  // 設備の熟練 I〜IV(10/40/120/300台)
+  const eqTiers = [[10, 30], [40, 90], [120, 240], [300, 600]];
   UPGRADES.forEach(u => {
-    if (u.type !== "cps") return;
-    list.push({ id: "ms_" + u.id + "_25", name: eqName(u.id) + "の熟練", cond: u.id === "grandma" || u.id === "oven" ? eqName(u.id) + " 25台" : eqName(u.id) + " 25台", trig: () => (state.upgrades[u.id] || 0) >= 25, fxText: eqName(u.id) + "の生産 ×2", fx: { up: { [u.id]: 2 } } });
+    eqTiers.forEach(([n, cs], ti) => {
+      const isClick = u.type === "click";
+      add("ms_" + u.id + "_t" + (ti + 1), eqName(u.id) + "の熟練 " + ROMA[ti], eqName(u.id) + " " + n + "台",
+        () => (state.upgrades[u.id] || 0) >= n,
+        isClick ? "タップ生産 ×1.35" : eqName(u.id) + "の生産 ×1.5",
+        isClick ? { click: 1.35 } : { up: { [u.id]: 1.5 } }, cs);
+    });
   });
-  ["grandma", "oven", "factory", "bank", "spiceRack"].forEach(id => {
-    list.push({ id: "ms_" + id + "_100", name: eqName(id) + "の極み", cond: eqName(id) + " 100台", trig: () => (state.upgrades[id] || 0) >= 100, fxText: eqName(id) + "の生産 ×3", fx: { up: { [id]: 3 } } });
+  // 討伐実績 8段(周回内・効果ローテ)
+  const killTiers = [[10, 20, { hunt: 1.3 }, "モンスターダメージ ×1.3"], [25, 40, { spawn: 0.85 }, "モンスター出現間隔 ×0.85"],
+    [50, 80, { stay: 1.2 }, "モンスター滞在時間 ×1.2"], [100, 160, { hunt: 1.3 }, "モンスターダメージ ×1.3"],
+    [200, 320, { hp: 0.75 }, "モンスターHP ×0.75"], [400, 600, { dropAdd: 1 }, "素材ドロップ +1個"],
+    [800, 900, { hunt: 1.3 }, "モンスターダメージ ×1.3"], [1600, 1200, { stay: 1.2 }, "モンスター滞在時間 ×1.2"]];
+  killTiers.forEach(([n, cs, fx, ft], i) => add("ms_kills_k" + (i + 1), "狩りの実績 " + ROMA[i], "この周回で討伐 " + n + "体",
+    () => (state.msKills || 0) >= n, ft, fx, cs));
+  // 金クッキー実績 6段(周回内)
+  [[5, 20], [15, 60], [40, 150], [100, 400], [250, 800], [600, 1500]].forEach(([n, cs], i) =>
+    add("ms_golden_g" + (i + 1), "金運 " + ROMA[i], "この周回で金クッキー " + n + "枚",
+      () => (state.msGoldens || 0) >= n, "金クッキー即時獲得 ×1.3", { golden: 1.3 }, cs));
+  // タップ実績 6段(周回内)
+  [[300, 15], [1000, 40], [3000, 120], [8000, 300], [20000, 700], [50000, 1500]].forEach(([n, cs], i) =>
+    add("ms_taps_p" + (i + 1), "タップの鍛錬 " + ROMA[i], "この周回でタップ " + n.toLocaleString() + "回",
+      () => (state.msTaps || 0) >= n, "タップ生産 ×1.4", { click: 1.4 }, cs));
+  // ノルマ層実績 6段(周回内)
+  [[5, 30], [15, 90], [30, 200], [60, 400], [100, 800], [150, 1500]].forEach(([n, cs], i) =>
+    add("ms_stage_s" + (i + 1), "深層踏破 " + ROMA[i], "この周回でノルマ第" + n + "層に到達",
+      () => maxQuotaStage() >= n, "全生産 ×1.15", { all: 1.15 }, cs));
+  // 転生実績 4段(通算)
+  [[2, 60], [5, 120], [10, 300], [20, 600]].forEach(([n, cs], i) =>
+    add("ms_prestige_r" + (i + 1), "輪廻 " + ROMA[i], "転生 " + n + "回",
+      () => (Number(state.prestigeRuns) || 0) >= n, "全生産 ×1.2", { all: 1.2 }, cs));
+  // --- スキル解放研究(各スキルで「応用」+生産系は「奥義」も) ---
+  const branchFx = id => {
+    if (id.startsWith("click_") || id === "upgrade_godfinger") return [{ click: 1.3 }, "タップ生産 ×1.3"];
+    if (id.startsWith("golden_")) return [{ golden: 1.25 }, "金クッキー即時獲得 ×1.25"];
+    if (id.startsWith("monster_") || id === "hunt_analysis" || id.startsWith("unlock_reward_")) return [{ hunt: 1.3 }, "モンスターダメージ ×1.3"];
+    if (id.startsWith("auto_") || id.startsWith("upgrade_")) return [{ cps: 1.3 }, "毎秒生産 ×1.3"];
+    if (id.startsWith("economy_") || id === "order_board") return [{ cps: 1.2 }, "毎秒生産 ×1.2"];
+    if (id.startsWith("research_")) return [{ all: 1.08 }, "全生産 ×1.08"];
+    if (id.startsWith("reward_")) return [{ hunt: 1.2 }, "モンスターダメージ ×1.2"];
+    if (id.startsWith("workshop_")) return [{ dropAdd: 1 }, "素材ドロップ +1個"];
+    if (id.startsWith("start_") || id === "offline_1" || id === "endless_oven") return [{ all: 1.05 }, "全生産 ×1.05"];
+    return [{ all: 1.1 }, "全生産 ×1.1"];
+  };
+  const csLadder = [20, 60, 180, 500, 1400];
+  SKILL_NODES.forEach((n, i) => {
+    const [fx, ft] = branchFx(n.id);
+    add("msk_" + n.id, n.name + "の応用", "スキル「" + n.name + "」を取得", () => hasSkill(n.id), ft, fx, csLadder[i % 5]);
+    const t = Object.keys(fx)[0];
+    if (t === "click" || t === "cps" || t === "golden" || t === "hunt") {
+      add("msk2_" + n.id, n.name + "の奥義", "スキル「" + n.name + "」を取得", () => hasSkill(n.id), ft, fx, csLadder[(i + 2) % 5] * 3);
+    }
   });
-  list.push({ id: "ms_finger_25", name: "指の鍛錬", cond: "強い指 25本", trig: () => (state.upgrades.finger || 0) >= 25, fxText: "タップ生産 ×2", fx: { click: 2 } });
-  list.push({ id: "ms_godFinger_10", name: "神指の目覚め", cond: "神の指 10本", trig: () => (state.upgrades.godFinger || 0) >= 10, fxText: "タップ生産 ×2", fx: { click: 2 } });
-  // 実績トリガは「その周回内」のカウント(2026-07-11 ユーザー指示)
-  list.push({ id: "ms_kills_25", name: "狩りの心得", cond: "この周回で討伐 25体", trig: () => (state.msKills || 0) >= 25, fxText: "モンスターダメージ ×1.5", fx: { hunt: 1.5 } });
-  list.push({ id: "ms_kills_100", name: "狩りの極意", cond: "この周回で討伐 100体", trig: () => (state.msKills || 0) >= 100, fxText: "モンスターダメージ ×2", fx: { hunt: 2 } });
-  list.push({ id: "ms_golden_10", name: "金運の兆し", cond: "この周回で金クッキー 10枚", trig: () => (state.msGoldens || 0) >= 10, fxText: "金クッキー即時獲得 ×1.5", fx: { golden: 1.5 } });
-  list.push({ id: "ms_golden_50", name: "金運の確信", cond: "この周回で金クッキー 50枚", trig: () => (state.msGoldens || 0) >= 50, fxText: "金クッキー即時獲得 ×2", fx: { golden: 2 } });
-  list.push({ id: "ms_taps_1000", name: "千本タップ", cond: "この周回でタップ 1,000回", trig: () => (state.msTaps || 0) >= 1000, fxText: "タップ生産 ×2", fx: { click: 2 } });
-  list.push({ id: "ms_stage_10", name: "深層の知恵", cond: "この周回でノルマ第10層に到達", trig: () => maxQuotaStage() >= 10, fxText: "全生産 ×1.5", fx: { all: 1.5 } });
-  list.push({ id: "ms_stage_50", name: "深淵の悟り", cond: "この周回でノルマ第50層に到達", trig: () => maxQuotaStage() >= 50, fxText: "全生産 ×2", fx: { all: 2 } });
-  list.push({ id: "ms_prestige_5", name: "輪廻の巧者", cond: "転生 5回", trig: () => (Number(state.prestigeRuns) || 0) >= 5, fxText: "全生産 ×1.5", fx: { all: 1.5 } });
-  // モンスター関連(2026-07-11 ユーザー指示)
-  list.push({ id: "ms_kills_50", name: "群れの気配", cond: "この周回で討伐 50体", trig: () => (state.msKills || 0) >= 50, fxText: "モンスター出現間隔 ×0.8", fx: { spawn: 0.8 } });
-  list.push({ id: "ms_stage_20", name: "足止めの罠", cond: "この周回でノルマ第20層に到達", trig: () => maxQuotaStage() >= 20, fxText: "モンスター滞在時間 ×1.3", fx: { stay: 1.3 } });
-  list.push({ id: "ms_kills_200", name: "弱点看破", cond: "この周回で討伐 200体", trig: () => (state.msKills || 0) >= 200, fxText: "モンスターHP ×0.7", fx: { hp: 0.7 } });
-  list.push({ id: "ms_kills_75", name: "戦利品の嗅覚", cond: "この周回で討伐 75体", trig: () => (state.msKills || 0) >= 75, fxText: "討伐の素材ドロップ +1個", fx: { dropAdd: 1 } });
-  const sk = (skillId, id, name, fxText, fx) => list.push({ id, name, cond: "スキル「" + skillNameOf(skillId) + "」を取得", trig: () => hasSkill(skillId), fxText, fx });
-  sk("click_amp", "ms_skill_click_amp", "速射の稽古", "タップ生産 ×1.5", { click: 1.5 });
-  sk("golden_amp", "ms_skill_golden_amp", "金箔の目利き", "金クッキー即時獲得 ×1.3", { golden: 1.3 });
-  sk("monster_amp", "ms_skill_monster_amp", "追撃の型", "モンスターダメージ ×1.5", { hunt: 1.5 });
-  sk("auto_amp", "ms_skill_auto_amp", "火吹きの呼吸", "全生産 ×1.3", { all: 1.3 });
-  sk("click_stall", "ms_skill_click_stall", "屋台の看板", "タップ生産 ×1.5", { click: 1.5 });
-  sk("monster_peddler", "ms_skill_monster_peddler", "行商の人脈", "モンスターダメージ ×1.5", { hunt: 1.5 });
-  sk("workshop_1", "ms_skill_workshop_1", "素材の目利き", "討伐の素材ドロップ +1個", { dropAdd: 1 });
-  sk("order_board", "ms_skill_order_board", "上得意", "全生産 ×1.2", { all: 1.2 });
   return list;
 })();
 function skillNameOf(id) { const n = SKILL_NODES.find(x => x.id === id); return n ? n.name : id; }
@@ -7413,7 +7442,7 @@ function msMulOf(kind, upId) {
   }
   return m;
 }
-function msResearchCost(ms) { return Math.max(100, Math.floor(currentCps() * 30)); }
+function msResearchCost(ms) { return Math.max(100, Math.floor(currentCps() * (ms && ms.costSec != null ? ms.costSec : 30))); }
 function buyMilestone(id) {
   const ms = MILESTONE_RESEARCH.find(m => m.id === id);
   if (!ms || msBought(id) || !ms.trig()) return;
@@ -7823,11 +7852,11 @@ function orderScale() {
 
 // 転生コスト(2026-07-11 ユーザー仕様・確定形): 完成版の測定(基準方針100hシム)で「第n回が転生した時点の
 // 毎秒生産×500」を10のべき乗に切り捨てた固定テーブル(全プレイヤー共通)。sim/prestige_costs.json と同期。
-// テーブルを超えた周回は末尾の桁ステップで自動延長。初回は500万。
-const PRESTIGE_COST_TABLE = [5000000, 1000000000, 1000000000000, 100000000000000, 100000000000000000, 100000000000000000, 100000000000000000000, 1e+22, 1e+23, 1e+25, 1.0000000000000001e+29, 1e+30, 1e+33, 1e+37, 1e+38, 1e+41, 1e+43, 1e+47, 1e+48, 1e+52, 1e+54, 1e+60, 1e+66, 1e+73, 1e+79, 1e+86, 1e+91, 1e+98, 1e+103, 1e+104, 1e+107, 1e+109, 1e+112, 1e+114, 1.0000000000000001e+111, 1e+113, 1e+113, 1e+117, 1e+119, 1e+121, 1e+123, 1.0000000000000001e+126, 1e+128, 1e+131, 1e+134, 9.999999999999999e+141, 9.999999999999999e+141, 1e+144, 1e+147, 1e+150, 1e+153, 1e+156, 1e+159, 1e+162, 1.0000000000000001e+165, 1e+168, 1e+171, 1e+174, 1e+177, 1e+180, 1e+183, 1e+186, 1e+189, 1e+192, 1e+195, 1e+198, 1e+201, 1e+204];
+// テーブルを超えた周回は末尾の桁ステップで自動延長。初回は1億(2026-07-11)。
+const PRESTIGE_COST_TABLE = [100000000, 1000000000, 1000000000000, 100000000000000, 100000000000000000, 10000000000000000000, 10000000000000000000, 1e+22, 1e+24, 9.999999999999999e+25, 1e+27, 1e+31, 1e+33, 1e+35, 1e+38, 1.0000000000000001e+39, 1e+43, 1e+45, 1e+47, 1e+51, 1e+52, 1e+59, 1e+65, 1e+72, 1e+79, 1e+85, 1e+89, 9.999999999999999e+95, 1e+98, 1e+100, 1e+103, 1e+106, 1e+110, 1.0000000000000001e+111, 1e+106, 1e+109, 1.0000000000000001e+111, 1e+114, 1e+116, 1e+118, 1e+120, 1e+124, 1.0000000000000001e+126, 1e+128, 1e+131, 1e+139, 1e+140, 9.999999999999999e+141, 1e+145, 1e+148, 1e+151, 1e+154, 1e+157, 1e+160, 1e+163, 1.0000000000000001e+166, 1.0000000000000001e+169, 1e+172, 1e+175, 1e+178, 1e+181, 1e+184, 1.0000000000000001e+187, 1e+190, 1e+193, 1e+196, 1e+199, 1e+202];
 function prestigeCookieCost() {
   const runs = Math.max(0, Math.floor(Number(state.prestigeRuns) || 0));
-  if (runs === 0) return 5000000;
+  if (runs === 0) return 100000000;
   if (PRESTIGE_COST_TABLE[runs] != null) return PRESTIGE_COST_TABLE[runs];
   // テーブル外: 末尾の桁ステップ(3桁/回)で延長
   const last = PRESTIGE_COST_TABLE[PRESTIGE_COST_TABLE.length - 1] || 1e7;
@@ -9823,7 +9852,7 @@ function baseCps() {
   v *= dishProductionMultiplier(); // 料理: バタークッキー生地
   v *= equipProductionMultiplier(); // 装備: 名匠の天板
 
-  v *= msMulOf("all"); // 実績研究(全生産系)
+  v *= msMulOf("all") * msMulOf("cps"); // 実績研究(全生産系・毎秒系)
 
   // 初台ボーナス(㉑対策): 所持中だけ効く静的加算(購入時CPS基準の固定値のため成長とともに自然消滅)
   v += presenceBonusCps();
@@ -12831,7 +12860,7 @@ function prestigeGain() {
 }
 
 function prestigeUnlocked() {
-  // 所持クッキーが初めて500万を超えた時点で解放し、以後は消費して下回っても解放のまま(ラッチ)
+  // 所持クッキーが初めて1億を超えた時点で解放し、以後は消費して下回っても解放のまま(ラッチ)
   return Boolean(state.prestigeUnlockedEver) || state.prestigeTotal > 0 || state.prestigeRuns > 0;
 }
 
@@ -12843,8 +12872,8 @@ function updatePrestigeTabLabel() {
 }
 
 function checkPrestigeUnlockNotice() {
-  // 所持クッキーが初めて500万を超えたら転生を解放する
-  if (!state.prestigeUnlockedEver && state.cookies.gte(5000000)) {
+  // 所持クッキーが初めて1億を超えたら転生を解放する
+  if (!state.prestigeUnlockedEver && state.cookies.gte(100000000)) {
     state.prestigeUnlockedEver = true;
     state.seenPrestigeUnlockNotice = true;
     showMessage("新たな機能が解放されます");
@@ -12863,7 +12892,7 @@ function renderPrestige() {
     box.innerHTML = `
       <div class="infoBox">
         <h3>？？？</h3>
-        <div class="desc">500万クッキーで新たな機能が解放されます。</div>
+        <div class="desc">1億クッキーで新たな機能が解放されます。</div>
         <button id="resetBtn" class="item danger">完全リセット</button>
       </div>
     `;
