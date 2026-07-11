@@ -705,10 +705,10 @@ function wsOrderTick(sim, prod) {
       const rkinds = ['cookie', 'materials', 'boost'];
       const rk = rkinds[ws.orderRewardRot % 3]; ws.orderRewardRot++;
       if (rk === 'cookie' && !wsOff(sim, 'order:cookie')) {
-        // 報酬の基準をcps→周回の平均稼ぎ率へ(2026-07-11): 設備生産が収入の数%しかない方針で
-        // cps基準の報酬は誤差(㉙cookie比1.009実測)。制限時間×rewardCookieぶんの平均稼ぎを一括で貰う。
-        const avgRate = Math.max(prod.cps, sim.run.runCookies / Math.max(60, t - sim.run.startT));
-        earn(sim, avgRate * o.limit * O.rewardCookie);
+        // 報酬=所持クッキー×rewardCookie(2026-07-11 確定形): 収入レート基準(cps→平均→EMA)はどれも
+        // 「周回中盤の達成だと終盤レートの数百分の一の価値」に潰れる(㉙比1.009→1.021→1.15止まり実測)。
+        // 富に比例した注入は指数成長下で達成タイミングに依らず複利で残る(boost×2が通るのと同じ時間不変性)。
+        earn(sim, Math.max(prod.cps * 60, (sim.run.cookies || 0) * O.rewardCookie));
       }
       else if (rk === 'materials' && !wsOff(sim, 'order:materials')) {
         // 素材セット=御用聞き型: 次に作りたい装備(方針の好み順で最初に作れない物)の不足分を補充する。
@@ -2221,6 +2221,15 @@ function advanceTick(sim, strategy) {
   {
     sim.t += dt;
     if (sim.hourly && sim.t % 60 === 0) sim.hourly.push(sim.totalCookies);
+    // 直近稼ぎ率EMA(時定数90秒・2026-07-11): 注文報酬cookieの基準。周回内は指数成長のため
+    // 平均稼ぎ率(獲得計/経過)では終盤レートの数百分の一になり報酬が誤差化する(㉙比1.021実測)。
+    {
+      const r0 = sim.run;
+      const dEarn = r0.runCookies - (r0._emaLastCookies || 0);
+      r0._emaLastCookies = r0.runCookies;
+      const A = Math.exp(-1 / 90);
+      r0.earnEma = (r0.earnEma || 0) * A + Math.max(0, dEarn) * (1 - A);
+    }
     // ⑬タイミング(B案・2026-07-09 ユーザー承認): 同一トラジェクトリの per-tick 稼ぎ力の幾何平均(=時間平均の稼ぎ率)を
     // 記録。opt-timing/idle-timing の2本でこれを比べると、per-run 効率(転生回数変動でカオス化)を使わず、
     // かつ全効果と比較した「操作の巧拙」を測れる。60秒ごとに1標本(コスト削減)。timing sim でのみ有効。
@@ -2319,7 +2328,9 @@ function advanceTick(sim, strategy) {
     if (resActive(sim, 'bankClickDividend') && resStage2(sim, 'bankClickDividend')) {
       const bank = r.upgrades.bank || 0;
       if (bank > 0 && r.cookies > 0) {
-        let soft = cpsNow * P.res2.bankIntCapCps;
+        // ソフトキャップの基準をcps→max(cps, 直近稼ぎ率EMA×frac)へ(2026-07-11): cps係留では直送収入が
+        // 主流の周回で利息が総収入の誤差になり、⑨bank段2/段3の持ち上げが1.000に潰れる(36h実測)ため。
+        let soft = Math.max(cpsNow, (r.earnEma || 0) * (P.res2.bankIntEmaFrac || 0)) * P.res2.bankIntCapCps;
         if (resStage3(sim, 'bankClickDividend')) soft *= 1 + P.res2.bankCapStageCoef * r.maxStage;
         const raw = r.cookies * P.res2.bankIntRate * Math.log10(1 + bank);
         if (soft > 0 && raw > 0) earn(sim, raw / (1 + raw / soft) * dt);

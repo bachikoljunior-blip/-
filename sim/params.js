@@ -318,7 +318,7 @@ module.exports = {
     factoryHiKind: 0.15, factoryStageCoef: 0.0012,
     matureRate: 0.006, aromaDur: 12, spiceStageCoef: 0.0015,
     huntExtendSec: 40, huntStageCoef: 0.0008,
-    bankIntRate: 0.005, bankIntCapCps: 8.0, bankCapStageCoef: 0.08,
+    bankIntRate: 0.005, bankIntCapCps: 8.0, bankIntEmaFrac: 0.05, bankCapStageCoef: 0.08, // bankIntEmaFrac(2026-07-11): ソフトキャップ=max(cps, 直近稼ぎ率EMA×0.05)×8=直送主流の周回でも利息が総収入の最大〜40%で見える(⑨bank1.000対策)
     moonMarginDiv: 10, moonResCount: 0.05,
     foldKillCoef: 0.002, foldStageCoef: 0.001,
     galaxyBonusCoef: 0.05, galaxySat: 120, galaxyStageCoef: 0.0008,
@@ -385,10 +385,11 @@ module.exports = {
     eqFx: { whiskPerLv: 0.15, mittPerLv: 0.12, pressPerLv: 0.04, almanacDmgPerLv: 0.15, almanacDropPerLv: 0.5, almanacHuntPerLv: 0.12, flaskPerLv: 0.10, compassDropPerLv: 0.05, trayPerLv: 0.06 }, // mittPerLv=断熱オーブン手袋: オーブン生産×(1+0.12×Lv)(焼き加減廃止で再係留・mittCpsPerLvは統合削除) / almanacDrop/Hunt=図鑑の再係留(2026-07-11: 研究インフレでダメージ飽和=一撃のため図鑑の限界価値ゼロ(⑮の2比1.000実測)→素材+0.5/Lv(旧floor(Lv/2)はLv1で0)+討伐直送×(1+0.12Lv)を追加)
     // 注文ボード(§19: 同時1件・間隔1800×0.85^転生回数・制限240+4√経過秒・必要量/報酬は現在値に相対)
     orders: { intervalBase: 1800, intervalDecay: 0.85, limitBase: 240, limitSqrt: 4,
-      needProd: 0.25, needClick: 0.5, needHunt: 0.6, rewardCookie: 0.6, rewardBoostMul: 2, rewardBoostSec: 120,
+      needProd: 0.25, needClick: 0.5, needHunt: 0.6, rewardCookie: 0.45, rewardBoostMul: 2, rewardBoostSec: 120,
       rewardMatSet: 80, rewardFill: 1.25, rewardItems: 4 }
-      // rewardCookie 50→0.6(2026-07-11: 基準をcps→周回平均稼ぎ率へ変更=設備生産が収入の数%しかない方針で
-      // 報酬が誤差になる(㉙cookie比1.009実測)ため。0.6=制限時間×0.6ぶんの平均稼ぎを一括獲得)
+      // rewardCookie 50→0.3(2026-07-11: 基準をcps→直近稼ぎ率EMA(時定数90秒)へ変更。cps基準は設備生産が
+      // 収入の数%しかない方針で誤差(㉙比1.009実測)・周回平均基準は指数成長で終盤レートの数百分の一(比1.021実測)。
+      // 現行=「今のペースで min(制限時間,900秒)×0.45 ぶん」を一括獲得(0.3では比1.153=閾値1.2に届かず)(boost報酬の実効120秒×2と同オーダー))
       // rewardFill 1.0→1.25・rewardItems 3→4(㉙materials 1.142→1.2乗せのマージン)
   }
 };
