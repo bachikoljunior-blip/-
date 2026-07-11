@@ -6070,7 +6070,7 @@ const SKILL_NODES = [
   { id: "monster_amp", name: "仕留めの一撃", branchId: "monster", cost: 20, x: 1220, y: 1120, icon: "◉", prereqs: ["monster_1"], desc: "モンスター最終ダメージ +60%。", effects: [{ type: "monsterDamageSkill", value: 0.6 }] },
   // 提案10/11(2026-07-11 承認): タップ/討伐の換金収入を安いスキルで先行開始(研究の段階2でフル。消えずに出続ける)
   { id: "click_stall", name: "土産の屋台", branchId: "click", cost: 2, x: 480, y: 1040, icon: "◆", prereqs: ["click_amp"], desc: "タップで焼いたクッキーのおすそ分けを屋台で売る。指系設備への投資量と到達層に応じた毎秒収入を追加(研究「指先の型」の段階2でフル稼働=それまでは5%)。", effects: [{ type: "unlockSystem", target: "tapStall" }] },
-  { id: "monster_peddler", name: "戦利品の行商", branchId: "monster", cost: 20, x: 1520, y: 1200, icon: "◉", prereqs: ["monster_1"], desc: "行商人が戦利品を買い取る。討伐系報酬の所持枚数と到達層に応じた毎秒収入(金相場基準)を追加(研究「異世界接続網」の段階2でフル稼働=それまでは2%)。", effects: [{ type: "unlockSystem", target: "huntPeddler" }] },
+  { id: "monster_peddler", name: "戦利品の行商", branchId: "monster", cost: 20, x: 1520, y: 1200, icon: "◉", prereqs: ["monster_1"], desc: "行商人が戦利品を買い取る。討伐系報酬の所持枚数と到達層に応じた毎秒収入(金相場基準)を追加(研究「異世界接続網」の段階2でフル稼働=それまでは6%)。", effects: [{ type: "unlockSystem", target: "huntPeddler" }] },
   { id: "auto_amp", name: "炉の熱気", branchId: "auto", cost: 35, x: 1380, y: 1120, icon: "◇", prereqs: ["auto_1"], desc: "毎秒生産 +75%。", effects: [{ type: "cps", value: 0.75 }] },
   { id: "golden_2", name: "金粉回収", branchId: "golden", cost: 1550, x: 620, y: 1380, icon: "✦", prereqs: ["golden_1"], desc: "金クッキー即時獲得量 +75%。", effects: [{ type: "goldenAmount", value: 0.75 }] },
   { id: "golden_3", name: "輝き増幅", branchId: "golden", cost: 550000, x: 440, y: 1500, icon: "✦", prereqs: ["golden_2"], desc: "金ブースト倍率 +2.1。", effects: [{ type: "goldenPower", value: 2.1 }] },
@@ -9971,8 +9971,8 @@ function currentCps() {
 const DIRECT_CFG = {
   equip:  { coef: 0.06, stagePow: 0.5, countPow: 2,   ref: 70,  startStage: 5, satMax: 50, otherMul: 0.2, anchorGolden: 0.15 },
   golden: { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 10, otherMul: { click: 0.3, balanced: 0.3, hunt: 0.3, default: 1 } },
-  hunt:   { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 15, otherMul: { click: 0.15, balanced: 0.15, golden: 0.9, default: 0.3 }, peddlerFrac: 0.02 },
-  tap:    { coef: 0.01, stagePow: 0.5, countPow: 2,   ref: 20,  startStage: 5, clickBonus: 3, satMax: 0, anchorGolden: 0.5, stallFrac: 0.05, otherMul: { golden: 0.6, default: 1 } },
+  hunt:   { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 15, otherMul: { click: 0.15, balanced: 0.15, golden: 0.9, default: 0.3 }, peddlerFrac: 0.06 },
+  tap:    { coef: 0.01, stagePow: 0.5, countPow: 2,   ref: 20,  startStage: 5, clickBonus: 3, satMax: 0, anchorGolden: 0.5, stallFrac: 0.05, otherMul: { golden: 0.6, balanced: 4.0, default: 1 } },
   bank:   { coef: 0.42, ownRate: 0.5, savedCoef: 0.05, clickBonus: 2.5, countCoef: 0.9, countPow: 1.8, ref: 150, anchorGolden: 0.12, otherMul: 0.5 }
 };
 let recentTapsPerSec = 0; // 毎秒サンプラ(メインループ)で更新: 直近1秒の実タップ数
