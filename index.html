@@ -408,6 +408,27 @@
       to { opacity: 0; transform: translate(-50%, -46px); }
     }
 
+    /* 討伐連鎖の一時表示(討伐直後にクッキーの上あたりへ数秒出す) */
+    #chainIndicator {
+      position: absolute;
+      left: 50%;
+      top: 34px;
+      transform: translateX(-50%);
+      font-size: 14px;
+      font-weight: 800;
+      color: #ffd76e;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,0.9);
+      pointer-events: none;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 6;
+    }
+
+    #chainIndicator.show {
+      opacity: 1;
+    }
+
     .stats {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
@@ -7095,9 +7116,11 @@ function generateHugeUnit(level) {
   return seededPick(HUGE_LONG_WORDS, n, 24) + seededPick(HUGE_SUFFIX, n, 25);
 }
 
-// 小数点の後ろに半角スペースを入れて、小数点があることを分かりやすくする(大きな数値=万/億/兆〜用)
+// 小数のある大きな数値(万/億/兆〜)は、小数部の右側(数字と単位の間)に半角スペースを入れて
+// 見やすくする。スペースは小数点の直後ではなく小数部の後ろに置く(2026-07-11 ユーザー指示)。
+// 呼び出し元は必ずこの直後に単位(万/億/兆〜)を連結するため、末尾スペースが浮くことはない。
 function spaceAfterDecimalPoint(s) {
-  return typeof s === "string" && s.indexOf(".") >= 0 ? s.replace(".", ". ") : s;
+  return typeof s === "string" && s.indexOf(".") >= 0 ? s + " " : s;
 }
 
 function fmtShortJapaneseUnitNumber(n) {
@@ -10794,6 +10817,23 @@ function showMessage(text) {
   $("message").textContent = text;
   clearTimeout(showMessage.timer);
   showMessage.timer = setTimeout(() => $("message").textContent = "", 1500);
+}
+
+// 討伐連鎖の一時表示: 討伐直後に「連鎖 ×N(全生産+X%)」をクッキーの上あたりへ数秒出す
+let chainIndicatorTimer = null;
+function showChainIndicator() {
+  const wrap = document.querySelector(".cookieWrap");
+  if (!wrap) return;
+  let el = document.getElementById("chainIndicator");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "chainIndicator";
+    wrap.appendChild(el);
+  }
+  el.textContent = `連鎖 ×${chainCount()}(全生産+${Math.round(CHAIN_PROD_COEF * chainCount() * 100)}%)`;
+  el.classList.add("show");
+  clearTimeout(chainIndicatorTimer);
+  chainIndicatorTimer = setTimeout(() => el.classList.remove("show"), 3000);
 }
 
 function showFloat(text, critical = false) {
@@ -14800,8 +14840,12 @@ function defeatMonster(id) {
   const dropText = grantMonsterDrops(defeatedTypeId, defeatedLevel, Boolean(mon.overkill));
   if (dropText) message += ` / ${dropText}`;
 
-  // 討伐連鎖: 2連鎖以上のときだけ表示(全生産に効いていることが分かるように)
-  if (chainCount() >= 2) message += ` / 連鎖 ×${chainCount()}(全生産+${Math.round(CHAIN_PROD_COEF * chainCount() * 100)}%)`;
+  // 討伐連鎖: 2連鎖以上のときだけ表示(全生産に効いていることが分かるように)。
+  // クッキーの上あたりにも数秒間出す(2026-07-11 ユーザー指示)
+  if (chainCount() >= 2) {
+    message += ` / 連鎖 ×${chainCount()}(全生産+${Math.round(CHAIN_PROD_COEF * chainCount() * 100)}%)`;
+    showChainIndicator();
+  }
 
   playSound("golden");
   showMessage(message);
