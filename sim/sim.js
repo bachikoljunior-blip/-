@@ -9,9 +9,12 @@ const UPGRADES = [
   { id: 'grandma', type: 'cps', value: 1, base: 40, growth: 1.30 },
   { id: 'oven', type: 'cps', value: 8, base: 390, growth: 1.35 },
   { id: 'factory', type: 'cps', value: 45, base: 2600, growth: 1.37 },
-  { id: 'bank', type: 'cps', value: 260, base: 18000, growth: 1.39 },
-  { id: 'spiceRack', type: 'cps', value: 780, base: 72000, growth: 1.40 },
-  { id: 'portal', type: 'cps', value: 1600, base: 260000, growth: 1.41 },
+  // 第12次R3: 初台ボーナス(presence)が第0回の中位チェーン(工場→銀行→香料棚→異世界炉)を加速し
+  // S9/S10のT2第0回が中央値0.43/0.44に潰れたため、銀行/香料棚/異世界炉の初期コストを×3(丸めq5)。
+  // ×1/×2/×3/×5の掃引で×3のみ10方針全部が帯[0.5,1]内(S9 0.59/S10 0.78/最大S3 0.96)。
+  { id: 'bank', type: 'cps', value: 260, base: 54000, growth: 1.39 },
+  { id: 'spiceRack', type: 'cps', value: 780, base: 180000, growth: 1.40 },
+  { id: 'portal', type: 'cps', value: 1600, base: 780000, growth: 1.41 },
   { id: 'moonBakery', type: 'cps', value: 9800, base: 12500000, growth: 1.43 },
   { id: 'timeOven', type: 'cps', value: 65000, base: 180000000, growth: 1.45 },
   { id: 'galaxyFactory', type: 'cps', value: 450000, base: 2800000000, growth: 1.47 },
@@ -1339,7 +1342,9 @@ function goldenBoostDurationMs(sim) {
 // やり直し比較(replay)を廃止し、各tickで「機能込みの瞬間稼ぎ力 ÷ 機能抜きの瞬間稼ぎ力」を測って
 // 周回平均(対数平均)を取る。同じ状態を2通り評価するだけなので、分かれ道のズレが原理的に発生しない。
 // 稼ぎ力 = 直接生産 + 金クッキー収入率 + 討伐報酬(投資)価値率 の合成。すべて現在状態から式で算出。
-const KILL_VALUE_SEC = 7;   // 討伐1体の価値を「生産◯秒ぶん」で近似。㉘: balancedの序盤討伐シェア(4-9%)を≥10%へ底上げ(5→7)。③⑨⑬は枝分かれrobust化済みで非干渉
+// 討伐1体の価値を「生産◯秒ぶん」で近似。㉘: balancedの序盤討伐シェア(4-9%)を≥10%へ底上げ(5→7)。③⑨⑬は枝分かれrobust化済みで非干渉。
+// 第12次R3: params駆動化(P.monster.killValueSec・既定7)= ㉘hunt序盤(直送ゲート前の討25-28%)を経済側で立てる調整をtune_rで振るため。
+const KILL_VALUE_SEC = (P.monster && P.monster.killValueSec != null) ? P.monster.killValueSec : 7;
 // earningPower は副作用のある関数(monsterStayMs 等が next*Multiplier をリセット)を呼ぶため、
 // 揮発フィールドを退避・復元して純粋化する(測定が実シミュの状態を壊さないように)
 function earningPowerSafe(sim) {
@@ -1416,8 +1421,12 @@ function huntDirectIncome(sim, base) {
   const r = sim.run;
   // 投資量=huntカテゴリperk合計(全8種)。旧4種(damage/fang/ferment/core)だと、S4が優先リスト先頭の
   // monsterRate を大量に拾う中盤周回で投資量0=直送不発(㉘hunt run18-27 の25-29%NGの原因)。
-  const inv = (r.perks.monsterDamage || 0) + (r.perks.crackedFang || 0) + (r.perks.beastHeatFerment || 0) + (r.perks.huntingCore || 0)
-    + (r.perks.monsterRate || 0) + (r.perks.monsterStay || 0) + (r.perks.biteRecovery || 0) + (r.perks.brandHunt || 0);
+  // 第12次R3: perk直接参照→rwOffゲート付きへ(計測の同式性)。旧実装は monsterRate 等を _md で無効化しても
+  // 討直の投資量が減らず、深い周回(討伐収入の本体=討直)で該当perkのliftが過小評価されていた(③monsterRate
+  // 36h窓の中央値1.1割れの一因)。通常プレイでは rwOff=false のため収入は不変。
+  const pk = (id) => rwOff(sim, id) ? 0 : (r.perks[id] || 0);
+  const inv = pk('monsterDamage') + pk('crackedFang') + pk('beastHeatFerment') + pk('huntingCore')
+    + pk('monsterRate') + pk('monsterStay') + pk('biteRecovery') + pk('brandHunt');
   // 方針係数: 非hunt方針の後半周回(報酬解禁スキル後=hunt perk投資が勝手に貯まる)で討伐直送が主役を
   // 押し退ける(bake S1 run25-29 討39-46%・balanced S6 run24-28 討33-53%=実測2026-07-10)のを抑える。
   const polM = otherMulOf(sim, P.huntDirect, 'hunt');
@@ -2001,7 +2010,14 @@ function doPrestige(sim) {
   sim.prevMaxStage = tfr >= 2 ? Math.max(r.maxStage, sim._prevMaxStage1 || 0) : r.maxStage;
   sim._prevMaxStage1 = r.maxStage;
   // 提案9: 今周回の長さを持ち越す(次周回の到達連動ノルマの進行比の分母)。
-  sim.prevDuration = sim.t - r.startT;
+  // EMA平滑化(第12次R3・T1 S10の交互振動対策): 生の前回長だと「軽い周回45m→未達が早発(33m)→
+  // モンスター停止で重い周回175m→分母が上限クランプ→未達が遅発→また軽い周回」の周期2振動になる
+  // (数列 d_{n+1}=D(d_n) の D'<-1 型)。減衰付き d ← (1-α)d + α×今回長 で不動点へ収束させる。α=1で従来どおり。
+  {
+    const durNow = sim.t - r.startT;
+    const alpha = (P.quota.reachEmaAlpha != null ? P.quota.reachEmaAlpha : 1);
+    sim.prevDuration = sim.prevDuration > 0 ? (1 - alpha) * sim.prevDuration + alpha * durNow : durNow;
+  }
 
   // 新周回
   sim.run = newRun(sim);

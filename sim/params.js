@@ -58,9 +58,10 @@ module.exports = {
     lvEarlyDiv: 92,
     lvLateDiv: 320, lvLatePow: 1.22,
     dmgSqrtCoef: 0.45,
-    ratePerLv: 0.16, // 0.14→0.16(2026-07-10 第12次R: surge0.45の経済移動で③monsterRate中央値が再び1.1割れ=マージン積み増し)
-    rateKillBonus: 0.5, rateKillHalf: 2, // 0.35→0.5(2026-07-10 novelty導入で③monsterRateの中央値が1.1を割れ=専用の討伐手数ボーナスで回復)
+    ratePerLv: 0.18, // 0.14→0.16(2026-07-10 第12次R: surge0.45の経済移動で③monsterRate中央値が再び1.1割れ=マージン積み増し)
+    rateKillBonus: 0.6, rateKillHalf: 2, // 0.35→0.5(2026-07-10 novelty導入で③monsterRateの中央値が1.1を割れ=専用の討伐手数ボーナスで回復)
     satKps: 2.0, // 討伐頻度の飽和半価点(2026-07-10): kill項の1体価値逓減。高テンポ期の討伐56-63%独走を[30,52]帯へ(balanced序盤0.02-0.05体/秒はほぼ線形)
+    killValueSec: 8, // 討伐1体の価値=生産◯秒ぶん(第12次R3・params駆動化)。7→8: ㉘hunt序盤(直送ゲート前)run8/20が討31-32%で合格化・balanced+1・click②改+2・bake影響なし(100h実測)。9/10はhunt+3〜4だがbalancedの打が7-9%に潰れ(−1〜2)・hunt後半②改−2=不採用
     scarceBonus: 2, scarceHalf: 0.02 // 希少プレミアム(第12次R続き・2026-07-10採用): 低テンポ期ほど討伐1体の価値を増幅(1+bonus/(1+kps/half))。balanced序盤討3-9%→≥10%・hunt序盤討28→30%(100h実測: balanced25→35-36・hunt29→34)。half0.05はclick中盤の討を+5-8pt膨らませ打を圧迫=0.02でkps0.2+をほぼ等倍に
   },
 
@@ -83,7 +84,7 @@ module.exports = {
     // 追跡ノルマ(旧⑧)は廃止(2026-07-06 ユーザー決定)。未達(T3a/T3b)は本来のノルマ係数
     // (baseCoef/basePow/base2Coef/base2Pow/w1〜w3P/ctrlMul/ctrlDiv)+後半成長の減速で作る。
     // 層の試練(2026-07-07 ユーザー採用・0-2提案4 / 第12次H 提案8で新規開拓層基準へ相対化): 発火せず無害の resting 値。
-    trialCoef: 0.08, trialStartLayer: 10, trialFloorRuns: 1, // trialFloorRuns=2で天井持ち越しを直近2周回のmaxに平滑化(第12次R2続き・T1 S10の交互振動対策・検証中)
+    trialCoef: 0.08, trialStartLayer: 10, trialFloorRuns: 2, // trialFloorRuns=2で天井持ち越しを直近2周回のmaxに平滑化(第12次R2続き・T1 S10の交互振動対策・検証中)
     // ---- 到達連動ノルマ(第12次H・提案9・ユーザー承認) ----
     // T3a を全周回・後半に置くための機構。層ゲージ(quotaAtElapsed=時間関数)には一切触れず、未達判定にだけ
     // 「到達項」を足す: 未達 = runCookies < max(従来ノルマ, runCookies×reachCoef×ρ^reachPow)。
@@ -95,7 +96,7 @@ module.exports = {
     // reachMaxSec=denom の上限クランプ(0=無効)。直前が極端に長い→短い周回で reach が未発火=T3a取りこぼし、を防ぐ。
     // 6000 で確定(sweep_maxsec.js で T3a と T3b を同時掃引): T3a全体 86→88%・S10 18/23@34% → 25/26@62%、
     // かつ T3b を維持(5000だと reach が早発して S8/S10 の T3b が落ちる。6000で S8 T3b40・S10 T3b17 を回復)。4000以下は位置が頭へ崩れる。
-    reachCoef: 20, reachPow: 10, reachMinSec: 600, reachMaxSec: 6000
+    reachCoef: 40, reachPow: 10, reachMinSec: 600, reachMaxSec: 6000, reachEmaAlpha: 0.35
   },
 
   // ---- 設備直送生産(第12次J・提案A・ユーザー承認 2026-07-07) ----
@@ -114,7 +115,7 @@ module.exports = {
   tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5, clickBonus: 3, satMax: 0, anchorGolden: 0.5, otherMul: { golden: 0.6, default: 1 } }, // clickBonus=3(2026-07-10採用): click中盤(神指0・指のみ=inv100-280)の打直2-12%を×3し打≥30%へ(click23→30/48)。後半(神指1851+)は既に②改NGなので失うものなし。satMaxは中盤/後半のinv比40-100倍を両立できず不採用。anchorGolden=0.5(採用)=**神指登場前だけ**max(base,0.5×金相場)(balanced中盤run25-32の打4-8%→14-18%で36→44/48。常時適用は後半打85%爆発=E2/E3実測)。otherMul.golden=0.6(採用)=golden後半の打圧迫を絞り41/44 // 投資量=神の指+強い指/10。clickBonus(第12次R続き・検証中)=click方針だけ厚く(bankDirectと同型・増加方向)。1で従来どおり
   // 銀行配当(直送・第12次J-3 腐り解消): bankClickDividend研究の独立収入。クリック方針で厚く効かせ①の各回minを満たす。
   // 全体cps倍率をやめ加算収入へ(他機能のlift希釈を回避)。所持数はlog10で床あり=早い周回でも効く。増加方向のみ。
-  bankDirect:   { coef: 0.42, ownRate: 0.5, savedCoef: 0.05, clickBonus: 1.5, countCoef: 0.9, countPow: 1.5, ref: 150 }, // 投資量=銀行所持数+貯蓄(総クッキー桁)。coef 0.34→0.42(2026-07-10 第12次R: surge経済移動で①bank研究が1.2割れ=マージン)
+  bankDirect:   { coef: 0.42, ownRate: 0.5, savedCoef: 0.05, clickBonus: 2.5, countCoef: 0.9, countPow: 1.5, ref: 150 }, // 投資量=銀行所持数+貯蓄(総クッキー桁)。coef 0.34→0.42(2026-07-10 第12次R: surge経済移動で①bank研究が1.2割れ=マージン)
   // 研究連動の全生産倍率(第12次L・提案A): 異世界接続網/銀河合成/量子証明が解放されている間、全生産(クリック＋毎秒)に
   // 一律の倍率を掛ける。floor で研究購入直後から立つ(①の各回min≥1.2)、所持数(log10)と最高層で伸びる。
   // 【重要】全生産倍率は設備/金/討伐/タップを同率で持ち上げる=㉘の稼ぎ口シェアが不変(相殺)、③/⑨の他機能liftも
@@ -275,7 +276,7 @@ module.exports = {
   // 目的: 周回終盤の駆け込み買い(谷)を引き伸ばしつつ、待てば必ず買える=16時間の壁を作らない。
   // perBuy 0.25→0.45(2026-07-10 第12次R: T1=短周回の谷対策。S3 17→26/47・S1 30→46/47・S8 31→33/45、
   // S10 28-31維持。halfSecを伸ばす案はS10=30秒間隔の放置型の周回が2時間上限を超えて崩れるため不採用=グリッド実測)
-  upSurge: { perBuy: 0.45, halfSec: 75 },
+  upSurge: { perBuy: 0.5, halfSec: 75 },
 
   // ---- アップグレードコスト式 ----  cost = coef * base^basePow * growth^(owned*ownPow)
   // 2026-07-06 第8次: 新帯域(周回25〜90分)へ向けownPow 0.25→0.27(再登坂・開拓の全体減速)、
@@ -306,7 +307,7 @@ module.exports = {
     factoryHiKind: 0.15, factoryStageCoef: 0.0012,
     matureRate: 0.006, aromaDur: 12, spiceStageCoef: 0.0015,
     huntExtendSec: 40, huntStageCoef: 0.0008,
-    bankIntRate: 0.004, bankIntCapCps: 8.0, bankCapStageCoef: 0.03,
+    bankIntRate: 0.004, bankIntCapCps: 8.0, bankCapStageCoef: 0.08,
     moonMarginDiv: 10, moonResCount: 0.05,
     foldKillCoef: 0.002, foldStageCoef: 0.001,
     galaxyBonusCoef: 0.05, galaxySat: 120, galaxyStageCoef: 0.0008,
