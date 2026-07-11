@@ -42,7 +42,7 @@ module.exports = {
     // 序盤ブースト(第12次R4・ユーザー指示 2026-07-11「序盤の金クッキーの獲得量を10倍くらいに」):
     // 即時獲得 ×(1+(earlyMul-1)×0.5^(転生回数/earlyHalfRuns))。第0回×10・第1回×6.7・第3回×3.3・第6回×1.6と減衰
     // =新規プレイヤーの体験だけを厚くし、中盤以降の稼ぎ口バランス(㉘・②改)を動かさない。ブースト側は対象外。
-    earlyMul: 10, earlyHalfRuns: 1.5,
+    earlyMul: 10, earlyHalfRuns: 0.7,
     multBase: 2.6,
     powerPerLv: 0.45, powerLvHalf: 60, rateLvHalf: 80,
     amountPerLv: 0.45, amountLvHalf: 45,
@@ -119,7 +119,7 @@ module.exports = {
   tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5, clickBonus: 3, satMax: 0, anchorGolden: 0.5, otherMul: { golden: 0.6, default: 1 } }, // clickBonus=3(2026-07-10採用): click中盤(神指0・指のみ=inv100-280)の打直2-12%を×3し打≥30%へ(click23→30/48)。後半(神指1851+)は既に②改NGなので失うものなし。satMaxは中盤/後半のinv比40-100倍を両立できず不採用。anchorGolden=0.5(採用)=**神指登場前だけ**max(base,0.5×金相場)(balanced中盤run25-32の打4-8%→14-18%で36→44/48。常時適用は後半打85%爆発=E2/E3実測)。otherMul.golden=0.6(採用)=golden後半の打圧迫を絞り41/44 // 投資量=神の指+強い指/10。clickBonus(第12次R続き・検証中)=click方針だけ厚く(bankDirectと同型・増加方向)。1で従来どおり
   // 銀行配当(直送・第12次J-3 腐り解消): bankClickDividend研究の独立収入。クリック方針で厚く効かせ①の各回minを満たす。
   // 全体cps倍率をやめ加算収入へ(他機能のlift希釈を回避)。所持数はlog10で床あり=早い周回でも効く。増加方向のみ。
-  bankDirect:   { coef: 0.42, ownRate: 0.5, savedCoef: 0.05, clickBonus: 2.5, countCoef: 0.9, countPow: 1.8, ref: 150 }, // 投資量=銀行所持数+貯蓄(総クッキー桁)。coef 0.34→0.42(2026-07-10 第12次R: surge経済移動で①bank研究が1.2割れ=マージン)
+  bankDirect:   { coef: 0.42, ownRate: 0.5, savedCoef: 0.05, clickBonus: 2.5, countCoef: 0.9, countPow: 1.8, ref: 150, anchorGolden: 0.12 }, // 投資量=銀行所持数+貯蓄(総クッキー桁)。coef 0.34→0.42(2026-07-10 第12次R: surge経済移動で①bank研究が1.2割れ=マージン)
   // 研究連動の全生産倍率(第12次L・提案A): 異世界接続網/銀河合成/量子証明が解放されている間、全生産(クリック＋毎秒)に
   // 一律の倍率を掛ける。floor で研究購入直後から立つ(①の各回min≥1.2)、所持数(log10)と最高層で伸びる。
   // 【重要】全生産倍率は設備/金/討伐/タップを同率で持ち上げる=㉘の稼ぎ口シェアが不変(相殺)、③/⑨の他機能liftも

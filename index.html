@@ -14212,10 +14212,10 @@ function hideGoldenCookie(shouldReschedule) {
 }
 
 // 序盤ブースト(2026-07-11): 金クッキーの即時獲得は駆け出しほどおいしい。
-// ×(1+9×0.5^(転生回数/1.5)) = 初周回×10・第1回×6.7・第3回×3.3・第6回×1.6と減衰(sim同期)。
+// ×(1+9×0.5^(転生回数/0.7)) = 初周回×10・第1回×4.4・第2回×2.3・第4回×1.2と減衰(sim同期)。
 function goldenEarlyMultiplier() {
   const runs = Math.max(0, Math.floor(Number(state.prestigeRuns) || 0));
-  return 1 + 9 * Math.pow(0.5, runs / 1.5);
+  return 1 + 9 * Math.pow(0.5, runs / 0.7);
 }
 function collectGoldenCookie() {
   if (!goldenVisible) return;
