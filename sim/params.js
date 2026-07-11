@@ -157,7 +157,7 @@ module.exports = {
   res: {
     // 会心1%開始(2026-07-06 ユーザー承認・第9次): score = 0.01 + 0.045×√強い指 + 0.002×最高到達層。
     // 取得直後(指0個・層0)でちょうど会心率1.0%。層項は周回内で会心が育つ動的項(①対策も兼ねる)
-    fingerBase: 0.01, fingerSqrt: 0.045, fingerStage: 0.002, fingerCritBase: 2.0, fingerCritGrow: 10.0,
+    fingerBase: 0.01, fingerSqrt: 0.045, fingerStage: 0.002, fingerCritBase: 2.2, fingerCritGrow: 10.0, // critBase 2.0→2.2(2026-07-11 ①finger: S2 run1のlift1.1996=基準1.2を丸め1つ分割れ。会心率(㉓固定)は不変・倍率の基礎項のみ)
     grandmaSelf: 30, grandmaSup: [0.007, 0.008, 0.009],
     // 2026-07-06 第8次: ⑫(設備の文脈依存性)用に所持数指数を再配分。
     // factory一強(全方針の最効率=工場固定)を解消: oven 0.060→0.067 / spice 0.062→0.071 / factory 0.060→0.057
