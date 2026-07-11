@@ -6069,8 +6069,8 @@ const SKILL_NODES = [
   { id: "golden_amp", name: "金箔集め", branchId: "golden", cost: 15, x: 780, y: 1120, icon: "✦", prereqs: ["golden_1"], desc: "金クッキー即時獲得量 +50%。", effects: [{ type: "goldenAmount", value: 0.5 }] },
   { id: "monster_amp", name: "仕留めの一撃", branchId: "monster", cost: 20, x: 1220, y: 1120, icon: "◉", prereqs: ["monster_1"], desc: "モンスター最終ダメージ +60%。", effects: [{ type: "monsterDamageSkill", value: 0.6 }] },
   // 提案10/11(2026-07-11 承認): タップ/討伐の換金収入を安いスキルで先行開始(研究の段階2でフル。消えずに出続ける)
-  { id: "click_stall", name: "土産の屋台", branchId: "click", cost: 2, x: 480, y: 1040, icon: "◆", prereqs: ["click_amp"], desc: "タップで焼いたクッキーのおすそ分けを屋台で売る。毎秒生産に「タップ1回の強さ×5%×√最高到達層」を追加(研究「指先の型」の段階2で20倍にパワーアップ)。", effects: [{ type: "unlockSystem", target: "tapStall" }] },
-  { id: "monster_peddler", name: "戦利品の行商", branchId: "monster", cost: 20, x: 1520, y: 1200, icon: "◉", prereqs: ["monster_1"], desc: "行商人が戦利品を買い取る。毎秒生産に「金クッキー1枚ぶんの獲得×0.2%×討伐系報酬の所持枚数×√最高到達層」を追加(研究「異世界接続網」の段階2で50倍にパワーアップ)。", effects: [{ type: "unlockSystem", target: "huntPeddler" }] },
+  { id: "click_stall", name: "土産の屋台", branchId: "click", cost: 2, x: 480, y: 1040, icon: "◆", prereqs: ["click_amp"], desc: "タップで焼いたクッキーのおすそ分けを屋台で売る。指系設備への投資量と到達層に応じた毎秒収入を追加(研究「指先の型」の段階2でフル稼働=それまでは5%)。", effects: [{ type: "unlockSystem", target: "tapStall" }] },
+  { id: "monster_peddler", name: "戦利品の行商", branchId: "monster", cost: 20, x: 1520, y: 1200, icon: "◉", prereqs: ["monster_1"], desc: "行商人が戦利品を買い取る。討伐系報酬の所持枚数と到達層に応じた毎秒収入(金相場基準)を追加(研究「異世界接続網」の段階2でフル稼働=それまでは2%)。", effects: [{ type: "unlockSystem", target: "huntPeddler" }] },
   { id: "auto_amp", name: "炉の熱気", branchId: "auto", cost: 35, x: 1380, y: 1120, icon: "◇", prereqs: ["auto_1"], desc: "毎秒生産 +75%。", effects: [{ type: "cps", value: 0.75 }] },
   { id: "golden_2", name: "金粉回収", branchId: "golden", cost: 1550, x: 620, y: 1380, icon: "✦", prereqs: ["golden_1"], desc: "金クッキー即時獲得量 +75%。", effects: [{ type: "goldenAmount", value: 0.75 }] },
   { id: "golden_3", name: "輝き増幅", branchId: "golden", cost: 550000, x: 440, y: 1500, icon: "✦", prereqs: ["golden_2"], desc: "金ブースト倍率 +2.1。", effects: [{ type: "goldenPower", value: 2.1 }] },
@@ -7566,7 +7566,7 @@ function appendMilestonePanel(box) {
 }
 
 const RES_STAGE2 = {
-  fingerTechnique: "click_2", grandmaCrowd: "auto_2", ovenBatch: "auto_3",
+  fingerTechnique: "click_2", grandmaCrowd: "auto_2", ovenBatch: "auto_1", // ovenBatch段2=auto_1(sim同期2026-07-10 ㉘bake対策: 設備直送の解放を早める。移植漏れを2026-07-11に修正)
   factoryNetwork: "auto_4", spiceBlend: "golden_1", portalNetwork: "monster_3",
   bankClickDividend: "economy_2", moonGlobalYeast: "upgrade_time", portalGlobalFold: "upgrade_singularity",
   galaxyAssembly: "upgrade_universe", blackHoleCompression: "upgrade_singularity",
@@ -9949,28 +9949,107 @@ function currentCps() {
   return baseCps() * goldenBoostMultiplier() * goldenAfterheatMultiplier() * challengeMultiplier() * chainProductionMultiplier();
 }
 
-// 提案10「土産の屋台」(2026-07-11 承認): タップ力の一部を毎秒の売上として換金。
-// 研究「指先の型」段階2でフル(×1)。スキルぶんが消えることはない(係数が上がるだけ)。係数=調整項目。
-const STALL_COEF = 0.05;
-function tapStallCps() {
-  if (!hasSkill("click_stall")) return 0;
-  const frac = (state.research.fingerTechnique && resStage2("fingerTechnique")) ? 1.0 : 0.05;
-  return baseClickPower() * STALL_COEF * 20 * frac * Math.sqrt(1 + maxQuotaStage());
-}
+// ================= 直送収入システム(sim同期・第12次J〜R5: 2026-07-11 フル移植) =================
+// 各ジャンルへ投資したプレイヤーだけに強く効く独立の毎秒収入(sim/sim.js の genreDirect 系と同形・同係数)。
+// ゲート: 設備=オーブン大量焼成 段階2 / 金=香料調合 段階2 / 討伐=異世界接続網 段階2(行商スキルで先行2%)/
+// タップ=指先の型 段階2(屋台スキルで先行5%)/ 銀行=銀行クリック配当研究。
+// 旧・屋台/行商の簡易式(タップ力×0.05×20×√層 / 金相場×0.002×20×枚数×√層)を置換=sim(判定基準)と同じ経済に。
+const DIRECT_CFG = {
+  equip:  { coef: 0.06, stagePow: 0.5, countPow: 2,   ref: 70,  startStage: 5, satMax: 50, otherMul: 0.2, anchorGolden: 0.15 },
+  golden: { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 10, otherMul: { click: 0.3, balanced: 0.3, hunt: 0.3, default: 1 } },
+  hunt:   { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 15, otherMul: { click: 0.15, balanced: 0.15, golden: 0.9, default: 0.3 }, peddlerFrac: 0.02 },
+  tap:    { coef: 0.01, stagePow: 0.5, countPow: 2,   ref: 20,  startStage: 5, clickBonus: 3, satMax: 0, anchorGolden: 0.5, stallFrac: 0.05, otherMul: { golden: 0.6, default: 1 } },
+  bank:   { coef: 0.42, ownRate: 0.5, savedCoef: 0.05, clickBonus: 2.5, countCoef: 0.9, countPow: 1.8, ref: 150, anchorGolden: 0.12, otherMul: 0.5 }
+};
+let recentTapsPerSec = 0; // 毎秒サンプラ(メインループ)で更新: 直近1秒の実タップ数
 
-// 提案11「戦利品の行商」(2026-07-11 承認): 討伐系報酬の枚数に応じて戦利品を毎秒換金。
-// 基準=金クッキー1枚ぶんの即時獲得。研究「異世界接続網」段階2でフル。係数=調整項目。
-const PEDDLER_COEF = 0.002;
+function directOtherMul(cfg, mainPol) {
+  if (runPolicyIs(mainPol)) return 1;
+  const om = cfg.otherMul;
+  if (om == null) return 1;
+  if (typeof om === "object") return om[state.runPolicy] != null ? om[state.runPolicy] : (om.default != null ? om.default : 1);
+  return om;
+}
+// 直送の共通形: coef × 基準 × (投資量/ref)^countPow(satMaxで飽和) × 層^stagePow
+function genreDirectCps(base, invest, cfg) {
+  if (!cfg || !cfg.coef) return 0;
+  const s = Math.max(0, maxQuotaStage() - (cfg.startStage || 0));
+  if (s <= 0) return 0;
+  let raw = Math.pow(Math.max(0, invest) / (cfg.ref || 1), cfg.countPow || 2);
+  if (cfg.satMax > 0) raw = raw / (1 + raw / cfg.satMax);
+  return cfg.coef * base * raw * Math.pow(s, cfg.stagePow || 0.5);
+}
+// 金クッキーの期待収入率(/秒): 実際の支払い式(即時50%/ブースト50%・出現間隔)から計算。直送のアンカー(金相場)に使う
+function expectedGoldenRateCps() {
+  const interval = Math.max(1, 65000 * goldenSpawnFactor() / 1000);
+  const clickEV = currentClickPower() * (1 + fingerCritChance() * (fingerCritMultiplier() - 1));
+  const instant = Math.max(100, currentCps() * 2.5, clickEV * 2.5) * goldenAmountMultiplier() * goldenEarlyMultiplier();
+  const boostVal = Math.max(0, goldenMultiplier() - 1) * currentCps() * (goldenBoostDuration() / 1000);
+  return (instant + boostVal) / 2 / interval;
+}
+function directBaseCps() {
+  return currentCps() + currentClickPower() * recentTapsPerSec;
+}
+// 設備直送: 投資量=オーブン所持数。量産品も金相場で売れる(アンカー=max(基準, 0.15×金相場))
+function equipDirectCps() {
+  if (!(state.research.ovenBatch && resStage2("ovenBatch"))) return 0;
+  const cfg = DIRECT_CFG.equip;
+  let anchor = directBaseCps();
+  if (cfg.anchorGolden > 0) anchor = Math.max(anchor, cfg.anchorGolden * expectedGoldenRateCps());
+  return genreDirectCps(anchor, state.upgrades.oven || 0, cfg) * directOtherMul(cfg, "bake");
+}
+// 金直送: 投資量=金カテゴリ報酬の所持枚数(全7種)
+function goldenDirectCps() {
+  if (!(state.research.spiceBlend && resStage2("spiceBlend"))) return 0;
+  const cfg = DIRECT_CFG.golden, p = state.perks || {};
+  const inv = (p.goldenAmount || 0) + (p.goldenPower || 0) + (p.goldenRate || 0)
+    + (p.goldenChain || 0) + (p.goldenTarget || 0) + (p.goldenFirstHit || 0) + (p.beastScent || 0);
+  return genreDirectCps(directBaseCps(), inv, cfg) * directOtherMul(cfg, "golden");
+}
+// 討伐直送(行商): 投資量=討伐カテゴリ報酬の所持枚数(全8種)。基準=金相場。図鑑で買い取り増(上限+50%)
 function huntPeddlerCps() {
-  if (!hasSkill("monster_peddler")) return 0;
+  const cfg = DIRECT_CFG.hunt;
+  let gateM = 1;
+  if (!(state.research.portalNetwork && resStage2("portalNetwork"))) {
+    if (!hasSkill("monster_peddler")) return 0;
+    gateM = cfg.peddlerFrac;
+  }
   const p = state.perks || {};
   const inv = (p.monsterDamage || 0) + (p.crackedFang || 0) + (p.beastHeatFerment || 0) + (p.huntingCore || 0)
     + (p.monsterRate || 0) + (p.monsterStay || 0) + (p.biteRecovery || 0) + (p.brandHunt || 0);
   if (inv <= 0) return 0;
-  const frac = (state.research.portalNetwork && resStage2("portalNetwork")) ? 1.0 : 0.02; // sim同期(peddlerFrac)
-  const goldenOne = Math.max(100, currentCps() * 2.5, currentClickPower() * 2.5);
-  const almanacM = 1 + Math.min(0.05 * equipLv("monsterAlmanac"), 0.5); // モンスター図鑑: 弱点を知る=買い取り増(上限+50%・sim同期2026-07-11)
-  return goldenOne * PEDDLER_COEF * 20 * frac * inv * Math.sqrt(1 + maxQuotaStage()) * almanacM;
+  const almanacM = 1 + Math.min(0.05 * equipLv("monsterAlmanac"), 0.5); // モンスター図鑑: 弱点を知る=買い取り増
+  return genreDirectCps(expectedGoldenRateCps(), inv, cfg) * directOtherMul(cfg, "hunt") * gateM * almanacM;
+}
+// タップ直送(屋台): 投資量=神の指+強い指÷10。神の指登場前だけ金相場アンカー(下位投資の換金)
+function tapStallCps() {
+  const cfg = DIRECT_CFG.tap;
+  let gateM = 1;
+  if (!(state.research.fingerTechnique && resStage2("fingerTechnique"))) {
+    if (!hasSkill("click_stall")) return 0;
+    gateM = cfg.stallFrac;
+  }
+  const inv = (state.upgrades.godFinger || 0) + (state.upgrades.finger || 0) * 0.1;
+  const polM = runPolicyIs("click") ? cfg.clickBonus : directOtherMul(cfg, "click");
+  let anchor = directBaseCps();
+  if (cfg.anchorGolden > 0 && (state.upgrades.godFinger || 0) === 0) anchor = Math.max(anchor, cfg.anchorGolden * expectedGoldenRateCps());
+  return genreDirectCps(anchor, inv, cfg) * polM * gateM;
+}
+// 銀行配当(直送): 所持数(log床+累乗)×貯蓄(桁)で毎秒へ加算。クリック方針で厚い
+function bankDirectCps() {
+  const cfg = DIRECT_CFG.bank;
+  if (!state.research.bankClickDividend) return 0;
+  const bank = state.upgrades.bank || 0;
+  if (bank <= 0) return 0;
+  let base = directBaseCps();
+  if (cfg.anchorGolden > 0) base = Math.max(base, cfg.anchorGolden * expectedGoldenRateCps());
+  const saved = Math.log10(Math.max(1, state.cookies.toNumberClamped(1e300)) + 10);
+  const polM = runPolicyIs("click") ? cfg.clickBonus : cfg.otherMul;
+  const ownM = 1 + cfg.ownRate * Math.log10(1 + bank) + cfg.countCoef * Math.pow(bank / cfg.ref, cfg.countPow);
+  return cfg.coef * base * ownM * (1 + Math.log1p(saved) * cfg.savedCoef) * polM;
+}
+function directIncomeTotalCps() {
+  return equipDirectCps() + goldenDirectCps() + huntPeddlerCps() + tapStallCps() + bankDirectCps();
 }
 
 function earn(amount) {
@@ -11211,7 +11290,7 @@ function checkQuotaStageTransition() {
 function updateTopOnly() {
   $("cookies").textContent = fmtCookieCount(state.cookies);
   const cpsEl = $("cookieCps");
-  if (cpsEl) cpsEl.textContent = pausedForSkillChoice() ? "合計毎秒 準備中" : "合計毎秒 " + fmt(currentCps() + tapStallCps() + huntPeddlerCps());
+  if (cpsEl) cpsEl.textContent = pausedForSkillChoice() ? "合計毎秒 準備中" : "合計毎秒 " + fmt(currentCps() + directIncomeTotalCps());
 
   $("cookie").classList.toggle("boost-all", goldenBoostActive());
 
@@ -15820,6 +15899,7 @@ $("titleAboutOverlay").addEventListener("click", e => {
 });
 
 let earnEmaTick = 0;
+let _lastTotalClicksSample = 0;
 const EARN_EMA_A = Math.exp(-1 / 90); // 直近稼ぎ率EMAの毎秒減衰(時定数90秒・sim同期)
 setInterval(() => {
   updateQuotaPauseState(); // タイトル画面中もノルマ時計を止めるため先に評価する
@@ -15832,8 +15912,8 @@ setInterval(() => {
     // ノルマ・注文・出現・各種ボーナスなど、その他の進行は従来どおりオーバーレイ中は止める。
     const overlayOpen = overlayFreezesGame();
     state.totalPlaySec = (state.totalPlaySec || 0) + 0.05; // v4: 総プレイ秒(転生持ち越し)
-    earn((currentCps() + tapStallCps() + huntPeddlerCps()) / 20);
-    if (orderCookieActive()) earn((currentCps() + tapStallCps() + huntPeddlerCps()) / 20 * ORDER_COOKIE_MUL); // 注文報酬cookie=時間窓の上乗せ(sim同期)
+    earn((currentCps() + directIncomeTotalCps()) / 20);
+    if (orderCookieActive()) earn((currentCps() + directIncomeTotalCps()) / 20 * ORDER_COOKIE_MUL); // 注文報酬cookie=時間窓の上乗せ(sim同期)
     // 直近稼ぎ率EMA(時定数90秒・sim同期2026-07-11): 毎秒1回、runCookiesの増分から更新
     earnEmaTick = (earnEmaTick + 1) % 20;
     if (earnEmaTick === 0) {
@@ -15841,6 +15921,8 @@ setInterval(() => {
       state.emaLastRunCookies = state.runCookies;
       state.earnEma = state.earnEma.mul(EARN_EMA_A).add(dEarn.mul(1 - EARN_EMA_A));
       state.lastSecondEarn = dEarn; // 直近1秒の実獲得(=瞬間ペース。注文報酬cookieの基準・sim同期)
+      recentTapsPerSec = Math.max(0, (state.totalClicks || 0) - _lastTotalClicksSample); // 直送の基準(タップ流量)
+      _lastTotalClicksSample = state.totalClicks || 0;
     }
     if (!overlayOpen) {
     // 最高到達ノルマ層を記録(段階式研究の変数)
