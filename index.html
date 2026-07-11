@@ -1631,12 +1631,13 @@
     }
 
     #cookie.boost-all {
-      /* 金クッキーはグロー(焼き込みの光の輪)を見せない: 145%に拡大してグローはほぼ見せずキラキラが縁に少し覗く。
-         枠になるbox-shadowの輪・縁取り(::before/::after)は付けず、円クリップでクッキーを丸く収める。 */
+      /* 金クッキーは縁がちゃんと見える大きさで表示(120%)。外周のグロー/キラキラは円の外に
+         ほぼ出しつつ、クッキー本体の輪郭は円内に収める。枠になるbox-shadowの輪・縁取りは付けない。
+         画像内でクッキー本体が中央よりやや下にあるため、縦位置80%で切り取って上の余白を消す。 */
       background: var(--golden-cookie-art);
-      background-size: 145%;
+      background-size: 120%;
       background-repeat: no-repeat;
-      background-position: center;
+      background-position: center 80%;
       box-shadow: none;
       overflow: hidden;
       border-radius: 50%;
@@ -2238,8 +2239,8 @@
       width: 90px !important;
       height: 90px !important;
       background: var(--golden-cookie-art) !important;
-      /* グロー(焼き込みの光の輪)は見せない: 145%でグローはほぼ見せずキラキラが縁に少し覗く。枠(box-shadow輪)は付けず円クリップで丸く収める */
-      background-size: 145% !important;
+      /* 縁がちゃんと見える大きさ(120%): グロー/キラキラはほぼ円外に出しつつ、本体の輪郭は円内に収める。枠は付けない */
+      background-size: 120% !important;
       background-repeat: no-repeat !important;
       background-position: center !important;
       box-shadow: none !important;
@@ -7125,11 +7126,10 @@ function generateHugeUnit(level) {
   return seededPick(HUGE_LONG_WORDS, n, 24) + seededPick(HUGE_SUFFIX, n, 25);
 }
 
-// 小数のある大きな数値(万/億/兆〜)は、小数部の右側(数字と単位の間)に半角スペースを入れて
-// 見やすくする。スペースは小数点の直後ではなく小数部の後ろに置く(2026-07-11 ユーザー指示)。
-// 呼び出し元は必ずこの直後に単位(万/億/兆〜)を連結するため、末尾スペースが浮くことはない。
+// 小数のある大きな数値(万/億/兆〜)は、小数点のちょうど左側に半角スペースを入れて
+// 「1 .234万」の形にし、小数点があることを分かりやすくする(2026-07-11 ユーザー指示)。
 function spaceAfterDecimalPoint(s) {
-  return typeof s === "string" && s.indexOf(".") >= 0 ? s + " " : s;
+  return typeof s === "string" && s.indexOf(".") >= 0 ? s.replace(".", " .") : s;
 }
 
 function fmtShortJapaneseUnitNumber(n) {
@@ -10687,14 +10687,35 @@ function startBgm() {
   } catch (e) {}
 }
 
+// AudioContextが "closed"(長時間バックグラウンド等でOSに破棄された)になると、
+// resume() では二度と復帰できない。その場合は音の配線を全部捨てて作り直す。
+// (BGMタイマー・SEマスターゲイン・BGMゲインは古いContextに繋がったままなので必ずリセットする)
+function rebuildAudioIfDead() {
+  try {
+    if (!audioCtx || audioCtx.state !== "closed") return false;
+    try { if (bgmTimer) { clearInterval(bgmTimer); bgmTimer = null; } } catch (e) {}
+    audioCtx = null;
+    seMasterGain = null;
+    bgmGainNode = null;
+    bgmFilter = null;
+    bgmStarted = false;
+    // ユーザー操作(タップ)中に呼ばれる前提で、新しいContextでBGMを再構築する
+    startBgm();
+    return true;
+  } catch (e) { return false; }
+}
+
 // suspend/interruptされたAudioContextを復帰させる(バックグラウンド復帰・画面転移・iOSの割り込み対策)
 // iOS/Safariは中断時に state を "interrupted" にするため、"suspended" だけ見ると復帰できず音が消えたままになる。
-// running 以外なら常に resume を試みる。resume 後は次のsetIntervalでBGMが鳴り直す。
+// running 以外なら常に resume を試みる。closed なら resume 不能なので作り直す。
 function resumeAudioIfNeeded() {
   try {
-    if (audioCtx && audioCtx.state !== "running") {
+    if (!audioCtx) return;
+    if (audioCtx.state === "closed") { rebuildAudioIfDead(); return; }
+    if (audioCtx.state !== "running") {
       const p = audioCtx.resume();
-      if (p && p.catch) p.catch(() => {});
+      // resumeが失敗し、その時点でclosedになっていたら作り直す
+      if (p && p.catch) p.catch(() => { rebuildAudioIfDead(); });
     }
   } catch (e) {}
 }
@@ -10724,6 +10745,8 @@ window.addEventListener("pageshow", resumeAudioIfNeeded);
 function playSound(kind) {
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
+    // closed(OSに破棄済み)のContextはresume不能。配線ごと作り直してから鳴らす
+    if (audioCtx && audioCtx.state === "closed") rebuildAudioIfDead();
     if (!audioCtx) audioCtx = new AudioContext();
     // 再開後・画面転移・iOSの割り込みでContextがsuspended/interruptedになると音が出なくなるため必ず復帰させる
     if (audioCtx.state !== "running") audioCtx.resume();
@@ -14993,11 +15016,11 @@ function defeatMonster(id) {
   const dropText = grantMonsterDrops(defeatedTypeId, defeatedLevel, Boolean(mon.overkill));
   if (dropText) message += ` / ${dropText}`;
 
-  // 討伐連鎖: 2連鎖以上のときだけ表示(全生産に効いていることが分かるように)。
-  // クッキーの上あたりにも数秒間出す(2026-07-11 ユーザー指示)
+  // 討伐連鎖: 2連鎖以上のときだけトーストに追記。
+  // クッキー上のチェイン表示は、報酬モーダルの裏で消えてしまわないよう
+  // 「報酬を選択した後」に出す(chooseReward側で表示。2026-07-11 ユーザー指示)
   if (chainCount() >= 2) {
     message += ` / 連鎖 ×${chainCount()}(全生産+${Math.round(CHAIN_PROD_COEF * chainCount() * 100)}%)`;
-    showChainIndicator();
   }
 
   playSound("golden");
@@ -15335,6 +15358,9 @@ function chooseReward(choice) {
 
   $("rewardModal").style.display = "none";
   finishQuotaPause();
+
+  // 討伐連鎖のチェイン表示は報酬選択後に出す(モーダルの裏で3秒消化されるのを防ぐ)
+  if (chainCount() >= 2) showChainIndicator();
 
   playSound("reward");
   showMessage(`報酬を獲得：${choice.name} +${gained}${affMul !== 1 ? `(相性×${affMul})` : ""}`);
