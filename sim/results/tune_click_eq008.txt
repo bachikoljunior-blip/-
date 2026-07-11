@@ -1,0 +1,1 @@
+=== override={"equipDirect":{"otherMul":{"click":0.08,"default":0.2}}} (100h) ===

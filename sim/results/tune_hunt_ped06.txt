@@ -1,0 +1,1 @@
+=== override={"huntDirect":{"peddlerFrac":0.06}} (100h) ===
