@@ -1298,7 +1298,7 @@ function monsterSpawnFactor(sim) {
     - Math.max(0, skillEffect(sim, 'monsterRate')) * 1.8
     - rewardCategoryBonus(sim, 'hunt') * 1.0
     - (policyIs(sim, 'hunt') ? 0.10 : 0)
-  ) * deep * portalHunt * runTempoRamp(sim)
+  ) * deep * portalHunt * runTempoRamp(sim) * ((r.ms && r.ms.spawn) || 1)
     * (wsBuffActive(sim, 'hunterStew') ? P.ws.fx.stewMonsterInt : 1)
     * (wsBuffActive(sim, 'voidTart') ? P.ws.fx.voidMonsterInt : 1);
 }
@@ -1314,6 +1314,7 @@ function monsterHpValue(sim, level) {
   const timePressure = 1 + Math.pow(Math.max(0, s - 45) / M.hpPressureDiv, M.hpPressurePow);
   let hp = M.hpBase * Math.pow(M.hpGrowth, Math.max(0, level - 1)) * timePressure;
   hp *= Math.exp(-Math.max(0, skillEffect(sim, 'monsterHpDown')));
+  hp *= ((sim.run.ms && sim.run.ms.hp) || 1); // 実績研究「弱点看破」(2026-07-11)
   hp *= Math.pow(P.rw.deepPursuitHp, rwOff(sim, 'deepPursuit') ? 0 : (sim.run.perks.deepPursuit || 0));
   // ステージHP補正(工房統合): S1=×1〜S5=×60・深層=60×4^層
   if (P.ws) {
@@ -1327,7 +1328,7 @@ function monsterStayMs(sim) {
   const rewardLv = rwOff(sim, 'monsterStay') ? 0 : Math.max(0, r.perks.monsterStay || 0);
   const mult = Math.exp(rewardLv * P.monster.stayPerLv + Math.max(0, skillEffect(sim, 'monsterStay')) * 0.12
     + (policyIs(sim, 'hunt') ? 0.10 : 0) + rewardCategoryBonus(sim, 'hunt'))
-    * (r.nextMonsterStayMultiplier || 1) * ((P.ws && wsStageDef(sim).stayMul) || 1);
+    * (r.nextMonsterStayMultiplier || 1) * ((P.ws && wsStageDef(sim).stayMul) || 1) * ((r.ms && r.ms.stay) || 1);
   r.nextMonsterStayMultiplier = 1;
   return Math.max(4000, P.monster.stayBase * mult);
 }
@@ -1399,6 +1400,11 @@ const MILESTONE_RESEARCH = (() => {
   list.push({ id: 'ms_stage_10', trig: sim => (sim.run.maxStage || 0) >= 10, fx: { all: 1.5 } });
   list.push({ id: 'ms_stage_50', trig: sim => (sim.run.maxStage || 0) >= 50, fx: { all: 2 } });
   list.push({ id: 'ms_prestige_5', trig: sim => (sim.prestigeRuns || 0) >= 5, fx: { all: 1.5 } });
+  // モンスター関連(2026-07-11 ユーザー指示「研究はモンスター関連の効果も追加して」)
+  list.push({ id: 'ms_kills_50', trig: sim => (sim.run.msKills || 0) >= 50, fx: { spawn: 0.8 } });   // 群れの気配: 出現間隔×0.8
+  list.push({ id: 'ms_stage_20', trig: sim => (sim.run.maxStage || 0) >= 20, fx: { stay: 1.3 } });   // 足止めの罠: 滞在×1.3
+  list.push({ id: 'ms_kills_200', trig: sim => (sim.run.msKills || 0) >= 200, fx: { hp: 0.7 } });    // 弱点看破: HP×0.7
+  list.push({ id: 'ms_kills_75', trig: sim => (sim.run.msKills || 0) >= 75, fx: { dropAdd: 1 } });   // 戦利品の嗅覚: ドロップ+1
   // スキル解放系(「スキルでの研究解放もたんと」)
   const sk = (id, fx) => list.push({ id: 'ms_skill_' + id, trig: sim => !!sim.skills[id], fx });
   sk('click_amp', { click: 1.5 }); sk('golden_amp', { golden: 1.3 }); sk('monster_amp', { hunt: 1.5 }); sk('auto_amp', { all: 1.3 });
@@ -1424,6 +1430,9 @@ function tryBuyMilestones(sim, prod) {
     if (m.fx.golden) r.ms.golden *= m.fx.golden;
     if (m.fx.hunt) r.ms.hunt *= m.fx.hunt;
     if (m.fx.dropAdd) r.ms.dropAdd += m.fx.dropAdd;
+    if (m.fx.spawn) r.ms.spawn = (r.ms.spawn || 1) * m.fx.spawn;
+    if (m.fx.stay) r.ms.stay = (r.ms.stay || 1) * m.fx.stay;
+    if (m.fx.hp) r.ms.hp = (r.ms.hp || 1) * m.fx.hp;
     if (!sim.everMs) sim.everMs = {};
     if (!sim.everMs[m.id]) { sim.everMs[m.id] = true; sim.unlockEvents.push({ t: sim.t, kind: 'research', id: m.id }); } // 解放イベントは初回のみ(買い直しはT2の「新規解放」に数えない)
   }
@@ -2036,12 +2045,17 @@ function cheapestUnownedSkillCost(sim) {
 // 必要量 = 10^(costExp0 + costStep×これまでの転生回数)。prestigeRuns は転生完了ごとに+1されるので、
 // 次の転生の必要量は毎回きっちり costStep 桁ぶん大きくなる。
 function prestigeCostOf(sim) {
-  // 転生のクッキー必要量(2026-07-11 ユーザー仕様変更): 初回転生=500万(firstCost)。
-  // 2回目以降=「前回転生した時点の毎秒生産 × costCpsMul(500)」を10のべき乗に切り捨て
-  // (10のべき乗ルールを保ったまま、プレイヤーの実ペースに追随する動的コスト)。
+  // 転生のクッキー必要量(2026-07-11 ユーザー仕様変更・確定形): 初回転生=500万(firstCost)。
+  // 2回目以降=**固定テーブル**(完成版での測定=基準方針の100hシミュレーションで、第n回の
+  // 「転生した時点の毎秒生産×500」を10のべき乗に切り捨てた値。build_prestige_table.js が
+  // prestige_costs.json に焼き込み、全プレイヤー共通の決まった値になる)。
+  // テーブルが無い/範囲を超えた場合は同じ式の動的計算にフォールバック(=テーブル生成にも使う)。
   const pc = P.prestige || {};
   const runs = sim.prestigeRuns || 0;
   if (runs === 0) return pc.firstCost != null ? pc.firstCost : 5e6;
+  const table = pc.costTable || [];
+  // 対応: 第n回(prestigeRuns=n)の必要量 = 完成版測定で「第n回が転生した時点の毎秒×500」の10べき切捨て(table[n])
+  if (table[runs] != null) return table[runs];
   const base = Math.max(1, (sim.lastPrestigeCps || 0) * (pc.costCpsMul != null ? pc.costCpsMul : 500));
   const cost = Math.pow(10, Math.floor(Math.log10(base)));
   return Math.max(pc.firstCost != null ? pc.firstCost : 5e6, cost);
@@ -2055,7 +2069,8 @@ function doPrestige(sim) {
   if (gain <= 0) return false;
   const nextCostAt = cheapestUnownedSkillCost(sim); // ⑭: 購入前の次スキル最安
   const onHandCookies = r.cookies; // 転生時の所持クッキー(コスト控除前・第0回コスト再算定用=diag_prestige0.js)
-  sim.lastPrestigeCps = computeProd(sim).cps; // 転生コスト式(2026-07-11): 次回コスト=この時点の毎秒×500の10べき切捨て
+  sim.lastPrestigeCps = computeProd(sim).cps; // テーブル生成用: この時点の毎秒(×500の10べき切捨てが次回コスト)
+  r.prestigeCps = sim.lastPrestigeCps; r.prestigeCostPaid = cost;
   r.cookies -= cost;
   sim.prestige += gain;
   sim.prestigeTotal += gain;
@@ -2082,6 +2097,7 @@ function doPrestige(sim) {
     upCounts: Object.assign({}, r.upgrades),
     nextSkillCost: nextCostAt, gainToNext: nextCostAt ? gain / nextCostAt : null,
     critAtBuy: r.critAtBuy, critEnd: r.critNow, critMax: r.critMax,
+    prestigeCps: r.prestigeCps, prestigeCostPaid: r.prestigeCostPaid, // 転生コストテーブル生成用(2026-07-11)
     killsByType: Object.assign({}, r.killsByType), rewardByType: Object.assign({}, r.rewardByType),
     wsDishes: Object.keys(r.buffs || {}), wsEq: Object.assign({}, sim.ws.eq), wsOrders: Object.assign({}, r.ordersDone), wsStageNo: r.wsStage,
     measure: finalizeMeasure(r)
