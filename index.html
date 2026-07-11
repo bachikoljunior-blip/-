@@ -1587,33 +1587,37 @@
     #cookie {
       width: 150px;
       height: 150px;
-      background: radial-gradient(circle at 50% 50%, rgba(255,222,124,0.28), transparent 65%), var(--cookie-art);
-      background-size: 122% 122%;
+      /* 通常クッキーも丸いUI枠を出さない: 画像を全表示(contain)、円クリップ(overflow/border-radius)・
+         box-shadowの輪・縁取り(::before/::after)は消す。影は絵の形に沿うdrop-shadowだけ。 */
+      background: var(--cookie-art);
+      background-size: contain;
+      background-repeat: no-repeat;
       background-position: center;
-      box-shadow:
-        0 0 24px rgba(255,184,76,0.34),
-        0 14px 26px rgba(0,0,0,0.42),
-        inset 0 0 18px rgba(255,235,175,0.10);
+      box-shadow: none;
+      overflow: visible;
+      border-radius: 0;
+      filter: drop-shadow(0 8px 14px rgba(0,0,0,0.42));
     }
 
-    #cookie::before {
-      background:
-        radial-gradient(circle at 32% 24%, rgba(255,255,255,0.30), transparent 18%),
-        radial-gradient(circle at 50% 50%, transparent 42%, rgba(87,41,14,0.26) 88%);
-    }
-
+    #cookie::before,
     #cookie::after {
-      border-color: rgba(255,221,136,0.20);
-      box-shadow: inset 0 0 18px rgba(77,32,9,0.28);
+      display: none;
     }
 
     #cookie.boost-all {
-      background: radial-gradient(circle at 50% 50%, rgba(255,246,160,0.44), transparent 64%), var(--golden-cookie-art);
-      /* 金クッキー画像は通常クッキー画像より余白が広く、126%では小さく縮んで“ずれ”て見える。
-         金クッキー(浮遊)の表示と同じ150%にして、通常時と同じくクッキーが枠いっぱいに収まるようにする。 */
-      background-size: 150% 150%;
+      /* 金クッキーはグロー(焼き込みの光の輪)を見せない: 画像を160%に拡大して光を円の外へ出す。
+         枠になるbox-shadowの輪・縁取り(::before/::after)は付けず、円クリップでクッキーを丸く収める。 */
+      background: var(--golden-cookie-art);
+      background-size: 160%;
+      background-repeat: no-repeat;
       background-position: center;
+      box-shadow: none;
+      overflow: hidden;
+      border-radius: 50%;
     }
+    /* 金クッキー時は、縁取り(::after)と縁の暗いふち(::before)を消して枠を見せない */
+    #cookie.boost-all::before,
+    #cookie.boost-all::after { display: none; }
 
     #goldenCookie {
       background: radial-gradient(circle at 50% 50%, rgba(255,246,160,0.36), transparent 68%), var(--golden-cookie-art);
@@ -2208,17 +2212,19 @@
       width: 90px !important;
       height: 90px !important;
       background: var(--golden-cookie-art) !important;
-      background-size: 150% 150% !important;
+      /* グロー(焼き込みの光の輪)は見せない: 160%に拡大して光を円の外へ出す。枠(box-shadow輪)は付けず円クリップで丸く収める */
+      background-size: 160% !important;
+      background-repeat: no-repeat !important;
       background-position: center !important;
-      filter:
-        drop-shadow(0 0 18px rgba(255, 232, 105, 1))
-        drop-shadow(0 0 34px rgba(255, 178, 44, 0.55))
-        drop-shadow(0 10px 18px rgba(0,0,0,0.42)) !important;
+      box-shadow: none !important;
+      overflow: hidden !important;
+      border-radius: 50% !important;
+      filter: drop-shadow(0 6px 12px rgba(0,0,0,0.42)) !important;
     }
 
     #goldenCookie::before {
-      inset: -18px !important;
-      background: radial-gradient(circle, rgba(255,230,120,0.50), transparent 70%) !important;
+      /* 外側の光の輪(枠)は出さない */
+      display: none !important;
     }
 
     #monsterWrap {
@@ -4894,9 +4900,11 @@
     .monsterInstance.mtype-boss .cookieMonsterButton {
       width: 250px;
       height: 250px;
-      box-shadow:
-        0 0 30px rgba(255, 64, 64, 0.72),
-        0 11px 24px rgba(0, 0, 0, 0.45);
+      /* 四角い枠(矩形box-shadow)は出さない。赤い光は絵の形に沿うdrop-shadowで付ける。 */
+      box-shadow: none;
+      filter:
+        drop-shadow(0 0 22px rgba(255, 64, 64, 0.72))
+        drop-shadow(0 11px 22px rgba(0, 0, 0, 0.45));
     }
 
     .monsterInstance.mtype-boss .monsterTypeLabel {
@@ -7031,13 +7039,21 @@ function generateHugeUnit(level) {
   return seededPick(HUGE_LONG_WORDS, n, 24) + seededPick(HUGE_SUFFIX, n, 25);
 }
 
+// 小数点の後ろに半角スペースを入れて、小数点があることを分かりやすくする(大きな数値=万/億/兆〜用)
+function spaceAfterDecimalPoint(s) {
+  return typeof s === "string" && s.indexOf(".") >= 0 ? s.replace(".", ". ") : s;
+}
+
 function fmtShortJapaneseUnitNumber(n) {
   n = Number(n) || 0;
 
-  if (n >= 1000) return n.toFixed(0);
-  if (n >= 100) return n.toFixed(1).replace(".0", "");
-  if (n >= 10) return n.toFixed(2).replace(/\.?0+$/, "");
-  return n.toFixed(3).replace(/\.?0+$/, "");
+  let s;
+  if (n >= 1000) s = n.toFixed(0);
+  else if (n >= 100) s = n.toFixed(1).replace(".0", "");
+  else if (n >= 10) s = n.toFixed(2).replace(/\.?0+$/, "");
+  else s = n.toFixed(3).replace(/\.?0+$/, "");
+  // 大きな数値(万/億/兆〜)の小数点は、あとに半角スペースを入れて分かりやすくする
+  return spaceAfterDecimalPoint(s);
 }
 
 function fmt(n) {
@@ -7088,7 +7104,8 @@ function fmtSixSigMantissa(scaled) {
   const decimals = abs >= 1000 ? 2 : abs >= 100 ? 3 : abs >= 10 ? 4 : 5; // 整数部桁数 + 小数桁 = 6桁
   let s = abs.toFixed(decimals);
   if (s.indexOf(".") >= 0) s = s.replace(/\.?0+$/, ""); // 末尾の0は落とす
-  return s;
+  // 大きな数値の小数点は、あとに半角スペースを入れて分かりやすくする
+  return spaceAfterDecimalPoint(s);
 }
 
 function fmtCookieCountNumber(n) {
@@ -8251,25 +8268,10 @@ function parfaitBoostedUnits(id) {
   return Math.max(0, Math.min(state.upgrades[id] || 0, Math.floor(Number((state.parfaitUnits || {})[id]) || 0)));
 }
 
-// レシピの開示ステージ = 構成素材の入手先ステージの最大(黄金粉・ボス核・万能粉は全ステージ入手可=1)。
-// 第12次(T2対策): 開示を「その素材の入手先ステージが拓けた瞬間」に変更=ステージ解放と同一タイミングに
-// 統合する(素材の初入手基準だと開示が周回中盤に単独で散らばる。開示が先・調理は素材が揃ってから、が自然)。
-const MATERIAL_SOURCE_STAGE = {
-  butter: 1, flour: 1,
-  cacao: 2, lavaSugar: 2, ironShard: 2,
-  mint: 3, frostSugar: 3, silentCore: 3,
-  spice: 4,
-  stardust: 5, cometShard: 5,
-  voidSugar: 6, deepCore: 6
-};
-
 function dishRecipeRevealed(dish) {
-  let s = 1;
-  for (const id of Object.keys(dish.cost)) {
-    if (id === "goldDust" || id === "bossCoreAny" || id === "omniFlour") continue;
-    s = Math.max(s, MATERIAL_SOURCE_STAGE[id] || 1);
-  }
-  return s <= maxUnlockedStageNo();
+  // 虚空タルトはS6(深層領域)到達で開示
+  if (dish.id === "voidTart") return maxUnlockedStageNo() > STAGES.length;
+  return Object.keys(dish.cost).every(id => id === "bossCoreAny" ? anyBossCoreCount() > 0 : materialSeen(id));
 }
 
 // ==== 素材の獲得・消費 ====
@@ -8811,7 +8813,7 @@ function renderWorkshop() {
   box.innerHTML = `
     <div class="infoBox">
       <h3>料理(時限バフ・最大${MAX_ACTIVE_DISHES}品)</h3>
-      ${dishCards || `<div class="desc">ステージを拓くとレシピが並ぶ</div>`}
+      ${dishCards || `<div class="desc">素材を集めるとレシピが並ぶ</div>`}
     </div>
     ${craftSection}
     <div class="infoBox">
@@ -10607,6 +10609,8 @@ function playSound(kind) {
 
     if (kind === "crit") {
       // 会心タップ：力強さ + 爽快な抜け + ノイズのバチバチ感 を両立させた一撃音
+      // 音量は通常タップ(0.055)と同程度に抑える(音色はそのまま、全レイヤーを一括で縮小)
+      const CRIT_VOL = 0.22;
       const now = audioCtx.currentTime;
 
       // 芯の低音インパクト(力強さ): sineを急降下でズンと当てる
@@ -10615,7 +10619,7 @@ function playSound(kind) {
       punch.type = "sine";
       punch.frequency.setValueAtTime(300, now);
       punch.frequency.exponentialRampToValueAtTime(85, now + 0.12);
-      pg.gain.setValueAtTime(0.16, now);
+      pg.gain.setValueAtTime(0.16 * CRIT_VOL, now);
       pg.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
       punch.connect(pg); pg.connect(seBus());
       punch.start(now); punch.stop(now + 0.16);
@@ -10627,7 +10631,7 @@ function playSound(kind) {
         osc.type = "triangle";
         osc.frequency.setValueAtTime(f, now + i * 0.018);
         osc.frequency.exponentialRampToValueAtTime(f * 1.18, now + i * 0.018 + 0.14);
-        g.gain.setValueAtTime(0.07, now + i * 0.018);
+        g.gain.setValueAtTime(0.07 * CRIT_VOL, now + i * 0.018);
         g.gain.exponentialRampToValueAtTime(0.0008, now + i * 0.018 + 0.24);
         osc.connect(g); g.connect(seBus());
         osc.start(now + i * 0.018);
@@ -10651,10 +10655,10 @@ function playSound(kind) {
         src.connect(filt); filt.connect(g); g.connect(seBus());
         src.start(t); src.stop(t + dur);
       };
-      spark(now,         0.035, 3500, 0.13);
-      spark(now + 0.020, 0.030, 2600, 0.10);
-      spark(now + 0.040, 0.030, 4200, 0.09);
-      spark(now + 0.062, 0.026, 3000, 0.08);
+      spark(now,         0.035, 3500, 0.13 * CRIT_VOL);
+      spark(now + 0.020, 0.030, 2600, 0.10 * CRIT_VOL);
+      spark(now + 0.040, 0.030, 4200, 0.09 * CRIT_VOL);
+      spark(now + 0.062, 0.026, 3000, 0.08 * CRIT_VOL);
       return;
     }
 
@@ -10856,6 +10860,7 @@ function updateTopOnly() {
   updatePrestigeTabLabel();
   checkPrestigeUnlockNotice();
   renderQuota();
+  enforceMonstersBelowQuota(); // ノルマUIの高さ変化でモンスターHPがゲージに重ならないよう常時補正
   checkQuotaStageTransition();
   renderStageBar();
   updateWorkshopTabVisibility();
@@ -14072,6 +14077,26 @@ function overlapArea(a, b, margin) {
   return ox > 0 && oy > 0 ? ox * oy : 0;
 }
 
+// モンスター(HP表示を含むラッパー)がノルマUI(quotaBox)と重ならないよう押し下げる。
+// 出現時はノルマ下に配置されるが、ノルマUIは再描画で高さが変わるため、描画のたびに確認する。
+// 「ノルマ表示より下」は placeFixedElement と同じく絶対条件として扱う。
+function enforceMonstersBelowQuota() {
+  const quota = $("quotaBox");
+  if (!quota || !monsters || !monsters.length) return;
+  const qr = quota.getBoundingClientRect();
+  if (!(qr.height > 0)) return;
+  monsters.forEach(m => {
+    const el = m && m.el;
+    if (!el || !el.isConnected) return;
+    const r = el.getBoundingClientRect();
+    if (!(r.height > 0)) return;
+    if (r.top < qr.bottom + 4 && r.bottom > qr.top && r.right > qr.left && r.left < qr.right) {
+      const delta = (qr.bottom + 4) - r.top;
+      el.style.top = ((parseFloat(el.style.top) || 0) + delta) + "px";
+    }
+  });
+}
+
 function placeFixedElement(el, width, height, minY) {
   const host = document.querySelector(".top");
   if (!el || !host) return;
@@ -14909,7 +14934,9 @@ function rewardPreviewText(choice) {
 function upgradeRewardPreviewText(choice) {
   const u = getUpgrade(choice.id);
   const lvNow = state.upgradePerks[u.id] || 0;
-  const lvNext = lvNow + choice.count;
+  // 相性倍率込みの実獲得Lv(rewardChoiceGain)で表示する。
+  // choice.count のままだと「Lv.X → Lv.Y」と「獲得Lv +N(相性込み)」や実際の付与量が食い違うため。
+  const lvNext = lvNow + rewardChoiceGain(choice);
 
   const before = 1 + lvNow * upgradeBoostRate(u);
   const after = 1 + lvNext * upgradeBoostRate(u);
@@ -15366,7 +15393,7 @@ setInterval(() => {
     // 最高到達ノルマ層を記録(段階式研究の変数)
     state.maxQuotaStage = Math.max(state.maxQuotaStage || 1, currentQuotaStageNumber());
     state.maxQuotaStageEver = Math.max(state.maxQuotaStageEver || 1, state.maxQuotaStage);
-    // 霜降りケーキ: ノルマ時計を15%遅らせる(ゲージ増加速度×0.85)
+    // 霜降りケーキ: ノルマ時計を40%遅らせる(ゲージ増加速度×0.6・第12次R4でfrostGauge0.85→0.6)
     if (dishActive("frostCake")) state.quotaPausedMs = (state.quotaPausedMs || 0) + 50 * 0.4;
     // 銀行クリック配当 段階2: 複利利息(所持クッキーに毎秒、毎秒生産比から逓減)
     if (state.research.bankClickDividend && resStage2("bankClickDividend")) {
