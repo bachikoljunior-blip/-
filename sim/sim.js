@@ -704,12 +704,10 @@ function wsOrderTick(sim, prod) {
       // 達成: 報酬(種別ローテ)。㉙=各報酬の稼ぎ比≥1.2 の判定対象
       const rkinds = ['cookie', 'materials', 'boost'];
       const rk = rkinds[ws.orderRewardRot % 3]; ws.orderRewardRot++;
-      if (rk === 'cookie' && !wsOff(sim, 'order:cookie')) {
-        // 報酬=「今この瞬間のペース×rewardCookie秒ぶん」(2026-07-11 確定形)。基準の変遷:
-        // cps基準1.009→周回平均1.021→EMA基準1.08-1.15(超成長でEMAが瞬間値の1/30に遅延)→
-        // 所持×45% 1.028(所持は使い切りで薄い)→直近1秒の実獲得×秒数(boost報酬と同じ瞬間フロー基準)。
-        const rate = Math.max(prod.cps, sim.run.lastTickEarn || 0);
-        earn(sim, rate * O.rewardCookie);
+      if (rk === 'cookie') {
+        // 報酬=時間窓の上乗せ(2026-07-11 確定形)。窓の設定自体は無条件、支払いはtick側で
+        // wsOff('order:cookie')ゲート(枝分かれ計測で以後の支払いだけ消える=同式性)。
+        sim.run.orderCookieUntil = t + (O.rewardCookieSec || 300);
       }
       else if (rk === 'materials' && !wsOff(sim, 'order:materials')) {
         // 素材セット=御用聞き型: 次に作りたい装備(方針の好み順で最初に作れない物)の不足分を補充する。
@@ -2325,6 +2323,12 @@ function advanceTick(sim, strategy) {
     const directAll = equipDirectIncome(sim, dirBase, prod) + goldenDirectIncome(sim, dirBase)
       + huntDirectIncome(sim, goldenRateValue(sim, prod)) + tapDirectIncome(sim, dirBase, prod) + bankDirectIncome(sim, dirBase, prod);
     earn(sim, cpsNow * dt + clickNow * tapsForCookies * dt + directAll * dt);
+    // 注文報酬cookie(2026-07-11 確定形=時間窓の上乗せ): 達成後 rewardCookieSec 秒間、獲得+rewardCookieMul を
+    // クッキーで受け取る。一括グラントは何秒ぶんでも通らない(末期は購入テンポ律速=軌道を先に進められず、
+    // 450秒ぶんでも比1.15止まりと実測)。フロー比例ならブースト報酬と同じ時間不変性で効く。
+    if (r.orderCookieUntil && sim.t < r.orderCookieUntil && !wsOff(sim, 'order:cookie')) {
+      earn(sim, (cpsNow + clickNow * tapsForCookies + directAll) * (P.ws.orders.rewardCookieMul || 0.5) * dt);
+    }
     r.msTaps = (r.msTaps || 0) + tapsForCookies * dt; // マイルストーン研究(第12次R5): その周回のタップ数
     tryBuyMilestones(sim, prod); // 同: 解放条件を満たした即効研究を自動購入(常に手が届く安さのモデル)
 
