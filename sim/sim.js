@@ -1488,7 +1488,9 @@ function bankDirectIncome(sim, base, prod) {
   // 複利で伸び、base係留の銀行配当のliftが尻すぼみ(S2 run35-39で1.06まで沈む=①bankの窓端NGの真因)。
   if ((cfg.anchorGolden || 0) > 0 && prod) base = Math.max(base, cfg.anchorGolden * goldenRateValue(sim, prod));
   const saved = Math.log10(r.cookies + 10);
-  const polM = policyIs(sim, 'click') ? (cfg.clickBonus || 1) : 1;
+  // 方針係数(第12次R4): click=clickBonus(①bankのS2マージン)/それ以外=otherMul。anchorGolden×countPow1.8の
+  // 複合で非click方針(S3金特化等)の銀行収入が深い周回で膨張し、goldenの金シェアを食った(run37+ 設備40%=実測)対策。
+  const polM = policyIs(sim, 'click') ? (cfg.clickBonus || 1) : (cfg.otherMul != null ? cfg.otherMul : 1);
   // 所持数の項: log10 の床(早い周回でも効く)+ 累乗項(他直送のinvest^2に置いていかれないよう後半で追随)。両方とも増加方向。
   const ownM = 1 + (cfg.ownRate || 0) * Math.log10(1 + bank)
              + (cfg.countCoef || 0) * Math.pow(bank / (cfg.ref || 1), cfg.countPow || 1);

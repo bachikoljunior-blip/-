@@ -5920,9 +5920,9 @@ const UPGRADES = [
   { id: "grandma", name: "おばあちゃん", type: "cps", value: 1, base: 40, growth: 1.30, desc: "毎秒 +1" },
   { id: "oven", name: "オーブン", type: "cps", value: 8, base: 520, growth: 1.35, desc: "毎秒 +8" },
   { id: "factory", name: "工場", type: "cps", value: 45, base: 7200, growth: 1.37, desc: "毎秒 +45" },
-  { id: "bank", name: "クッキー銀行", type: "cps", value: 260, base: 78000, growth: 1.39, desc: "毎秒 +260" },
-  { id: "spiceRack", name: "香料棚", type: "cps", value: 780, base: 320000, growth: 1.40, desc: "毎秒 +780" },
-  { id: "portal", name: "異世界クッキー炉", type: "cps", value: 1600, base: 980000, growth: 1.41, desc: "毎秒 +1600" },
+  { id: "bank", name: "クッキー銀行", type: "cps", value: 260, base: 54000, growth: 1.39, desc: "毎秒 +260" },
+  { id: "spiceRack", name: "香料棚", type: "cps", value: 780, base: 215000, growth: 1.40, desc: "毎秒 +780" },
+  { id: "portal", name: "異世界クッキー炉", type: "cps", value: 1600, base: 780000, growth: 1.41, desc: "毎秒 +1600" },
   { id: "moonBakery", name: "月面ベーカリー", type: "cps", value: 9800, base: 12500000, growth: 1.43, desc: "毎秒 +9800" },
   { id: "timeOven", name: "時空オーブン", type: "cps", value: 65000, base: 180000000, growth: 1.45, desc: "毎秒 +6.5万" },
   { id: "galaxyFactory", name: "銀河工場", type: "cps", value: 450000, base: 2800000000, growth: 1.47, desc: "毎秒 +45万" },
@@ -5939,11 +5939,11 @@ const RESEARCH = [
   // 段階2/3は「対応スキル取得後、研究タブに購入カードが出現し、クッキーで購入して有効化」する。
   { id: "fingerTechnique", name: "指先の型", cost: 2500, detail: "式：会心率=1-e^-score、倍率=2+score×10(score=0.01+√強い指×0.045+0.002×最高到達層。開始1%から育つ)。段階2(スキル「連打の呼吸」で購入可):会心コンボ=会心ごとに+1(上限なし、30秒途切れでリセット)、会心倍率×(1+0.03×コンボ)。段階3(スキル「神経直結」で購入可):会心の余熱=会心のたびに毎秒生産×0.025%×最高到達層を追加獲得。", desc: "タップ会心を解放する。段階購入でコンボと会心の余熱が追加" },
   { id: "grandmaCrowd", name: "おばあちゃん連携", cost: 12000, detail: "式：支援=1.002〜1.003^おばあちゃん(強い指・オーブン・工場)。段階2(スキル「炉の列」で購入可):支援先に銀行・香料棚を追加(×1.008^おばあちゃん)。段階3(スキル「無人ライン」で購入可):全支援×(1+0.001×最高到達層)。", desc: "おばあちゃんが強い指・オーブン・工場を支援する。段階購入で銀行・香料棚も支援＋層効果が追加" },
-  { id: "ovenBatch", name: "オーブン大量焼成", cost: 30000, detail: "式：9×1.008^オーブン×1.004^(最高到達層-1)。段階2(スキル「同期炉」で購入可):オーブン強化倍率×1.35。段階3(スキル「焼き加減調整」で購入可):オーブン個別強化Lv×(1+0.05×Lv)。", desc: "最高到達層とオーブン数でオーブンを強化する。段階購入で強化倍率と個別強化連動が追加" },
+  { id: "ovenBatch", name: "オーブン大量焼成", cost: 30000, detail: "式：9×1.008^オーブン×1.004^(最高到達層-1)。段階2(スキル「同期炉」で購入可):オーブン強化倍率×1.35。段階3(スキル「無人ライン」で購入可):オーブン個別強化Lv×(1+0.05×Lv)。", desc: "最高到達層とオーブン数でオーブンを強化する。段階購入で強化倍率と個別強化連動が追加" },
   { id: "factoryNetwork", name: "工場ネットワーク", cost: 7700000000, detail: "式：9×1.002^(指+婆+炉)×1.008^工場。段階2(スキル「無人ライン」で購入可):銀行以上の所持設備種類×(1+0.15×種類数)。段階3(スキル「まとめ買い」で購入可):×(1+0.0012×最高到達層)。", desc: "下位設備と工場数で工場を強化する。段階購入で上位設備種類と層効果が追加" },
   { id: "spiceBlend", name: "香料調合", cost: 1950000000000000, detail: "式：金取得後30秒 香料棚×8×1.006^棚。段階2(スキル「金色の匂い」で購入可):風味の熟成=金取得から12秒間、全生産×(1+0.6%×前回の金からの経過秒)。段階3(スキル「輝き増幅」で購入可):熟成×(1+0.0015×最高到達層)。", desc: "金クッキー取得後に香料棚を強化する。段階購入で熟成バーストが追加" },
   { id: "portalNetwork", name: "異世界接続網", cost: 815000000000000000, detail: "式：金取得後の狩り窓=20秒×1.0042^異世界炉、窓中の出現間隔×0.990^異世界炉。段階2(スキル「砕ける皮」で購入可):窓中の討伐1体ごとに窓+2秒。段階3(スキル「群れ読み」で購入可):窓中の出現×e^(-0.0008×最高到達層)。", desc: "金クッキー取得後にモンスターの狩り窓を開く。段階購入で窓延長と層効果が追加" },
-  { id: "bankClickDividend", name: "銀行クリック配当", cost: 4550000000000, detail: "式：クリック×1.008^銀行×(1+log(貯蓄)×8)。段階2(スキル「まとめ買い」で購入可):複利利息=所持×0.12%×log10(1+銀行)を毎秒獲得(毎秒生産×2付近から逓減、打ち止めなし)。段階3(スキル「経済分析」で購入可):逓減基準×(1+0.004×最高到達層)。", desc: "銀行と貯蓄でクリックを強化する。段階購入で複利利息が追加" },
+  { id: "bankClickDividend", name: "銀行クリック配当", cost: 4550000000000, detail: "式：クリック×1.008^銀行×(1+log(貯蓄)×8)。段階2(スキル「まとめ買い」で購入可):複利利息=所持×0.5%×log10(1+銀行)を毎秒獲得(毎秒生産×8付近から逓減、打ち止めなし)。段階3(スキル「経済分析」で購入可):逓減基準×(1+0.08×最高到達層)。", desc: "銀行と貯蓄でクリックを強化する。段階購入で複利利息が追加" },
   { id: "moonGlobalYeast", name: "月面発酵", cost: 2.9000000000000003e+41, detail: "式：9×1.003^(最高到達層-2)×1.001^月面 ※第3層以降。段階2(スキル「時空免許」で購入可):log10(1+ノルマ余裕率)/10で発酵が進む。段階3(スキル「研究解析」で購入可):×(1+5%×取得研究数)。", desc: "最高到達層で全体生産を強化する。段階購入で余裕率連動と研究数連動が追加" },
   { id: "portalGlobalFold", name: "異世界増幅", cost: 360000000000000000000, detail: "式：1.002^異世界炉×3.5^出現中モンスター×金ブースト中×5。段階2(スキル「特異点管理」で購入可):折込連鎖=全生産×1.058^ノルマ中討伐数。討伐するほど成長率が上がる。段階3(スキル「超越体」で購入可):×(1+0.001×最高到達層)。", desc: "異世界炉・金・モンスターの連動。段階購入で折込連鎖(討伐数が指数)が追加" },
   { id: "galaxyAssembly", name: "銀河分業", cost: 7.550000000000001e+99, detail: "式：銀河工場×1.5^種類数×1.006^銀河工場。段階2(スキル「宇宙炉心」で購入可):編成ボーナス=全生産×(1+0.027×バランス係数)^銀河工場数。バランス係数=所持数の幾何平均/算術平均(まんべんなく揃えるほど1に近い)。段階3(スキル「特異点管理」で購入可):レート×(1+0.0008×最高到達層)。", desc: "設備種類で銀河工場を強化する。段階購入で編成ボーナス(銀河工場数が指数×バランス)が追加" },
@@ -6053,8 +6053,6 @@ const SKILL_NODES = [
   { id: "mastery_high", name: "工程の極み", branchId: "economy", cost: 12000000, x: 1560, y: 140, icon: "⚒", prereqs: ["mastery_low", "upgrade_galaxy"], desc: "上位設備(月面ベーカリー〜反物質オーブン)にも熟練が付く：同じ設備を買うほど1台あたりの生産が+0.5%ずつ複利で伸びる。", effects: [{ type: "unlockSystem", target: "masteryHigh" }] },
   { id: "order_board", name: "注文ボード", branchId: "economy", cost: 180, x: 440, y: 340, icon: "⬡", prereqs: ["economy_analysis"], desc: "一覧タブに注文ボードを追加する。ノルマ進行度に応じて要求量と報酬倍率が上がる短期目標を表示する。", effects: [{ type: "unlockSystem", target: "orderBoard" }] },
 
-    { id: "bake_temperature", name: "焼き加減調整", branchId: "auto", cost: 3200, x: 1740, y: 460, icon: "◇", prereqs: ["auto_3"], desc: "焼き加減(生焼け/ちょうどいい/香ばしい/焦げ気味)を解放する。オーブン大量焼成の段階3の解放条件にもなる。", effects: [{ type: "unlockSystem", target: "bakeTemperature" }] },
-
 { id: "upgrade_moon", name: "月面許可", branchId: "upgrade", cost: 5900, x: 1180, y: 420, icon: "◌", prereqs: ["economy_2"], desc: "月面ベーカリーを解放。", effects: [{ type: "unlockUpgrade", target: "moonBakery" }] },
   { id: "upgrade_time", name: "時空免許", branchId: "upgrade", cost: 55500, x: 1000, y: 260, icon: "◌", prereqs: ["upgrade_moon", "research_remodel"], desc: "時空オーブンを解放。", effects: [{ type: "unlockUpgrade", target: "timeOven" }] },
   { id: "upgrade_galaxy", name: "銀河契約", branchId: "upgrade", cost: 4150000, x: 1360, y: 260, icon: "✺", prereqs: ["upgrade_time", "auto_4"], desc: "銀河工場を解放。", effects: [{ type: "unlockUpgrade", target: "galaxyFactory" }] },
@@ -6149,10 +6147,10 @@ const MATERIALS = [
 // 料理: 消費・時限バフ(基本600秒)。転生で効果消滅、レシピ開示は持ち越し。同時有効3品まで。
 const DISHES = [
   { id: "butterCookie", name: "バタークッキー生地", cost: { butter: 5, flour: 3 }, desc: "全生産 ×(1+0.02×最高到達層)" },
-  { id: "chocoFondant", name: "濃厚ショコラ", cost: { cacao: 6, butter: 4 }, desc: "クリックの生産連動係数 ×2(0.4%→0.8%)" },
+  { id: "chocoFondant", name: "濃厚ショコラ", cost: { cacao: 4, butter: 3 }, desc: "クリックの生産連動係数 ×2(0.4%→0.8%)" },
   { id: "mintIce", name: "ミントアイスサンド", cost: { mint: 6, frostSugar: 3 }, desc: "金クッキー出現間隔 ×0.75" },
   { id: "hunterStew", name: "狩人のシチュー", cost: { ironShard: 2, spice: 4 }, desc: "モンスター出現間隔 ×0.75、モンスターダメージ ×1.5" },
-  { id: "frostCake", name: "霜降りケーキ", cost: { frostSugar: 5, silentCore: 1 }, desc: "ノルマの進行を15%遅らせ、モンスター生成ノルマを達成しやすくする" },
+  { id: "frostCake", name: "霜降りケーキ", cost: { frostSugar: 5, silentCore: 1 }, desc: "ノルマの進行を40%遅らせ、モンスター生成ノルマを達成しやすくする" },
   { id: "stardustParfait", name: "星屑パフェ", cost: { stardust: 8, cometShard: 1 }, desc: "効果中に購入した設備はその周回中、生産 ×1.25" },
   // v2: エンドコンテンツ料理。レシピはS6(深層領域)到達で開示
   { id: "voidTart", name: "虚空タルト", cost: { voidSugar: 10, cometShard: 2 }, desc: "素材ドロップ ×2、モンスター出現間隔 ×0.7" }
@@ -6163,9 +6161,9 @@ const MAX_ACTIVE_DISHES = 3;
 // 作成: 永続装備(Lv制、転生持ち越し)。コスト=基本×2.2^Lv(切り上げ)、Lv上限10。
 const EQUIPMENT = [
   { id: "goldenWhisk", name: "黄金の泡立て器", cost: { butter: 10, flour: 8 }, effect: lv => `クリックの生産連動係数 ×${(1 + 0.15 * lv).toFixed(2)}` },
-  { id: "ovenMitt", name: "断熱オーブン手袋", cost: { cacao: 12, ironShard: 2 }, effect: lv => `モンスターダメージ +${(0.05 * lv).toFixed(2)}` },
+  { id: "ovenMitt", name: "断熱オーブン手袋", cost: { cacao: 12, ironShard: 2 }, effect: lv => `オーブン生産 ×${(1 + 0.12 * lv).toFixed(2)}` },
   { id: "pressExtractor", name: "香料圧搾機", cost: { spice: 14, goldDust: 2 }, effect: lv => `金ブースト倍率 ×${(1 + 0.04 * lv).toFixed(2)}` },
-  { id: "monsterAlmanac", name: "モンスター図鑑", cost: { ironShard: 4, silentCore: 2 }, effect: lv => `素材ドロップ +${Math.floor(lv / 2)}個、モンスターダメージ ×${(1 + 0.06 * lv).toFixed(2)}` },
+  { id: "monsterAlmanac", name: "モンスター図鑑", cost: { ironShard: 4, silentCore: 2 }, effect: lv => `素材ドロップ +${Math.floor(lv / 2)}個、モンスターダメージ ×${(1 + 0.10 * lv).toFixed(2)}` },
   { id: "stillFlask", name: "蒸留フラスコ", cost: { mint: 10, lavaSugar: 6 }, effect: lv => `料理の効果時間 ×${(1 + 0.10 * lv).toFixed(2)}` },
   { id: "dimensionCompass", name: "次元コンパス", cost: { bossCoreAny: 1, stardust: 12 }, effect: lv => `ボス化に必要な討伐数 -${lv}、選択中ステージの素材ドロップ ×${(1 + 0.05 * lv).toFixed(2)}` },
   { id: "masterTray", name: "名匠の天板", cost: { flour: 10, cacao: 8 }, effect: lv => `全生産 ×${(1 + 0.06 * lv).toFixed(2)}` }
@@ -7243,9 +7241,6 @@ function upgradeUnlocked(u) {
   return !need || hasSkill(need);
 }
 
-function advancedResearchUnlocked() {
-  return hasSkillEffect("unlockSystem", "researchRemodel");
-}
 
 // ==== 段階式研究: 対応設備(その回で購入済みの研究のみ表示・購入可)と段階解放スキル ====
 const RES_EQUIP = {
@@ -7267,7 +7262,7 @@ const RES_STAGE2 = {
   quantumProofing: "upgrade_antimatter", antimatterRecipe: "research_analysis"
 };
 const RES_STAGE3 = {
-  fingerTechnique: "click_4", grandmaCrowd: "auto_4", ovenBatch: "bake_temperature",
+  fingerTechnique: "click_4", grandmaCrowd: "auto_4", ovenBatch: "auto_4", // 焼き加減廃止(R2)で段3ゲートを無人ラインへ付け替え
   factoryNetwork: "economy_2", spiceBlend: "golden_3", portalNetwork: "monster_4",
   bankClickDividend: "economy_analysis", moonGlobalYeast: "research_analysis", portalGlobalFold: "master_final",
   galaxyAssembly: "upgrade_singularity", blackHoleCompression: "upgrade_quantum",
@@ -7703,7 +7698,7 @@ function createOrderSnapshot(id) {
     stage: currentQuotaStageNumber(),
     need: orderNeedFor(picked),
     limitMs,
-    rewardCookies: Math.floor(currentCps() * (limitMs / 1000) * 0.5), // 報酬は生成時点で相対確定
+    rewardCookies: Math.floor(currentCps() * (limitMs / 1000) * 25), // ×0.5→×25(R4・sim同期: 序盤金ブースト後の収入基準に対する相対価値の回復)
     progress: 0,
     createdAt: Date.now(),
     expiresAt: Date.now() + limitMs,
@@ -7748,7 +7743,7 @@ function orderProgressRatio(order) {
 function orderRewardText(order) {
   const def = orderDef(order.id);
   if (def.id === "ovenOrder" || def.id === "clickOrder") return `クッキー +${fmt(Math.max(1, Number(order.rewardCookies) || 0))}`;
-  if (def.id === "monsterOrder" || def.id === "spiceOrder") return workshopTabUnlocked() ? "選択中ステージの基本素材 +5" : `クッキー +${fmt(Math.max(1, Number(order.rewardCookies) || 0))}`;
+  if (def.id === "monsterOrder" || def.id === "spiceOrder") return workshopTabUnlocked() ? "作りたい装備の不足素材を補充(最大3種)" : `クッキー +${fmt(Math.max(1, Number(order.rewardCookies) || 0))}`;
   return "毎秒生産 x2(120秒)";
 }
 
@@ -7771,7 +7766,7 @@ function orderSpiceMultiplier() {
   return Date.now() < (state.orderTempSpiceUntil || 0) ? Math.max(1, state.orderTempSpiceMultiplier || 1) : 1;
 }
 
-// v4 §19: 報酬は相対型のみ — クッキー(毎秒生産×制限時間×0.5)/素材セット/毎秒生産×2(120秒)
+// v4 §19: 報酬は相対型のみ — クッキー(毎秒生産×制限時間×25)/素材セット(不足補充)/毎秒生産×2(120秒)
 function applyOrderReward(order) {
   const def = orderDef(order.id);
   if (!state.codex || typeof state.codex !== "object") state.codex = {};
@@ -7783,11 +7778,36 @@ function applyOrderReward(order) {
   }
 
   if (def.id === "monsterOrder" || def.id === "spiceOrder") {
-    // 素材セット: 選択中ステージの基本素材×5(工房未解放ならクッキーで代替)
+    // 素材セット=御用聞き型(sim同期): 「次に作りたいのに素材が足りない装備」の不足分を補充する(最大3種)。
+    // ステージ共通素材の固定配布は最も余っている素材になりがちで実利がない(sim実測)ため置き換え。
     if (workshopTabUnlocked()) {
-      const matId = currentStageNo() >= MAX_STAGE_NO ? "voidSugar" : (STAGE_MATERIALS[currentStageNo()] || STAGE_MATERIALS[1]).normal;
-      gainMaterial(matId, 5);
-      showMessage(`注文報酬：${getMaterial(matId).name} +5`);
+      let granted = 0;
+      const gifts = [];
+      for (const eq of EQUIPMENT) {
+        if (granted >= 3) break;
+        const lv = equipLv(eq.id);
+        if (lv >= equipMaxLv(eq.id)) continue;
+        const cost = equipmentCost(eq, lv);
+        let filledAny = false;
+        for (const matId in cost) {
+          if (granted >= 3) break;
+          if (matId === "bossCoreAny") continue; // 核は恒久シンク=注文では配らない
+          const deficit = Math.ceil(Number(cost[matId]) || 0) - materialCount(matId);
+          if (deficit > 0) {
+            gainMaterial(matId, deficit);
+            gifts.push(`${getMaterial(matId).name} +${deficit}`);
+            granted++; filledAny = true;
+          }
+        }
+        if (filledAny) break; // 1装備ぶんを満たしたら終了
+      }
+      if (gifts.length) {
+        showMessage(`注文報酬：${gifts.join("、")}(作りたい装備の不足分)`);
+      } else {
+        const matId = currentStageNo() >= MAX_STAGE_NO ? "voidSugar" : (STAGE_MATERIALS[currentStageNo()] || STAGE_MATERIALS[1]).normal;
+        gainMaterial(matId, 5);
+        showMessage(`注文報酬：${getMaterial(matId).name} +5`);
+      }
       state.codex.orderMaterial = true;
     } else {
       earn(Math.max(1, Number(order.rewardCookies) || Math.floor(currentCps() * 120)));
@@ -9200,6 +9220,7 @@ function researchUpgradeMultiplier(u) {
 
   if (u.id === "grandma" && state.research.grandmaCrowd) m *= 9;
   if (u.id === "oven" && state.research.ovenBatch) m *= 9 * ovenStageMultiplier();
+  if (u.id === "oven") m *= 1 + 0.12 * equipLv("ovenMitt"); // 断熱オーブン手袋(焼き加減廃止で再係留・sim同期)
   if (u.id === "factory" && state.research.factoryNetwork) m *= 9 * factoryNetworkMultiplier();
   if (u.id === "spiceRack" && state.research.spiceBlend) m *= spiceRackMultiplier();
   if (u.id === "portal" && state.research.portalNetwork) m *= 9;
@@ -9376,7 +9397,7 @@ function monsterDamageMultiplier(mon) {
     + ovenMittBonus
   ) * bakeMonsterDamageMultiplier()
     * (dishActive("hunterStew") ? 1.5 : 1)         // 狩人のシチュー
-    * (1 + 0.06 * equipLv("monsterAlmanac"))       // モンスター図鑑
+    * (1 + 0.10 * equipLv("monsterAlmanac"))       // モンスター図鑑
     * killRecordDamageMultiplier((currentMonster && currentMonster.typeId) || "normal"); // 討伐記録
 }
 
@@ -9402,7 +9423,7 @@ function goldenSpawnFactor() {
 
 function monsterSpawnFactor() {
   return Math.exp(
-    -(Math.max(0, state.perks.monsterRate) / (1 + Math.max(0, state.perks.monsterRate) / 80)) * 0.15
+    -(Math.max(0, state.perks.monsterRate) / (1 + Math.max(0, state.perks.monsterRate) / 80)) * 0.18
     -Math.max(0, skillEffect("monsterRate")) * 1.8
     -rewardCategoryBonus("hunt") * 1.0
     -(runPolicyIs("hunt") ? 0.10 : 0)
@@ -9453,7 +9474,7 @@ function q5cost(v) { return Math.max(1, Math.floor(q5round(v))); }
 // まとめ買い割増(2026-07-06 ユーザー採用): 同じ設備を短時間に連続購入するほど値段に割増がつき、
 // 時間で元に戻る。割増倍率 = (1+SURGE_PER_BUY)^熱量。熱量は購入ごとに+1、SURGE_HALF_SEC秒ごとに半減。
 // 目的: 終盤の駆け込みまとめ買いをゆっくりにする(待てば必ず元の値段に戻る)。係数は調整項目。
-const SURGE_PER_BUY = 0.25;
+const SURGE_PER_BUY = 0.5; // 0.25→0.45(第12次R)→0.5(R3・sim同期): 短周回の谷をT1帯へ
 const SURGE_HALF_SEC = 75;
 
 function surgeHeat(id) {
@@ -9681,7 +9702,7 @@ function quotaTrialMultiplier() {
 // 未達 = runCookies < max(従来ノルマ, runCookies×REACH_COEF×ρ^REACH_POW)。
 // ρ = 周回内経過秒 ÷ max(前回周回の長さ prevDuration, REACH_MIN_SEC)。runCookies が相殺 → 実質
 // 「ρ が ρ*=(1/REACH_COEF)^(1/REACH_POW)≈0.80 を越えたら未達」。絶対クッキー桁に非依存。sim と同式。
-const REACH_COEF = 20;
+const REACH_COEF = 40; // 20→40(R3・sim同期): ρ*=0.74→0.69(未達位置を少し前へ=EMA平滑化とセット)
 const REACH_POW = 10;
 const REACH_MIN_SEC = 600;
 const REACH_MAX_SEC = 6000; // denom(前回周回長)の上限クランプ(0=無効)。直前が極端に長い→短い周回で reach 未発火を防ぐ。
@@ -11661,7 +11682,7 @@ const PERK_FORMULA = {
   goldenPower: "金ブースト倍率 = 基準2.1 + 0.25 × Lv/(1+Lv/60)。Lvが高いほど1Lvの伸びは緩やか。",
   goldenAmount: "金クッキー即時獲得量 ×(1 + 0.45 × Lv/(1+Lv/45))。Lvが高いほど1Lvの伸びは緩やか。",
   monsterDamage: "モンスターダメージ倍率に +5.5×Lv を加算（他のダメージ報酬と合算。Lvに比例、＝+550%×Lv相当）。",
-  monsterRate: "モンスター出現間隔 ×e^(−0.15 × Lv/(1+Lv/80))。Lvが上がるほど間隔が短くなり、徐々に緩やか。",
+  monsterRate: "モンスター出現間隔 ×e^(−0.18 × Lv/(1+Lv/80))。Lvが上がるほど間隔が短くなり、徐々に緩やか。",
   monsterStay: "モンスターの画面滞在時間 ×e^(0.04×Lv)。Lvごとに滞在が延びる。",
   goldenChain: "金クッキー取得後、次に出るモンスターへのダメージ ×(1 + 2.0×Lv)（＝+200%×Lv）。",
   crackedFang: "モンスターダメージ倍率に +6.5×Lv を加算（他のダメージ報酬と合算。＝+650%×Lv相当）。",
@@ -11741,13 +11762,13 @@ function codexPolicyEffectRows(id) {
   if (id === "bake") {
     return `<div>・毎秒生産倍率 <b>+0.12</b>（毎秒倍率 = 1 + スキル + 全体スキル + <b>0.12</b>）</div>`
       + `<div>・オーブン研究倍率 <b>×1.10</b></div>`
-      + `<div>・焼き加減が「ちょうどいい（毎秒生産寄り）」に寄りやすい（抽選重み +0.85）</div>`;
+      ;
   }
   if (id === "hunt") {
     return `<div>・モンスター最終ダメージ <b>+0.14</b>（ダメージ倍率へ加算）</div>`
       + `<div>・モンスター滞在時間 <b>+0.10</b> 相当（滞在 = 基準 ×(1 + スキル + <b>0.10</b> + 報酬)）</div>`
       + `<div>・モンスター出現間隔 <b>−0.10</b>（出現が速くなる）</div>`
-      + `<div>・焼き加減が「香ばしい（狩猟寄り）」に寄りやすい（抽選重み +0.85）</div>`;
+      ;
   }
   if (id === "golden") {
     return `<div>・金ブースト倍率 <b>+0.18</b>（全生産×の追加分に加算）</div>`
@@ -11755,7 +11776,7 @@ function codexPolicyEffectRows(id) {
       + `<div>・金クッキー獲得量倍率 <b>+0.10</b></div>`
       + `<div>・金クッキー出現間隔 <b>−0.12</b>（出現が速くなる）</div>`
       + `<div>・スパイス（金ブースト中）倍率 <b>×1.08</b></div>`
-      + `<div>・焼き加減が「生焼け（金クッキー寄り）」に寄りやすい（抽選重み +0.85）</div>`;
+      ;
   }
   return "";
 }
@@ -13340,9 +13361,14 @@ function prestigeReset() {
   const keepTotalPlaySec = Math.max(0, Number(state.totalPlaySec) || 0);
   const keepMaxQuotaStageEver = Math.max(1, Math.floor(Number(state.maxQuotaStageEver) || 1));
   // 提案8(第12次H): 今周回の天井を次周回の層の試練の相対基準として持ち越す。表示層数は絶対累積のまま。
-  const keepPrevMaxQuotaStage = maxQuotaStage();
+  // 層の試練の天井持ち越し=直近2周回のmax(R3・trialFloorRuns=2相当・sim同期)
+  const keepPrevMaxQuotaStage = Math.max(maxQuotaStage(), Math.floor(Number(state._prevMaxStage1) || 0));
+  const keepPrevMaxStage1 = maxQuotaStage();
   // 提案9(第12次H): 今周回の長さを次周回の到達連動ノルマの進行比の分母として持ち越す。
-  const keepPrevDuration = quotaElapsedSeconds();
+  // EMA平滑化(R3・sim同期): 生の前回長だと軽い周回⇔重い周回の交互振動になるため減衰付きで持ち越す(α=0.35)
+  const keepPrevDuration = (Number(state.prevDuration) || 0) > 0
+    ? 0.65 * Number(state.prevDuration) + 0.35 * quotaElapsedSeconds()
+    : quotaElapsedSeconds();
 
   state = freshState();
 
@@ -13377,6 +13403,7 @@ function prestigeReset() {
   state.totalPlaySec = keepTotalPlaySec;
   state.maxQuotaStageEver = keepMaxQuotaStageEver;
   state.prevMaxQuotaStage = keepPrevMaxQuotaStage;
+  state._prevMaxStage1 = keepPrevMaxStage1;
   state.prevDuration = keepPrevDuration;
   state.runStart = Date.now();
   resetRunLimitedEffects();
@@ -15340,15 +15367,15 @@ setInterval(() => {
     state.maxQuotaStage = Math.max(state.maxQuotaStage || 1, currentQuotaStageNumber());
     state.maxQuotaStageEver = Math.max(state.maxQuotaStageEver || 1, state.maxQuotaStage);
     // 霜降りケーキ: ノルマ時計を15%遅らせる(ゲージ増加速度×0.85)
-    if (dishActive("frostCake")) state.quotaPausedMs = (state.quotaPausedMs || 0) + 50 * 0.15;
+    if (dishActive("frostCake")) state.quotaPausedMs = (state.quotaPausedMs || 0) + 50 * 0.4;
     // 銀行クリック配当 段階2: 複利利息(所持クッキーに毎秒、毎秒生産比から逓減)
     if (state.research.bankClickDividend && resStage2("bankClickDividend")) {
       const bank = state.upgrades.bank || 0;
       if (bank > 0 && state.cookies.gt(0)) {
         // 上限撤廃: 毎秒生産×2付近を基準に逓減しながら伸び続ける(打ち止めなし)
-        let soft = Math.max(1, currentCps() * 2.0);
-        if (resStage3("bankClickDividend")) soft *= 1 + 0.004 * maxQuotaStage();
-        const rawInterest = state.cookies.mul(0.0012 * Math.log10(1 + bank));
+        let soft = Math.max(1, currentCps() * 8.0);
+        if (resStage3("bankClickDividend")) soft *= 1 + 0.08 * maxQuotaStage();
+        const rawInterest = state.cookies.mul(0.005 * Math.log10(1 + bank));
         earn(rawInterest.div(D(1).add(rawInterest.div(soft))).div(20));
       }
     }
