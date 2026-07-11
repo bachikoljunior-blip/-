@@ -117,6 +117,10 @@ const SKILL_NODES = [
   { id: 'click_amp', cost: 15, prereqs: ['click_1'], fixed: true, effects: [['click', null, 0.75]] },
   { id: 'golden_amp', cost: 15, prereqs: ['golden_1'], fixed: true, effects: [['goldenAmount', null, 0.50]] },
   { id: 'monster_amp', cost: 15, prereqs: ['monster_1'], fixed: true, effects: [['monsterDamageSkill', null, 0.60]] },
+  // 提案10/11(2026-07-11 ユーザー承認・「消さない・毎秒生産に直接乗せる」形へ単純化):
+  // タップ/討伐の直送収入を、研究段2より前からスキルで弱く先行開始する(段2でフル。以後も出続ける=置き換え演出なし)
+  { id: 'click_stall', cost: 15, prereqs: ['click_amp'], effects: [['unlockSystem', 'tapStall']] },
+  { id: 'monster_peddler', cost: 15, prereqs: ['monster_1'], effects: [['unlockSystem', 'huntPeddler']] },
   { id: 'auto_amp', cost: 15, prereqs: ['auto_1'], fixed: true, effects: [['cps', null, 0.75]] },
   { id: 'golden_2', cost: 43, prereqs: ['golden_1'], effects: [['goldenAmount', null, 0.15]] },
   { id: 'golden_3', cost: 47, prereqs: ['golden_2'], effects: [['goldenPower', null, 0.35]] },
@@ -185,7 +189,9 @@ const UTILITY_SKILLS = new Set([
   'order_board', 'reward_synergy', 'reward_1', 'reward_choice_2',
   'start_1', 'offline_1', 'start_2', 'workshop_1', 'workshop_2',
   // 方針入口の増幅ノード(第12次R4): 価格ははしご非消費のおまけ価格。効果は固定値(fixed)
-  'click_amp', 'golden_amp', 'monster_amp', 'auto_amp'
+  'click_amp', 'golden_amp', 'monster_amp', 'auto_amp',
+  // 提案10/11(2026-07-11): 直送の早期入口ノード(価格はおまけ枠・効果はゲート解放)
+  'click_stall', 'monster_peddler'
 ]);
 function isUtilitySkill(id) { return UTILITY_SKILLS.has(id); }
 
@@ -193,7 +199,7 @@ function isUtilitySkill(id) { return UTILITY_SKILLS.has(id); }
 const SKILL_HAND_ORDER = [
   // 2026-07-06 第8次 ⑲対応v3: 取得順(=コストはしご順)。全ツリー辺のメインラング差≤5。
   // 設備解放: 月面=r12(7種設備の壁dec40を跨ぐ前)、時空=r17、以降約3ラングごとに第16種(r40)まで。
-  'core', 'click_1', 'click_amp', 'golden_1', 'golden_amp', 'monster_1', 'monster_amp', 'workshop_1', 'workshop_2', 'auto_1', 'auto_amp', 'economy_1',
+  'core', 'click_1', 'click_amp', 'click_stall', 'golden_1', 'golden_amp', 'monster_1', 'monster_amp', 'monster_peddler', 'workshop_1', 'workshop_2', 'auto_1', 'auto_amp', 'economy_1',
   'click_2', 'golden_2', 'monster_2', 'auto_2', 'economy_2',
   'mastery_low',
   'click_3', 'upgrade_moon', 'auto_3', 'research_1', 'research_remodel', 'economy_analysis', 'order_board',
@@ -1440,7 +1446,12 @@ function goldenDirectIncome(sim, base) {
 }
 // 討伐直送: 投資量=討伐perk合計。ゲート=異世界接続網 段階2(スキル monster_3→段階2購入→効果)。
 function huntDirectIncome(sim, base) {
-  if (!resStage2(sim, 'portalNetwork')) return 0;
+  // 提案11「戦利品の行商」(2026-07-11 ユーザー承認): 段2より前でもスキルがあれば弱い係数で先行開始。
+  let gateM = 1;
+  if (!resStage2(sim, 'portalNetwork')) {
+    if (!sim.skills.monster_peddler) return 0;
+    gateM = P.huntDirect.peddlerFrac || 0.2;
+  }
   const r = sim.run;
   // 投資量=huntカテゴリperk合計(全8種)。旧4種(damage/fang/ferment/core)だと、S4が優先リスト先頭の
   // monsterRate を大量に拾う中盤周回で投資量0=直送不発(㉘hunt run18-27 の25-29%NGの原因)。
@@ -1453,11 +1464,17 @@ function huntDirectIncome(sim, base) {
   // 方針係数: 非hunt方針の後半周回(報酬解禁スキル後=hunt perk投資が勝手に貯まる)で討伐直送が主役を
   // 押し退ける(bake S1 run25-29 討39-46%・balanced S6 run24-28 討33-53%=実測2026-07-10)のを抑える。
   const polM = otherMulOf(sim, P.huntDirect, 'hunt');
-  return genreDirect(sim, base, inv, P.huntDirect) * polM;
+  return genreDirect(sim, base, inv, P.huntDirect) * polM * gateM;
 }
 // タップ直送: 投資量=クリック系(神の指+強い指/10)。ゲート=指先の型 段階2(スキル click_2→段階2購入→効果)。
 function tapDirectIncome(sim, base, prod) {
-  if (!resStage2(sim, 'fingerTechnique')) return 0;
+  // 提案10「土産の屋台」(2026-07-11 ユーザー承認): 段2より前でもスキルがあれば弱い係数で先行開始。
+  // 段2でフル(gateM=1)。屋台ぶんが消える演出はない(収入は増える方向にしか動かない)。
+  let gateM = 1;
+  if (!resStage2(sim, 'fingerTechnique')) {
+    if (!sim.skills.click_stall) return 0;
+    gateM = P.tapDirect.stallFrac || 0.2;
+  }
   const r = sim.run;
   const inv = (r.upgrades.godFinger || 0) + (r.upgrades.finger || 0) * 0.1;
   // 方針係数(第12次R続き・bankDirectのclickBonusと同型): click方針の中盤は銀/金直/討直に打が
@@ -1472,7 +1489,7 @@ function tapDirectIncome(sim, base, prod) {
   if ((P.tapDirect.anchorGolden || 0) > 0 && prod && (r.upgrades.godFinger || 0) === 0) {
     anchor = Math.max(base, P.tapDirect.anchorGolden * goldenRateValue(sim, prod));
   }
-  return genreDirect(sim, anchor, inv, P.tapDirect) * polM;
+  return genreDirect(sim, anchor, inv, P.tapDirect) * polM * gateM;
 }
 // 銀行配当(直送・第12次J-3 腐り解消): 銀行の所持数と貯蓄(総クッキー桁)で毎秒生産へ加算する独立収入。
 // ゲート=銀行クリック配当研究(resActive=①測定トグル対応)。クリック方針で厚く効く(既存の×1.08と整合)。

@@ -6029,6 +6029,9 @@ const SKILL_NODES = [
   { id: "click_amp", name: "速射の指", branchId: "click", cost: 8, x: 620, y: 1120, icon: "◆", prereqs: ["click_1"], desc: "タップ生産 +75%。", effects: [{ type: "click", value: 0.75 }] },
   { id: "golden_amp", name: "金箔集め", branchId: "golden", cost: 10, x: 780, y: 1120, icon: "✦", prereqs: ["golden_1"], desc: "金クッキー即時獲得量 +50%。", effects: [{ type: "goldenAmount", value: 0.5 }] },
   { id: "monster_amp", name: "仕留めの一撃", branchId: "monster", cost: 20, x: 1220, y: 1120, icon: "◉", prereqs: ["monster_1"], desc: "モンスター最終ダメージ +60%。", effects: [{ type: "monsterDamageSkill", value: 0.6 }] },
+  // 提案10/11(2026-07-11 承認): タップ/討伐の換金収入を安いスキルで先行開始(研究の段階2でフル。消えずに出続ける)
+  { id: "click_stall", name: "土産の屋台", branchId: "click", cost: 2, x: 480, y: 1040, icon: "◆", prereqs: ["click_amp"], desc: "タップで焼いたクッキーのおすそ分けを屋台で売る。毎秒生産に「タップ1回の強さ×5%×√最高到達層」を追加(研究「指先の型」の段階2で20倍にパワーアップ)。", effects: [{ type: "unlockSystem", target: "tapStall" }] },
+  { id: "monster_peddler", name: "戦利品の行商", branchId: "monster", cost: 20, x: 1520, y: 1200, icon: "◉", prereqs: ["monster_1"], desc: "行商人が戦利品を買い取る。毎秒生産に「金クッキー1枚ぶんの獲得×0.2%×討伐系報酬の所持枚数×√最高到達層」を追加(研究「異世界接続網」の段階2で50倍にパワーアップ)。", effects: [{ type: "unlockSystem", target: "huntPeddler" }] },
   { id: "auto_amp", name: "炉の熱気", branchId: "auto", cost: 35, x: 1380, y: 1120, icon: "◇", prereqs: ["auto_1"], desc: "毎秒生産 +75%。", effects: [{ type: "cps", value: 0.75 }] },
   { id: "golden_2", name: "金粉回収", branchId: "golden", cost: 395, x: 620, y: 1380, icon: "✦", prereqs: ["golden_1"], desc: "金クッキー即時獲得量 +75%。", effects: [{ type: "goldenAmount", value: 0.75 }] },
   { id: "golden_3", name: "輝き増幅", branchId: "golden", cost: 35500, x: 440, y: 1500, icon: "✦", prereqs: ["golden_2"], desc: "金ブースト倍率 +2.1。", effects: [{ type: "goldenPower", value: 2.1 }] },
@@ -9626,6 +9629,29 @@ function currentCps() {
   return baseCps() * goldenBoostMultiplier() * goldenAfterheatMultiplier() * challengeMultiplier() * chainProductionMultiplier();
 }
 
+// 提案10「土産の屋台」(2026-07-11 承認): タップ力の一部を毎秒の売上として換金。
+// 研究「指先の型」段階2でフル(×1)。スキルぶんが消えることはない(係数が上がるだけ)。係数=調整項目。
+const STALL_COEF = 0.05;
+function tapStallCps() {
+  if (!hasSkill("click_stall")) return 0;
+  const frac = (state.research.fingerTechnique && resStage2("fingerTechnique")) ? 1.0 : 0.05;
+  return baseClickPower() * STALL_COEF * 20 * frac * Math.sqrt(1 + maxQuotaStage());
+}
+
+// 提案11「戦利品の行商」(2026-07-11 承認): 討伐系報酬の枚数に応じて戦利品を毎秒換金。
+// 基準=金クッキー1枚ぶんの即時獲得。研究「異世界接続網」段階2でフル。係数=調整項目。
+const PEDDLER_COEF = 0.002;
+function huntPeddlerCps() {
+  if (!hasSkill("monster_peddler")) return 0;
+  const p = state.perks || {};
+  const inv = (p.monsterDamage || 0) + (p.crackedFang || 0) + (p.beastHeatFerment || 0) + (p.huntingCore || 0)
+    + (p.monsterRate || 0) + (p.monsterStay || 0) + (p.biteRecovery || 0) + (p.brandHunt || 0);
+  if (inv <= 0) return 0;
+  const frac = (state.research.portalNetwork && resStage2("portalNetwork")) ? 1.0 : 0.02; // sim同期(peddlerFrac)
+  const goldenOne = Math.max(100, currentCps() * 2.5, currentClickPower() * 2.5);
+  return goldenOne * PEDDLER_COEF * 20 * frac * inv * Math.sqrt(1 + maxQuotaStage());
+}
+
 function earn(amount) {
   if (pausedForSkillChoice()) return Decimal.ZERO;
 
@@ -10853,7 +10879,7 @@ function checkQuotaStageTransition() {
 function updateTopOnly() {
   $("cookies").textContent = fmtCookieCount(state.cookies);
   const cpsEl = $("cookieCps");
-  if (cpsEl) cpsEl.textContent = pausedForSkillChoice() ? "合計毎秒 準備中" : "合計毎秒 " + fmt(currentCps());
+  if (cpsEl) cpsEl.textContent = pausedForSkillChoice() ? "合計毎秒 準備中" : "合計毎秒 " + fmt(currentCps() + tapStallCps() + huntPeddlerCps());
 
   $("cookie").classList.toggle("boost-all", goldenBoostActive());
 
@@ -15388,7 +15414,7 @@ setInterval(() => {
     // ノルマ・注文・出現・各種ボーナスなど、その他の進行は従来どおりオーバーレイ中は止める。
     const overlayOpen = overlayFreezesGame();
     state.totalPlaySec = (state.totalPlaySec || 0) + 0.05; // v4: 総プレイ秒(転生持ち越し)
-    earn(currentCps() / 20);
+    earn((currentCps() + tapStallCps() + huntPeddlerCps()) / 20);
     if (!overlayOpen) {
     // 最高到達ノルマ層を記録(段階式研究の変数)
     state.maxQuotaStage = Math.max(state.maxQuotaStage || 1, currentQuotaStageNumber());

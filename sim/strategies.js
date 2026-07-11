@@ -21,7 +21,7 @@ function branchOf(id) {
 // 生産・解放ノードを先に、解析系QoLノードは余りPTで後から取る
 // 方針入口の増幅ノード(_amp)は価格こそQoL枠だが効果は生産増幅=プレイヤーは通常のスキルとして
 // 安い順・系統順で普通に買う(「+75%が8PT」を余りPT扱いで後回しにするのは不自然)。
-function isDeferredUtility(id) { return G.isUtilitySkill(id) && !id.endsWith('_amp'); }
+function isDeferredUtility(id) { return G.isUtilitySkill(id) && !/_amp$|_stall$|_peddler$/.test(id); }
 function skillOrderByBranch(priority) {
   return function (sim) {
     const nodes = G.SKILL_NODES.slice();
