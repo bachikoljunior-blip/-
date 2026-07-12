@@ -7570,6 +7570,7 @@ function msResearchLists() {
   const nextOfSeries = {};
   lockedAll.forEach(m => {
     if (m.id.startsWith("msk_") || m.id.startsWith("msk2_")) return;
+    if (m.id.startsWith("ms_prestige_")) return; // 転生(輪廻)の実績研究は達成するまで予告しない
     const em = m.id.match(/^ms_(.+)_t\d+$/);
     if (em && !visibleUpgrades().some(u => u.id === em[1])) return;
     const series = m.id.replace(/\d+$/, "");
