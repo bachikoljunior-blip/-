@@ -9447,7 +9447,7 @@ function ovenStageMultiplier() {
   const stage = maxQuotaStage(); // その回の最高到達ノルマ層
   const policyBonus = runPolicyIs("bake") ? 1.10 : 1;
 
-  let m = levelGrowth(owned, 0.008) * levelGrowth(Math.max(0, stage - 1), 0.010) * policyBonus; // 層ランプ0.004→0.010(sim同期2026-07-11 ①oven再係留)
+  let m = levelGrowth(owned, 0.008) * levelGrowth(Math.max(0, stage - 1), 0.015) * policyBonus; // 層ランプ0.004→0.010(sim同期2026-07-11 ①oven再係留)
   // 段階2: オーブン強化倍率 x1.35
   if (resStage2("ovenBatch")) m *= 1.35;
   // 段階3: オーブンの個別強化Lvが研究倍率にも乗る
@@ -12692,7 +12692,7 @@ function researchFormulaText(r) {
   if (r.id === "ovenBatch") {
     const oven = state.upgrades.oven || 0;
     const stage = maxQuotaStage();
-    return `式：オーブン研究倍率 = 9 × 1.008^オーブン数 × 1.010^(最高到達層 - 1) × 方針補正 / 現在：オーブン ${fmt(oven)}個、最高到達 第${fmt(stage)}層、倍率 x${(9 * ovenStageMultiplier()).toFixed(3)}`;
+    return `式：オーブン研究倍率 = 9 × 1.008^オーブン数 × 1.015^(最高到達層 - 1) × 方針補正 / 現在：オーブン ${fmt(oven)}個、最高到達 第${fmt(stage)}層、倍率 x${(9 * ovenStageMultiplier()).toFixed(3)}`;
   }
 
   if (r.id === "factoryNetwork") {
