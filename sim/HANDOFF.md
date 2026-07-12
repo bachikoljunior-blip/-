@@ -115,7 +115,12 @@
   ⑮の2 14/14・㉙3/3 / ④90%・⑤98% / T3b(早)81% / ㉘190/235(81%)・②改139/186(75%)**
 - ㉘第2ラウンドの採用(2026-07-11終盤): huntDirect.peddlerFrac 0.02→0.06(hunt序盤(a)31→42/44)/
   tapDirect.otherMul.balanced 4.0(balanced 29→42/49)/ equipDirect.otherMul.click 0.08(click24→25)。
-  clickの中盤打25-29%はclickBonus増と②改のトレードで残(次の綱引き対象)。ゲームDIRECT_CFG同期済み
+  ゲームDIRECT_CFG同期済み
+- **第3ラウンド(同日・最終)**: T3b修復=reachCoef 2.0→1.2(ρ*0.93→0.98・T3a廃止で未達はT3b専用)+
+  第0回reach非適用(床600秒発火で維持22%に潰れていた) → **T3b(早)81→88%**。
+  click複合=clickBonus 5.0+satMax 150(単独では両立不可の2つを複合: 中盤+22%・後半飽和 → click 25→27-29)。
+  reach延長の余波でbalanced 42→33 → tapDirect.otherMul.balanced 5.5で38へ回復。
+  **最終確定: ㉘189/233(81%)・②改134/184・T3b(早)88%・T1 95%・㉑/T2/⑭満点・①③⑨⑫⑬/⑮の2/㉙満点**
 - ③utilityの判定窓は48hを推奨【仮】: 最深部解放の報酬(crushedMill/goldenBeastMutation)は36h窓だと
   最終1-2周回でしか取得されずn=1-2のコイントス(0.96-2.35で振動)。48hで8.1/1.24と安定合格。
 - 直送収入システムをゲームへフル移植済み(同係数・方針係数込み)。ovenBatch段2ゲートの移植漏れ(auto_3→auto_1)も同期。
