@@ -145,12 +145,12 @@ module.exports = {
   // 実効735へ=tapD 15-20%→28%試算。中盤(raw≈200)は×1.2どまり=②改2 clickリフトへの波及は小)
   // clickBonus 8.0→5.6に差し戻し+clickBonusLate 14 新設(2026-07-12: 8.0一律はアンカー時代(神指0=run25-32)の
   // タップを膨らませ①bank S2 min 1.21→1.15に希釈。フェーズ分離=アンカー時代5.6(①復元)・投資時代14(㉘後半専用))
-  tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5, clickBonus: 5.6, clickBonusLate: 14, satMax: 800, anchorGolden: 0.5, stallFrac: 0.05, otherMul: { golden: 0.6, balanced: 9.0, default: 1 } },
+  tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5, clickBonus: 5.6, clickBonusLate: 18, satMax: 800, anchorGolden: 0.5, stallFrac: 0.05, otherMul: { golden: 0.6, balanced: 9.0, default: 1 } },
   // 銀行配当(直送・第12次J-3 腐り解消): bankClickDividend研究の独立収入。クリック方針で厚く効かせ①の各回minを満たす。
   // 全体cps倍率をやめ加算収入へ(他機能のlift希釈を回避)。所持数はlog10で床あり=早い周回でも効く。増加方向のみ。
-  // countPow 1.8→1.6(2026-07-12 ㉘click後半: 銀行配当が後半33-41%に膨張しタップ主役25%の壁。
-  // ref150に対し序盤count<150はratio<1で指数減=序盤bkD+25%(①bank S2 min1.21の増し)・後半count~1500は−37%=一石二鳥)
-  bankDirect:   { coef: 0.42, ownRate: 0.5, savedCoef: 0.05, clickBonus: 2.8, countCoef: 0.9, countPow: 1.6, ref: 150, anchorGolden: 0.12, otherMul: 0.5 }, // clickBonus 2.5→2.8(2026-07-11: echo金インフレで①bankのS2が1周回だけ1.2割れ=マージン) // 投資量=銀行所持数+貯蓄(総クッキー桁)。coef 0.34→0.42(2026-07-10 第12次R: surge経済移動で①bank研究が1.2割れ=マージン)
+  // countPow 1.6は棄却→1.8へ差し戻し(2026-07-12: ①bankの真の束縛はS2 run25-32(count300-800=ratio>1域)で
+  // 指数減はここも−13〜28%痩せさせ1.179どまり。㉘click後半はclickBonusLateへ一本化)
+  bankDirect:   { coef: 0.42, ownRate: 0.5, savedCoef: 0.05, clickBonus: 2.8, countCoef: 0.9, countPow: 1.8, ref: 150, anchorGolden: 0.12, otherMul: 0.5 }, // clickBonus 2.5→2.8(2026-07-11: echo金インフレで①bankのS2が1周回だけ1.2割れ=マージン) // 投資量=銀行所持数+貯蓄(総クッキー桁)。coef 0.34→0.42(2026-07-10 第12次R: surge経済移動で①bank研究が1.2割れ=マージン)
   // 研究連動の全生産倍率(第12次L・提案A): 異世界接続網/銀河合成/量子証明が解放されている間、全生産(クリック＋毎秒)に
   // 一律の倍率を掛ける。floor で研究購入直後から立つ(①の各回min≥1.2)、所持数(log10)と最高層で伸びる。
   // 【重要】全生産倍率は設備/金/討伐/タップを同率で持ち上げる=㉘の稼ぎ口シェアが不変(相殺)、③/⑨の他機能liftも
