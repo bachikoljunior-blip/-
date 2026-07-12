@@ -145,7 +145,9 @@ module.exports = {
   // 実効735へ=tapD 15-20%→28%試算。中盤(raw≈200)は×1.2どまり=②改2 clickリフトへの波及は小)
   // clickBonus 8.0→5.6に差し戻し+clickBonusLate 14 新設(2026-07-12: 8.0一律はアンカー時代(神指0=run25-32)の
   // タップを膨らませ①bank S2 min 1.21→1.15に希釈。フェーズ分離=アンカー時代5.6(①復元)・投資時代14(㉘後半専用))
-  tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5, clickBonus: 5.6, clickBonusLate: 18, satMax: 800, anchorGolden: 0.5, stallFrac: 0.05, otherMul: { golden: 0.6, balanced: 9.0, default: 1 } },
+  // satMax 150差し戻し+satMaxLate 800新設(2026-07-12: 一律800はアンカー時代raw≈196を85→175に倍化させ
+  // ①bank S2 run31=1.186の残NG源。フェーズ分離でアンカー時代=R13完全復元・投資時代のみ飽和緩和)
+  tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5, clickBonus: 5.6, clickBonusLate: 18, satMax: 150, satMaxLate: 800, anchorGolden: 0.5, stallFrac: 0.05, otherMul: { golden: 0.6, balanced: 9.0, default: 1 } },
   // 銀行配当(直送・第12次J-3 腐り解消): bankClickDividend研究の独立収入。クリック方針で厚く効かせ①の各回minを満たす。
   // 全体cps倍率をやめ加算収入へ(他機能のlift希釈を回避)。所持数はlog10で床あり=早い周回でも効く。増加方向のみ。
   // countPow 1.6は棄却→1.8へ差し戻し(2026-07-12: ①bankの真の束縛はS2 run25-32(count300-800=ratio>1域)で
