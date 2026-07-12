@@ -1,0 +1,1 @@
+=== override={"huntDirect":{"satMax":12}} (100h) ===
