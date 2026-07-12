@@ -1,0 +1,14 @@
+㉕(機械判定) カテゴリ別最効率種類: golden=goldenBeast hunt=tank equipment=tank risk=goldenBeast → 2種 (≥2で OK)
+㉖(案②-b 種類別の全カテゴリ合計旨味 ±1.5倍以内): normal=4.0 swarm=4.0 tank=7.0 speedy=5.5 goldenBeast=7.0 → OK
+S1: ㉔ 相性有効/無効比 中央値=1.062 (幾何平均=1.391) [min 0.60 .. max 134.08] x48周回 NG(<1.1) / 報酬寄与1位(標準以外)=goldenBeast
+S2: ㉔ 相性有効/無効比 中央値=1.036 (幾何平均=1.296) [min 0.58 .. max 31.89] x48周回 NG(<1.1) / 報酬寄与1位(標準以外)=swarm
+S3: ㉔ 相性有効/無効比 中央値=1.187 (幾何平均=1.320) [min 0.23 .. max 3.20] x48周回 OK / 報酬寄与1位(標準以外)=goldenBeast
+S4: ㉔ 相性有効/無効比 中央値=1.016 (幾何平均=0.919) [min 0.05 .. max 1.86] x47周回 NG(<1.1) / 報酬寄与1位(標準以外)=swarm
+S5: ㉔ 相性有効/無効比 中央値=1.067 (幾何平均=1.190) [min 0.13 .. max 4.55] x42周回 NG(<1.1) / 報酬寄与1位(標準以外)=goldenBeast
+S6: ㉔ 相性有効/無効比 中央値=1.066 (幾何平均=1.349) [min 0.85 .. max 43.51] x48周回 NG(<1.1) / 報酬寄与1位(標準以外)=goldenBeast
+S7: ㉔ 相性有効/無効比 中央値=1.036 (幾何平均=1.197) [min 0.63 .. max 7.33] x25周回 NG(<1.1) / 報酬寄与1位(標準以外)=goldenBeast
+S8: ㉔ 相性有効/無効比 中央値=1.050 (幾何平均=1.024) [min 0.03 .. max 2.27] x48周回 NG(<1.1) / 報酬寄与1位(標準以外)=swarm
+S9: ㉔ 相性有効/無効比 中央値=1.035 (幾何平均=1.685) [min 0.69 .. max 1191.47] x48周回 NG(<1.1) / 報酬寄与1位(標準以外)=goldenBeast
+S10: ㉔ 相性有効/無効比 中央値=1.221 (幾何平均=1.647) [min 0.87 .. max 5.95] x46周回 OK / 報酬寄与1位(標準以外)=goldenBeast
+㉕(実測) 方針の報酬寄与1位種類: S1=goldenBeast S2=swarm S3=goldenBeast S4=swarm S5=goldenBeast S6=goldenBeast S7=goldenBeast S8=swarm S9=goldenBeast S10=goldenBeast → 2種 (≥2で OK)
+㉖: 種類別の1体あたり報酬量 ±1.5倍以内 47/449周回
