@@ -408,7 +408,7 @@ module.exports = {
       { id: 'voidTart',        cost: { voidSugar: 10, cometShard: 2 } } // ドロップ×2・モンスター間隔×0.7
     ],
     fx: { butterLayerCoef: 0.02, fondantClickMul: 2, mintIceGoldenInt: 0.75, stewMonsterInt: 0.75, stewDmg: 1.5,
-      frostGauge: 0.6, parfaitProdMul: 1.25, voidDrop: 2, voidMonsterInt: 0.7 },
+      frostGauge: 0.55, parfaitProdMul: 1.25, voidDrop: 2, voidMonsterInt: 0.7 },
     // 作成(装備・永続Lv・コスト=基本×2.2^Lv・Lv上限10=限界突破は本シム省略)
     eqGrowth: 2.2, eqLvCap: 10,
     equipment: [
