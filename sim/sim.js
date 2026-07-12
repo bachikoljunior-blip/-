@@ -1220,7 +1220,8 @@ function computeProd(sim) {
     const policyC = policyIs(sim, 'click') ? 0.010 : 0;
     // 会心1%開始(第9次): 開始値0.01(=会心率1.0%)+設備√+最高到達層(周回内で育つ動的項)
     const score = R.fingerBase + Math.sqrt(f) * R.fingerSqrt + (R.fingerStage || 0) * r.maxStage + policyC;
-    const chance = 1 - Math.exp(-score);
+    // scoreの飽和上限6.2=会心率99.8%止まり(2026-07-11 ㉓-3「100%には到達しない」: S2の指2.8万台で100.0%到達の対策)
+    const chance = 1 - Math.exp(-Math.min(score, 6.2));
     critChanceOut = chance;
     let critMul = R.fingerCritBase + score * R.fingerCritGrow;
     // 段階2: 会心コンボ(期待値: 直近30秒の会心回数。キャップ撤廃済み)

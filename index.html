@@ -9335,7 +9335,8 @@ function fingerCritChance() {
   // 会心1%開始(2026-07-06): 開始値0.01(=会心率1.0%)。設備√と最高到達層で周回内に育つ
   const score = 0.01 + Math.sqrt(f) * 0.045 + 0.002 * maxQuotaStage() + policy;
 
-  return 1 - Math.exp(-score);
+  // scoreの飽和上限6.2=会心率99.8%止まり(sim同期2026-07-11 ㉓-3「100%には到達しない」)
+  return 1 - Math.exp(-Math.min(score, 6.2));
 }
 
 function fingerCritMultiplier() {
