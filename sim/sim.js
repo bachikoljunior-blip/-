@@ -2416,7 +2416,8 @@ function advanceTick(sim, strategy) {
       // 層ゲージ(quotaAtElapsed)には触れず、ここでの未達判定にだけ到達項を上乗せする(max)。
       // runCookies×reachCoef×ρ^reachPow と runCookies を比べる=クッキー桁に依存せず ρ で未達位置が決まる。
       // 進行を層比でなく時間比にする(未達で層が凍結するため層比は序盤に寄る=第12次H実測)。
-      if (quota !== null && quota > 0 && P.quota.reachCoef) {
+      // 第0回は reach 非適用(2026-07-11 T3b: 前回長が無く床600秒基準で558秒発火→維持22-23%に潰れる)
+      if (quota !== null && quota > 0 && P.quota.reachCoef && (sim.prevDuration || 0) > 0) {
         let denom = Math.max(sim.prevDuration || 0, P.quota.reachMinSec || 0);
         // reachMaxSec>0 のとき denom を上限クランプ(直前が極端に長い→短い周回で reach 未発火を防ぐ)。
         if (P.quota.reachMaxSec) denom = Math.min(denom, P.quota.reachMaxSec);
