@@ -76,7 +76,7 @@ module.exports = {
     ratePerLv: 0.18, // 0.14→0.16(2026-07-10 第12次R: surge0.45の経済移動で③monsterRate中央値が再び1.1割れ=マージン積み増し)
     rateKillBonus: 0.6, rateKillHalf: 2, // 0.35→0.5(2026-07-10 novelty導入で③monsterRateの中央値が1.1を割れ=専用の討伐手数ボーナスで回復)
     satKps: 2.0, // 討伐頻度の飽和半価点(2026-07-10): kill項の1体価値逓減。高テンポ期の討伐56-63%独走を[30,52]帯へ(balanced序盤0.02-0.05体/秒はほぼ線形)
-    killValueSec: 8, // 討伐1体の価値=生産◯秒ぶん(第12次R3・params駆動化)。7→8: ㉘hunt序盤(直送ゲート前)run8/20が討31-32%で合格化・balanced+1・click②改+2・bake影響なし(100h実測)。9/10はhunt+3〜4だがbalancedの打が7-9%に潰れ(−1〜2)・hunt後半②改−2=不採用
+    killValueSec: 7, // 8→7(2026-07-12 ②改2: huntのlift3.05-3.09が帯上限3.00超過。直送絞りでは動かず本体=討伐報酬項を微減。序盤の役割はpeddlerFrac0.06が引き継ぎ済み) // 討伐1体の価値=生産◯秒ぶん(第12次R3・params駆動化)。7→8: ㉘hunt序盤(直送ゲート前)run8/20が討31-32%で合格化・balanced+1・click②改+2・bake影響なし(100h実測)。9/10はhunt+3〜4だがbalancedの打が7-9%に潰れ(−1〜2)・hunt後半②改−2=不採用
     scarceBonus: 2, scarceHalf: 0.02 // 希少プレミアム(第12次R続き・2026-07-10採用): 低テンポ期ほど討伐1体の価値を増幅(1+bonus/(1+kps/half))。balanced序盤討3-9%→≥10%・hunt序盤討28→30%(100h実測: balanced25→35-36・hunt29→34)。half0.05はclick中盤の討を+5-8pt膨らませ打を圧迫=0.02でkps0.2+をほぼ等倍に
   },
 
@@ -135,7 +135,7 @@ module.exports = {
 
   // huntDirect: satMax 15→14(2026-07-12 ②改2: huntのlift3.09が帯上限3.00超過→飽和を微絞り)
   // peddlerFrac 0.02→0.06(2026-07-11 hunt序盤対策) / otherMul.golden 0.9(2026-07-11) / 投資量=討伐perk8種・基準=金相場
-  huntDirect:   { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 14, otherMul: { click: 0.15, balanced: 0.15, golden: 0.9, default: 0.3 }, peddlerFrac: 0.06 },
+  huntDirect:   { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 12, otherMul: { click: 0.15, balanced: 0.15, golden: 0.9, default: 0.3 }, peddlerFrac: 0.06 },
   // tapDirect: clickBonus 5.0→5.6(2026-07-12 ②改2: clickのlift1.46が最弱=底上げで帯上限を引き上げhuntを収容)
   // clickBonus5.0+satMax150(2026-07-11 複合=中盤+22%・後半飽和) / otherMul.balanced7.0(echo対応) / anchorGolden0.5=神指前のみ
   tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5, clickBonus: 5.6, satMax: 150, anchorGolden: 0.5, stallFrac: 0.05, otherMul: { golden: 0.6, balanced: 7.0, default: 1 } },
