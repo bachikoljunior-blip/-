@@ -12858,7 +12858,8 @@ function renderResearch() {
   const purchasables = list.map(r => ({ id: r.id, r, sc: null, ms: null, cost: researchCost(r) }))
     .concat(stageCards.map(sc => ({ id: sc.key, r: null, sc, ms: null, cost: researchStageCost(sc.r, sc.stageNo) })))
     .concat(ms.avail.map(m => ({ id: "ms:" + m.id, r: null, sc: null, ms: m, cost: msResearchCost(m) })));
-  purchasables.sort((a, b) => a.cost - b.cost);
+  // 段階2/3カードは一番上(2026-07-11 ユーザー指示)。同種同士はコストの安い順
+  purchasables.sort((a, b) => ((a.sc ? 0 : 1) - (b.sc ? 0 : 1)) || (a.cost - b.cost));
 
   // 解放前(ロック中)のカードも全種を混ぜてコスト順に(2026-07-11 ユーザー指示):
   // 通常研究の？？？・段階2/3の予告(スキル未取得)・実績研究の予告(未達成)を1つの群としてコスト順。
