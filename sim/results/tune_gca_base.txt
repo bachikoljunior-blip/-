@@ -1,0 +1,1 @@
+=== override={"golden":{"clickInstantCoef":4}} (100h) ===
