@@ -116,6 +116,10 @@ const SKILL_NODES = [
   // 割り込まない生の値(既存46ラングの経済を一切動かさない)。値段はQoL枠(utilRatio×入口)=はしご非消費。
   { id: 'click_amp', cost: 15, prereqs: ['click_1'], fixed: true, effects: [['click', null, 0.75]] },
   { id: 'golden_amp', cost: 15, prereqs: ['golden_1'], fixed: true, effects: [['goldenAmount', null, 0.50]] },
+  // 提案12「金は金を呼ぶ」(2026-07-11 ユーザー承認): 金を取った瞬間、確率pで追いの金が1枚即出現(連鎖なし)
+  { id: 'golden_echo', cost: 15, prereqs: ['golden_amp'], effects: [['unlockSystem', 'goldenEcho']] },
+  // 提案13「編成の心得」(2026-07-11 ユーザー承認・通常型=バランス方針限定): 4稼ぎ口がそろっているほど全生産ボーナス
+  { id: 'ensemble', cost: 15, prereqs: ['core'], effects: [['unlockSystem', 'ensemble']] },
   { id: 'monster_amp', cost: 15, prereqs: ['monster_1'], fixed: true, effects: [['monsterDamageSkill', null, 0.60]] },
   // 提案10/11(2026-07-11 ユーザー承認・「消さない・毎秒生産に直接乗せる」形へ単純化):
   // タップ/討伐の直送収入を、研究段2より前からスキルで弱く先行開始する(段2でフル。以後も出続ける=置き換え演出なし)
@@ -191,7 +195,9 @@ const UTILITY_SKILLS = new Set([
   // 方針入口の増幅ノード(第12次R4): 価格ははしご非消費のおまけ価格。効果は固定値(fixed)
   'click_amp', 'golden_amp', 'monster_amp', 'auto_amp',
   // 提案10/11(2026-07-11): 直送の早期入口ノード(価格はおまけ枠・効果はゲート解放)
-  'click_stall', 'monster_peddler'
+  'click_stall', 'monster_peddler',
+  // 提案12/13(2026-07-11 承認): おまけ価格枠
+  'golden_echo', 'ensemble'
 ]);
 function isUtilitySkill(id) { return UTILITY_SKILLS.has(id); }
 
@@ -199,7 +205,7 @@ function isUtilitySkill(id) { return UTILITY_SKILLS.has(id); }
 const SKILL_HAND_ORDER = [
   // 2026-07-06 第8次 ⑲対応v3: 取得順(=コストはしご順)。全ツリー辺のメインラング差≤5。
   // 設備解放: 月面=r12(7種設備の壁dec40を跨ぐ前)、時空=r17、以降約3ラングごとに第16種(r40)まで。
-  'core', 'click_1', 'click_amp', 'click_stall', 'golden_1', 'golden_amp', 'monster_1', 'monster_amp', 'monster_peddler', 'workshop_1', 'workshop_2', 'auto_1', 'auto_amp', 'economy_1',
+  'core', 'ensemble', 'click_1', 'click_amp', 'click_stall', 'golden_1', 'golden_amp', 'golden_echo', 'monster_1', 'monster_amp', 'monster_peddler', 'workshop_1', 'workshop_2', 'auto_1', 'auto_amp', 'economy_1',
   'click_2', 'golden_2', 'monster_2', 'auto_2', 'economy_2',
   'mastery_low',
   'click_3', 'upgrade_moon', 'auto_3', 'research_1', 'research_remodel', 'economy_analysis', 'order_board',
@@ -1180,6 +1186,11 @@ function computeProd(sim) {
   // 連鎖数は討伐数に線形でしか増えない(共鳴型の雪だるまにならない)。途切れ・転生で0。
   const chainM = 1 + (P.chain ? P.chain.prodCoef * chainCount(sim) : 0);
   click *= chainM; cps *= chainM;
+  // 提案13「編成の心得」(2026-07-11 承認・バランス方針限定): 4稼ぎ口のそろい具合(30秒ごとに更新の遅延値=再帰回避)
+  // に応じて全生産ボーナス。u=min(1, 4×最小シェア)・倍率=1+maxBonus×u
+  if (sim.skills.ensemble && policyIs(sim, 'balanced') && r._ensembleM > 1) {
+    click *= r._ensembleM; cps *= r._ensembleM;
+  }
   // 工房: バタークッキー生地=全生産×(1+0.02×最高層)(600秒バフ・相対型)
   if (wsBuffActive(sim, 'butterCookie')) {
     const bm = 1 + P.ws.fx.butterLayerCoef * Math.max(1, r.maxStage);
@@ -1794,6 +1805,8 @@ function measureTick(sim) {
         const inc = r._inc || (r._inc = { equip: 0, golden: 0, hunt: 0, tap: 0, n: 0 });
         inc.equip += parts.equip / tot; inc.golden += parts.golden / tot;
         inc.hunt += parts.hunt / tot; inc.tap += parts.tap / tot; inc.n++;
+        // ②改の前半判定用(2026-07-11 ユーザー決定A案): 累積和を10標本ごとにスナップ→周回末にn/2へ最近傍
+        if (inc.n % 10 === 0) (r._incSnaps || (r._incSnaps = [])).push({ e: inc.equip, g: inc.golden, h: inc.hunt, t: inc.tap, n: inc.n });
         if (parts.detail) {
           const d = parts.detail;
           const dt = d.cps + d.tap0 + d.tapD + d.eqD + d.bkD + d.gRate + d.gD + d.killT + d.huntD;
@@ -1824,17 +1837,23 @@ function finalizeMeasure(run) {
   if (run._meas) for (const [k, m] of Object.entries(run._meas)) if (m.n > 0) lift[k] = Math.exp(m.s / m.n);
   let bestPol = null, bestV = -Infinity;
   if (run._polPow) for (const [pol, v] of Object.entries(run._polPow)) if (v > bestV) { bestV = v; bestPol = pol; }
-  let income = null;
+  let income = null, incomeH1 = null;
   if (run._inc && run._inc.n > 0) {
     const i = run._inc;
     income = { equip: i.equip / i.n, golden: i.golden / i.n, hunt: i.hunt / i.n, tap: i.tap / i.n };
+    // 前半平均(②改のA案・2026-07-11): n/2 に最も近いスナップの累積和から
+    const half = i.n / 2, snaps = run._incSnaps || [];
+    let best = null;
+    for (const sn of snaps) if (!best || Math.abs(sn.n - half) < Math.abs(best.n - half)) best = sn;
+    if (best && best.n > 0) incomeH1 = { equip: best.e / best.n, golden: best.g / best.n, hunt: best.h / best.n, tap: best.t / best.n };
+    else incomeH1 = income; // 短い周回=スナップ無しは全周回平均で代用
   }
   let incomeDetail = null;
   if (run._incD && run._incD.n > 0) {
     const d = run._incD; incomeDetail = {};
     for (const k of Object.keys(d)) if (k !== 'n') incomeDetail[k] = d[k] / d.n;
   }
-  return { lift, bestPol, income, incomeDetail, invLast: run._invLast || null };
+  return { lift, bestPol, income, incomeH1, incomeDetail, invLast: run._invLast || null };
 }
 // タイミング機能(⑬)の測定: idleTiming を _md ではなく opt で切替えるため別扱い
 const TIMING_KEYS = [
@@ -1958,6 +1977,15 @@ function collectGolden(sim, prod) {
         until: sim.t + dur + (3000 + Math.log1p(timeOven) * 1400) / 1000
       });
     }
+  }
+  // 提案12「金は金を呼ぶ」(2026-07-11 ユーザー承認): 確率pで追いの金が1枚即出現(連鎖なし=追い金は対象外)。
+  // 期待値モデル: 追い金は即時獲得型としてp×amountMulぶんを加算・取得カウントもpぶん進む。
+  if (sim.skills.golden_echo && P.goldenEcho && P.goldenEcho.p > 0) {
+    const pE = P.goldenEcho.p;
+    earn(sim, Math.max(100, prod.cps * P.golden.instantCoef, prod.clickEV * P.golden.instantCoef)
+      * goldenAmountMultiplier(sim) * goldenEarlyMul(sim) * ((P.ws && wsStageDef(sim).goldenGain) || 1)
+      * pE * (P.goldenEcho.amountMul || 1));
+    r.goldenTaken += pE; r.msGoldens = (r.msGoldens || 0) + pE;
   }
 }
 
@@ -2229,6 +2257,19 @@ function advanceTick(sim, strategy) {
       r0._emaLastCookies = r0.runCookies;
       const A = Math.exp(-1 / 90);
       r0.earnEma = (r0.earnEma || 0) * A + Math.max(0, dEarn) * (1 - A);
+      // 提案13: 編成の心得のそろい具合を30秒ごとに更新(遅延値=同tickの生産へ再帰しない)
+      if (sim.skills.ensemble && policyIs(sim, 'balanced') && sim.t % (P.ensemble && P.ensemble.updateSec || 30) === 0) {
+        const pw = earningPowerSafe(sim);
+        const parts = pw > 0 ? incomeParts(sim, pw) : null;
+        if (parts) {
+          const tot = parts.equip + parts.golden + parts.hunt + parts.tap;
+          if (tot > 0 && Number.isFinite(tot)) {
+            const mn = Math.min(parts.equip, parts.golden, parts.hunt, parts.tap) / tot;
+            const u = Math.min(1, 4 * Math.max(0, mn));
+            r0._ensembleM = 1 + (P.ensemble ? P.ensemble.maxBonus : 0.15) * u;
+          }
+        }
+      }
       // 直近1秒の実獲得(=瞬間ペース)。末期の超成長(1桁/6秒)ではEMAが瞬間値の1/30以下に遅延するため、
       // 注文報酬cookieの基準はこちらを使う(2026-07-11 ㉙実測: EMA基準は比1.08-1.15止まり)
       r0.lastTickEarn = Math.max(0, dEarn);

@@ -1073,9 +1073,10 @@ if (mode === 'baseline') {
       const inc = r.measure.income;
       const shares = { equip: inc.equip, golden: inc.golden, hunt: inc.hunt, tap: inc.tap };
       const maxShare = Math.max(...Object.values(shares));
+      // 主役シェア閾値 30%→25%(2026-07-11 ユーザー決定・相談1のA案)
       const aPass = pol === 'balanced'
         ? Object.values(shares).every(v => v >= 0.10)
-        : shares[ROLE_CHANNEL[pol]] >= 0.30;
+        : shares[ROLE_CHANNEL[pol]] >= 0.25;
       // (b)独占禁止(どの稼ぎ口も≤90%)は2026-07-08 ユーザー決定で全方針撤廃。㉘は(a)主役シェア≥30%のみで判定。
       const bPass = true;
       const pass = aPass && bPass;
@@ -1083,23 +1084,25 @@ if (mode === 'baseline') {
       // ②(改・ジャンル単位の一強禁止・2026-07-08 ユーザー承認): 収入をジャンル(設備/金/討伐/タップ)に束ねた
       // lift(=1/(1-share))を出し、その方針の得意ジャンルの lift が全ジャンル lift 幾何平均の±1.5倍以内。
       // 得意ジャンルが突出しすぎない(=他ジャンルも腐らない)を担保。個々の研究の±1.5(構造的に不可能)を置換。
+      // ②改は周回の前半のシェアで判定(2026-07-11 ユーザー決定・相談2のA案=終盤の主役無双は醍醐味として許す)
       let c2 = true;
+      const sh2 = inc && r.measure.incomeH1 ? r.measure.incomeH1 : shares;
       if (gated && ROLE_CHANNEL[pol]) {
-        const gl = ['equip', 'golden', 'hunt', 'tap'].map(k => 1 / Math.max(1e-6, 1 - Math.min(0.999, shares[k])));
+        const gl = ['equip', 'golden', 'hunt', 'tap'].map(k => 1 / Math.max(1e-6, 1 - Math.min(0.999, sh2[k])));
         const gm = Math.exp(gl.reduce((a, b) => a + Math.log(b), 0) / gl.length);
-        const spec = 1 / Math.max(1e-6, 1 - Math.min(0.999, shares[ROLE_CHANNEL[pol]]));
+        const spec = 1 / Math.max(1e-6, 1 - Math.min(0.999, sh2[ROLE_CHANNEL[pol]]));
         c2 = spec >= gm / 1.5 && spec <= gm * 1.5;
         c2all++; if (c2) c2ok++;
       }
       rows.push(`  run${String(r.idx).padStart(2)} ${gated ? '対象' : '対象外'} 設備${(shares.equip * 100).toFixed(0)}% 金${(shares.golden * 100).toFixed(0)}% 討伐${(shares.hunt * 100).toFixed(0)}% タップ${(shares.tap * 100).toFixed(0)}%${gated ? ` → (a)${aPass ? 'OK' : 'NG'} ②改${c2 ? 'OK' : 'NG'}` : ''}`);
     }
     okAll += ok; allAll += all; c2okAll += c2ok; c2allAll += c2all;
-    const role = ROLE_CHANNEL[pol] ? `主役=${CH_NAME[ROLE_CHANNEL[pol]]}≥30%` : '4つすべて≥10%';
+    const role = ROLE_CHANNEL[pol] ? `主役=${CH_NAME[ROLE_CHANNEL[pol]]}≥25%` : '4つすべて≥10%';
     console.log(`${pol}(${s.id} ${s.name}) ${role}: ${ok}/${all}周回 合格`);
     rows.forEach(x => console.log(x));
   }
   console.log(`㉘合計: ${okAll}/${allAll}周回`);
-  console.log(`②(改・ジャンル一強禁止 得意ジャンルlift≤±1.5倍) 合計: ${c2okAll}/${c2allAll}周回`);
+  console.log(`②(改・前半判定・得意ジャンルlift≤±1.5倍) 合計: ${c2okAll}/${c2allAll}周回`);
 } else if (mode === 'skillsum') {
   let sum = 0;
   for (const n of G.SKILL_NODES) sum += G.skillCostOf(n);
