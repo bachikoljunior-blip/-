@@ -1911,7 +1911,10 @@ function researchStageCostOf(sim, id, stage) {
 // capv(効果キャップ)は2026-07-05のキャップ全撤廃で削除済み
 
 // 次に買える最安スキル(未取得・前提充足)。到達連動ノルマ(gain基準)とstrategiesの転生判断が同じ景色を見る
+// 毎tick呼ばれるためスキル所持数でキャッシュ(所持が変わった時だけ再走査)
 function cheapestNextSkillCostSim(sim) {
+  const cnt = Object.keys(sim.skills).length;
+  if (sim._nextCostCache && sim._nextCostCache.cnt === cnt) return sim._nextCostCache.v;
   let best = Infinity, bestAny = Infinity;
   for (const n of SKILL_NODES) {
     if (sim.skills[n.id]) continue;
@@ -1920,9 +1923,9 @@ function cheapestNextSkillCostSim(sim) {
     bestAny = Math.min(bestAny, c);
     if (!isUtilitySkill(n.id)) best = Math.min(best, c);
   }
-  if (best !== Infinity) return best;
-  if (bestAny !== Infinity) return bestAny;
-  return null;
+  const v = best !== Infinity ? best : (bestAny !== Infinity ? bestAny : null);
+  sim._nextCostCache = { cnt, v };
+  return v;
 }
 function prestigeGainOf(runCookies) {
   const t = Math.max(0, Math.floor(runCookies));
