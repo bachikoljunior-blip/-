@@ -1,0 +1,1 @@
+=== override={"golden":{"clickAnchorHalfMul":0.7}} (100h) ===
