@@ -1419,6 +1419,10 @@ const MILESTONE_RESEARCH = (() => {
       add('ms_' + u.id + '_t' + (ti + 1), sim => (sim.run.upgrades[u.id] || 0) >= n, fx, cs);
     });
   }
+  // 工場の早期強化 3段(2026-07-11 ユーザー指示「工場の段1研究が高いので、実績研究でその前にいくつか
+  // 工場強化できるものを入れて」): 組立ライン網(段1)が買える前の3/6/8台で工場生産を先行強化。安価(即買い帯)
+  const facEarly = [[3, 40, 1.35], [6, 80, 1.4], [8, 120, 1.45]];
+  facEarly.forEach(([n, cs, m], i) => add('ms_factory_e' + (i + 1), sim => (sim.run.upgrades.factory || 0) >= n, { up: { factory: m } }, cs));
   // 討伐実績 8段(周回内): 効果はダメージ/出現/滞在/HP/ドロップのローテ
   const killTiers = [[10, 100, { hunt: 1.3 }], [25, 200, { spawn: 0.85 }], [50, 400, { stay: 1.2 }], [100, 800, { hunt: 1.3 }],
     [200, 1600, { hp: 0.75 }], [400, 3000, { dropAdd: 1 }], [800, 4500, { hunt: 1.3 }], [1600, 6000, { stay: 1.2 }]];
