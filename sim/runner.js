@@ -1009,9 +1009,10 @@ if (mode === 'baseline') {
     });
     console.log(`参考 討伐連鎖lift: ${rows.length ? rows.join(' / ') : '(討伐なし)'}`);
   }
-  // ② 研究の一強禁止: 各方針で、その方針が取得した研究の「周回幾何平均lift」が幾何平均±1.5倍
+  // (参考)旧②・研究lift分散: ②は2026-07-12に方針間判定(②改2)へ再定義済み=runner income が正式判定。
+  // この方針ごとの研究lift分散は合否に使わない(研究間のliftは桁が違って当然=①が下限だけ守る)。
   {
-    let ok = 0, all = 0;
+    const rows = [];
     for (const s of STRATEGIES) {
       const full = sims[s.id].runs.filter(r => !r.partial && r.measure);
       const per = {};
@@ -1021,13 +1022,10 @@ if (mode === 'baseline') {
       }
       const arr = Object.values(per);
       if (arr.length < 2) continue;
-      all++;
       const gm = Math.exp(arr.reduce((a, b) => a + Math.log(b), 0) / arr.length);
-      const within = arr.every(v => v >= gm / 1.5 && v <= gm * 1.5);
-      if (within) ok++;
-      console.log(`  ${within ? 'OK' : 'NG'} ${s.id} 研究lift[${Math.min(...arr).toFixed(2)}..${Math.max(...arr).toFixed(2)}] 平均${gm.toFixed(2)}`);
+      rows.push(`${s.id} 研究lift[${Math.min(...arr).toFixed(2)}..${Math.max(...arr).toFixed(2)}] 平均${gm.toFixed(2)}`);
     }
-    console.log(`② 一強禁止(方針ごと) ${ok}/${all}`);
+    console.log(`参考 研究lift分散(旧②・合否対象外=②改2は income で判定): ${rows.join(' / ')}`);
   }
   // ⑫ 周回方針の文脈依存: 5方針それぞれが「1位になる周回」を持つ(全方針・全周回のargmax集合)
   {
