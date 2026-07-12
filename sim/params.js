@@ -135,12 +135,15 @@ module.exports = {
 
   // huntDirect: satMax 15→14(2026-07-12 ②改2: huntのlift3.09が帯上限3.00超過→飽和を微絞り)
   // peddlerFrac 0.02→0.06(2026-07-11 hunt序盤対策) / otherMul.golden 0.9(2026-07-11) / 投資量=討伐perk8種・基準=金相場
-  huntDirect:   { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 12, otherMul: { click: 0.15, balanced: 0.15, golden: 0.9, default: 0.3 }, peddlerFrac: 0.06 },
+  // otherMul.click 0.15→0.08(2026-07-12 ㉘click後半: 討直29-31%がタップ主役25%を圧迫。診断=partsDetail)
+  huntDirect:   { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 12, otherMul: { click: 0.08, balanced: 0.15, golden: 0.9, default: 0.3 }, peddlerFrac: 0.06 },
   // tapDirect: clickBonus 5.0→5.6(2026-07-12 ②改2: clickのlift1.46が最弱=底上げで帯上限を引き上げhuntを収容)
   // clickBonus5.0+satMax150(2026-07-11 複合=中盤+22%・後半飽和) / otherMul.balanced7.0(echo対応) / anchorGolden0.5=神指前のみ
   // satMax 150→400・otherMul.balanced 7.0→9.0(2026-07-12 ㉘後半対策: click run33-47 打12-21%<25%・
   // balanced run33-45 打8-10%<10%は共に飽和/係数不足。golden/hunt後半は打1-5%で巻き添え安全圏を実測確認済み)
-  tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5, clickBonus: 5.6, satMax: 400, anchorGolden: 0.5, stallFrac: 0.05, otherMul: { golden: 0.6, balanced: 9.0, default: 1 } },
+  // satMax 400→800(2026-07-12 続き: click後半は神指1600+で投資raw≈9500=400でも再飽和(実効383)。
+  // 実効735へ=tapD 15-20%→28%試算。中盤(raw≈200)は×1.2どまり=②改2 clickリフトへの波及は小)
+  tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5, clickBonus: 5.6, satMax: 800, anchorGolden: 0.5, stallFrac: 0.05, otherMul: { golden: 0.6, balanced: 9.0, default: 1 } },
   // 銀行配当(直送・第12次J-3 腐り解消): bankClickDividend研究の独立収入。クリック方針で厚く効かせ①の各回minを満たす。
   // 全体cps倍率をやめ加算収入へ(他機能のlift希釈を回避)。所持数はlog10で床あり=早い周回でも効く。増加方向のみ。
   bankDirect:   { coef: 0.42, ownRate: 0.5, savedCoef: 0.05, clickBonus: 2.8, countCoef: 0.9, countPow: 1.8, ref: 150, anchorGolden: 0.12, otherMul: 0.5 }, // clickBonus 2.5→2.8(2026-07-11: echo金インフレで①bankのS2が1周回だけ1.2割れ=マージン) // 投資量=銀行所持数+貯蓄(総クッキー桁)。coef 0.34→0.42(2026-07-10 第12次R: surge経済移動で①bank研究が1.2割れ=マージン)
