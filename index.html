@@ -6058,8 +6058,8 @@ const SKILL_NODES = [
 
   // 左上：タップ型
   { id: "click_1", name: "会心の指", branchId: "click", cost: 25, x: 800, y: 980, icon: "◆", prereqs: ["core"], desc: "タップ生産 +200%。", effects: [{ type: "click", value: 2 }] },
-  { id: "click_2", name: "連打の呼吸", branchId: "click", cost: 495, x: 620, y: 860, icon: "◆", prereqs: ["click_1"], desc: "タップ生産 x7。", effects: [{ type: "click", value: 6 }] },
-  { id: "click_3", name: "焼き印タップ", branchId: "click", cost: 36500, x: 440, y: 740, icon: "◆", prereqs: ["click_2", "golden_2"], desc: "タップ生産 x16、金獲得量 +30%。", effects: [{ type: "click", value: 15 }, { type: "goldenAmount", value: 0.3 }] },
+  { id: "click_2", name: "連打の呼吸", branchId: "click", cost: 250, x: 620, y: 860, icon: "◆", prereqs: ["click_1"], desc: "タップ生産 x7。", effects: [{ type: "click", value: 6 }] },
+  { id: "click_3", name: "焼き印タップ", branchId: "click", cost: 15500, x: 440, y: 740, icon: "◆", prereqs: ["click_2", "golden_2"], desc: "タップ生産 x16、金獲得量 +30%。", effects: [{ type: "click", value: 15 }, { type: "goldenAmount", value: 0.3 }] },
   { id: "click_4", name: "神経直結", branchId: "click", cost: 13500000, x: 260, y: 620, icon: "◆", prereqs: ["click_3", "auto_4"], desc: "タップ生産 +24%、全生産 x641。銀行配当の増幅先。", effects: [{ type: "click", value: 0.24 }, { type: "all", value: 640 }] },
 
   // 左下：金クッキー型
@@ -6082,7 +6082,7 @@ const SKILL_NODES = [
   // 右上：自動焼成型
   { id: "auto_1", name: "火種", branchId: "auto", cost: 110, x: 1200, y: 980, icon: "◇", prereqs: ["core"], desc: "毎秒生産 +300%。", effects: [{ type: "cps", value: 3 }] },
   { id: "auto_2", name: "炉の列", branchId: "auto", cost: 3850, x: 1380, y: 860, icon: "◇", prereqs: ["auto_1", "monster_2"], desc: "毎秒生産 x11。", effects: [{ type: "cps", value: 10 }] },
-  { id: "auto_3", name: "同期炉", branchId: "auto", cost: 130000, x: 1560, y: 740, icon: "◇", prereqs: ["auto_2", "monster_2"], desc: "毎秒生産 x41、モンスターダメージ +60%。", effects: [{ type: "cps", value: 40 }, { type: "monsterDamageSkill", value: 0.6 }] },
+  { id: "auto_3", name: "同期炉", branchId: "auto", cost: 38500, x: 1560, y: 740, icon: "◇", prereqs: ["auto_2", "monster_2"], desc: "毎秒生産 x41、モンスターダメージ +60%。", effects: [{ type: "cps", value: 40 }, { type: "monsterDamageSkill", value: 0.6 }] },
   { id: "auto_4", name: "無人ライン", branchId: "auto", cost: 3500000, x: 1740, y: 620, icon: "◇", prereqs: ["auto_3"], desc: "毎秒生産 +24%、全生産 x161。工場ネットワークの増幅先。", effects: [{ type: "cps", value: 0.24 }, { type: "all", value: 160 }] },
 
   // 右下：怪物狩り型
@@ -6105,7 +6105,7 @@ const SKILL_NODES = [
   { id: "mastery_high", name: "工程の極み", branchId: "economy", cost: 150000000, x: 1560, y: 140, icon: "⚒", prereqs: ["mastery_low", "upgrade_galaxy"], desc: "上位設備(月面ベーカリー〜反物質オーブン)にも熟練が付く：同じ設備を買うほど1台あたりの生産が+0.5%ずつ複利で伸びる。", effects: [{ type: "unlockSystem", target: "masteryHigh" }] },
   { id: "order_board", name: "注文ボード", branchId: "economy", cost: 770, x: 440, y: 340, icon: "⬡", prereqs: ["economy_analysis"], desc: "一覧タブに注文ボードを追加する。ノルマ進行度に応じて要求量と報酬倍率が上がる短期目標を表示する。", effects: [{ type: "unlockSystem", target: "orderBoard" }] },
 
-{ id: "upgrade_moon", name: "月面許可", branchId: "upgrade", cost: 66000, x: 1180, y: 420, icon: "◌", prereqs: ["economy_2"], desc: "月面ベーカリーを解放。", effects: [{ type: "unlockUpgrade", target: "moonBakery" }] },
+{ id: "upgrade_moon", name: "月面許可", branchId: "upgrade", cost: 63500, x: 1180, y: 420, icon: "◌", prereqs: ["economy_2"], desc: "月面ベーカリーを解放。", effects: [{ type: "unlockUpgrade", target: "moonBakery" }] },
   { id: "upgrade_time", name: "時空免許", branchId: "upgrade", cost: 865000, x: 1000, y: 260, icon: "◌", prereqs: ["upgrade_moon", "research_remodel"], desc: "時空オーブンを解放。", effects: [{ type: "unlockUpgrade", target: "timeOven" }] },
   { id: "upgrade_galaxy", name: "銀河契約", branchId: "upgrade", cost: 53000000, x: 1360, y: 260, icon: "✺", prereqs: ["upgrade_time", "auto_4"], desc: "銀河工場を解放。", effects: [{ type: "unlockUpgrade", target: "galaxyFactory" }] },
   { id: "upgrade_blackhole", name: "重力設備", branchId: "upgrade", cost: 3900000000, x: 1360, y: -120, icon: "●", prereqs: ["upgrade_galaxy"], desc: "ブラックホールミキサーを解放。", effects: [{ type: "unlockUpgrade", target: "blackHoleMixer" }] },
@@ -6119,7 +6119,7 @@ const SKILL_NODES = [
 
   { id: "unlock_reward_crackedFang", name: "割れた牙", branchId: "reward", cost: 7800000000, x: 1560, y: 1340, icon: "✧", prereqs: ["monster_4"], desc: "報酬カード『割れた牙』を解禁。モンスターへのダメージが上がる。", effects: [{ type: "unlockReward", target: "crackedFang" }] },
   { id: "unlock_reward_chainPrep", name: "連戦準備", branchId: "reward", cost: 52000000000, x: 1720, y: 1440, icon: "✧", prereqs: ["unlock_reward_crackedFang"], desc: "報酬カード『連戦準備』を解禁。撃破後、次出現が早くなるが次HPも上がる。", effects: [{ type: "unlockReward", target: "chainPrep" }] },
-  { id: "unlock_reward_huntFocus", name: "狩猟集中", branchId: "reward", cost: 81500000000, x: 1360, y: 1520, icon: "✧", prereqs: ["unlock_reward_crackedFang"], desc: "報酬カード『狩猟集中』を解禁。成功・失敗で次の狩り方が変わる。", effects: [{ type: "unlockReward", target: "huntFocus" }] },
+  { id: "unlock_reward_huntFocus", name: "狩猟集中", branchId: "reward", cost: 78000000000, x: 1360, y: 1520, icon: "✧", prereqs: ["unlock_reward_crackedFang"], desc: "報酬カード『狩猟集中』を解禁。成功・失敗で次の狩り方が変わる。", effects: [{ type: "unlockReward", target: "huntFocus" }] },
   { id: "unlock_reward_biteRecovery", name: "甘噛み回収", branchId: "reward", cost: 3000000000000, x: 1360, y: 1680, icon: "✧", prereqs: ["unlock_reward_huntFocus"], desc: "報酬カード『甘噛み回収』を解禁。攻撃ごとに少量のクッキーを得る。", effects: [{ type: "unlockReward", target: "biteRecovery" }] },
   { id: "unlock_reward_beastHeatFerment", name: "獣熱発酵", branchId: "reward", cost: 4750000000000, x: 1540, y: 1680, icon: "✧", prereqs: ["unlock_reward_biteRecovery"], desc: "報酬カード『獣熱発酵』を解禁。撃破数で全生産が上がる。", effects: [{ type: "unlockReward", target: "beastHeatFerment" }] },
   { id: "unlock_reward_huntingCore", name: "狩猟炉心", branchId: "reward", cost: 7450000000000, x: 1540, y: 1840, icon: "✧", prereqs: ["unlock_reward_beastHeatFerment"], desc: "報酬カード『狩猟炉心』を解禁。撃破数で毎秒生産が上がる。", effects: [{ type: "unlockReward", target: "huntingCore" }] },

@@ -266,6 +266,9 @@ function buildSkillCosts() {
     if (!n) throw new Error('unknown node ' + id);
     if (!n.prereqs.every(q => have[q])) throw new Error('infeasible order at ' + id);
     SKILL_RANK[id] = rank++;
+    // ⑲改の辺間隔上書き(2026-07-11): 梯子リチューン(tune.js)後に辺比>10倍となった5ノードだけ
+    // 個別値で上書き(はしご進行=lastRungCostは元のままなので他ノードに波及しない)。値はq5準拠・全て引き下げ方向。
+    const OV = P.skillCost.overrides;
     if (isUtilitySkill(id)) {
       // QoLノードは「前提ノードのコスト」基準のおまけ価格(解放時点でほぼ即買い可能)
       const base = n.prereqs.length ? Math.max(...n.prereqs.map(q => SKILL_COST_MAP[q] || P.skillCost.C0)) : lastRungCost;
@@ -286,6 +289,7 @@ function buildSkillCosts() {
       rung++;
       SKILL_COST_MAP[id] = q5cost(tentative); // 丸め規則(有効数字3桁=5の倍数)を内部値にも適用
     }
+    if (OV && OV[id] != null) SKILL_COST_MAP[id] = OV[id]; // ⑲改の個別上書き(q5準拠値)
     have[id] = true;
   }
   return SKILL_COST_MAP;

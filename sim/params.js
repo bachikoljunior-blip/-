@@ -24,7 +24,11 @@ module.exports = {
   // C0=13: coreの子ノード群(≤10×core=130)がチューナの序盤閾値(dec≈21-26)を収容できる水準
   // rungCosts: tune.js の出力(rung_costs.json)を自動読込(なければ C0×rho^k)
   skillCost: { mode: 'ladder', C0: 13, rho: 1.57, edgeCap: 10, utilRatio: 0.35, segments: [],
-    rungCosts: (function () { try { return require('./rung_costs.json'); } catch (e) { return []; } })() },
+    rungCosts: (function () { try { return require('./rung_costs.json'); } catch (e) { return []; } })(),
+    // ⑲改の辺間隔上書き(2026-07-11): 梯子リチューン後に「比≤10倍の辺なし」となった5ノードを、最も近い
+    // 隣接ノードのちょうど10倍(q5準拠)へ引き下げ。click_2=click_1×10 / click_3=golden_2×10 /
+    // auto_3=auto_2×10 / upgrade_moon=economy_2×10 / unlock_reward_huntFocus=crackedFang×10
+    overrides: { click_2: 250, click_3: 15500, auto_3: 38500, upgrade_moon: 63500, unlock_reward_huntFocus: 78000000000 } },
 
   // ---- 生産系数値ノードの1ノードあたり目標倍率 ----
   nodeM: { all: 4, cps: 4, click: 3 }, // 14/14/9->4/4/3 (2026-07-06: 安価⑲ラダー下で周回時間を帯域スケールへ減速)
