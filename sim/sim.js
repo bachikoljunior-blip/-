@@ -1374,6 +1374,14 @@ function goldenEarlyMul(sim) {
   const half = P.golden.earlyHalfRuns || 1.5;
   return 1 + (m - 1) * Math.pow(0.5, (sim.prestigeRuns || 0) / half);
 }
+// タップ換算アンカーの実効値(2026-07-12): 「タップ数回ぶんの金は雑魚」対策は序盤の体感の問題なので、
+// clickInstantCoef は基礎値(instantCoef)へ周回数で減衰(早期ブーストと同型・中盤以降の㉘バランスに触れない)。
+// 第0回=フル(40タップ)・半減期 earlyHalfRuns×3(≈2周回)で基礎4タップへ。
+function clickInstantCoefEff(sim) {
+  const base = P.golden.instantCoef, full = P.golden.clickInstantCoef || base;
+  const half = (P.golden.earlyHalfRuns || 0.7) * 3;
+  return base + (full - base) * Math.pow(0.5, sim.prestigeRuns / half);
+}
 function goldenMultiplierVal(sim) {
   const r = sim.run;
   const lv = satLv(rwOff(sim, 'goldenPower') ? 0 : r.perks.goldenPower, P.golden.powerLvHalf);
@@ -1650,7 +1658,7 @@ function goldenRateValue(sim, prod) {
   // 即時獲得の計測は実支払い(collectGolden: max(cps, clickEV)×instantCoef×gAM)と同式にする。
   // 旧: baseClick(会心・ブースト抜き)を参照していたため、会心が育つ後半周回で金の実収入を
   // critEV×boostM 倍(10-30倍)過小評価し、S3金特化の後半の金シェアが25%へ沈んで見えていた(㉘計測歪み)。
-  const instant = Math.max(prod.cps * P.golden.instantCoef, prod.clickEV * (P.golden.clickInstantCoef || P.golden.instantCoef)) * goldenAmountMultiplier(sim)
+  const instant = Math.max(prod.cps * P.golden.instantCoef, prod.clickEV * clickInstantCoefEff(sim)) * goldenAmountMultiplier(sim)
     * goldenEarlyMul(sim)
     * ((P.ws && wsStageDef(sim).goldenGain) || 1);
   const boostVal = Math.max(0, goldenMultiplierVal(sim) - 1) * prod.cps * (goldenBoostDurationMs(sim) / 1000);
@@ -1988,7 +1996,7 @@ function collectGolden(sim, prod) {
   // 期待値: 交互に即時獲得/ブースト
   sim.goldenAlt ^= 1;
   if (sim.goldenAlt === 1) {
-    earn(sim, Math.max(100, prod.cps * P.golden.instantCoef, prod.clickEV * (P.golden.clickInstantCoef || P.golden.instantCoef)) * goldenAmountMultiplier(sim)
+    earn(sim, Math.max(100, prod.cps * P.golden.instantCoef, prod.clickEV * clickInstantCoefEff(sim)) * goldenAmountMultiplier(sim)
       * goldenEarlyMul(sim)
       * ((P.ws && wsStageDef(sim).goldenGain) || 1));
   } else {
@@ -2008,7 +2016,7 @@ function collectGolden(sim, prod) {
   // 期待値モデル: 追い金は即時獲得型としてp×amountMulぶんを加算・取得カウントもpぶん進む。
   if (sim.skills.golden_echo && P.goldenEcho && P.goldenEcho.p > 0) {
     const pE = P.goldenEcho.p;
-    earn(sim, Math.max(100, prod.cps * P.golden.instantCoef, prod.clickEV * (P.golden.clickInstantCoef || P.golden.instantCoef))
+    earn(sim, Math.max(100, prod.cps * P.golden.instantCoef, prod.clickEV * clickInstantCoefEff(sim))
       * goldenAmountMultiplier(sim) * goldenEarlyMul(sim) * ((P.ws && wsStageDef(sim).goldenGain) || 1)
       * pE * (P.goldenEcho.amountMul || 1));
     r.goldenTaken += pE; r.msGoldens = (r.msGoldens || 0) + pE;
