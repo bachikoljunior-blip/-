@@ -5045,6 +5045,16 @@
       box-shadow: inset 0 0 0 2px rgba(255, 205, 122, 0.85);
     }
 
+    /* 研究が新しく解放されたら研究タブを光らせて点滅(開くと解除) */
+    .tab.researchNotify {
+      animation: orderTabBlink 1.1s ease-in-out infinite;
+    }
+
+    body.fxOff .tab.researchNotify {
+      animation: none;
+      box-shadow: inset 0 0 0 2px rgba(255, 205, 122, 0.85);
+    }
+
     /* ===== 直近要望: 表示崩れ対策 ===== */
     /* ダブルタップでの画面拡大を無効化(スクロール・パンは維持) */
     html, body {
@@ -7999,6 +8009,39 @@ function notifyOrderTab() {
 function clearOrderTabNotify() {
   const tab = document.querySelector('.tab[data-tab="orderTab"]');
   if (tab) tab.classList.remove("orderNotify");
+}
+
+// ==== 研究の新規解放の通知(研究タブを光らせて点滅、開くと解除) ====
+let lastResearchAvailKey = null;
+
+function researchAvailIdsNow() {
+  const ids = [];
+  RESEARCH.forEach(r => { if (!state.research[r.id] && researchUnlocked(r)) ids.push(r.id); });
+  visibleResearchStageCards().forEach(sc => ids.push(sc.key));
+  // 実績研究も対象(達成して購入可能になったら光らせる)
+  msResearchLists().avail.forEach(m => ids.push("ms:" + m.id));
+  return ids;
+}
+
+function checkResearchUnlockNotify() {
+  try {
+    const ids = researchAvailIdsNow();
+    const key = ids.join(",");
+    if (lastResearchAvailKey === null) { lastResearchAvailKey = key; return; } // 初回は基準を覚えるだけ
+    if (key === lastResearchAvailKey) return;
+    const prev = new Set(lastResearchAvailKey.split(","));
+    const added = ids.some(id => !prev.has(id));
+    lastResearchAvailKey = key;
+    if (added && activeTab !== "researchTab") {
+      const tab = document.querySelector('.tab[data-tab="researchTab"]');
+      if (tab) tab.classList.add("researchNotify");
+    }
+  } catch (e) {}
+}
+
+function clearResearchTabNotify() {
+  const tab = document.querySelector('.tab[data-tab="researchTab"]');
+  if (tab) tab.classList.remove("researchNotify");
 }
 
 function ensureActiveOrder() {
@@ -12480,14 +12523,28 @@ function researchArt(r) {
 }
 
 function upgradeShopEffectRows(u) {
-  const owned = state.upgrades[u.id];
-  const before = upgradeEffectiveContributionAtCount(u, owned, true);
-  const after = upgradeEffectiveContributionAtCount(u, owned + 1, true);
-  const add = Math.max(0, after - before);
-  const kind = u.type === "cps" ? "毎秒" : "タップ";
+  const owned = state.upgrades[u.id] || 0;
+  const isCps = u.type === "cps";
+  const measure = () => (isCps ? currentCps() : currentClickPower());
+
+  // 最終値で表示する(2026-07-11 ユーザー指示): 全ての倍率・ブースト込みの実際の生産で、
+  // 台数を一時的に変えて本物のパイプラインの差分を取る(連携・系列ボーナス等の波及も含む)。
+  const cur = measure();
+  let withoutV, plusOneV;
+  try {
+    state.upgrades[u.id] = 0;
+    withoutV = measure();
+    state.upgrades[u.id] = owned + 1;
+    plusOneV = measure();
+  } finally {
+    state.upgrades[u.id] = owned;
+  }
+  const total = Math.max(0, cur - withoutV);
+  const add = Math.max(0, plusOneV - cur);
+  const kind = isCps ? "毎秒" : "タップ";
 
   // 追加分は「+X」、合計は「毎秒 X(タップ X)」のみを表示する
-  return { addText: `+${fmt(add)}`, totalText: `${kind} ${fmt(before)}` };
+  return { addText: `+${fmt(add)}`, totalText: `${kind} ${fmt(total)}` };
 }
 
 // 経済分析スキル解放後のみ表示するコスパ行(表示条件・情報量は従来と同じ)
@@ -12803,9 +12860,27 @@ function renderResearch() {
     .concat(ms.avail.map(m => ({ id: "ms:" + m.id, r: null, sc: null, ms: m, cost: msResearchCost(m) })));
   purchasables.sort((a, b) => a.cost - b.cost);
 
+  // 解放前(ロック中)のカードも全種を混ぜてコスト順に(2026-07-11 ユーザー指示):
+  // 通常研究の？？？・段階2/3の予告(スキル未取得)・実績研究の予告(未達成)を1つの群としてコスト順。
+  // 段階2/3はスキルで解放する前から「次の段」を予告カードとして表示する。
+  const stagePreviews = debugMode ? [] : (() => {
+    const arr = [];
+    RESEARCH.forEach(r => {
+      if (!state.research[r.id] || !researchUnlocked(r)) return;
+      const cur = Math.max(1, Math.floor(Number((state.researchStages || {})[r.id]) || 1));
+      if (cur < 2 && RES_STAGE2[r.id] && !hasSkill(RES_STAGE2[r.id])) arr.push({ r, stageNo: 2 });
+      else if (cur === 2 && RES_STAGE3[r.id] && !hasSkill(RES_STAGE3[r.id])) arr.push({ r, stageNo: 3 });
+    });
+    return arr;
+  })();
+
+  const lockedCards = lockedList.map(r => ({ id: "lock:" + r.id, r, sp: null, m: null, cost: researchCost(r) }))
+    .concat(stagePreviews.map(sp => ({ id: "stagelock:" + sp.r.id + "__s" + sp.stageNo, r: null, sp, m: null, cost: researchStageCost(sp.r, sp.stageNo) })))
+    .concat(ms.locked.map(m => ({ id: "mslock:" + m.id, r: null, sp: null, m, cost: msResearchCost(m) })));
+  lockedCards.sort((a, b) => a.cost - b.cost);
+
   const ids = purchasables.map(p => p.id)
-    .concat(lockedList.map(r => "lock:" + r.id))
-    .concat(ms.locked.map(m => "mslock:" + m.id))
+    .concat(lockedCards.map(l => l.id))
     .concat(showBhGauge ? ["__bhGauge"] : [])
     .concat(ownedList.map(r => "own:" + r.id));
   // 実績研究の購入で ms: のidが列から消えるため、購入時は必ず ids が変わり再構築される
@@ -12840,30 +12915,36 @@ function renderResearch() {
       box.appendChild(btn);
     });
 
-    lockedList.forEach(r => {
-      const btn = document.createElement("button");
-
-      // 対応設備が未購入: 効果と絵を伏せた購入不可カード
-      btn.className = "item artCard artSilhouette researchLocked";
-      btn.dataset.id = "lock:" + r.id;
-      btn.dataset.art = researchArt(r);
-      setArtImage(btn, ASSETS.research[r.id]);
-      btn.disabled = true;
-      box.appendChild(btn);
-    });
-
-    // 実績研究の予告(未達成): 実績の内容だけ見せ、効果とコストは解除まで伏せる
-    ms.locked.forEach(m => {
+    // 解放前(ロック中)のカード群: 全種を混ぜたコスト順で作る
+    lockedCards.forEach(l => {
       const btn = document.createElement("button");
       btn.className = "item artCard artSilhouette researchLocked";
-      btn.dataset.id = "mslock:" + m.id;
-      setArtImage(btn, msArtOf(m));
+      btn.dataset.id = l.id;
       btn.disabled = true;
-      btn.innerHTML = `
-        <b>${m.name}</b>
-        <div class="desc">実績: ${m.cond}</div>
-        <div class="desc">達成すると効果とコストが開示され、購入できるようになる</div>
-      `;
+
+      if (l.r) {
+        // 対応設備が未購入の通常研究: 効果と絵を伏せる(中身は更新パスで？？？表示)
+        btn.dataset.art = researchArt(l.r);
+        setArtImage(btn, ASSETS.research[l.r.id]);
+      } else if (l.sp) {
+        // 段階2/3の予告(解放スキル未取得): 解放条件だけ見せ、効果とコストは伏せる
+        btn.dataset.art = researchArt(l.sp.r);
+        setArtImage(btn, ASSETS.research[l.sp.r.id]);
+        const gate = (l.sp.stageNo === 2 ? RES_STAGE2 : RES_STAGE3)[l.sp.r.id];
+        btn.innerHTML = `
+          <b>${l.sp.r.name} 段階${l.sp.stageNo}</b>
+          <div class="desc">解放条件: スキル「${skillNameOf(gate)}」を取得</div>
+          <div class="desc">取得すると効果とコストが開示され、購入できるようになる</div>
+        `;
+      } else {
+        // 実績研究の予告(未達成): 実績の内容だけ見せ、効果とコストは解除まで伏せる
+        setArtImage(btn, msArtOf(l.m));
+        btn.innerHTML = `
+          <b>${l.m.name}</b>
+          <div class="desc">実績: ${l.m.cond}</div>
+          <div class="desc">達成すると効果とコストが開示され、購入できるようになる</div>
+        `;
+      }
       box.appendChild(btn);
     });
 
@@ -12951,8 +13032,8 @@ function renderResearch() {
       return;
     }
 
-    // 実績研究の予告(未達成)は作成時の内容のまま(静的)
-    if (lockId.startsWith("mslock:")) return;
+    // 実績研究・段階2/3の予告(未解放)は作成時の内容のまま(静的)
+    if (lockId.startsWith("mslock:") || lockId.startsWith("stagelock:")) return;
 
     if (lockId.startsWith("own:")) {
       const r = RESEARCH.find(x => ("own:" + x.id) === lockId);
@@ -13362,6 +13443,7 @@ function switchTab(tabId) {
   if (activeTab !== tabId) playSound("tab");
   activeTab = tabId;
   if (tabId === "orderTab") clearOrderTabNotify();
+  if (tabId === "researchTab") clearResearchTabNotify();
   updatePrestigeTabLabel();
 
   document.body.classList.toggle("playTabActive", normalPlayScreenActive());
@@ -16012,6 +16094,9 @@ setInterval(() => {
     // 一覧タブもスキル解放などの変化を反映するため毎秒再描画する(スクロール位置は保持)
     renderActiveTab();
   }
+
+  // 研究の新規解放を監視して研究タブを点滅させる(開くと解除)
+  checkResearchUnlockNotify();
 
   updateTopOnly();
 }, 1000);
