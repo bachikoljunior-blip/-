@@ -136,7 +136,8 @@ module.exports = {
   // huntDirect: satMax 15→14(2026-07-12 ②改2: huntのlift3.09が帯上限3.00超過→飽和を微絞り)
   // peddlerFrac 0.02→0.06(2026-07-11 hunt序盤対策) / otherMul.golden 0.9(2026-07-11) / 投資量=討伐perk8種・基準=金相場
   // otherMul.click 0.15→0.08(2026-07-12 ㉘click後半: 討直29-31%がタップ主役25%を圧迫。診断=partsDetail)
-  huntDirect:   { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 12, otherMul: { click: 0.08, balanced: 0.15, golden: 0.9, default: 0.3 }, peddlerFrac: 0.06 },
+  // otherMul.balanced 0.15→0.18(2026-07-12 ㉘balanced中盤run13-19: 討伐8-9%<10%=タップ9.0倍の圧迫の再均衡)
+  huntDirect:   { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 12, otherMul: { click: 0.08, balanced: 0.18, golden: 0.9, default: 0.3 }, peddlerFrac: 0.06 },
   // tapDirect: clickBonus 5.0→5.6(2026-07-12 ②改2: clickのlift1.46が最弱=底上げで帯上限を引き上げhuntを収容)
   // clickBonus5.0+satMax150(2026-07-11 複合=中盤+22%・後半飽和) / otherMul.balanced7.0(echo対応) / anchorGolden0.5=神指前のみ
   // satMax 150→400・otherMul.balanced 7.0→9.0(2026-07-12 ㉘後半対策: click run33-47 打12-21%<25%・
@@ -147,7 +148,8 @@ module.exports = {
   // タップを膨らませ①bank S2 min 1.21→1.15に希釈。フェーズ分離=アンカー時代5.6(①復元)・投資時代14(㉘後半専用))
   // satMax 150差し戻し+satMaxLate 800新設(2026-07-12: 一律800はアンカー時代raw≈196を85→175に倍化させ
   // ①bank S2 run31=1.186の残NG源。フェーズ分離でアンカー時代=R13完全復元・投資時代のみ飽和緩和)
-  tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5, clickBonus: 5.6, clickBonusLate: 18, satMax: 150, satMaxLate: 800, anchorGolden: 0.5, stallFrac: 0.05, otherMul: { golden: 0.6, balanced: 9.0, default: 1 } },
+  // clickBonusLate 18→21(2026-07-12 ㉘click残り: run33/47 タップ22-23%の押し込み)
+  tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5, clickBonus: 5.6, clickBonusLate: 21, satMax: 150, satMaxLate: 800, anchorGolden: 0.5, stallFrac: 0.05, otherMul: { golden: 0.6, balanced: 9.0, default: 1 } },
   // 銀行配当(直送・第12次J-3 腐り解消): bankClickDividend研究の独立収入。クリック方針で厚く効かせ①の各回minを満たす。
   // 全体cps倍率をやめ加算収入へ(他機能のlift希釈を回避)。所持数はlog10で床あり=早い周回でも効く。増加方向のみ。
   // countPow 1.6は棄却→1.8へ差し戻し(2026-07-12: ①bankの真の束縛はS2 run25-32(count300-800=ratio>1域)で
