@@ -1,0 +1,1 @@
+=== override={"tapDirect":{"satMax":150,"clickBonus":5}} (100h) ===
