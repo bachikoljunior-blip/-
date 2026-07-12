@@ -9972,7 +9972,7 @@ const DIRECT_CFG = {
   equip:  { coef: 0.06, stagePow: 0.5, countPow: 2,   ref: 70,  startStage: 5, satMax: 50, otherMul: { click: 0.08, default: 0.2 }, anchorGolden: 0.15 },
   golden: { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 10, otherMul: { click: 0.3, balanced: 0.3, hunt: 0.3, default: 1 } },
   hunt:   { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 15, otherMul: { click: 0.15, balanced: 0.15, golden: 0.9, default: 0.3 }, peddlerFrac: 0.06 },
-  tap:    { coef: 0.01, stagePow: 0.5, countPow: 2,   ref: 20,  startStage: 5, clickBonus: 5.0, satMax: 150, anchorGolden: 0.5, stallFrac: 0.05, otherMul: { golden: 0.6, balanced: 4.0, default: 1 } },
+  tap:    { coef: 0.01, stagePow: 0.5, countPow: 2,   ref: 20,  startStage: 5, clickBonus: 5.0, satMax: 150, anchorGolden: 0.5, stallFrac: 0.05, otherMul: { golden: 0.6, balanced: 5.5, default: 1 } },
   bank:   { coef: 0.42, ownRate: 0.5, savedCoef: 0.05, clickBonus: 2.5, countCoef: 0.9, countPow: 1.8, ref: 150, anchorGolden: 0.12, otherMul: 0.5 }
 };
 let recentTapsPerSec = 0; // 毎秒サンプラ(メインループ)で更新: 直近1秒の実タップ数
