@@ -1616,7 +1616,12 @@ function tapDirectIncome(sim, base, prod) {
   // 方針係数(第12次R続き・bankDirectのclickBonusと同型): click方針の中盤は銀/金直/討直に打が
   // 圧迫され打<30%が続く(S2 run21-32)。主役方針だけ厚くする増加方向の係数。clickBonus=1(既定)で従来どおり。
   // 非click方針はotherMulマップも適用可(golden後半run45-46=打33-41%が金<30%を圧迫する対策等)
-  const polM = policyIs(sim, 'click') ? (P.tapDirect.clickBonus || 1) : otherMulOf(sim, P.tapDirect, 'click');
+  // clickBonusLate(2026-07-12): click方針の係数をフェーズで分離。アンカー時代(神指0)=clickBonus
+  // (①bankのS2 run25-32はタップ直送50%台との相対で銀行liftが決まる=ここを上げると①が割れる)、
+  // 投資時代(神指>0)=clickBonusLate(㉘後半のタップ主役25%はここだけの問題)。
+  const polM = policyIs(sim, 'click')
+    ? (((r.upgrades.godFinger || 0) > 0 ? P.tapDirect.clickBonusLate : 0) || P.tapDirect.clickBonus || 1)
+    : otherMulOf(sim, P.tapDirect, 'click');
   // アンカー=max(base, anchorGolden×金相場)(equipDirectと同型)。ただし**神の指(上位クリック設備)登場前だけ**:
   // balanced中盤(run25-32=神指0・指のみ)の打4-9%<10%の底上げ用=「上位設備が出るまでの下位投資(指)の換金」。
   // 神指以降は投資複利(raw無飽和)が主役=常時アンカーだと後半打85-88%に爆発しbalanced後半が全滅(E2/E3実測)。

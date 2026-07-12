@@ -143,8 +143,9 @@ module.exports = {
   // balanced run33-45 打8-10%<10%は共に飽和/係数不足。golden/hunt後半は打1-5%で巻き添え安全圏を実測確認済み)
   // satMax 400→800(2026-07-12 続き: click後半は神指1600+で投資raw≈9500=400でも再飽和(実効383)。
   // 実効735へ=tapD 15-20%→28%試算。中盤(raw≈200)は×1.2どまり=②改2 clickリフトへの波及は小)
-  // clickBonus 5.6→8.0(2026-07-12 続き: satMaxは周回末しか効かない=周回内投資軌道で希釈。全フェーズ一律の係数で底上げ)
-  tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5, clickBonus: 8.0, satMax: 800, anchorGolden: 0.5, stallFrac: 0.05, otherMul: { golden: 0.6, balanced: 9.0, default: 1 } },
+  // clickBonus 8.0→5.6に差し戻し+clickBonusLate 14 新設(2026-07-12: 8.0一律はアンカー時代(神指0=run25-32)の
+  // タップを膨らませ①bank S2 min 1.21→1.15に希釈。フェーズ分離=アンカー時代5.6(①復元)・投資時代14(㉘後半専用))
+  tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5, clickBonus: 5.6, clickBonusLate: 14, satMax: 800, anchorGolden: 0.5, stallFrac: 0.05, otherMul: { golden: 0.6, balanced: 9.0, default: 1 } },
   // 銀行配当(直送・第12次J-3 腐り解消): bankClickDividend研究の独立収入。クリック方針で厚く効かせ①の各回minを満たす。
   // 全体cps倍率をやめ加算収入へ(他機能のlift希釈を回避)。所持数はlog10で床あり=早い周回でも効く。増加方向のみ。
   // countPow 1.8→1.6(2026-07-12 ㉘click後半: 銀行配当が後半33-41%に膨張しタップ主役25%の壁。
