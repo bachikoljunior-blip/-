@@ -165,7 +165,7 @@ function prestigeWhen(minElapsedSec, gainFactor) {
   return function (sim) {
     if (sim.t - sim.run.startT < minElapsedSec) return false;
     if (sim.run.cookies < G.prestigeCostOf(sim)) return false; // 転生には所持クッキー(10のべき乗・前回より大)が必要
-    const next = nextTargetSkillCost(sim);
+    const next = cheapestNextSkillCost(sim); // 系統ターゲット基準は差し戻し(2026-07-12実測: ④89.5%と改善なし・T1 96.4→93.9・周回構造激変=S3 49→20周回。nextTargetSkillCostは温存)
     if (next === null) return false; // ツリー完了後はPTの使い道がないため転生しない
     const gain = G.prestigeGainOf(sim.run.runCookies);
     return gain >= next * gainFactor && gain >= 1;
