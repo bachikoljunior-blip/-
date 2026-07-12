@@ -103,7 +103,7 @@ module.exports = {
     // reachMaxSec=denom の上限クランプ(0=無効)。直前が極端に長い→短い周回で reach が未発火=T3a取りこぼし、を防ぐ。
     // 6000 で確定(sweep_maxsec.js で T3a と T3b を同時掃引): T3a全体 86→88%・S10 18/23@34% → 25/26@62%、
     // かつ T3b を維持(5000だと reach が早発して S8/S10 の T3b が落ちる。6000で S8 T3b40・S10 T3b17 を回復)。4000以下は位置が頭へ崩れる。
-    reachCoef: 2.0, reachPow: 10, reachMinSec: 600, reachMaxSec: 6000, reachEmaAlpha: 0.35
+    reachCoef: 1.2, reachPow: 10, reachMinSec: 600, reachMaxSec: 6000, reachEmaAlpha: 0.35 // reachCoef 2.0→1.2(2026-07-11 T3a廃止後: 未達はT3b専用になったのでρ*0.93→0.98へ後ろ倒し。前回より長い周回の維持率70-79%割れを救う。掃引: S4 33→38・S9 35→41・S3 44→46・S1 43→44)
   },
 
   // ---- 設備直送生産(第12次J・提案A・ユーザー承認 2026-07-07) ----
