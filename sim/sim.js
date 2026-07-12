@@ -1379,7 +1379,7 @@ function goldenEarlyMul(sim) {
 // 第0回=フル(40タップ)・半減期 earlyHalfRuns×3(≈2周回)で基礎4タップへ。
 function clickInstantCoefEff(sim) {
   const base = P.golden.instantCoef, full = P.golden.clickInstantCoef || base;
-  const half = (P.golden.earlyHalfRuns || 0.7) * 3;
+  const half = (P.golden.earlyHalfRuns || 0.7) * (P.golden.clickAnchorHalfMul || 3);
   return base + (full - base) * Math.pow(0.5, sim.prestigeRuns / half);
 }
 function goldenMultiplierVal(sim) {
