@@ -12952,7 +12952,9 @@ function renderResearch() {
   const lockedCards = lockedList.map(r => ({ id: "lock:" + r.id, r, sp: null, m: null, cost: researchCost(r) }))
     .concat(stagePreviews.map(sp => ({ id: "stagelock:" + sp.r.id + "__s" + sp.stageNo, r: null, sp, m: null, cost: researchStageCost(sp.r, sp.stageNo) })))
     .concat(ms.locked.map(m => ({ id: "mslock:" + m.id, r: null, sp: null, m, cost: msResearchCost(m) })));
-  lockedCards.sort((a, b) => a.cost - b.cost);
+  // 表示中の設備に紐づく研究(？？？・段階2/3の予告)は実績研究の予告より上(2026-07-11 ユーザー指示)。
+  // 各グループ内はコストの安い順
+  lockedCards.sort((a, b) => ((a.m ? 1 : 0) - (b.m ? 1 : 0)) || (a.cost - b.cost));
 
   const ids = purchasables.map(p => p.id)
     .concat(lockedCards.map(l => l.id))
