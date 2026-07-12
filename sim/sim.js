@@ -2448,6 +2448,23 @@ function advanceTick(sim, strategy) {
       scheduleGolden(sim);
     }
 
+    // 周回序盤の強制出現(2026-07-11 main同期「周回の初めに30秒おきにクッキーモンスターを1体ずつ計5体」):
+    // ノルマ達成前でも通常種が出る。ゲームは出現中でも重ねて出すが、simは1体モデルのため空き待ち(期待値近似)。
+    if (!r.monster && (r.earlyMonsters || 0) < 5 && (sim.t - r.startT) >= ((r.earlyMonsters || 0) + 1) * 30) {
+      r.earlyMonsters = (r.earlyMonsters || 0) + 1;
+      const level = monsterLevel(sim);
+      const maxHp = Math.max(40, Math.floor(monsterHpValue(sim, level) * (r.nextMonsterHpMultiplier || 1)));
+      r.nextMonsterHpMultiplier = 1;
+      r.monster = {
+        typeId: 'normal', level, hp: maxHp, maxHp,
+        stayLeft: monsterStayMs(sim) / 1000,
+        goldenChainMultiplier: r.goldenChainReady ? 1 + (r.perks.goldenChain || 0) * effRw(sim, 'goldenChain') : 1,
+        goldenFirstHitReady: r.goldenFirstHitReady,
+        firstHitUsed: !r.goldenFirstHitReady
+      };
+      r.goldenChainReady = false;
+      r.goldenFirstHitReady = false;
+    }
     // モンスター出現
     if (!r.monster) {
       r.monsterTimer -= dt;
