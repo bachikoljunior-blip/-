@@ -1910,6 +1910,20 @@ function researchStageCostOf(sim, id, stage) {
 }
 // capv(効果キャップ)は2026-07-05のキャップ全撤廃で削除済み
 
+// 次に買える最安スキル(未取得・前提充足)。到達連動ノルマ(gain基準)とstrategiesの転生判断が同じ景色を見る
+function cheapestNextSkillCostSim(sim) {
+  let best = Infinity, bestAny = Infinity;
+  for (const n of SKILL_NODES) {
+    if (sim.skills[n.id]) continue;
+    if (!n.prereqs.every(q => sim.skills[q])) continue;
+    const c = skillCostOf(n);
+    bestAny = Math.min(bestAny, c);
+    if (!isUtilitySkill(n.id)) best = Math.min(best, c);
+  }
+  if (best !== Infinity) return best;
+  if (bestAny !== Infinity) return bestAny;
+  return null;
+}
 function prestigeGainOf(runCookies) {
   const t = Math.max(0, Math.floor(runCookies));
   const pp = P.prestige;
@@ -2462,10 +2476,19 @@ function advanceTick(sim, strategy) {
       // 層ゲージ(quotaAtElapsed)には触れず、ここでの未達判定にだけ到達項を上乗せする(max)。
       // runCookies×reachCoef×ρ^reachPow と runCookies を比べる=クッキー桁に依存せず ρ で未達位置が決まる。
       // 進行を層比でなく時間比にする(未達で層が凍結するため層比は序盤に寄る=第12次H実測)。
-      // 第0回は reach 非適用(2026-07-11 T3b: 前回長が無く床600秒基準で558秒発火→維持22-23%に潰れる)
-      if (quota !== null && quota > 0 && P.quota.reachCoef && (sim.prevDuration || 0) > 0) {
+      // 到達連動ノルマの発火基準を時間比→転生準備の進みへ(2026-07-11 第2再設計・式変更):
+      // 旧・時間比(ρ=経過/前回長)は「前の周回より大幅に長い周回」で早発し、T3b維持が54-75%に割れる
+      // (S4 run27: 前回3102s→今回4965s・未達2677s=54%と実測)。周回の経済的な終点=「獲得予定PTが
+      // 次スキル費用に届く瞬間」に追従する gain 基準へ: gain ≥ 次スキル最安 × reachGainFrac で未達。
+      // 末期は超成長のため gain 90%→100% は数十秒=維持率は周回長のブレに関係なく9割前後で安定する。
+      // 従来の時間比はフォールバック(ツリー完成後 next=null の周回は基礎ノルマのみ=未達なしでOK)。
+      if (quota !== null && quota > 0 && (P.quota.reachGainFrac || 0) > 0 && (sim.prevDuration || 0) > 0) {
+        const next = cheapestNextSkillCostSim(sim);
+        if (next != null && prestigeGainOf(r.runCookies) >= next * P.quota.reachGainFrac) {
+          quota = Math.max(quota, r.runCookies * 2); // 未達を強制(runCookies<quotaに必ず落ちる形)
+        }
+      } else if (quota !== null && quota > 0 && P.quota.reachCoef && (sim.prevDuration || 0) > 0) {
         let denom = Math.max(sim.prevDuration || 0, P.quota.reachMinSec || 0);
-        // reachMaxSec>0 のとき denom を上限クランプ(直前が極端に長い→短い周回で reach 未発火を防ぐ)。
         if (P.quota.reachMaxSec) denom = Math.min(denom, P.quota.reachMaxSec);
         if (denom > 0) {
           const rho = el / denom;
