@@ -143,12 +143,29 @@ function standardBuy(researchRatio, upgradeRatio) {
   };
 }
 
+// 「次に欲しいスキル」= その方針の取得順で最初に未取得のノード(ついで枠は目標にしない)。
+// 2026-07-12 ④対策: 旧・全体最安基準だと「買い物は系統順・転生目安は最安」のズレで、系統の高いノードを
+// 貯める間ずっと同じ額で転生を繰り返す(×1.0の反復周回=S5/S8/S9で計7-9本)。目安を本当に欲しい物に揃える。
+function nextTargetSkillCost(sim) {
+  const strat = sim.strat;
+  if (strat && strat.skillOrder) {
+    const order = strat.skillOrder(sim);
+    for (const id of order) {
+      if (sim.skills[id]) continue;
+      const n = G.SKILL_NODES.find(x => x.id === id);
+      if (!n || !n.prereqs.every(q => sim.skills[q])) continue;
+      if (isDeferredUtility(id)) continue;
+      return G.skillCostOf(n);
+    }
+  }
+  return cheapestNextSkillCost(sim);
+}
 function prestigeWhen(minElapsedSec, gainFactor) {
   // 「この周回の獲得予定PTだけで、次に欲しいスキルのコストに届いたら転生」
   return function (sim) {
     if (sim.t - sim.run.startT < minElapsedSec) return false;
     if (sim.run.cookies < G.prestigeCostOf(sim)) return false; // 転生には所持クッキー(10のべき乗・前回より大)が必要
-    const next = cheapestNextSkillCost(sim);
+    const next = nextTargetSkillCost(sim);
     if (next === null) return false; // ツリー完了後はPTの使い道がないため転生しない
     const gain = G.prestigeGainOf(sim.run.runCookies);
     return gain >= next * gainFactor && gain >= 1;
@@ -341,7 +358,7 @@ const STRATEGIES = [
     skillOrder: skillOrderByBranch(['core', 'monster', 'auto', 'reward', 'economy', 'research', 'click', 'golden', 'upgrade', 'start', 'master'])
   },
   {
-    id: 'S10', name: 'のんびり放置型',
+    id: 'S10', name: 'のんびり放置型', noT1Cap: true, // 周回時間の上限なし(2026-07-12 ユーザー決定)
     // タップ1/秒。金クッキーは60%だけ取る。買い物判断は30秒ごと: 効率最良<=50%、研究<=50%。
     tapRate: 1, goldenTake: 0.6,
     pickPolicy: sim => 'golden',

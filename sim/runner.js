@@ -68,11 +68,13 @@ function summarize(sim) {
   const ev = mergeEventsByRun(sim);
   // T1(周回時間): 各周回(転生から転生まで)20分〜2時間。第0回も含む。
   // 全スキル解放後の放置周回は対象外【仮:旧⑥⑦の免除ルールを踏襲。要ユーザー確認】
+  // のんびり放置型は周回時間の上限なし(2026-07-12 ユーザー決定「のんびり放置型は周回上限なくていいよ」)
+  const noCap = !!(sim.strat && sim.strat.noT1Cap);
   let t1Ok = 0, t1All = 0;
   for (const r of full) {
     if (r.startT >= fullT) continue;
     t1All++;
-    if (r.duration >= 1200 && r.duration <= 7200) t1Ok++;
+    if (r.duration >= 1200 && (noCap || r.duration <= 7200)) t1Ok++;
   }
   // T2(解放テンポ・2026-07-11 ユーザー決定「解放条件は上限だけにして、下限はなくていい」=待たされる時間だけ判定):
   // 初転生後の各周回で新規解放1件以上(件数の上限3は撤廃=盛り沢山OK)。
@@ -1059,7 +1061,8 @@ if (mode === 'baseline') {
   }
   const CH_NAME = { equip: '設備生産', golden: '金クッキー', hunt: '討伐由来', tap: 'タップ' };
   console.log(`=== ㉘稼ぎ口比率(${H}h・周回シェア=各tickシェアの周回平均) ===`);
-  let okAll = 0, allAll = 0, c2okAll = 0, c2allAll = 0;
+  let okAll = 0, allAll = 0;
+  const polSpecLifts = {}; // ②改(方針間比較): 方針→得意分野liftの列
   for (const pol of ['balanced', 'click', 'golden', 'hunt', 'bake']) {
     const s = reps[pol];
     if (!s) { console.log(`${pol}: 代表方針なし NG`); continue; }
@@ -1084,25 +1087,40 @@ if (mode === 'baseline') {
       // ②(改・ジャンル単位の一強禁止・2026-07-08 ユーザー承認): 収入をジャンル(設備/金/討伐/タップ)に束ねた
       // lift(=1/(1-share))を出し、その方針の得意ジャンルの lift が全ジャンル lift 幾何平均の±1.5倍以内。
       // 得意ジャンルが突出しすぎない(=他ジャンルも腐らない)を担保。個々の研究の±1.5(構造的に不可能)を置換。
-      // ②改は周回の前半のシェアで判定(2026-07-11 ユーザー決定・相談2のA案=終盤の主役無双は醍醐味として許す)
-      let c2 = true;
-      const sh2 = inc && r.measure.incomeH1 ? r.measure.incomeH1 : shares;
+      // ②改の再定義(2026-07-12 ユーザー指示「突出しないって、他の周回方針に比べて。それぞれの周回方針で
+      // 討伐もしつつ、その周回方針の強みが他と足並み揃えばいい」): 周回内の4分野均衡は要求しない。
+      // 各方針の「得意分野のlift」を集め、方針間で±1.5倍以内かを最後に判定する(集計はループ後)。
       if (gated && ROLE_CHANNEL[pol]) {
-        const gl = ['equip', 'golden', 'hunt', 'tap'].map(k => 1 / Math.max(1e-6, 1 - Math.min(0.999, sh2[k])));
-        const gm = Math.exp(gl.reduce((a, b) => a + Math.log(b), 0) / gl.length);
-        const spec = 1 / Math.max(1e-6, 1 - Math.min(0.999, sh2[ROLE_CHANNEL[pol]]));
-        c2 = spec >= gm / 1.5 && spec <= gm * 1.5;
-        c2all++; if (c2) c2ok++;
+        const spec = 1 / Math.max(1e-6, 1 - Math.min(0.999, shares[ROLE_CHANNEL[pol]]));
+        (polSpecLifts[pol] = polSpecLifts[pol] || []).push(spec);
       }
-      rows.push(`  run${String(r.idx).padStart(2)} ${gated ? '対象' : '対象外'} 設備${(shares.equip * 100).toFixed(0)}% 金${(shares.golden * 100).toFixed(0)}% 討伐${(shares.hunt * 100).toFixed(0)}% タップ${(shares.tap * 100).toFixed(0)}%${gated ? ` → (a)${aPass ? 'OK' : 'NG'} ②改${c2 ? 'OK' : 'NG'}` : ''}`);
+      rows.push(`  run${String(r.idx).padStart(2)} ${gated ? '対象' : '対象外'} 設備${(shares.equip * 100).toFixed(0)}% 金${(shares.golden * 100).toFixed(0)}% 討伐${(shares.hunt * 100).toFixed(0)}% タップ${(shares.tap * 100).toFixed(0)}%${gated ? ` → (a)${aPass ? 'OK' : 'NG'}` : ''}`);
     }
-    okAll += ok; allAll += all; c2okAll += c2ok; c2allAll += c2all;
+    okAll += ok; allAll += all;
     const role = ROLE_CHANNEL[pol] ? `主役=${CH_NAME[ROLE_CHANNEL[pol]]}≥25%` : '4つすべて≥10%';
     console.log(`${pol}(${s.id} ${s.name}) ${role}: ${ok}/${all}周回 合格`);
     rows.forEach(x => console.log(x));
   }
   console.log(`㉘合計: ${okAll}/${allAll}周回`);
-  console.log(`②(改・前半判定・得意ジャンルlift≤±1.5倍) 合計: ${c2okAll}/${c2allAll}周回`);
+  // ②改(方針間・2026-07-12 ユーザー再定義): 各方針の得意分野lift(中央値)が方針間の幾何平均の±1.5倍以内
+  {
+    const meds = {};
+    for (const [pol, arr] of Object.entries(polSpecLifts)) {
+      const a = arr.slice().sort((x, y) => x - y);
+      meds[pol] = a.length ? a[a.length >> 1] : null;
+    }
+    const vals = Object.values(meds).filter(v => v != null);
+    if (vals.length >= 2) {
+      const gm = Math.exp(vals.reduce((a, b) => a + Math.log(b), 0) / vals.length);
+      let ok2 = true;
+      const parts = Object.entries(meds).map(([pol, v]) => {
+        const pass = v >= gm / 1.5 && v <= gm * 1.5;
+        if (!pass) ok2 = false;
+        return `${pol}=${v.toFixed(2)}${pass ? '' : '(帯外)'}`;
+      });
+      console.log(`②(改2・方針間: 得意分野liftの中央値が幾何平均${gm.toFixed(2)}の±1.5倍以内) ${parts.join(' ')} → ${ok2 ? 'OK' : 'NG'}`);
+    }
+  }
 } else if (mode === 'skillsum') {
   let sum = 0;
   for (const n of G.SKILL_NODES) sum += G.skillCostOf(n);
