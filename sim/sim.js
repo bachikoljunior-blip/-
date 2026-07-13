@@ -391,7 +391,9 @@ function newSim(strategy, opts) {
     runs: [],                   // 各周回の結果
     // 工房・素材・ステージ・注文(第12次P統合・転生持ち越し)
     ws: { mats: {}, eq: {}, seen: {}, everWs: {}, stageUnlocked: 1, deepLayer: 0,
-      matRot: 0, orderNextT: null, order: null, orderKindRot: 0, orderRewardRot: 0 },
+      matRot: 0, orderNextT: null, order: null, orderKindRot: 0, orderRewardRot: 0,
+      // 新装備システム(2026-07-13): owned=所持数(id→個数)・equipped=部位→装備id・seenEq=一度表示されたレシピ(消えない)
+      eq2Owned: {}, eq2Equipped: {}, eq2Seen: {} },
     // 周回内
     run: null,
     rotIdx: 0, upRotIdx: 0, goldenAlt: 0,
@@ -581,6 +583,130 @@ const WS_EQ_PREF = {
   hunt: ['monsterAlmanac', 'dimensionCompass', 'masterTray', 'ovenMitt', 'stillFlask', 'pressExtractor', 'goldenWhisk'],
   balanced: ['stillFlask', 'masterTray', 'monsterAlmanac', 'goldenWhisk', 'ovenMitt', 'pressExtractor', 'dimensionCompass']
 };
+// ==== 新装備システム(2026-07-13 ユーザー確定仕様) ====
+// 9部位(武器/盾/防具上/防具下/手/帽子/靴/アクセ×2枠)の付け替え式。工房スキル不要=最初から解放。
+// 効果=全生産×(allMulPerTier^ティア)の固定倍率。素材=色素材ore_t*(モンスターの色=ノルマ層帯)+ステージ素材。
+// レシピ=前ティア同カテゴリ装備1個+素材(1〜5種の枠内)。一度表示(素材が揃った)されたレシピは消えない。
+const EQUIP2_SLOTS = ['weapon', 'shield', 'armorTop', 'armorBottom', 'hands', 'hat', 'shoes', 'acc1', 'acc2'];
+const EQUIP2_CATS = ['weapon', 'shield', 'armorTop', 'armorBottom', 'hands', 'hat', 'shoes', 'accessory'];
+let EQUIP2_ITEMS = null, EQUIP2_BY_ID = null;
+function equip2Items() {
+  if (EQUIP2_ITEMS) return EQUIP2_ITEMS;
+  const E = P.equip2; EQUIP2_ITEMS = [];
+  if (!E) return EQUIP2_ITEMS;
+  for (let t = 1; t <= E.tiers; t++) {
+    const stage = P.ws.stages[Math.min(t, P.ws.stages.length) - 1];
+    const smatA = (stage.c && stage.c[0]) || 'butter';
+    const smatB = (stage.c && stage.c[1]) || smatA;
+    for (const cat of EQUIP2_CATS) {
+      const variants = cat === 'accessory' ? ['a', 'b'] : [''];
+      for (const v of variants) {
+        const id = `${cat}${v ? '_' + v : ''}_t${t}`;
+        const cost = { ['ore_t' + t]: E.oreNeed };
+        // ティア1=色素材のみ(装備は最初から解放=工房スキル前でも作れる)。ティア2+でステージ素材が加わる
+        if (t >= 2) cost[v === 'b' ? smatB : smatA] = (cost[v === 'b' ? smatB : smatA] || 0) + E.stageMatNeed;
+        EQUIP2_ITEMS.push({ id, cat, tier: t, stageNo: stage.no, prev: t > 1 ? `${cat}${v ? '_' + v : ''}_t${t - 1}` : null, cost });
+      }
+    }
+  }
+  return EQUIP2_ITEMS;
+}
+function equip2ById(id) {
+  if (!EQUIP2_BY_ID) { EQUIP2_BY_ID = {}; for (const it of equip2Items()) EQUIP2_BY_ID[it.id] = it; }
+  return EQUIP2_BY_ID[id];
+}
+// 全生産倍率: 装備中アイテムの積
+function equip2Mult(sim) {
+  const E = P.equip2; if (!E) return 1;
+  const eq = sim.ws.eq2Equipped; let m = 1;
+  for (const slot of EQUIP2_SLOTS) {
+    const it = eq[slot] ? equip2ById(eq[slot]) : null;
+    if (it) m *= Math.pow(E.allMulPerTier, it.tier);
+  }
+  return m;
+}
+// 色素材ドロップ: モンスターの色=ノルマ層の帯(band層ごとに変わる)。工房スキル不要
+function equip2DropOre(sim, units) {
+  const E = P.equip2; if (!E) return;
+  const t = Math.max(1, Math.min(E.tiers, 1 + Math.floor((sim.run.maxStage || 0) / E.layerBand)));
+  const ws = sim.ws;
+  ws.mats['ore_t' + t] = (ws.mats['ore_t' + t] || 0) + E.oreDropPerKill * (units || 1);
+}
+// 装備専用の素材判定/消費: 料理用costMul(×4)や万能粉代替は適用しない生コスト
+// 色素材は上位が下位を代替できる(層が深いと低位色が落ちないため。ore_tNの必要にはore_tN..t6を低い方から充当)
+function equip2OreHave(sim, tier) {
+  const E = P.equip2; let n = 0;
+  for (let t = tier; t <= E.tiers; t++) n += sim.ws.mats['ore_t' + t] || 0;
+  return n;
+}
+function equip2Afford(sim, cost) {
+  for (const k in cost) {
+    const m = /^ore_t(\d+)$/.exec(k);
+    const have = m ? equip2OreHave(sim, Number(m[1])) : (sim.ws.mats[k] || 0);
+    if (have < cost[k]) return false;
+  }
+  return true;
+}
+function equip2Consume(sim, cost) {
+  const E = P.equip2;
+  for (const k in cost) {
+    const m = /^ore_t(\d+)$/.exec(k);
+    if (!m) { sim.ws.mats[k] = Math.max(0, (sim.ws.mats[k] || 0) - cost[k]); continue; }
+    let need = cost[k];
+    for (let t = Number(m[1]); t <= E.tiers && need > 0; t++) {
+      const key = 'ore_t' + t, have = sim.ws.mats[key] || 0, used = Math.min(have, need);
+      sim.ws.mats[key] = have - used; need -= used;
+    }
+  }
+}
+// 作成+装備(毎tick・軽量): 現在ステージのティアの全カテゴリを素材が揃い次第、周回1個(アクセ2個)まで作る
+function equip2Tick(sim) {
+  const E = P.equip2; if (!E) return;
+  if (sim.opt.noNewEquip) return; // 装備lift判定の枝分かれ: 新規作成・付け替えを封止
+  const ws = sim.ws, r = sim.run;
+  const tier = Math.max(1, Math.min(E.tiers, r.wsStage || 1));
+  // 作れるのは現ステージのティア以下(ステージが進むと新ティアが加わる)。高ティア優先で1カテゴリ1個(アクセ2個)/周回。
+  // 下位ティアも作れるので「前ティア装備を消費する合成連鎖」が在庫切れで止まらない
+  const items = equip2Items().slice().sort((a, b) => b.tier - a.tier);
+  for (const it of items) {
+    if (it.tier > tier) continue;
+    const cap = it.cat === 'accessory' ? 2 : 1;
+    if (((r.eq2Made && r.eq2Made[it.cat]) || 0) >= cap) continue;
+    const havePrev = it.prev ? ((ws.eq2Owned[it.prev] || 0) >= 1) : true;
+    const afford = havePrev && equip2Afford(sim, it.cost);
+    // レシピ表示(発見式): 一度素材が揃えば以後表示は消えない
+    if (!ws.eq2Seen[it.id]) { if (afford) ws.eq2Seen[it.id] = true; else continue; }
+    if (!afford) continue;
+    // 合成: 素材+前ティア装備1個を消費
+    equip2Consume(sim, it.cost);
+    let upgradedSlot = null;
+    if (it.prev) {
+      ws.eq2Owned[it.prev] = Math.max(0, (ws.eq2Owned[it.prev] || 0) - 1);
+      for (const s of EQUIP2_SLOTS) if (ws.eq2Equipped[s] === it.prev && (ws.eq2Owned[it.prev] || 0) === 0) { upgradedSlot = s; break; }
+    }
+    ws.eq2Owned[it.id] = (ws.eq2Owned[it.id] || 0) + 1;
+    (r.eq2Made || (r.eq2Made = {}))[it.cat] = ((r.eq2Made || {})[it.cat] || 0) + 1;
+    // 装備: 素になった枠があればそこへ、なければ低ティア枠を置換
+    if (upgradedSlot) {
+      ws.eq2Equipped[upgradedSlot] = it.id;
+      (r.eq2NewEquipped || (r.eq2NewEquipped = [])).push(it.id);
+    } else {
+      const slots = it.cat === 'accessory' ? ['acc1', 'acc2'] : [it.cat];
+      let best = null, bestTier = Infinity;
+      for (const s of slots) {
+        if (it.cat === 'accessory' && ws.eq2Equipped[s] === it.id) { best = null; break; } // 同一アクセの重複装備禁止
+        const cur = ws.eq2Equipped[s] ? equip2ById(ws.eq2Equipped[s]) : null;
+        const ct = cur ? cur.tier : 0;
+        if (ct < bestTier) { bestTier = ct; best = s; }
+      }
+      if (best !== null && bestTier < it.tier) {
+        ws.eq2Equipped[best] = it.id;
+        (r.eq2NewEquipped || (r.eq2NewEquipped = [])).push(it.id);
+      }
+    }
+  }
+}
+
 const WS_RECIPE_BY_ID = {}; // params から引く(遅延)
 function wsRecipeOf(id) {
   if (!WS_RECIPE_BY_ID[id]) for (const rc of P.ws.recipes) WS_RECIPE_BY_ID[rc.id] = rc;
@@ -648,7 +774,7 @@ function wsDropMaterials(sim, mon, overkill) {
   dropMul *= 1 + P.ws.eqFx.compassDropPerLv * wsEqLv(sim, 'dimensionCompass');
   if (wsBuffActive(sim, 'voidTart')) dropMul *= P.ws.fx.voidDrop;
   // 図鑑の素材ボーナス: 旧floor(Lv/2)はLv1で0=効果ゼロ。連続値へ(2026-07-11 ⑮の2比1.000の修復)
-  const per = (D.base + Math.floor(Math.sqrt(lv) / D.lvDiv) + (P.ws.eqFx.almanacDropPerLv || 0) * wsEqLv(sim, 'monsterAlmanac')) * dropMul;
+  const per = (D.base + Math.floor(Math.sqrt(lv) / D.lvDiv) + (P.ws.eqFx.almanacDropPerLv || 0) * wsEqLv(sim, 'monsterAlmanac')) * dropMul * ((P.equip2 && P.equip2.dropAllMul) || 1); // ×dropAllMul(2026-07-13「素材を増やし」)
   // 共通素材(ステージ基本): 決定的ローテーション
   const cList = st.c;
   const cPick = cList[ws.matRot % cList.length]; ws.matRot++;
@@ -1191,7 +1317,8 @@ function computeProd(sim) {
   // 討伐連鎖(第12次D・提案1採用): 倒し続けている間だけ全生産×(1+prodCoef×連鎖数)。
   // 連鎖数は討伐数に線形でしか増えない(共鳴型の雪だるまにならない)。途切れ・転生で0。
   const chainM = 1 + (P.chain ? P.chain.prodCoef * chainCount(sim) : 0);
-  click *= chainM; cps *= chainM;
+  const eq2M = equip2Mult(sim); // 新装備: 全生産×固定倍率(装備中の積)
+  click *= chainM * eq2M; cps *= chainM * eq2M;
   // 提案13「編成の心得」(2026-07-11 承認・バランス方針限定): 4稼ぎ口のそろい具合(30秒ごとに更新の遅延値=再帰回避)
   // に応じて全生産ボーナス。u=min(1, 4×最小シェア)・倍率=1+maxBonus×u
   if (sim.skills.ensemble && policyIs(sim, 'balanced') && r._ensembleM > 1) {
@@ -2095,6 +2222,7 @@ function defeatMonster(sim, mon) {
   r.killsByType[typeId] = (r.killsByType[typeId] || 0) + units;
   if (typeId === 'boss') r.killsSinceBoss = 0; else r.killsSinceBoss += units;
   wsDropMaterials(sim, mon, !!mon.overkill); // 素材ドロップ(条件ドロップ制・workshop_1ゲート)
+  equip2DropOre(sim, (P.mtype && P.mtype.rewardEvents && P.mtype.rewardEvents[mon.typeId]) || 1); // 新装備: 色素材(層帯・ゲートなし)
   // はやての運び屋: 撃破すると次の金クッキーが早く来る
   if (typeId === 'speedy' && M) r.nextGoldenSpawnMultiplier *= M.speedyGoldenCut;
   // 異世界接続網 段階2: 延長狩り(⑬・2026-07-09 作り替え)= 討伐のリズムを保つと狩り窓が続く。
@@ -2202,6 +2330,7 @@ function doPrestige(sim) {
     maxStage: r.maxStage,
     kills: r.kills, golden: r.goldenTaken, chainMax: r.chainMax,
     cpsSamples: r._cpsSamples || [],
+    eq2Made: Object.assign({}, r.eq2Made || {}), eq2NewEquipped: (r.eq2NewEquipped || []).slice(),
     gain,
     researchBought: Object.keys(r.research).filter(k => r.research[k]),
     stages2: Object.keys(r.research2).filter(k => r.research2[k]),
@@ -2348,6 +2477,7 @@ function advanceTick(sim, strategy) {
     const prod = computeProd(sim);
     sim._lastProd = prod; // ㉑判定用: 直近の生産値
     wsAutoPlay(sim);       // 工房: 料理の維持・装備の作成(素材の嗅覚/工房の拡張スキルでゲート)
+    equip2Tick(sim);       // 新装備(2026-07-13): 作成+付け替え。最初から解放=スキルゲートなし
     wsOrderTick(sim, prod); // 注文ボード(order_boardスキルでゲート)
     // ㉓(会心1%開始)用: 研究取得直後/転生時点/周回最大の会心率を記録
     if (prod.critChance > 0) {
@@ -2633,6 +2763,7 @@ function simulate(strategy, opts) {
     duration: sim.t - r.startT, runCookies: r.runCookies,
     quotaHold: r.quotaHoldSeconds, maxStage: r.maxStage,
     kills: r.kills, golden: r.goldenTaken, cpsSamples: r._cpsSamples || [],
+    eq2Made: Object.assign({}, r.eq2Made || {}), eq2NewEquipped: (r.eq2NewEquipped || []).slice(),
     gain: prestigeGainOf(r.runCookies), partial: true,
     researchBought: Object.keys(r.research).filter(k => r.research[k]),
     stages2: Object.keys(r.research2).filter(k => r.research2[k]),
