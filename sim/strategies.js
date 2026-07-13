@@ -380,14 +380,21 @@ const STRATEGIES = [
     },
     pickReward: pickRewardByPriority(['monsterRate', 'beastHeatFerment', 'monsterDamage', 'huntingCore', 'monsterStay', 'goldenAmount']),
     // ノルマ失敗後は目標達成し次第すぐ転生、ノルマ維持中は1.5倍まで粘る。
+    // 目標の単調化(2026-07-14): prestigeWhenと同じ「前回目標×1.57」の床を敷く。
+    // S9だけ床が無く即転生が④(前回比1e8)を迂回していた(baseline R19: S9のみ16/32)。
     shouldPrestige: function (sim) {
       const gain = G.prestigeGainOf(sim.run.runCookies);
       const next = cheapestNextSkillCost(sim);
       if (next === null) return false;
       if ((sim.t - sim.run.startT) < 120) return false;
       if (sim.run.cookies < G.prestigeCostOf(sim)) return false; // 転生には所持クッキー(10のべき乗・前回より大)が必要
-      if (sim.run.quotaFailed) return gain >= next * 1.0;
-      return gain >= next * 1.5;
+      const target = Math.max(next, (sim._prTarget || 0) * 1.57);
+      const factor = sim.run.quotaFailed ? 1.0 : 1.5;
+      if (gain >= target * factor && gain >= 1) {
+        sim._prTarget = target;
+        return true;
+      }
+      return false;
     },
     skillOrder: skillOrderByBranch(['core', 'monster', 'auto', 'reward', 'economy', 'research', 'click', 'golden', 'upgrade', 'start', 'master'])
   },
