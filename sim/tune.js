@@ -4,10 +4,10 @@
 // モデル: D_k = A(深さ) + B_k×(しきい値dec - 自然フロンティアdec)。B_k は反復間の割線で推定。
 const fs = require('fs');
 
-function decMinStep(k) { return 2.6; } // ⑤下限: コスト比2倍 ⇔ pG=0.13で2.32桁。余裕をみて2.6
+function decMinStep(k) { return 8.2; } // ④=1億倍(2026-07-13): 各段≥8桁+ノイズ余裕0.2桁
 const RESUME = process.argv.includes('--resume');
 // 押し込み上限: ⑤上限(PT比100倍 ⇔ pG=0.5で4.0桁)内に収める(rung13の初回キャッチアップのみ例外)
-function decMaxStep(k) { return 8; } // ⑤上限: コスト比100倍 ⇔ 15.4桁。周回を伸ばす余地を残して8桁
+function decMaxStep(k) { return 12; } // ⑤は廃止(2026-07-13)=上限はfloat64の総スパン(34段×平均8.8桁≦300桁)から12桁
 const TARGET_FRAC = 1.15;       // 周回時間の狙い(値段割りD'対応: スキル+中間目標の2件を各半分≥0.5Yで収めるため周回=1.15Y。⑦は維持時間(チェイス失敗まで)で判定されるため帯域内に留まる)
 const HOURS = Number((process.argv[4] && process.argv[4] !== '--resume') ? process.argv[4] : 30); // 探索は30hで十分。'--resume'がargv[4]でもNaNにしない
 const ITERS = Number(process.argv[2] || 8);
