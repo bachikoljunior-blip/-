@@ -763,10 +763,12 @@ function equip2Tick(sim) {
   const rot = (sim.prestigeRuns || 0) % EQUIP2_CATS.length;
   const catOrder = {};
   EQUIP2_CATS.forEach((c, i) => { catOrder[c] = (i - rot + EQUIP2_CATS.length) % EQUIP2_CATS.length; });
-  // バリエーションもローテ(2026-07-14 486種のカバレッジ用): 今周回の狙いv=runs%9+1に近い順に作る
-  const vWant = ((sim.prestigeRuns || 0) % 9) + 1;
-  const vDist = v => Math.min(Math.abs((v || 1) - vWant), 9 - Math.abs((v || 1) - vWant));
-  const items = equip2Items().slice().sort((a, b) => (b.tier - a.tier) || (catOrder[a.cat] - catOrder[b.cat]) || (vDist(a.variant) - vDist(b.variant)));
+  // 方針レーン制(2026-07-14 v2): 各方針は(カテゴリ,ティア)ごとに担当色銘 v=(方針idx+ティア+カテゴリidx)%9+1 を
+  // 優先して作り、装備はティアアップ時のみ(横滑り付け替え廃止=lift(a)を壊さない)。
+  // 9方針×54種のレーンで486種のカバレッジがちょうど一巡する。
+  const stratIdx = Math.max(0, parseInt(String(sim.strat && sim.strat.id || 'S1').replace(/\D/g, ''), 10) - 1) % 9;
+  const laneV = it => ((stratIdx + it.tier + EQUIP2_CATS.indexOf(it.cat)) % 9) + 1;
+  const items = equip2Items().slice().sort((a, b) => (b.tier - a.tier) || (catOrder[a.cat] - catOrder[b.cat]) || ((a.variant === laneV(a) ? 0 : 1) - (b.variant === laneV(b) ? 0 : 1)));
   for (const it of items) {
     if (!it.stages.includes(curStage)) continue;
     const cap = 1; // 9カテゴリ各1個/周回(アクセは甲/乙で別カテゴリ)
@@ -790,15 +792,13 @@ function equip2Tick(sim) {
       ws.eq2Equipped[upgradedSlot] = it.id;
       (r.eq2NewEquipped || (r.eq2NewEquipped = [])).push(it.id);
     } else {
-      // スロット=カテゴリ名。ティアが上なら装備。同ティアでも未装備実績のバリエーションなら
-      // ローテ装備(カバレッジ条件「全装備がどこかの方針で1回は装備される」用)
+      // スロット=カテゴリ名。装備はティアアップのみ(横滑り廃止=常に純上位・lift(a)保護)。
+      // レーン担当の色銘を優先するが、担当が作れないティアでは作れた物で上げる
       const slot = it.cat;
       const cur = ws.eq2Equipped[slot] ? equip2ById(ws.eq2Equipped[slot]) : null;
       const ct = cur ? cur.tier : 0;
-      const everKey = 'eq2ever:' + it.id;
-      if (ct < it.tier || (ct === it.tier && !ws.everWs[everKey])) {
+      if (ct < it.tier) {
         ws.eq2Equipped[slot] = it.id;
-        ws.everWs[everKey] = true;
         (r.eq2NewEquipped || (r.eq2NewEquipped = [])).push(it.id);
       }
     }
