@@ -1892,7 +1892,10 @@ function earningPower(sim) {
     // ほぼ等倍で②改の[30,52]帯・satKpsの分離を保つ。scarceBonus=0で無効。
     const scarceM = (P.monster.scarceBonus || 0) > 0
       ? 1 + P.monster.scarceBonus / (1 + killsPerSec / (P.monster.scarceHalf || 0.05)) : 1;
-    power += kpsSat * base * KILL_VALUE_SEC * scarceM + huntDirectIncome(sim, huntAnchor);
+    // killValMul(2026-07-14 ㉘balanced中盤): 討伐1体の価値の方針係数(otherMulと同型のマップ)。
+    // balanced中盤の討3-6%<10%を、討伐報酬項の本体側で方針スコープに立てる(直送は投資連動=中盤に効かないため)
+    const kvPol = (P.monster.killValMul && (P.monster.killValMul[sim.run.policy] != null ? P.monster.killValMul[sim.run.policy] : P.monster.killValMul.default)) || 1;
+    power += kpsSat * base * KILL_VALUE_SEC * scarceM * kvPol + huntDirectIncome(sim, huntAnchor);
   }
   return power;
 }
