@@ -9417,6 +9417,12 @@ function equip2Afford(it) {
   for (const k in it.cost) if (equip2HaveOf(k) < it.cost[k]) return false;
   return true;
 }
+// 表示解禁の判定(前ティア装備の所持は問わない)。素材が必要数に達したら表示する(2026-07-14 ユーザー指示)。
+// 作成の可否(equip2Afford)は従来どおり前ティア所持が必須。
+function equip2MatsAfford(it) {
+  for (const k in it.cost) if (equip2HaveOf(k) < it.cost[k]) return false;
+  return true;
+}
 function equip2CraftableNow(it) { return (it.stages || [it.tier]).includes(Math.min(EQUIP2_CFG.tiers, currentStageNo())); } // ステージ配置ばらけ(2026-07-14)
 function craftEquip2(id) {
   const it = equip2ById(id);
@@ -9580,7 +9586,8 @@ function renderWorkshop() {
   // 新装備の作成欄(2026-07-13 ユーザー指定レイアウト): 全体は従来の1/2幅。
   // 左=作れる装備(欄いっぱい)・横=必要なもの(画像+「所持/必要」の分数・少し小さめ)・右=作成ボタン。
   // 発見式: 素材が一度揃ったレシピ(state.eq2Seen)は素材が無くなっても表示が消えない。背景画像は使わない。
-  for (const it of equip2Items()) { if (!state.eq2Seen[it.id] && equip2CraftableNow(it) && equip2Afford(it)) state.eq2Seen[it.id] = true; }
+  // 表示解禁は素材が必要数に達したら(前ティア装備の所持は不要)。作成可否は別途equip2Affordで判定(2026-07-14 ユーザー指示)
+  for (const it of equip2Items()) { if (!state.eq2Seen[it.id] && equip2CraftableNow(it) && equip2MatsAfford(it)) state.eq2Seen[it.id] = true; }
   const craftRows = equip2Items().filter(it => state.eq2Seen[it.id] && equip2CraftableNow(it)).map(it => {
     const needs = [];
     if (it.prev) {
