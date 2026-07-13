@@ -245,8 +245,9 @@ module.exports = {
     blackHoleCompression: 160000000000, quantumProofing: 3200000000000,
     antimatterRecipe: 64000000000000
   }, (function () { try { return require('./weave_costs.json').resCost || {}; } catch (e) { return {}; } })(), {
-    // 2026-07-13 ユーザー指定の固定コスト(weave焼き込みより優先): 工場段1=100万・香料調合段1=2000万
-    factoryNetwork: 1000000, spiceBlend: 20000000
+    // 2026-07-13 ユーザー指定の固定コスト(weave焼き込みより優先): 工場段1=100万・香料調合段1=2000万・
+    // 生産火力転換(cpsStrike)=3000万「モンスターダメージに毎秒生産が乗るようになる」
+    factoryNetwork: 1000000, spiceBlend: 20000000, cpsStrike: 30000000
   }),
 
   // ---- モンスター報酬効果 ----

@@ -6055,6 +6055,7 @@ const RESEARCH = [
   { id: "grandmaCrowd", name: "おばあちゃん連携", cost: 12000, detail: "式：支援=1.002〜1.003^おばあちゃん(強い指・オーブン・工場)。段階2(スキル「炉の列」で購入可):支援先に銀行・香料棚を追加(×1.008^おばあちゃん)。段階3(スキル「無人ライン」で購入可):全支援×(1+0.001×最高到達層)。", desc: "おばあちゃんが強い指・オーブン・工場を支援する。段階購入で銀行・香料棚も支援＋層効果が追加" },
   { id: "ovenBatch", name: "オーブン大量焼成", cost: 30000, detail: "式：9×1.008^オーブン×1.004^(最高到達層-1)。段階2(スキル「同期炉」で購入可):オーブン強化倍率×1.35。段階3(スキル「無人ライン」で購入可):オーブン個別強化Lv×(1+0.05×Lv)。", desc: "最高到達層とオーブン数でオーブンを強化する。段階購入で強化倍率と個別強化連動が追加" },
   { id: "factoryNetwork", name: "工場ネットワーク", cost: 1000000, detail: "式：9×1.002^(指+婆+炉)×1.008^工場。段階2(スキル「無人ライン」で購入可):銀行以上の所持設備種類×(1+0.15×種類数)。段階3(スキル「まとめ買い」で購入可):×(1+0.0012×最高到達層)。", desc: "下位設備と工場数で工場を強化する。段階購入で上位設備種類と層効果が追加" },
+  { id: "cpsStrike", name: "生産火力転換", cost: 30000000, detail: "式：モンスターへのダメージに現在の毎秒生産がそのまま加算される。", desc: "工房群の生産ラインを砲身に転用し、毎秒生産がモンスターダメージに乗るようになる" },
   { id: "spiceBlend", name: "香料調合", cost: 20000000, detail: "式：金取得後30秒 香料棚×8×1.006^棚。段階2(スキル「金色の匂い」で購入可):風味の熟成=金取得から12秒間、全生産×(1+0.6%×前回の金からの経過秒)。段階3(スキル「輝き増幅」で購入可):熟成×(1+0.0015×最高到達層)。", desc: "金クッキー取得後に香料棚を強化する。段階購入で熟成バーストが追加" },
   { id: "portalNetwork", name: "異世界接続網", cost: 815000000000000000, detail: "式：金取得後の狩り窓=20秒×1.0042^異世界炉、窓中の出現間隔×0.990^異世界炉。段階2(スキル「砕ける皮」で購入可):窓中の討伐1体ごとに窓+2秒。段階3(スキル「群れ読み」で購入可):窓中の出現×e^(-0.0008×最高到達層)。", desc: "金クッキー取得後にモンスターの狩り窓を開く。段階購入で窓延長と層効果が追加" },
   { id: "bankClickDividend", name: "銀行クリック配当", cost: 4550000000000, detail: "式：クリック×1.008^銀行×(1+log(貯蓄)×8)。段階2(スキル「まとめ買い」で購入可):複利利息=所持×0.5%×log10(1+銀行)を毎秒獲得(毎秒生産×8付近から逓減、打ち止めなし)。段階3(スキル「経済分析」で購入可):逓減基準×(1+0.08×最高到達層)。", desc: "銀行と貯蓄でクリックを強化する。段階購入で複利利息が追加" },
@@ -7468,6 +7469,7 @@ const RES_EQUIP = {
   bankClickDividend: "bank", moonGlobalYeast: "moonBakery", portalGlobalFold: "portal",
   galaxyAssembly: "galaxyFactory", blackHoleCompression: "blackHoleMixer",
   quantumProofing: "quantumBakery", antimatterRecipe: "antimatterOven",
+  cpsStrike: "portal", // 生産火力転換(2026-07-13): 異世界炉を購入済みの周回で買える
   // v2: 新規増幅研究7種(段階購入なし。表示は既存ルール=その回で対応設備購入済みのみ)
   bankVault: "bank", moonBake: "moonBakery", timeLayer: "timeOven",
   eventHorizon: "blackHoleMixer", cosmicConvection: "universeOven",
@@ -9802,7 +9804,9 @@ function globalResearchMultiplier() {
 
 function monsterBaseDamage() {
   const p = Math.max(1, baseClickPower());
-  return Math.max(1, Math.floor(1 + Math.sqrt(p) * 0.45));
+  // 生産火力転換(2026-07-13 ユーザー指示): モンスターダメージに毎秒生産がそのまま乗る
+  const cpsAdd = state.research.cpsStrike ? Math.max(0, currentCps()) : 0;
+  return Math.max(1, Math.floor(1 + Math.sqrt(p) * 0.45 + cpsAdd));
 }
 
 

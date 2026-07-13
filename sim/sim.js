@@ -43,7 +43,8 @@ const RESEARCH = [
   { id: 'factoryNetwork' }, { id: 'spiceBlend' }, { id: 'portalNetwork' },
   { id: 'bankClickDividend' }, { id: 'moonGlobalYeast' }, { id: 'portalGlobalFold' },
   { id: 'galaxyAssembly' }, { id: 'blackHoleCompression' }, { id: 'quantumProofing' },
-  { id: 'antimatterRecipe' }
+  { id: 'antimatterRecipe' },
+  { id: 'cpsStrike' } // 生産火力転換(2026-07-13 ユーザー指示「研究3000万クッキー、モンスターダメージに毎秒生産が乗る」)
 ];
 
 // ==== 段階式研究: 対応設備(その回で購入済みのみ表示/購入可)と段階解放スキル ====
@@ -52,7 +53,8 @@ const RES_EQUIP = {
   factoryNetwork: 'factory', spiceBlend: 'spiceRack', portalNetwork: 'portal',
   bankClickDividend: 'bank', moonGlobalYeast: 'moonBakery', portalGlobalFold: 'portal',
   galaxyAssembly: 'galaxyFactory', blackHoleCompression: 'blackHoleMixer',
-  quantumProofing: 'quantumBakery', antimatterRecipe: 'antimatterOven'
+  quantumProofing: 'quantumBakery', antimatterRecipe: 'antimatterOven',
+  cpsStrike: 'portal' // 生産火力転換: 異世界炉(モンスター系)を購入済みの周回で買える
 };
 // ovenBatch段2の解放=auto_1(2026-07-10 ㉘bake対策): cheapestFirst系の方針はスキルを毎周回1個ずつ
 // 段順に買うため、旧auto_3ゲートだと bake代表(S1)の主役エンジン(設備直送+大量焼成倍率)が run14まで
@@ -1420,7 +1422,9 @@ function effRw(sim, id) {
 function monsterDamage(sim, prod) {
   const r = sim.run;
   const p = Math.max(1, prod.baseClick * prod.boostM);
-  const base = Math.max(1, Math.floor(1 + Math.sqrt(p) * P.monster.dmgSqrtCoef));
+  // 生産火力転換(2026-07-13 ユーザー指示): モンスターダメージに毎秒生産(CPS)がそのまま乗る
+  const cpsAdd = resActive(sim, 'cpsStrike') ? Math.max(0, prod.cps || 0) : 0;
+  const base = Math.max(1, Math.floor(1 + Math.sqrt(p) * P.monster.dmgSqrtCoef + cpsAdd));
   const goldTarget = goldenBoostActive(sim) ? (r.perks.goldenTarget || 0) * effRw(sim, 'goldenTarget') : 0;
   const chain = r.monster ? ((r.monster.goldenChainMultiplier || 1) - 1) : 0;
   const clickOwned = (r.upgrades.finger || 0) + (r.upgrades.godFinger || 0);
