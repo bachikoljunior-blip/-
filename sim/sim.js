@@ -2980,6 +2980,9 @@ function simulate(strategy, opts) {
 // 既所持種の買い増し・研究の買い直しは対象外。ゲーム側も同じゲートで同期する。
 function unlockGateOk(sim) {
   const gap = (P.t2 && P.t2.unlockGap != null) ? P.t2.unlockGap : 30;
+  // 初回も下限を適用(2026-07-14 ユーザー指示「初研究、設備の解放もそれ下限にして」):
+  // ゲーム開始(解放イベントがまだ無い)から30秒経つまで、最初の設備・研究も解放しない
+  if (sim.lastUnlockT === -Infinity) return sim.t >= gap;
   return sim.t === sim.lastUnlockT || sim.t - sim.lastUnlockT >= gap;
 }
 function pushUnlock(sim, kind, id, n) {

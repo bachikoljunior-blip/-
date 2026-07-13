@@ -98,8 +98,13 @@ function summarize(sim) {
   // 初転生後の各周回で新規解放1件以上(件数の上限3は撤廃=盛り沢山OK)。
   // 第0回は間隔y÷帯域Y(120+8√x)の中央値が ≤1 のみ(速い側0.5は撤廃)。
   let t2Ok = 0, t2All = 0, t2Run0 = null;
-  // T2下限(2026-07-14 ユーザー指示「開放間隔は30秒以上」・同一秒統合後の全イベント間隔): 最小間隔と30秒未満の件数
+  // T2下限(2026-07-14 ユーザー指示「開放間隔は30秒以上」・同一秒統合後の全イベント間隔): 最小間隔と30秒未満の件数。
+  // 初回も対象(同日ユーザー指示「初研究、設備の解放もそれ下限にして」= ゲーム開始t=0→初解放も≥30秒)
   let gapMin = Infinity, gapNg = 0;
+  if (ev.length) {
+    if (ev[0].t < gapMin) gapMin = ev[0].t;
+    if (ev[0].t < 30) gapNg++;
+  }
   for (let i = 0; i + 1 < ev.length; i++) {
     const y = ev[i + 1].t - ev[i].t;
     if (y < gapMin) gapMin = y;
