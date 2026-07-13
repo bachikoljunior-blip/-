@@ -280,23 +280,43 @@ module.exports = {
   // 討伐した種類が報酬Lvの増分を決める: 増分 = max(1, floor(基本量 × 相性倍率))。
   // 出現はゲームと同じ重み(標準50/こつぶ22/鉄焼き14/はやて14)を決定的ローテーションで期待値化。
   // 黄金獣=金ブースト中に出現枠の35%を置換 / ボス=討伐25体ごと(+選択肢+1)。数値はすべて調整対象。
+  // モンスター種類3倍(2026-07-13 ユーザー指示「モンスターの種類も色を変えて、3倍にして」): 5系統×3色変種=15種。
+  // 変種は同系統の性格を保ちつつ相性のピーク位置をずらす(㉕多様性)。行合計は4.0〜7.0帯を維持(㉖±1.5)。
+  // 色は種類ごとに固有(ゲーム側で描画)・ノルマ層の色帯(色素材ore_t1..t6)とは別パレットで被らない。
   mtype: {
-    weights: { normal: 50, swarm: 22, tank: 14, speedy: 14 },
-    hpMul: { normal: 1, swarm: 0.66, tank: 6, speedy: 0.45, goldenBeast: 2.5, boss: 12 }, // swarm=3体×0.22
-    stayMul: { normal: 1, swarm: 1, tank: 1.5, speedy: 0.55, goldenBeast: 1, boss: 3.75 },
-    rewardEvents: { normal: 1, swarm: 3, tank: 1, speedy: 1, goldenBeast: 1, boss: 1 }, // こつぶは3体分の報酬
-    rewardLvAdd: { tank: 18 },
-    goldenBeastShare: 0.35,
+    weights: { normal: 26, normal2: 12, normal3: 12, swarm: 12, swarm2: 5, swarm3: 5,
+      tank: 8, tank2: 3, tank3: 3, speedy: 8, speedy2: 3, speedy3: 3 },
+    hpMul: { normal: 1, normal2: 1.2, normal3: 0.85, swarm: 0.66, swarm2: 0.8, swarm3: 0.55,
+      tank: 6, tank2: 7, tank3: 5, speedy: 0.45, speedy2: 0.5, speedy3: 0.4,
+      goldenBeast: 2.5, goldenBeast2: 3, goldenBeast3: 2.2, boss: 12 }, // swarm=3体×0.22
+    stayMul: { normal: 1, normal2: 1.1, normal3: 0.9, swarm: 1, swarm2: 1.1, swarm3: 0.9,
+      tank: 1.5, tank2: 1.65, tank3: 1.35, speedy: 0.55, speedy2: 0.6, speedy3: 0.5,
+      goldenBeast: 1, goldenBeast2: 1.1, goldenBeast3: 0.9, boss: 3.75 },
+    rewardEvents: { normal: 1, normal2: 1, normal3: 1, swarm: 3, swarm2: 3, swarm3: 3,
+      tank: 1, tank2: 1, tank3: 1, speedy: 1, speedy2: 1, speedy3: 1,
+      goldenBeast: 1, goldenBeast2: 1, goldenBeast3: 1, boss: 1 }, // こつぶ系は3体分の報酬
+    rewardLvAdd: { tank: 18, tank2: 18, tank3: 18 },
+    goldenBeastShare: 0.35, goldenBeastVariants: ['goldenBeast', 'goldenBeast2', 'goldenBeast3'],
     bossCycle: 25,
-    speedyGoldenCut: 0.5, // はやて撃破で次の金クッキー間隔×0.5
+    speedyGoldenCut: 0.5, // はやて系撃破で次の金クッキー間隔×0.5
     bossChoiceBonus: 1,
     affinity: {
-      normal: { golden: 1.0, hunt: 1.0, equipment: 1.0, risk: 1.0 },
-      swarm: { golden: 0.6, hunt: 1.6, equipment: 0.8, risk: 1.0 }, // 1体あたり。㉖=行合計4.0(±1.5倍帯内)・狩りピーク(㉕多様性)。③がrobust化したので合計上げでも③非崩壊
-      tank: { golden: 0.5, hunt: 2.0, equipment: 3.5, risk: 1.0 },
-      speedy: { golden: 3.0, hunt: 0.5, equipment: 0.5, risk: 1.5 },
-      goldenBeast: { golden: 3.5, hunt: 1.0, equipment: 0.5, risk: 2.0 },
-      boss: { golden: 4.0, hunt: 4.0, equipment: 4.0, risk: 4.0 }
+      normal:       { golden: 1.0, hunt: 1.0, equipment: 1.0, risk: 1.0 }, // 行計4.0
+      normal2:      { golden: 1.6, hunt: 0.8, equipment: 0.8, risk: 0.8 }, // 行計4.0(金寄り)
+      normal3:      { golden: 0.8, hunt: 0.8, equipment: 1.6, risk: 0.8 }, // 行計4.0(装備寄り)
+      swarm:        { golden: 0.6, hunt: 1.6, equipment: 0.8, risk: 1.0 }, // 行計4.0(狩りピーク)
+      swarm2:       { golden: 1.0, hunt: 1.4, equipment: 0.6, risk: 1.0 }, // 行計4.0
+      swarm3:       { golden: 0.5, hunt: 1.3, equipment: 1.2, risk: 1.0 }, // 行計4.0
+      tank:         { golden: 0.5, hunt: 2.0, equipment: 3.5, risk: 1.0 }, // 行計7.0(装備ピーク)
+      tank2:        { golden: 1.5, hunt: 1.5, equipment: 3.0, risk: 1.0 }, // 行計7.0
+      tank3:        { golden: 0.5, hunt: 3.0, equipment: 2.5, risk: 1.0 }, // 行計7.0(狩り厚め)
+      speedy:       { golden: 3.0, hunt: 0.5, equipment: 0.5, risk: 1.5 }, // 行計5.5(金ピーク)
+      speedy2:      { golden: 2.0, hunt: 0.5, equipment: 0.5, risk: 2.5 }, // 行計5.5(リスクピーク)
+      speedy3:      { golden: 2.5, hunt: 1.0, equipment: 1.0, risk: 1.0 }, // 行計5.5
+      goldenBeast:  { golden: 3.5, hunt: 1.0, equipment: 0.5, risk: 2.0 }, // 行計7.0(金ピーク)
+      goldenBeast2: { golden: 2.5, hunt: 0.5, equipment: 1.0, risk: 3.0 }, // 行計7.0(リスクピーク)
+      goldenBeast3: { golden: 3.0, hunt: 2.0, equipment: 1.0, risk: 1.0 }, // 行計7.0
+      boss:         { golden: 4.0, hunt: 4.0, equipment: 4.0, risk: 4.0 }
     }
   },
 

@@ -76,6 +76,13 @@ function summarize(sim) {
     t1All++;
     if (r.duration >= 1200 && (noCap || r.duration <= 7200)) t1Ok++;
   }
+  // T3c(2026-07-13 ユーザー追加「モンスターが全て倒せなくなるのも周回の8割以上」):
+  // 初逃走(滞在切れ)が周回の80%地点以降なら合格。逃走ゼロも合格。
+  let t3cOk = 0, t3cAll = 0;
+  for (const r of full) {
+    t3cAll++;
+    if (r.firstEscapeAt == null || r.firstEscapeAt >= 0.8 * r.duration) t3cOk++;
+  }
   // 新条件「毎秒生産が3分おきに2倍以上」(2026-07-13 ユーザー追加): 周回内の180秒サンプル列で
   // 連続ペア(前サンプル>0)ごとに 次サンプル≥2×前サンプル を判定。ペア単位で集計。
   let dblOk = 0, dblAll = 0;
@@ -153,7 +160,7 @@ function summarize(sim) {
     if (ratio >= 1) prOk++;
     if (!prWorst || ratio < prWorst.ratio) prWorst = { id: c.id, runIdx: c.runIdx, ratio };
   }
-  return { total, runs: sim.runs.length, doubleOk, doubleAll, gainOk, t1Ok, t1All, dblOk, dblAll, t2Ok, t2All, t2Run0, t3bOk, medianDur, paceOk, paceAll, events: ev.length, fullT, failOk, failAll: full.length, pwOk, pwAll, durOk, durAll, prOk, prAll, prWorst };
+  return { total, runs: sim.runs.length, doubleOk, doubleAll, gainOk, t1Ok, t1All, dblOk, dblAll, t3cOk, t3cAll, t2Ok, t2All, t2Run0, t3bOk, medianDur, paceOk, paceAll, events: ev.length, fullT, failOk, failAll: full.length, pwOk, pwAll, durOk, durAll, prOk, prAll, prWorst };
 }
 
 function runBaseline(hours, only) {
@@ -173,14 +180,14 @@ function printBaseline(results) {
   // 「早い」の線引き【仮】: 方針ごとの周回時間の中央値が、全方針の中央値以下のもの。遅い方針は(対象外)。
   const meds = results.map(r => r.sum.medianDur).filter(x => Number.isFinite(x)).sort((a, b) => a - b);
   const cutoff = meds.length ? meds[meds.length >> 1] : Infinity;
-  console.log('ID  名称              周回数 総クッキー   ④x1e8  (参考:旧⑤) 新⑥3分2倍 T1周回時間 T2解放≥1 T2第0回 (参考)T3a廃止 T3b維持±20%(早い方針) ⑭PT≥1 ㉑存在感 全解放 | 参考: 旧⑥ペース 旧㉒単調増');
+  console.log('ID  名称              周回数 総クッキー   ④x1e8  (参考:旧⑤) 新⑥3分2倍 T3c討伐維持 T1周回時間 T2解放≥1 T2第0回 (参考)T3a廃止 T3b維持±20%(早い方針) ⑭PT≥1 ㉑存在感 全解放 | 参考: 旧⑥ペース 旧㉒単調増');
   for (const r of results) {
     const fullT = r.sum.fullT === Infinity ? '未' : fmtT(r.sum.fullT);
     const t2r0 = r.sum.t2Run0 ? `${r.sum.t2Run0.ok ? 'OK' : 'NG'}(中央値${r.sum.t2Run0.med.toFixed(2)})` : '-';
     const fast = r.sum.medianDur <= cutoff;
     const t3bText = fast ? `${r.sum.t3bOk}/${r.sum.failAll}` : `(対象外:${r.sum.t3bOk}/${r.sum.failAll})`;
     console.log(
-      `${r.s.id.padEnd(3)} ${r.s.name.padEnd(14)} ${String(r.sum.runs).padStart(4)}  ${fmtN(r.sum.total).padStart(10)}  ${r.sum.doubleOk}/${r.sum.doubleAll}   ${r.sum.gainOk}/${r.sum.doubleAll}   ${r.sum.dblOk}/${r.sum.dblAll}   ${r.sum.t1Ok}/${r.sum.t1All}   ${r.sum.t2Ok}/${r.sum.t2All}  ${t2r0}  ${r.sum.failOk}/${r.sum.failAll}  ${t3bText}  ${r.sum.pwOk}/${r.sum.pwAll}  ${r.sum.prOk}/${r.sum.prAll}  ${fullT} | ${r.sum.paceOk}/${r.sum.paceAll} ${r.sum.durOk}/${r.sum.durAll}  (${r.ms}ms)` +
+      `${r.s.id.padEnd(3)} ${r.s.name.padEnd(14)} ${String(r.sum.runs).padStart(4)}  ${fmtN(r.sum.total).padStart(10)}  ${r.sum.doubleOk}/${r.sum.doubleAll}   ${r.sum.gainOk}/${r.sum.doubleAll}   ${r.sum.dblOk}/${r.sum.dblAll}   ${r.sum.t3cOk}/${r.sum.t3cAll}   ${r.sum.t1Ok}/${r.sum.t1All}   ${r.sum.t2Ok}/${r.sum.t2All}  ${t2r0}  ${r.sum.failOk}/${r.sum.failAll}  ${t3bText}  ${r.sum.pwOk}/${r.sum.pwAll}  ${r.sum.prOk}/${r.sum.prAll}  ${fullT} | ${r.sum.paceOk}/${r.sum.paceAll} ${r.sum.durOk}/${r.sum.durAll}  (${r.ms}ms)` +
       (r.sum.prWorst && r.sum.prWorst.ratio < 1 ? `  ㉑最悪: ${r.sum.prWorst.id}@run${r.sum.prWorst.runIdx} x${r.sum.prWorst.ratio.toFixed(2)}` : '')
     );
   }
@@ -993,7 +1000,28 @@ if (mode === 'baseline') {
   {
     const UTIL = new Set(UTILITY_REWARDS);
     const directIds = G.REWARD_POOL.filter(r => !UTIL.has(r.id)).map(r => 'rw:' + r.id);
-    const okDirect = judge(collect('rw:'), 1.1, '③-a 報酬instant(中央値≥1.1・2026-07-08)', directIds, true);
+    const okDirect = judge(collect('rw:'), 1.1, '③-a 報酬instant(全周回≥1.1・2026-07-13ユーザー変更)', directIds, false);
+    // ③カバレッジ強化(2026-07-13「どれかのプレイ方針は毎回とる」): 各報酬について、
+    // 「初取得以降の全周回で毎回取る」方針が少なくとも1つ実在すること
+    {
+      const okCov = [];
+      for (const key of directIds.concat(UTILITY_REWARDS.map(id => 'rw:' + id))) {
+        const rid = key.replace(/^rw:/, '');
+        let pass = null;
+        for (const st of STRATEGIES) {
+          const full = sims[st.id].runs.filter(r => !r.partial);
+          let firstIdx = -1;
+          for (let i = 0; i < full.length; i++) if ((full[i].perks || {})[rid] > 0) { firstIdx = i; break; }
+          if (firstIdx < 0) continue;
+          let every = true;
+          for (let i = firstIdx; i < full.length; i++) if (!((full[i].perks || {})[rid] > 0)) { every = false; break; }
+          if (every) { pass = st.id; break; }
+        }
+        okCov.push({ rid, pass });
+      }
+      const ng = okCov.filter(x => !x.pass);
+      console.log(`③-c 毎回取る方針の実在 ${okCov.length - ng.length}/${okCov.length}${ng.length ? ' NG: ' + ng.map(x => x.rid).join(',') : ''}`);
+    }
     const okUtil = judgeUtilityRewards(H, sims, UTILITY_REWARDS);
     console.log(`③ 報酬 合計 ${okDirect + okUtil}/${G.REWARD_POOL.length} (instant ${okDirect}/${directIds.length} + utility ${okUtil}/${UTILITY_REWARDS.length})`);
   }

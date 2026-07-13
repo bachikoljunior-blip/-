@@ -451,7 +451,13 @@ function pickMonsterType(sim) {
   if (r.killsSinceBoss >= (P.ws ? wsBossCycle(sim) : M.bossCycle)) return 'boss';
   if (goldenBoostActive(sim)) {
     r.gbAcc += M.goldenBeastShare + ((P.ws && wsStageDef(sim).gbShareAdd) || 0);
-    if (r.gbAcc >= 1) { r.gbAcc -= 1; return 'goldenBeast'; }
+    if (r.gbAcc >= 1) {
+      r.gbAcc -= 1;
+      // 黄金獣も3色変種をローテーション(2026-07-13 種類3倍)
+      const gv = M.goldenBeastVariants || ['goldenBeast'];
+      r.gbRot = ((r.gbRot || 0) + 1) % gv.length;
+      return gv[r.gbRot];
+    }
   }
   const ids = Object.keys(M.weights);
   let totalW = 0; for (const id of ids) totalW += M.weights[id];
@@ -738,8 +744,8 @@ function wsAutoPlay(sim) {
     active++;
     if (!ws.everWs['dish:' + id]) ws.everWs['dish:' + id] = true; // 解放イベントはレシピ開示時に計上済み(初調理は重複させない)
   }
-  // 作成(装備): workshop_2 解放後、好み順にLvを上げる
-  if (wsEqUnlocked(sim)) {
+  // 旧装備(Lv式7種)は廃止(2026-07-13 ユーザー指示「既存の装備は廃止」)。作成停止=Lv恒久0で全フック無効
+  if (false) {
     const epref = WS_EQ_PREF[r.policy] || WS_EQ_PREF.balanced;
     for (const id of epref) {
       const def = wsEqDefOf(id);
@@ -2224,7 +2230,7 @@ function defeatMonster(sim, mon) {
   wsDropMaterials(sim, mon, !!mon.overkill); // 素材ドロップ(条件ドロップ制・workshop_1ゲート)
   equip2DropOre(sim, (P.mtype && P.mtype.rewardEvents && P.mtype.rewardEvents[mon.typeId]) || 1); // 新装備: 色素材(層帯・ゲートなし)
   // はやての運び屋: 撃破すると次の金クッキーが早く来る
-  if (typeId === 'speedy' && M) r.nextGoldenSpawnMultiplier *= M.speedyGoldenCut;
+  if (typeId && typeId.startsWith('speedy') && M) r.nextGoldenSpawnMultiplier *= M.speedyGoldenCut; // speedy系3変種すべて
   // 異世界接続網 段階2: 延長狩り(⑬・2026-07-09 作り替え)= 討伐のリズムを保つと狩り窓が続く。
   // 討伐のたびに窓を「今+huntExtendSec」まで張り直す(討伐間隔<huntExtendSec なら窓が途切れない)。
   // 完全放置は張り直しに気づかない=窓なし。金クッキー非依存なので常時ON/不発の両端に倒れない。
@@ -2331,6 +2337,7 @@ function doPrestige(sim) {
     kills: r.kills, golden: r.goldenTaken, chainMax: r.chainMax,
     cpsSamples: r._cpsSamples || [],
     eq2Made: Object.assign({}, r.eq2Made || {}), eq2NewEquipped: (r.eq2NewEquipped || []).slice(),
+    firstEscapeAt: r.firstEscapeAt != null ? r.firstEscapeAt : null,
     gain,
     researchBought: Object.keys(r.research).filter(k => r.research[k]),
     stages2: Object.keys(r.research2).filter(k => r.research2[k]),
@@ -2532,7 +2539,8 @@ function advanceTick(sim, strategy) {
       } else {
         r.monster.stayLeft -= dt;
         if (r.monster.stayLeft <= 0) {
-          // 逃した
+          // 逃した(T3c: 「全て倒せる」が崩れた最初の時刻を記録=2026-07-13 新条件)
+          if (r.firstEscapeAt == null) r.firstEscapeAt = sim.t - r.startT;
           if ((r.huntFocusLv || 0) > 0) {
             r.nextMonsterHpMultiplier *= 0.75;
             r.huntFocusRewardPenalty = Math.max(r.huntFocusRewardPenalty || 0, 1);
@@ -2764,6 +2772,7 @@ function simulate(strategy, opts) {
     quotaHold: r.quotaHoldSeconds, maxStage: r.maxStage,
     kills: r.kills, golden: r.goldenTaken, cpsSamples: r._cpsSamples || [],
     eq2Made: Object.assign({}, r.eq2Made || {}), eq2NewEquipped: (r.eq2NewEquipped || []).slice(),
+    firstEscapeAt: r.firstEscapeAt != null ? r.firstEscapeAt : null,
     gain: prestigeGainOf(r.runCookies), partial: true,
     researchBought: Object.keys(r.research).filter(k => r.research[k]),
     stages2: Object.keys(r.research2).filter(k => r.research2[k]),
