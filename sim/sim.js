@@ -618,20 +618,51 @@ function equip2Items() {
   // 効果の本体はティア(全生産×allMulPerTier^t)・バリエーションは色素材の配合違い(横持ち)。
   // 合成連鎖は同バリエーションの前ティアを消費。バリエーション1(v1)は下位色素材のみ=入口。
   const VARIANTS = E.variants || 9;
+  // ステージ配置のばらけ(2026-07-14 ユーザー指示「もっとカテゴリとレベルをばらけさせて。
+  // 後半が強いのは傾向でいいが完全にはしない。他のステージと同じやつが作れてもいい」):
+  // 主ステージ = clamp(ティア + 散らしオフセット(-2..+2), 1..6)=傾向は保ちつつ混ざる。
+  // v%3==0 のアイテムは隣のステージでも作れる(2ステージ重複)。
+  const OFFSETS = [-2, -1, -1, 0, 0, 0, 1, 1, 2]; // v1..v9(中心=同ティア・傾向維持)
+  const clampSt = x => Math.max(1, Math.min(E.tiers, x));
   for (let t = 1; t <= E.tiers; t++) {
-    const stage = P.ws.stages[Math.min(t, P.ws.stages.length) - 1];
-    const smatA = (stage.c && stage.c[0]) || 'butter';
-    const smatB = (stage.c && stage.c[1]) || smatA;
     for (const cat of EQUIP2_CATS) {
+      const ci = EQUIP2_CATS.indexOf(cat);
       for (let v = 1; v <= VARIANTS; v++) {
         const id = `${cat}_t${t}_v${v}`;
+        const st1 = clampSt(t + OFFSETS[(v - 1 + ci) % 9]); // カテゴリで散らし位相をずらす
+        const stages = [st1];
+        if (v % 3 === 0) stages.push(clampSt(st1 + (v % 2 === 0 ? 1 : -1))); // 重複ステージ
+        const stDef = P.ws.stages[Math.min(st1, P.ws.stages.length) - 1];
+        const smatA = (stDef.c && stDef.c[0]) || 'butter';
+        const smatB = (stDef.c && stDef.c[1]) || smatA;
         const cost = { ['ore_t' + t]: E.oreNeed };
-        // バリエーションごとに副素材が変わる: v1=色素材のみ / v2-5=ステージ素材A / v6-9=ステージ素材B。
-        // 高バリエーションほど色素材が1個多い(見た目のレア度)
+        // 副素材は主ステージの素材(v1=色素材のみ)
         if (v >= 2 && t >= 2) { const m = v <= 5 ? smatA : smatB; cost[m] = (cost[m] || 0) + E.stageMatNeed; }
         if (v >= 6) cost['ore_t' + t] += 1;
-        EQUIP2_ITEMS.push({ id, cat, tier: t, variant: v, stageNo: stage.no, prev: t > 1 ? `${cat}_t${t - 1}_v${v}` : null, cost });
+        EQUIP2_ITEMS.push({ id, cat, tier: t, variant: v, stages, stageNo: st1, prev: t > 1 ? `${cat}_t${t - 1}_v${v}` : null, cost });
       }
+    }
+  }
+  // 合成連鎖は「前ティアがどこかの共通ステージで作れる」場合のみ要求。そうでなければ素材のみレシピ
+  // (ユーザー許可「装備がなかったり素材がなかったりしてもいい」)
+  const byId = {};
+  for (const it of EQUIP2_ITEMS) byId[it.id] = it;
+  for (const it of EQUIP2_ITEMS) {
+    if (!it.prev) continue;
+    const pv = byId[it.prev];
+    if (!pv) { it.prev = null; continue; }
+    // 前ティアが自分と同じステージ帯(±1)で作れないなら連鎖なし=素材のみ
+    const near = it.stages.some(a => pv.stages.some(b => Math.abs(a - b) <= 1));
+    if (!near) it.prev = null;
+  }
+  // 保証: 各(ステージ,カテゴリ)に作成可能アイテム≥2(毎周回全カテゴリ作成の成立条件)
+  for (let st = 1; st <= E.tiers; st++) {
+    for (const cat of EQUIP2_CATS) {
+      const have = EQUIP2_ITEMS.filter(it => it.cat === cat && it.stages.includes(st));
+      if (have.length >= 2) continue;
+      const cands = EQUIP2_ITEMS.filter(it => it.cat === cat && !it.stages.includes(st))
+        .sort((a, b) => Math.abs(a.tier - st) - Math.abs(b.tier - st));
+      for (let k = 0; k < cands.length && have.length + k < 2; k++) cands[k].stages.push(st);
     }
   }
   return EQUIP2_ITEMS;
@@ -725,9 +756,8 @@ function equip2Tick(sim) {
   const E = P.equip2; if (!E) return;
   if (sim.opt.noNewEquip) return; // 装備lift判定の枝分かれ: 新規作成・付け替えを封止
   const ws = sim.ws, r = sim.run;
-  const tier = Math.max(1, Math.min(E.tiers, r.wsStage || 1));
-  // 作れるのは現ステージのティア以下(ステージが進むと新ティアが加わる)。高ティア優先で1カテゴリ1個(アクセ2個)/周回。
-  // 下位ティアも作れるので「前ティア装備を消費する合成連鎖」が在庫切れで止まらない
+  const curStage = Math.max(1, Math.min(E.tiers, r.wsStage || 1));
+  // 作れるのは「現ステージのラインナップ」(ばらけ配置・2026-07-14)。高ティア優先で1カテゴリ1個/周回。
   // カテゴリ優先を周回ごとにローテーション(2026-07-13: 固定順だと末尾カテゴリ(hat/shoes/acc)が
   // いつも素材切れ後=周回終盤の初作成になり装備lift(a)と作成テンポ(c)を落とす)
   const rot = (sim.prestigeRuns || 0) % EQUIP2_CATS.length;
@@ -738,7 +768,7 @@ function equip2Tick(sim) {
   const vDist = v => Math.min(Math.abs((v || 1) - vWant), 9 - Math.abs((v || 1) - vWant));
   const items = equip2Items().slice().sort((a, b) => (b.tier - a.tier) || (catOrder[a.cat] - catOrder[b.cat]) || (vDist(a.variant) - vDist(b.variant)));
   for (const it of items) {
-    if (it.tier > tier) continue;
+    if (!it.stages.includes(curStage)) continue;
     const cap = 1; // 9カテゴリ各1個/周回(アクセは甲/乙で別カテゴリ)
     if (((r.eq2Made && r.eq2Made[it.cat]) || 0) >= cap) continue;
     const havePrev = it.prev ? ((ws.eq2Owned[it.prev] || 0) >= 1) : true;

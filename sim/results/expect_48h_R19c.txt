@@ -59,3 +59,9 @@
   OK stage:galaxyAssembly:3       S7 min=1.14
   OK stage:antimatterRecipe:2     S7 min=1.17
 ⑨ 段階whole軸(短い枝分かれ比べ・同一状態から1周回ぶん・総クッキー比の中央値 ≥1.05・利息/余熱)
+  OK stage:bankClickDividend:2    S9 中央値比=3.600 (n=12)
+  OK stage:bankClickDividend:3    S9 中央値比=2.006 (n=12)
+  OK stage:fingerTechnique:3      S1 中央値比=1000000000.000 (n=10)
+⑨ whole軸 3/3
+⑨ 段階 合計 19/20 (instant 16/17 + whole 3/3・⑬タイミング段3件は⑬で判定のため除外)
+⑬ タイミング機能(短い枝分かれ比べ・最適操作/その機能だけ完全放置の1周回総クッキー比の中央値, 要求[1.05,2.00])

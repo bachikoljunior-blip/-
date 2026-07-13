@@ -9304,7 +9304,7 @@ function equip2Afford(it) {
   for (const k in it.cost) if (equip2HaveOf(k) < it.cost[k]) return false;
   return true;
 }
-function equip2CraftableNow(it) { return it.tier <= Math.min(EQUIP2_CFG.tiers, currentStageNo()); }
+function equip2CraftableNow(it) { return (it.stages || [it.tier]).includes(Math.min(EQUIP2_CFG.tiers, currentStageNo())); } // ステージ配置ばらけ(2026-07-14)
 function craftEquip2(id) {
   const it = equip2ById(id);
   if (!it || !equip2Afford(it) || !equip2CraftableNow(it)) return;
@@ -10322,13 +10322,20 @@ let EQUIP2_ITEMS_CACHE = null;
 function equip2Items() {
   if (EQUIP2_ITEMS_CACHE) return EQUIP2_ITEMS_CACHE;
   EQUIP2_ITEMS_CACHE = [];
-  // 9カテゴリ×各54種(6ティア×9バリエーション・2026-07-14 sim同期)
+  // 9カテゴリ×各54種・ステージ配置ばらけ(2026-07-14 sim同期: 主ステージ=ティア±2散らし・
+  // v%3==0は2ステージ重複・傾向=後半ほど高ティア・各(ステージ,カテゴリ)≥2種保証)
+  const OFFSETS = [-2, -1, -1, 0, 0, 0, 1, 1, 2];
+  const clampSt = x => Math.max(1, Math.min(EQUIP2_CFG.tiers, x));
   for (let t = 1; t <= EQUIP2_CFG.tiers; t++) {
-    const smats = STAGE_MATERIALS[Math.min(t, 5)] || STAGE_MATERIALS[1];
-    const smatA = smats.normal, smatB = smats.tank || smats.normal;
     for (const cat of EQUIP2_CATS) {
+      const ci = EQUIP2_CATS.indexOf(cat);
       for (let v = 1; v <= 9; v++) {
         const id = `${cat}_t${t}_v${v}`;
+        const st1 = clampSt(t + OFFSETS[(v - 1 + ci) % 9]);
+        const stages = [st1];
+        if (v % 3 === 0) stages.push(clampSt(st1 + (v % 2 === 0 ? 1 : -1)));
+        const smats = STAGE_MATERIALS[Math.min(st1, 5)] || STAGE_MATERIALS[1];
+        const smatA = smats.normal, smatB = smats.tank || smats.normal;
         const cost = { ["ore_t" + t]: EQUIP2_CFG.oreNeed };
         if (v >= 2 && t >= 2) { const m = v <= 5 ? smatA : smatB; cost[m] = (cost[m] || 0) + EQUIP2_CFG.stageMatNeed; }
         if (v >= 6) cost["ore_t" + t] += 1;
@@ -10337,7 +10344,7 @@ function equip2Items() {
         const fxList = [];
         for (let i = 0; i < defs.length; i += 2) fxList.push([defs[i], defs[i + 1] * scale]);
         EQUIP2_ITEMS_CACHE.push({
-          id, cat, tier: t, variant: v, prev: t > 1 ? `${cat}_t${t - 1}_v${v}` : null, cost,
+          id, cat, tier: t, variant: v, stages, prev: t > 1 ? `${cat}_t${t - 1}_v${v}` : null, cost,
           name: EQUIP2_GRADE_NAMES[t - 1] + EQUIP2_ITEM_NAMES[cat][v - 1],
           fxList, // 効果は固定値で表示(2026-07-14 全面刷新)
           fxText: fxList.map(([k, val]) => {
@@ -10348,6 +10355,24 @@ function equip2Items() {
           }).join(" / ")
         });
       }
+    }
+  }
+  // 連鎖: 前ティアが近傍ステージ(±1)で作れない場合は素材のみレシピ(ユーザー許可「装備がなくてもいい」)
+  const byId = {};
+  for (const it of EQUIP2_ITEMS_CACHE) byId[it.id] = it;
+  for (const it of EQUIP2_ITEMS_CACHE) {
+    if (!it.prev) continue;
+    const pv = byId[it.prev];
+    if (!pv || !it.stages.some(a => pv.stages.some(b => Math.abs(a - b) <= 1))) it.prev = null;
+  }
+  // 保証: 各(ステージ,カテゴリ)に作成可能≥2種
+  for (let st = 1; st <= EQUIP2_CFG.tiers; st++) {
+    for (const cat of EQUIP2_CATS) {
+      const have = EQUIP2_ITEMS_CACHE.filter(it => it.cat === cat && it.stages.includes(st));
+      if (have.length >= 2) continue;
+      const cands = EQUIP2_ITEMS_CACHE.filter(it => it.cat === cat && !it.stages.includes(st))
+        .sort((a, b) => Math.abs(a.tier - st) - Math.abs(b.tier - st));
+      for (let k = 0; k < cands.length && have.length + k < 2; k++) cands[k].stages.push(st);
     }
   }
   return EQUIP2_ITEMS_CACHE;
