@@ -5293,7 +5293,7 @@
          ゲーム全体を等倍スケール。全端末で文字・画像・ボタン・プレイ画面の比率がすべて同一になる。
          倍率(--gameScale)はJS(applyGameScale)がリサイズ時に計算する */
       width: 375px !important;
-      height: 720px !important;
+      height: 667px !important;
       margin: 0 !important;
       transform: scale(var(--gameScale, 1));
       transform-origin: center center;
@@ -11446,11 +11446,11 @@ function resumeAudioIfNeeded() {
 // iOSで時々起きるダブルタップ拡大の保険(全要素のtouch-action: manipulationに加えて)
 document.addEventListener("dblclick", e => { e.preventDefault(); }, { passive: false });
 
-// 画面サイズが変わっても内容の比率が一切変わらないよう、固定の基準サイズ(375×720=縦長)に対する
+// 画面サイズが変わっても内容の比率が一切変わらないよう、固定の基準サイズに対する
 // 等倍スケールを計算してゲーム全体に適用する(CSSの --gameScale)。全端末で完全に同じ比率。
-// 高さは従来の547より縦長にして、縦長スマホでの上下の黒帯(=小さく見える)を減らす。
+// 基準比率は端末画面の縦横比(750:1334=375:667)に合わせ、その端末で黒帯が出ないようにする。
 const GAME_BASE_W = 375;
-const GAME_BASE_H = 720;
+const GAME_BASE_H = 667;
 // 横並び(ワイド)レイアウトの基準サイズ: クッキー画面(375×234)とタブ画面(375×305)を
 // 縦画面と同じ比率のまま横に2列で並べる。全体は 750×305。
 const GAME_WIDE_W = 750;
@@ -11461,17 +11461,22 @@ const WIDE_ASPECT_THRESHOLD = 1.0;
 function applyGameScale() {
   let wide = false;
   try {
-    wide = (window.innerWidth / Math.max(1, window.innerHeight)) >= WIDE_ASPECT_THRESHOLD;
+    // Safariはツールバーの分 innerHeight が実際の可視領域とズレるため、可視領域(visualViewport)を使う。
+    // これで、ツールバー開閉で残ってしまう黒帯を防ぐ。
+    const vv = window.visualViewport;
+    const vw = (vv ? vv.width : window.innerWidth);
+    const vh = (vv ? vv.height : window.innerHeight);
+    wide = (vw / Math.max(1, vh)) >= WIDE_ASPECT_THRESHOLD;
     document.body.classList.toggle("wideLayout", wide);
-    const availH = window.innerHeight - 8;
+    const availH = vh - 8;
     if (wide) {
-      const availW = Math.min(window.innerWidth - 12, 1400);
+      const availW = Math.min(vw - 12, 1400);
       const k = Math.max(0.2, Math.min(availW / GAME_WIDE_W, availH / GAME_WIDE_H));
       document.documentElement.style.setProperty("--gameScale", String(k));
     } else {
-      // 縦画面: 固定基準(375×720)を等倍スケールで画面に収める。全端末で内容の比率は完全に同一。
-      // 端末比率が基準と違う分だけ上下または左右に黒帯が出るが、内容の大小関係は一切変わらない。
-      const availW = Math.min(window.innerWidth - 8, 900);
+      // 縦画面: 固定基準(375×667=端末画面と同じ比率)を等倍スケールで可視領域に収める。
+      // 全端末で内容の比率は完全に同一。基準と同じ比率の端末なら黒帯はほぼ出ない。
+      const availW = Math.min(vw - 8, 900);
       const k = Math.max(0.35, Math.min(availW / GAME_BASE_W, availH / GAME_BASE_H));
       document.documentElement.style.setProperty("--gameScale", String(k));
     }
@@ -11491,6 +11496,11 @@ function applyGameScale() {
 
 window.addEventListener("resize", applyGameScale);
 window.addEventListener("orientationchange", applyGameScale);
+// Safariのツールバー開閉(可視領域の変化)でも再フィットして黒帯を残さない
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", applyGameScale);
+  window.visualViewport.addEventListener("scroll", applyGameScale);
+}
 applyGameScale();
 
 // 自動再生制限のため、最初の操作(タップ)でBGMを開始する
