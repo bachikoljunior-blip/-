@@ -62,6 +62,9 @@
     body {
       margin: 0;
       height: 100%;
+      /* iOS Safariのツールバー分を除いた「実際に見える高さ」に合わせる。
+         100%(=全画面)だと中央寄せしたゲームの下端がツールバーに隠れて見切れるため(2026-07-13) */
+      height: 100dvh;
       overflow: hidden;
       /* プレイ画面をスクロール/バウンスさせない(タップ操作で画面が動かないように) */
       overscroll-behavior: none;
@@ -4944,6 +4947,24 @@
     /* 作成する装備のアイコン(名前・効果はタップで表示。行には載せない) */
     .eq2CraftItemIcon { flex: 1 0 44px; width: 44px; height: 44px; max-width: 44px; object-fit: contain; cursor: pointer; }
     .eq2Need img { border-radius: 5px; }
+    /* アイコン近くに出す情報ポップアップ(名前・効果) */
+    .infoPopup {
+      position: fixed;
+      z-index: 12000;
+      max-width: 70vw;
+      padding: 7px 11px;
+      border-radius: 9px;
+      background: rgba(20, 12, 6, 0.97);
+      border: 1px solid rgba(255, 213, 138, 0.5);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.55);
+      color: #ffe9c2;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.35;
+      text-align: left;
+      white-space: normal;
+      pointer-events: auto;
+    }
     .eq2Needs { display: flex; gap: 4px; flex: 0 0 auto; }
     .eq2Need { display: flex; flex-direction: column; align-items: center; font-size: 11px; border: 1px solid rgba(255,255,255,0.18); border-radius: 6px; padding: 2px 4px; }
     .eq2Need img { width: 22px; height: 22px; object-fit: contain; }
@@ -9337,6 +9358,31 @@ function equip2Hue(it) { return ((it.tier - 1) * 55 + ((it.variant || 1) - 1) * 
 // 同じ画像を色替えで使う素材(色粉 ore_t*)を、色でハッキリ見分けられるようにする(2026-07-13)。
 // 彩度・明度を強めた上で、素材テーマ色の枠(ボーダー)を付ける。
 const ORE_COLORS = ["#dfe3ea", "#e8b23a", "#38c76e", "#3f79ea", "#a44fe0", "#e35168"]; // 白銀/琥珀/翡翠/瑠璃/紫/紅
+// アイコンの近くに出す情報ポップアップ(2026-07-13)。スクロールしても消えず、画面のどこかをタップで消える。
+let _infoPopupDismiss = null;
+function hideInfoPopup() {
+  const el = document.getElementById("infoPopup");
+  if (el) el.remove();
+  if (_infoPopupDismiss) { document.removeEventListener("pointerdown", _infoPopupDismiss, true); _infoPopupDismiss = null; }
+}
+function showInfoPopup(anchor, text) {
+  hideInfoPopup();
+  const el = document.createElement("div");
+  el.id = "infoPopup";
+  el.className = "infoPopup";
+  el.textContent = text;
+  document.body.appendChild(el);
+  const r = anchor.getBoundingClientRect();
+  const pw = el.offsetWidth, ph = el.offsetHeight;
+  let left = Math.max(6, Math.min(r.left + r.width / 2 - pw / 2, window.innerWidth - pw - 6));
+  let top = r.top - ph - 8;                 // 基本はアイコンの上
+  if (top < 6) top = r.bottom + 8;          // 上に入らなければ下に出す
+  el.style.left = left + "px";
+  el.style.top = top + "px";
+  // 次にどこかをタップしたら消す(開いたタップ自身では消えないよう次フレームで登録)
+  _infoPopupDismiss = () => hideInfoPopup();
+  setTimeout(() => document.addEventListener("pointerdown", _infoPopupDismiss, true), 0);
+}
 function oreDecor(matId) {
   const m = /^ore_t(\d+)$/.exec(matId);
   if (!m) return { filter: "", color: "" };
@@ -9383,7 +9429,9 @@ function craftEquip2(id) {
   state.eq2Owned[it.id] = (state.eq2Owned[it.id] || 0) + 1;
   state.eq2MadeThisRun[it.cat] = (state.eq2MadeThisRun[it.cat] || 0) + 1;
   if (upgradedSlot) state.eq2Equipped[upgradedSlot] = it.id; // 合成で消えた装備の枠は新装備に置き換え
-  dropMat(`${it.name} を作成！`);
+  // dropMatは別関数内のローカル変数でここでは未定義。これで落ちて以降のrenderActiveTabが
+  // 実行されず、所持素材の減りがすぐ反映されなかった。showMessageに修正(2026-07-13)。
+  showMessage(`${it.name} を作成！`);
   playSound("buy");
   saveGame(); renderActiveTab(); updateTopOnly();
 }
@@ -9558,13 +9606,13 @@ function renderWorkshop() {
   // 必要素材アイコンをタップしたら名前を表示(2026-07-13)
   box.querySelectorAll("[data-matinfo]").forEach(b => addTap(b, () => {
     const v = b.dataset.matinfo;
-    if (v.startsWith("prev:")) { const pit = equip2ById(v.slice(5)); showMessage(pit ? pit.name : v.slice(5)); }
-    else if (v.startsWith("mat:")) { const m = getMaterial(v.slice(4)); showMessage(m ? m.name : v.slice(4)); }
+    if (v.startsWith("prev:")) { const pit = equip2ById(v.slice(5)); showInfoPopup(b, pit ? pit.name : v.slice(5)); }
+    else if (v.startsWith("mat:")) { const m = getMaterial(v.slice(4)); showInfoPopup(b, m ? m.name : v.slice(4)); }
   }));
-  // 作成する装備のアイコンをタップしたら名前+効果を表示(行には載せない)(2026-07-13)
+  // 作成する装備のアイコンをタップしたら名前+効果をアイコン近くにポップアップ表示(行には載せない)(2026-07-13)
   box.querySelectorAll("[data-eq2info]").forEach(b => addTap(b, () => {
     const eit = equip2ById(b.dataset.eq2info);
-    if (eit) showMessage(`${eit.name} — ${eit.fxText}(固定値)`);
+    if (eit) showInfoPopup(b, `${eit.name} — ${eit.fxText}`);
   }));
   box.dataset.sig = workshopStructSig();
 }
