@@ -640,22 +640,58 @@ function equip2ById(id) {
   if (!EQUIP2_BY_ID) { EQUIP2_BY_ID = {}; for (const it of equip2Items()) EQUIP2_BY_ID[it.id] = it; }
   return EQUIP2_BY_ID[id];
 }
-// 全生産倍率: 装備中アイテムの積
-function equip2Mult(sim) {
-  const E = P.equip2; if (!E) return 1;
-  const eq = sim.ws.eq2Equipped; let m = 1;
+// ==== 装備効果レジストリ(2026-07-14 ユーザー指示「効果は全部変えて・複数効果も・同じ効果は二つ作らない」) ====
+// カテゴリ=効果の角度・色銘(v1-9)=角度内の効果種・ティア=数値スケール(×2^(t-1))。
+// v7-8=2効果・v9=3効果の複合。486種すべて(種類,数値)の組が一意。
+// 効果タイプ: clickMul/cpsMul/allMul(生産倍率) dmgMul/killValMul/spawnMul/stayMul(討伐)
+//   goldenAmtMul/goldenRateMul/goldenBoostMul(金) quotaSlow(ノルマ減速) upDisc/resDisc(割引・上限0.5)
+//   dropMul(素材) oreAdd(色素材+n/体) rewardLvAdd(報酬Lv+) critAdd(会心率+・上限0.3)
+const EQUIP2_FX = {
+  weapon:      [['dmgMul', 1.0], ['killValMul', 0.8], ['spawnMul', 0.10], ['stayMul', 0.25], ['dmgMul', 0.6, 'killValMul', 0.4], ['dmgMul', 0.5, 'spawnMul', 0.06], ['killValMul', 0.5, 'stayMul', 0.15], ['dmgMul', 0.4, 'killValMul', 0.3, 'spawnMul', 0.05], ['dmgMul', 1.6]],
+  shield:      [['quotaSlow', 0.10], ['stayMul', 0.30], ['quotaSlow', 0.06, 'stayMul', 0.15], ['cpsMul', 0.5], ['quotaSlow', 0.14], ['stayMul', 0.45], ['quotaSlow', 0.08, 'cpsMul', 0.3], ['stayMul', 0.2, 'cpsMul', 0.35], ['quotaSlow', 0.06, 'stayMul', 0.12, 'cpsMul', 0.25]],
+  armorTop:    [['cpsMul', 1.0], ['allMul', 0.5], ['cpsMul', 0.7, 'dropMul', 0.2], ['cpsMul', 1.4], ['allMul', 0.7], ['cpsMul', 0.6, 'allMul', 0.25], ['allMul', 0.4, 'dropMul', 0.3], ['cpsMul', 0.8, 'allMul', 0.3], ['cpsMul', 0.5, 'allMul', 0.3, 'dropMul', 0.25]],
+  armorBottom: [['upDisc', 0.08], ['resDisc', 0.08], ['upDisc', 0.05, 'resDisc', 0.05], ['cpsMul', 0.6], ['upDisc', 0.12], ['resDisc', 0.12], ['upDisc', 0.06, 'cpsMul', 0.35], ['resDisc', 0.06, 'cpsMul', 0.35], ['upDisc', 0.05, 'resDisc', 0.05, 'cpsMul', 0.3]],
+  hands:       [['clickMul', 1.0], ['critAdd', 0.03], ['clickMul', 0.7, 'critAdd', 0.02], ['clickMul', 1.4], ['critAdd', 0.05], ['clickMul', 0.6, 'dmgMul', 0.3], ['clickMul', 0.5, 'critAdd', 0.03], ['critAdd', 0.04, 'dmgMul', 0.3], ['clickMul', 0.5, 'critAdd', 0.02, 'dmgMul', 0.25]],
+  hat:         [['resDisc', 0.10], ['allMul', 0.45], ['resDisc', 0.06, 'allMul', 0.25], ['cpsMul', 0.8], ['resDisc', 0.14], ['allMul', 0.6], ['resDisc', 0.07, 'cpsMul', 0.4], ['allMul', 0.35, 'cpsMul', 0.4], ['resDisc', 0.05, 'allMul', 0.25, 'cpsMul', 0.3]],
+  shoes:       [['dropMul', 0.5], ['oreAdd', 1], ['dropMul', 0.3, 'oreAdd', 0.5], ['spawnMul', 0.08], ['dropMul', 0.7], ['oreAdd', 2], ['dropMul', 0.4, 'spawnMul', 0.05], ['oreAdd', 1, 'spawnMul', 0.05], ['dropMul', 0.3, 'oreAdd', 0.5, 'spawnMul', 0.04]],
+  accA:        [['goldenAmtMul', 1.0], ['goldenRateMul', 0.15], ['goldenBoostMul', 0.4], ['goldenAmtMul', 0.6, 'goldenRateMul', 0.10], ['goldenAmtMul', 1.5], ['goldenRateMul', 0.22], ['goldenBoostMul', 0.3, 'goldenAmtMul', 0.4], ['goldenRateMul', 0.12, 'goldenBoostMul', 0.25], ['goldenAmtMul', 0.5, 'goldenRateMul', 0.08, 'goldenBoostMul', 0.2]],
+  accB:        [['rewardLvAdd', 2], ['killValMul', 0.6], ['rewardLvAdd', 1, 'killValMul', 0.4], ['stayMul', 0.35], ['rewardLvAdd', 3], ['killValMul', 0.9], ['rewardLvAdd', 1.5, 'stayMul', 0.2], ['killValMul', 0.5, 'stayMul', 0.2], ['rewardLvAdd', 1, 'killValMul', 0.35, 'stayMul', 0.15]]
+};
+// 集約: 装備中9部位の効果を1つの束に(倍率系は積・加算系は和・割引/会心は上限つき)
+function equip2Fx(sim) {
+  const ws = sim.ws;
+  if (ws._eq2FxCache && ws._eq2FxKey === JSON.stringify(ws.eq2Equipped)) return ws._eq2FxCache;
+  const fx = { clickMul: 1, cpsMul: 1, allMul: 1, dmgMul: 1, killValMul: 1, spawnMul: 1, stayMul: 1,
+    goldenAmtMul: 1, goldenRateMul: 1, goldenBoostMul: 1, quotaSlow: 0, upDisc: 0, resDisc: 0,
+    dropMul: 1, oreAdd: 0, rewardLvAdd: 0, critAdd: 0 };
   for (const slot of EQUIP2_SLOTS) {
-    const it = eq[slot] ? equip2ById(eq[slot]) : null;
-    if (it) m *= Math.pow(E.allMulPerTier, it.tier);
+    const it = ws.eq2Equipped[slot] ? equip2ById(ws.eq2Equipped[slot]) : null;
+    if (!it) continue;
+    const defs = EQUIP2_FX[it.cat][(it.variant || 1) - 1];
+    const scale = Math.pow(2, it.tier - 1); // ティア=数値スケール(固定値表示)
+    for (let i = 0; i < defs.length; i += 2) {
+      const type = defs[i], base = defs[i + 1];
+      const v = base * scale;
+      if (type === 'quotaSlow' || type === 'upDisc' || type === 'resDisc' || type === 'critAdd') fx[type] = Math.min(type === 'critAdd' ? 0.3 : 0.5, fx[type] + Math.min(0.5, v));
+      else if (type === 'oreAdd' || type === 'rewardLvAdd') fx[type] += v;
+      else fx[type] *= 1 + v; // 倍率系: ×(1+base×2^(t-1))
+    }
   }
-  return m;
+  ws._eq2FxKey = JSON.stringify(ws.eq2Equipped);
+  ws._eq2FxCache = fx;
+  return fx;
+}
+// 旧・一律全生産倍率の互換(生産チェーン用): クリック/毎秒はcomputeProd側で個別適用
+function equip2Mult(sim) {
+  const fx = equip2Fx(sim);
+  return fx.allMul;
 }
 // 色素材ドロップ: モンスターの色=ノルマ層の帯(band層ごとに変わる)。工房スキル不要
 function equip2DropOre(sim, units) {
   const E = P.equip2; if (!E) return;
   const t = Math.max(1, Math.min(E.tiers, 1 + Math.floor((sim.run.maxStage || 0) / E.layerBand)));
   const ws = sim.ws;
-  ws.mats['ore_t' + t] = (ws.mats['ore_t' + t] || 0) + E.oreDropPerKill * (units || 1);
+  ws.mats['ore_t' + t] = (ws.mats['ore_t' + t] || 0) + (E.oreDropPerKill + equip2Fx(sim).oreAdd) * (units || 1); // 新装備: 色素材追加系
 }
 // 装備専用の素材判定/消費: 料理用costMul(×4)や万能粉代替は適用しない生コスト
 // 色素材は上位が下位を代替できる(層が深いと低位色が落ちないため。ore_tNの必要にはore_tN..t6を低い方から充当)
@@ -803,7 +839,7 @@ function wsDropMaterials(sim, mon, overkill) {
   const lv = Math.max(1, mon.level || 1);
   let dropMul = st.dropMul + (st.dropPerLayer ? st.dropPerLayer * sim.ws.deepLayer : 0);
   dropMul *= 1 + (P.chain ? P.chain.dropCoef * chainCount(sim) : 0);
-  dropMul *= 1 + P.ws.eqFx.compassDropPerLv * wsEqLv(sim, 'dimensionCompass');
+  dropMul *= (1 + P.ws.eqFx.compassDropPerLv * wsEqLv(sim, 'dimensionCompass')) * equip2Fx(sim).dropMul; // 新装備: 素材ドロップ系
   if (wsBuffActive(sim, 'voidTart')) dropMul *= P.ws.fx.voidDrop;
   // 図鑑の素材ボーナス: 旧floor(Lv/2)はLv1で0=効果ゼロ。連続値へ(2026-07-11 ⑮の2比1.000の修復)
   const per = (D.base + Math.floor(Math.sqrt(lv) / D.lvDiv) + (P.ws.eqFx.almanacDropPerLv || 0) * wsEqLv(sim, 'monsterAlmanac')) * dropMul * ((P.equip2 && P.equip2.dropAllMul) || 1); // ×dropAllMul(2026-07-13「素材を増やし」)
@@ -1006,7 +1042,7 @@ function quotaAtElapsed(sim, s) {
   const trial = q.trialCoef
     ? Math.pow(1 + q.trialCoef, Math.max(0, sim.run.maxStage - trialFloor))
     : 1;
-  const frost = wsBuffActive(sim, 'frostCake') ? P.ws.fx.frostGauge : 1; // 霜降りケーキ: ノルマゲージ増加×0.85(必要量減の近似)
+  const frost = (wsBuffActive(sim, 'frostCake') ? P.ws.fx.frostGauge : 1) * (1 - equip2Fx(sim).quotaSlow); // 新装備: ノルマ減速系(盾)+霜降りケーキ
   return Math.max(1, Math.floor((base * wall * trial * frost) / quotaControlMultiplier(sim)));
 }
 function monsterQuotaRequired(sim) {
@@ -1101,7 +1137,9 @@ function purgeBoosts(sim) {
   r.afterheats = r.afterheats.filter(b => b.until > sim.t);
 }
 function goldenBoostMultiplier(sim) {
-  let m = 1; for (const b of sim.run.boosts) m *= b.mult; return m;
+  let m = 1; for (const b of sim.run.boosts) m *= b.mult;
+  if (m > 1) m *= equip2Fx(sim).goldenBoostMul; // 新装備: 金ブースト系(アクセ甲)
+  return m;
 }
 function goldenBoostActive(sim) { return sim.run.boosts.length > 0; }
 function afterheatMultiplier(sim) {
@@ -1355,8 +1393,8 @@ function computeProd(sim) {
   // 討伐連鎖(第12次D・提案1採用): 倒し続けている間だけ全生産×(1+prodCoef×連鎖数)。
   // 連鎖数は討伐数に線形でしか増えない(共鳴型の雪だるまにならない)。途切れ・転生で0。
   const chainM = 1 + (P.chain ? P.chain.prodCoef * chainCount(sim) : 0);
-  const eq2M = equip2Mult(sim); // 新装備: 全生産×固定倍率(装備中の積)
-  click *= chainM * eq2M; cps *= chainM * eq2M;
+  const eqFx = equip2Fx(sim); // 新装備: 効果束(2026-07-14 全面刷新: 角度別・複合あり・486種一意)
+  click *= chainM * eqFx.allMul * eqFx.clickMul; cps *= chainM * eqFx.allMul * eqFx.cpsMul;
   // 提案13「編成の心得」(2026-07-11 承認・バランス方針限定): 4稼ぎ口のそろい具合(30秒ごとに更新の遅延値=再帰回避)
   // に応じて全生産ボーナス。u=min(1, 4×最小シェア)・倍率=1+maxBonus×u
   if (sim.skills.ensemble && policyIs(sim, 'balanced') && r._ensembleM > 1) {
@@ -1388,7 +1426,7 @@ function computeProd(sim) {
     // 会心1%開始(第9次): 開始値0.01(=会心率1.0%)+設備√+最高到達層(周回内で育つ動的項)
     const score = R.fingerBase + Math.sqrt(f) * R.fingerSqrt + (R.fingerStage || 0) * r.maxStage + policyC;
     // scoreの飽和上限6.2=会心率99.8%止まり(2026-07-11 ㉓-3「100%には到達しない」: S2の指2.8万台で100.0%到達の対策)
-    const chance = 1 - Math.exp(-Math.min(score, 6.2));
+    const chance = Math.min(0.995, (1 - Math.exp(-Math.min(score, 6.2))) + equip2Fx(sim).critAdd); // 新装備: 会心率系(㉓-3の100%到達封鎖は維持)
     critChanceOut = chance;
     let critMul = R.fingerCritBase + score * R.fingerCritGrow;
     // 段階2: 会心コンボ(期待値: 直近30秒の会心回数。キャップ撤廃済み)
@@ -1453,6 +1491,7 @@ function monsterDamage(sim, prod) {
   )
     * (wsBuffActive(sim, 'hunterStew') ? P.ws.fx.stewDmg : 1)
     * (1 + P.ws.eqFx.almanacDmgPerLv * wsEqLv(sim, 'monsterAlmanac'))
+    * equip2Fx(sim).dmgMul // 新装備: 討伐ダメージ系
     * ((r.ms && r.ms.hunt) || 1); // マイルストーン研究(第12次R5)
   return Math.max(1, Math.ceil(base * mult));
 }
@@ -1467,7 +1506,8 @@ function goldenSpawnFactor(sim) {
     - (policyIs(sim, 'golden') ? 0.12 : 0)
   ) * runTempoRamp(sim)
     * (wsBuffActive(sim, 'mintIce') ? P.ws.fx.mintIceGoldenInt : 1)
-    * ((P.ws && wsStageDef(sim).goldenIntMul) || 1);
+    * ((P.ws && wsStageDef(sim).goldenIntMul) || 1)
+    / equip2Fx(sim).goldenRateMul; // 新装備: 金出現系(アクセ甲)
 }
 function monsterSpawnFactor(sim) {
   const r = sim.run;
@@ -1489,6 +1529,7 @@ function monsterSpawnFactor(sim) {
     - rewardCategoryBonus(sim, 'hunt') * 1.0
     - (policyIs(sim, 'hunt') ? 0.10 : 0)
   ) * deep * portalHunt * runTempoRamp(sim) * ((r.ms && r.ms.spawn) || 1)
+    / (1 + Math.max(0, equip2Fx(sim).spawnMul - 1)) // 新装備: 出現短縮系
     * (wsBuffActive(sim, 'hunterStew') ? P.ws.fx.stewMonsterInt : 1)
     * (wsBuffActive(sim, 'voidTart') ? P.ws.fx.voidMonsterInt : 1);
 }
@@ -1518,7 +1559,7 @@ function monsterStayMs(sim) {
   const rewardLv = rwOff(sim, 'monsterStay') ? 0 : Math.max(0, r.perks.monsterStay || 0);
   const mult = Math.exp(rewardLv * P.monster.stayPerLv + Math.max(0, skillEffect(sim, 'monsterStay')) * 0.12
     + (policyIs(sim, 'hunt') ? 0.10 : 0) + rewardCategoryBonus(sim, 'hunt'))
-    * (r.nextMonsterStayMultiplier || 1) * ((P.ws && wsStageDef(sim).stayMul) || 1) * ((r.ms && r.ms.stay) || 1);
+    * (r.nextMonsterStayMultiplier || 1) * ((P.ws && wsStageDef(sim).stayMul) || 1) * ((r.ms && r.ms.stay) || 1) * equip2Fx(sim).stayMul; // 新装備: 滞在系
   r.nextMonsterStayMultiplier = 1;
   return Math.max(4000, P.monster.stayBase * mult);
 }
@@ -1547,7 +1588,7 @@ function goldenEarlyMul(sim) {
 // clickInstantCoef は基礎値(instantCoef)へ周回数で減衰(早期ブーストと同型・中盤以降の㉘バランスに触れない)。
 // 第0回=フル(40タップ)・半減期 earlyHalfRuns×3(≈2周回)で基礎4タップへ。
 function clickInstantCoefEff(sim) {
-  const base = P.golden.instantCoef, full = P.golden.clickInstantCoef || base;
+  const base = P.golden.instantCoef * equip2Fx(sim).goldenAmtMul, full = (P.golden.clickInstantCoef || P.golden.instantCoef) * equip2Fx(sim).goldenAmtMul; // 新装備: 金即時系
   const half = (P.golden.earlyHalfRuns || 0.7) * (P.golden.clickAnchorHalfMul || 3);
   return base + (full - base) * Math.pow(0.5, sim.prestigeRuns / half);
 }
@@ -1903,7 +1944,7 @@ function earningPower(sim) {
     // killValMul(2026-07-14 ㉘balanced中盤): 討伐1体の価値の方針係数(otherMulと同型のマップ)。
     // balanced中盤の討3-6%<10%を、討伐報酬項の本体側で方針スコープに立てる(直送は投資連動=中盤に効かないため)
     const kvPol = (P.monster.killValMul && (P.monster.killValMul[sim.run.policy] != null ? P.monster.killValMul[sim.run.policy] : P.monster.killValMul.default)) || 1;
-    power += kpsSat * base * KILL_VALUE_SEC * scarceM * kvPol + huntDirectIncome(sim, huntAnchor);
+    power += kpsSat * base * KILL_VALUE_SEC * scarceM * kvPol * equip2Fx(sim).killValMul + huntDirectIncome(sim, huntAnchor);
   }
   return power;
 }
@@ -2078,7 +2119,7 @@ function surgeHeat(sim, id) {
 }
 function upgradeCost(sim, u) {
   const owned = sim.run.upgrades[u.id];
-  const disc = Math.exp(-Math.max(0, skillEffect(sim, 'upgradeDiscount')));
+  const disc = Math.exp(-Math.max(0, skillEffect(sim, 'upgradeDiscount'))) * (1 - equip2Fx(sim).upDisc); // 新装備: 設備割引系
   // 所有数指数: knee以降は急勾配(大量買い占め抑制)
   const knee = P.upCost.knee || Infinity;
   const e = owned <= knee ? owned * P.upCost.ownPow : knee * P.upCost.ownPow + (owned - knee) * (P.upCost.ownPow2 || P.upCost.ownPow);
@@ -2088,7 +2129,7 @@ function upgradeCost(sim, u) {
   return q5cost(P.upCost.coef * Math.pow(u.base, P.upCost.basePow) * Math.pow(u.growth, e) * surge * disc);
 }
 function researchCostOf(sim, id) {
-  const disc = Math.exp(-Math.max(0, skillEffect(sim, 'researchDiscount')));
+  const disc = Math.exp(-Math.max(0, skillEffect(sim, 'researchDiscount'))) * (1 - equip2Fx(sim).resDisc); // 新装備: 研究割引系
   return q5cost(P.resCost[id] * disc);
 }
 // 研究の段階 (1=購入 / 2,3=対応スキル取得後に購入欄へカード追加→クッキーで購入して有効化)
@@ -2219,7 +2260,7 @@ function buildRewardOffer(sim, level, typeId) {
   const lvAdd = ((P.mtype && P.mtype.rewardLvAdd && P.mtype.rewardLvAdd[typeId]) || 0)
     + ((P.ws && wsStageDef(sim).rewardLvAdd) || 0);
   // 討伐連鎖(第12次D): 報酬レベル +floor(rewardCoef×連鎖数)
-  const chainLv = P.chain ? Math.floor(P.chain.rewardCoef * chainCount(sim)) : 0;
+  const chainLv = (P.chain ? Math.floor(P.chain.rewardCoef * chainCount(sim)) : 0) + Math.floor(equip2Fx(sim).rewardLvAdd); // 新装備: 報酬Lv系(アクセ乙)
   const baseCount = 1 + Math.floor((level + lvAdd + chainLv) / P.reward.lvPerCount);
   const deepBonus = Math.pow(P.rw.deepPursuitReward, rwOff(sim, 'deepPursuit') ? 0 : (r.perks.deepPursuit || 0));
   const penalty = Math.max(0, r.huntFocusRewardPenalty || 0);

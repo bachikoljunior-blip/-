@@ -1,0 +1,61 @@
+=== 期待値方式(48h・各回の稼ぎ力の持ち上げ) ===
+① 研究instant(各回≥1.2・13本) 10/13
+  OK res:fingerTechnique          S2 min=2.36
+  NG res:grandmaCrowd             取得あり・全周回≥1.2に未達(最大幾何平均4714744.08)
+  NG res:ovenBatch                取得あり・全周回≥1.2に未達(最大幾何平均1.48)
+  NG res:factoryNetwork           取得あり・全周回≥1.2に未達(最大幾何平均1.51)
+  OK res:spiceBlend               S3 min=1.24
+  OK res:portalNetwork            S8 min=1.25
+  OK res:bankClickDividend        S2 min=1.38
+  OK res:moonGlobalYeast          S8 min=17.29
+  OK res:portalGlobalFold         S8 min=1.83
+  OK res:galaxyAssembly           S7 min=1.25
+  OK res:blackHoleCompression     S1 min=5.00
+  OK res:quantumProofing          S1 min=1.25
+  OK res:antimatterRecipe         S7 min=15014416.10
+  OK res:cpsStrike(whole軸) S1 中央値比=186694.229 (n=10)
+① 研究 合計 11/14 (instant 10/13 + whole 1/1)
+③-a 報酬instant(全周回≥1.1・2026-07-13ユーザー変更) 6/8
+  NG rw:goldenRate                取得あり・全周回≥1.1に未達(最大幾何平均5.91)
+  OK rw:goldenPower               S3 min=1.20
+  OK rw:goldenAmount              S7 min=1.19
+  NG rw:monsterRate               取得あり・全周回≥1.1に未達(最大幾何平均1.19)
+  OK rw:goldenTarget              S2 min=2.26
+  OK rw:goldenFirstHit            S4 min=1.26
+  OK rw:beastHeatFerment          S4 min=34585.99
+  OK rw:huntingCore               S4 min=79336.32
+③-c 毎回取る方針の実在 17/20 NG: deepPursuit,crushedMill,goldenBeastMutation
+③ 報酬utility軸(短い枝分かれ比べ・同一状態から1周回ぶん・総クッキー比の中央値 ≥1.1)
+  OK rw:monsterDamage        S6 中央値比=1000000000.000 (n=12)
+  OK rw:monsterStay          S3 中央値比=1000000000.000 (n=12)
+  OK rw:crackedFang          S4 中央値比=1000000000.000 (n=11)
+  OK rw:brandHunt            S8 中央値比=799334.087 (n=2)
+  NG rw:deepPursuit          どの方針も未取得
+  OK rw:chainPrep            S5 中央値比=58.176 (n=8)
+  OK rw:huntFocus            S9 中央値比=1.836 (n=8)
+  OK rw:biteRecovery         S4 中央値比=1000000000.000 (n=2)
+  NG rw:crushedMill          どの方針も未取得
+  NG rw:goldenBeastMutation  どの方針も未取得
+  OK rw:goldenChain          S9 中央値比=1.462 (n=9)
+  OK rw:beastScent           S9 中央値比=1.616 (n=5)
+③ utility軸 9/12
+③ 報酬 合計 15/20 (instant 6/8 + utility 9/12)
+⑨-a 段階instant(各回≥1.05・⑬タイミング段は除外) 16/17
+  OK stage:ovenBatch:2            S5 min=1.47
+  OK stage:spiceBlend:2           S3 min=1.11
+  OK stage:fingerTechnique:2      S2 min=9.56
+  OK stage:grandmaCrowd:2         S3 min=435322.27
+  OK stage:spiceBlend:3           S8 min=1.06
+  OK stage:moonGlobalYeast:2      S4 min=2.28
+  OK stage:moonGlobalYeast:3      S9 min=1.55
+  OK stage:grandmaCrowd:3         S8 min=1.15
+  OK stage:ovenBatch:3            S5 min=1.06
+  NG stage:factoryNetwork:2       取得あり・全周回≥1.05に未達(最大幾何平均1.00)
+  OK stage:factoryNetwork:3       S2 min=1.06
+  OK stage:portalNetwork:2        S9 min=3.77
+  OK stage:portalNetwork:3        S9 min=1.06
+  OK stage:galaxyAssembly:2       S8 min=1.70
+  OK stage:portalGlobalFold:2     S9 min=5.39
+  OK stage:galaxyAssembly:3       S7 min=1.14
+  OK stage:antimatterRecipe:2     S7 min=1.17
+⑨ 段階whole軸(短い枝分かれ比べ・同一状態から1周回ぶん・総クッキー比の中央値 ≥1.05・利息/余熱)

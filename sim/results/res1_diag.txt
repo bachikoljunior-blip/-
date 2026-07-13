@@ -1,0 +1,2 @@
+grandmaCrowd 最良方針 S4 min 1.007 NG: run0=1.01
+ovenBatch 最良方針 S5 min 1.022 NG: run0=1.04 run14=1.05 run15=1.06 run16=1.08 run17=1.05 run18=1.04
