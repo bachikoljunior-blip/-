@@ -202,6 +202,9 @@ function nextTargetSkillCost(sim) {
   }
   return cheapestNextSkillCost(sim);
 }
+// 転生床1200秒(2026-07-14 T1序盤クラスタ対策): 「20分は育ててから転生」= T1下限そのもの。
+// 序盤周回(run1-4)が2-14分で終わるのは金の序盤ブースト+安い序盤段の複合で、梯子側(tune)では
+// 押し込めなかった(FAIL:0->1)。全方針の最低経過時間を120-180→1200秒へ。
 function prestigeWhen(minElapsedSec, gainFactor) {
   // 「この周回の獲得予定PTだけで、次に欲しいスキルのコストに届いたら転生」
   // 目標の単調化(2026-07-14 ④修復の恒久解): 目標 = max(次スキル束, 前回目標×1.57)。
@@ -232,7 +235,7 @@ const STRATEGIES = [
     pickPolicy: sim => 'bake',
     buy: standardBuy(0.30, 0.25),
     pickReward: pickRewardAffinityAware(['beastHeatFerment', 'goldenAmount', 'monsterDamage', 'huntingCore', 'goldenRate', 'monsterRate', 'goldenPower', 'crackedFang', 'monsterStay']),
-    shouldPrestige: prestigeWhen(120, 1.2),
+    shouldPrestige: prestigeWhen(1200, 1.2),
     skillOrder: cheapestFirst
   },
   {
@@ -262,7 +265,7 @@ const STRATEGIES = [
       buyAllResearch(sim, 0.20);
     },
     pickReward: pickRewardByPriority(['monsterDamage', 'crackedFang', 'goldenAmount', 'goldenTarget', 'brandHunt', 'goldenRate', 'beastHeatFerment']),
-    shouldPrestige: prestigeWhen(120, 1.0),
+    shouldPrestige: prestigeWhen(1200, 1.0),
     skillOrder: skillOrderByBranch(['core', 'click', 'golden', 'economy', 'research', 'monster', 'auto', 'upgrade', 'reward', 'start', 'master'])
   },
   {
@@ -287,7 +290,7 @@ const STRATEGIES = [
       buyAllResearch(sim, 0.25);
     },
     pickReward: pickRewardSkipEarly(['goldenRate'], 2, pickRewardByPriority(['goldenRate', 'goldenPower', 'goldenAmount', 'beastScent', 'goldenChain', 'goldenTarget', 'goldenFirstHit', 'beastHeatFerment'])),
-    shouldPrestige: prestigeWhen(120, 1.2),
+    shouldPrestige: prestigeWhen(1200, 1.2),
     skillOrder: skillOrderByBranch(['core', 'golden', 'click', 'economy', 'research', 'auto', 'monster', 'upgrade', 'reward', 'start', 'master'])
   },
   {
@@ -307,7 +310,7 @@ const STRATEGIES = [
       buyAllResearch(sim, 0.30);
     },
     pickReward: pickRewardOncePerRunFirst(['biteRecovery'], pickRewardByPriority(['monsterRate', 'monsterDamage', 'beastHeatFerment', 'huntingCore', 'crackedFang', 'monsterStay', 'chainPrep', 'biteRecovery'])),
-    shouldPrestige: prestigeWhen(120, 1.2),
+    shouldPrestige: prestigeWhen(1200, 1.2),
     skillOrder: skillOrderByBranch(['core', 'monster', 'auto', 'economy', 'research', 'reward', 'click', 'golden', 'upgrade', 'start', 'master'])
   },
   {
@@ -332,7 +335,7 @@ const STRATEGIES = [
       buyAllResearch(sim, 0.80);
     },
     pickReward: pickRewardUpgradeFirst(['beastHeatFerment', 'goldenAmount', 'monsterDamage', 'goldenRate']),
-    shouldPrestige: prestigeWhen(180, 2.0),
+    shouldPrestige: prestigeWhen(1200, 2.0),
     skillOrder: skillOrderByBranch(['core', 'economy', 'research', 'auto', 'upgrade', 'click', 'golden', 'monster', 'reward', 'start', 'master'])
   },
   {
@@ -342,7 +345,7 @@ const STRATEGIES = [
     pickPolicy: sim => 'balanced',
     buy: standardBuy(0.30, 0.30),
     pickReward: pickRewardAffinityAware(['goldenAmount', 'monsterDamage', 'beastHeatFerment', 'goldenRate', 'monsterRate']),
-    shouldPrestige: prestigeWhen(120, 1.0),
+    shouldPrestige: prestigeWhen(1200, 1.0),
     skillOrder: cheapestFirst
   },
   {
@@ -353,7 +356,7 @@ const STRATEGIES = [
     buy: standardBuy(0.35, 0.25),
     pickReward: pickRewardAffinityAware(['huntingCore', 'beastHeatFerment', 'goldenAmount', 'monsterDamage', 'goldenPower', 'goldenRate']),
     // 転生は「次スキルコストの4倍」を貯めてから(まとめ買い派)。最短600秒。
-    shouldPrestige: prestigeWhen(180, 4.0),
+    shouldPrestige: prestigeWhen(1200, 4.0),
     skillOrder: cheapestFirst
   },
   {
@@ -376,7 +379,7 @@ const STRATEGIES = [
       buyAllResearch(sim, 0.22);
     },
     pickReward: pickRewardUpgradeFirst(['monsterDamage', 'beastHeatFerment', 'goldenAmount']),
-    shouldPrestige: prestigeWhen(150, 1.5),
+    shouldPrestige: prestigeWhen(1200, 1.5),
     skillOrder: skillOrderByBranch(['core', 'economy', 'auto', 'upgrade', 'research', 'monster', 'click', 'golden', 'reward', 'start', 'master'])
   },
   {
@@ -403,7 +406,7 @@ const STRATEGIES = [
       const gain = G.prestigeGainOf(sim.run.runCookies);
       const next = cheapestNextSkillCost(sim);
       if (next === null) return false;
-      if ((sim.t - sim.run.startT) < 120) return false;
+      if ((sim.t - sim.run.startT) < 1200) return false;
       if (sim.run.cookies < G.prestigeCostOf(sim)) return false; // 転生には所持クッキー(10のべき乗・前回より大)が必要
       const target = Math.max(next, (sim._prTarget || 0) * 1.57);
       const factor = sim.run.quotaFailed ? 1.0 : 1.5;

@@ -213,7 +213,9 @@ module.exports = {
     factorySelf: 14, factoryLow: 0.002, factoryOwn: 0.026, // ①factory再係留2回目(2026-07-14: コスト100万はユーザー固定のため効果側で)
     // 量産波及(2026-07-14 ①後半希釈対策): 研究ゲート付きの全生産×(1+係数)^台数。
     // 後半周回(台数2500-3300)で×1.6-1.9=lift受け皿・序盤(台数40-90)は≈1.01で無害。
-    ovenGlobal: 0.0002, factoryGlobal: 0.0002,
+    // 0.0002→0.00012(2026-07-14 R20: 全体項が設備収入を押し上げ②改2のbake2.66>帯2.57・balanced5/29に。
+    // ①の後半liftは1.00012^2600=1.37で維持)
+    ovenGlobal: 0.00012, factoryGlobal: 0.00012,
     spiceOwn: 0.032, spiceGold: 7, spiceGoldOwn: 0.006, spiceGoldDur: 30000,
     // 狩り窓(2026-07-09 ⑬作り替え): 窓は討伐が開く・維持する(金クッキー非関与)。portalHuntDur/Grow は旧・金開窓用=現在未使用(移植時に削除)。
     // portalHuntSpawnBase=窓に関係ない常時スポーン加速(研究解放中)/ portalHuntSpawn=窓中の追加加速(⑬延長狩りのコントラスト)。
