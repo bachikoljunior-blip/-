@@ -4907,6 +4907,16 @@
     .monsterInstance .cookieMonsterButton { filter: hue-rotate(var(--mtype-hue, 0deg)); }
     /* ノルマ層の色帯: 討伐で落ちる色素材のオーラ(種類色とは別チャンネル) */
     .monsterInstance .cookieMonsterButton { filter: hue-rotate(var(--mtype-hue, 0deg)) drop-shadow(0 0 10px var(--layer-ore-color, transparent)); }
+    /* 新装備の作成欄(2026-07-13): 全体1/2幅・左=装備・中=必要物(画像+分数)・右=作成ボタン。背景画像なし */
+    .eq2CraftBox { width: 50%; min-width: 320px; }
+    .eq2CraftRow { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-bottom: 1px solid rgba(255,255,255,0.12); }
+    .eq2CraftRow .eq2CraftItem { flex: 1 1 auto; display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .eq2CraftRow .eq2CraftItem img { width: 34px; height: 34px; object-fit: contain; }
+    .eq2Needs { display: flex; gap: 4px; flex: 0 0 auto; }
+    .eq2Need { display: flex; flex-direction: column; align-items: center; font-size: 11px; border: 1px solid rgba(255,255,255,0.18); border-radius: 6px; padding: 2px 4px; }
+    .eq2Need img { width: 22px; height: 22px; object-fit: contain; }
+    .eq2CraftBtn { flex: 0 0 auto; width: auto; padding: 8px 14px; }
+    @media (max-width: 700px) { .eq2CraftBox { width: 100%; } }
     .monsterInstance.mtype-swarm {
       width: 116px;
     }
@@ -5406,6 +5416,7 @@
     <button class="tab" data-tab="researchTab">研究</button>
     <button class="tab" data-tab="prestigeTab">?</button>
     <button class="tab" data-tab="orderTab">?</button>
+    <button class="tab" data-tab="equipTab">装備</button>
     <button class="tab" data-tab="workshopTab">?</button>
     <button class="tab" data-tab="infoTab">一覧</button>
   </nav>
@@ -5455,6 +5466,13 @@
       </div>
       <button id="backToTitleBtn" type="button" class="backToTitleBtn">タイトル画面に戻る</button>
       <div id="infoPanel" class="pageScroll"></div>
+    </section>
+
+    <section id="equipTab" class="tabPage">
+      <div class="tabPageHead" data-full-target="equipTab">
+        <h2>装備</h2>
+      </div>
+      <div id="equipPanel" class="pageScroll"></div>
     </section>
 
     <section id="workshopTab" class="tabPage">
@@ -8378,8 +8396,16 @@ function renderOrder() {
   const box = $("orderPanel");
   if (!box) return;
 
+  // 固定クエスト(2026-07-13): 注文ボードに常設表示。達成で次のステージ解放+次のクエスト表示。
+  // 制限時間なし・内容固定・進捗は周回を跨いで累積。
+  const questBoxHtml = `
+    <div class="infoBox orderBoardBox">
+      <h3>固定クエスト</h3>
+      <div class="desc">${currentQuestText()}</div>
+    </div>`;
+
   if (!orderBoardUnlocked()) {
-    box.innerHTML = `
+    box.innerHTML = questBoxHtml + `
       <div class="infoBox orderBoardBox">
         <h3>？？？</h3>
         <div class="desc">まだ解放されていない機能です。ゲームを進めると解放されます。</div>
@@ -8419,7 +8445,7 @@ function renderOrder() {
   const remainSec = Math.ceil(remainMs / 1000);
   const timeClass = remainMs <= 30000 ? " orderTimeFill--low" : "";
 
-  box.innerHTML = `
+  box.innerHTML = questBoxHtml + `
     <div class="infoBox orderBoardBox">
       <h3>注文ボード</h3>
       <div class="desc">短期の依頼が1件ずつ届く。要求・報酬は今の生産に合わせて決まる。制限時間内に達成で報酬、時間切れは次の注文へ。選び直しは不可。</div>
@@ -9155,14 +9181,109 @@ function grantMonsterDrops(typeId, level, overkill) {
 
 // ==== 工房タブの描画 ====
 function renderWorkshop() {
+// ==== 新装備システム: ヘルパ・タブ描画・作成(2026-07-13) ====
+// 画像: 既存装備画像をカテゴリに割当て、ティアでhue回転(「画像のないものは既存のものを色を変えてつかう」)
+const EQUIP2_ART = { weapon: "goldenWhisk", shield: "masterTray", armorTop: "ovenMitt", armorBottom: "pressExtractor",
+  hands: "ovenMitt", hat: "stillFlask", shoes: "dimensionCompass", accessory: "monsterAlmanac" };
+function equip2Art(it) { return (ASSETS.equipment && ASSETS.equipment[EQUIP2_ART[it.cat]]) || ASSETS.objects.cookieMonster; }
+function equip2Hue(it) { return ((it.tier - 1) * 55 + (it.id.includes("_b_") ? 30 : 0)); }
+// 色素材は上位が下位を代替(sim同期)
+function equip2OreHave(tier) { let n = 0; for (let t = tier; t <= EQUIP2_CFG.tiers; t++) n += materialCount("ore_t" + t); return n; }
+function equip2HaveOf(matId) { const m = /^ore_t(\d+)$/.exec(matId); return m ? equip2OreHave(Number(m[1])) : materialCount(matId); }
+function equip2Afford(it) {
+  if (it.prev && (state.eq2Owned[it.prev] || 0) < 1) return false;
+  for (const k in it.cost) if (equip2HaveOf(k) < it.cost[k]) return false;
+  return true;
+}
+function equip2CraftableNow(it) { return it.tier <= Math.min(EQUIP2_CFG.tiers, currentStageNo()); }
+function craftEquip2(id) {
+  const it = equip2ById(id);
+  if (!it || !equip2Afford(it) || !equip2CraftableNow(it)) return;
+  // 消費(色素材は低い方から充当)
+  for (const k in it.cost) {
+    const m = /^ore_t(\d+)$/.exec(k);
+    if (!m) { state.materials[k] = Math.max(0, materialCount(k) - it.cost[k]); continue; }
+    let need = it.cost[k];
+    for (let t = Number(m[1]); t <= EQUIP2_CFG.tiers && need > 0; t++) {
+      const key = "ore_t" + t, have = materialCount(key), used = Math.min(have, need);
+      state.materials[key] = have - used; need -= used;
+    }
+  }
+  let upgradedSlot = null;
+  if (it.prev) {
+    state.eq2Owned[it.prev] = Math.max(0, (state.eq2Owned[it.prev] || 0) - 1);
+    for (const sl of EQUIP2_SLOTS) if (state.eq2Equipped[sl] === it.prev && (state.eq2Owned[it.prev] || 0) === 0) { upgradedSlot = sl; break; }
+  }
+  state.eq2Owned[it.id] = (state.eq2Owned[it.id] || 0) + 1;
+  state.eq2MadeThisRun[it.cat] = (state.eq2MadeThisRun[it.cat] || 0) + 1;
+  if (upgradedSlot) state.eq2Equipped[upgradedSlot] = it.id; // 合成で消えた装備の枠は新装備に置き換え
+  dropMat(`${it.name} を作成！`);
+  playSound("buy");
+  saveGame(); renderActiveTab(); updateTopOnly();
+}
+function equip2SlotLabel(slot) { return slot === "acc1" ? "アクセ1" : slot === "acc2" ? "アクセ2" : EQUIP2_CAT_NAMES[slot]; }
+function equipItemToSlot(itemId, slot) {
+  const it = equip2ById(itemId);
+  if (!it) return;
+  const slots = it.cat === "accessory" ? ["acc1", "acc2"] : [it.cat];
+  if (!slots.includes(slot)) return;
+  if (it.cat === "accessory") { const other = slot === "acc1" ? "acc2" : "acc1"; if (state.eq2Equipped[other] === itemId) return; }
+  state.eq2Equipped[slot] = itemId;
+  playSound("buy"); saveGame(); renderEquip2Tab(); updateTopOnly();
+}
+let equip2SubTab = "equipped"; // equipped | owned | mats
+let equip2ChoosingSlot = null;
+function renderEquip2Tab() {
+  const box = $("equipPanel");
+  if (!box) return;
+  const sub = equip2SubTab;
+  const tabBar = `
+    <div class="buyModeBar" style="margin-bottom:8px">
+      <button class="item ${sub === "equipped" ? "canBuy" : ""}" data-eq2sub="equipped" style="width:auto;padding:6px 14px">装備中</button>
+      <button class="item ${sub === "owned" ? "canBuy" : ""}" data-eq2sub="owned" style="width:auto;padding:6px 14px">所持装備</button>
+      <button class="item ${sub === "mats" ? "canBuy" : ""}" data-eq2sub="mats" style="width:auto;padding:6px 14px">所持素材</button>
+    </div>`;
+  let body = "";
+  if (sub === "equipped") {
+    body = `<div class="desc">全生産 ×${fmt(equip2Mult())}(装備合計)</div>` + EQUIP2_SLOTS.map(slot => {
+      const id = state.eq2Equipped[slot];
+      const it = id ? equip2ById(id) : null;
+      const choosing = equip2ChoosingSlot === slot;
+      let chooser = "";
+      if (choosing) {
+        const cat = slot.startsWith("acc") ? "accessory" : slot;
+        const cands = equip2Items().filter(x => x.cat === cat && (state.eq2Owned[x.id] || 0) > 0);
+        chooser = cands.length
+          ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">` + cands.map(c =>
+              `<button class="item canBuy" data-eq2equip="${c.id}" data-eq2slot="${slot}" style="width:auto;padding:4px 10px"><img class="matIcon" src="${assetUrl(equip2Art(c))}" style="filter:hue-rotate(${equip2Hue(c)}deg)" alt="">${c.name}(×${fmt(c.mult)})</button>`).join("") + `</div>`
+          : `<div class="desc">所持している${EQUIP2_CAT_NAMES[cat]}がない</div>`;
+      }
+      return `<div class="infoRow"><b>${equip2SlotLabel(slot)}</b>:
+        <button class="item ${it ? "canBuy" : ""}" data-eq2choose="${slot}" style="width:auto;padding:4px 10px">
+          ${it ? `<img class="matIcon" src="${assetUrl(equip2Art(it))}" style="filter:hue-rotate(${equip2Hue(it)}deg)" alt="">${it.name}(全生産×${fmt(it.mult)})` : "なし(押して装備)"}
+        </button>${chooser}</div>`;
+    }).join("");
+  } else if (sub === "owned") {
+    body = EQUIP2_CATS.map(cat => {
+      const rows = equip2Items().filter(x => x.cat === cat && (state.eq2Owned[x.id] || 0) > 0)
+        .map(x => `<div class="infoRow"><img class="matIcon" src="${assetUrl(equip2Art(x))}" style="filter:hue-rotate(${equip2Hue(x)}deg)" alt=""><b>${x.name}</b> ×${fmt(state.eq2Owned[x.id])} / 効果: 全生産×${fmt(x.mult)}(固定値)</div>`).join("");
+      return `<h3>${EQUIP2_CAT_NAMES[cat]}</h3>` + (rows || `<div class="desc">未所持</div>`);
+    }).join("");
+  } else {
+    body = MATERIALS.filter(m => materialSeen(m.id) || /^ore_t/.test(m.id) && materialCount(m.id) > 0)
+      .map(m => `<div class="infoRow"><img class="matIcon" src="${assetUrl(ASSETS.materials[m.id] || ASSETS.materials.butter)}" ${/^ore_t/.test(m.id) ? `style="filter:hue-rotate(${(Number(m.id.slice(-1)) - 1) * 60}deg)"` : ""} alt=""><b>${m.name}</b> ×${fmt(materialCount(m.id))}</div>`).join("")
+      || `<div class="desc">まだ素材がない</div>`;
+  }
+  box.innerHTML = tabBar + body;
+  box.querySelectorAll("[data-eq2sub]").forEach(b => b.onclick = () => { equip2SubTab = b.dataset.eq2sub; equip2ChoosingSlot = null; renderEquip2Tab(); });
+  box.querySelectorAll("[data-eq2choose]").forEach(b => b.onclick = () => { equip2ChoosingSlot = equip2ChoosingSlot === b.dataset.eq2choose ? null : b.dataset.eq2choose; renderEquip2Tab(); });
+  box.querySelectorAll("[data-eq2equip]").forEach(b => b.onclick = () => { equip2ChoosingSlot = null; equipItemToSlot(b.dataset.eq2equip, b.dataset.eq2slot); });
+}
+
   const box = $("workshopPanel");
   if (!box) return;
 
-  if (!workshopTabUnlocked()) {
-    box.innerHTML = `<div class="desc">スキル「素材の嗅覚」を取得すると解放される</div>`;
-    box.dataset.sig = workshopStructSig();
-    return;
-  }
+  // 旧・全体ゲートは撤廃(2026-07-13): 装備の作成は最初から使える。料理だけ既存スキルで解放
 
   const now = Date.now();
   const active = activeDishList();
@@ -9180,35 +9301,7 @@ function renderWorkshop() {
       </button>`;
   }).join("");
 
-  const equipCards = EQUIPMENT.map(eq => {
-    const lv = equipLv(eq.id);
-    const maxLv = equipMaxLv(eq.id);
-    const ascend = equipAscendCount(eq.id);
-    const ascendNote = ascend > 0 ? ` / 限界突破${ascend}回` : "";
-
-    if (lv >= maxLv) {
-      // v2: Lv上限到達後は「限界突破」ボタン(任意ボス核+虚空糖でLv上限+5、回数無制限)
-      const aCost = equipmentAscendCost(eq.id);
-      const canAscend = canAffordMaterials(aCost) && !pausedForSkillChoice();
-
-      return `
-        <button class="item artCard workshopCard hasArtImage ${canAscend ? "canBuy" : ""}" data-ascend="${eq.id}" style="--art-img:url('${assetUrl(ASSETS.equipment[eq.id])}')">
-          <b>${eq.name} Lv.${lv}(上限${maxLv}${ascendNote})— 限界突破</b>
-          <div class="price">${materialCostText(aCost)}</div>
-          <div class="desc">現在：${eq.effect(lv)} / 突破するとLv上限が${maxLv + 5}になる</div>
-        </button>`;
-    }
-
-    const cost = equipmentCost(eq, lv);
-    const can = canAffordMaterials(cost) && !pausedForSkillChoice();
-
-    return `
-      <button class="item artCard workshopCard hasArtImage ${can ? "canBuy" : ""}" data-equip="${eq.id}" style="--art-img:url('${assetUrl(ASSETS.equipment[eq.id])}')">
-        <b>${eq.name} Lv.${lv} → Lv.${lv + 1}(上限${maxLv}${ascendNote})</b>
-        <div class="price">${materialCostText(cost)}</div>
-        <div class="desc">現在：${lv > 0 ? eq.effect(lv) : "未作成"} / 次：${eq.effect(lv + 1)}</div>
-      </button>`;
-  }).join("");
+  // 旧装備(EQUIPMENT)は廃止(2026-07-13)=カード生成なし
 
   const matRows = MATERIALS
     .filter(m => materialSeen(m.id))
@@ -9227,39 +9320,54 @@ function renderWorkshop() {
     return `<div class="infoRow"><img class="matIcon" src="${assetUrl(ASSETS.monsters[typeId] || ASSETS.objects.cookieMonster)}" alt="" aria-hidden="true" loading="lazy"><b>${type.name}</b> 累計${fmt(c)}体 / 次の記録 ${fmt(next)}体 / 記録${m}段：${bonus}</div>`;
   }).join("");
 
-  // v2: 「作成」(装備)はworkshop_2(工房の拡張)取得で解放
-  const craftSection = workshopCraftUnlocked()
-    ? `
-    <div class="infoBox">
-      <h3>作成(永続装備)</h3>
-      ${equipCards}
-    </div>`
-    : `
-    <div class="infoBox">
-      <h3>作成</h3>
-      <div class="desc">スキル「工房の拡張」を取得すると装備の作成が解放される</div>
+  // 新装備の作成欄(2026-07-13 ユーザー指定レイアウト): 全体は従来の1/2幅。
+  // 左=作れる装備(欄いっぱい)・横=必要なもの(画像+「所持/必要」の分数・少し小さめ)・右=作成ボタン。
+  // 発見式: 素材が一度揃ったレシピ(state.eq2Seen)は素材が無くなっても表示が消えない。背景画像は使わない。
+  for (const it of equip2Items()) { if (!state.eq2Seen[it.id] && equip2CraftableNow(it) && equip2Afford(it)) state.eq2Seen[it.id] = true; }
+  const craftRows = equip2Items().filter(it => state.eq2Seen[it.id] && equip2CraftableNow(it)).map(it => {
+    const needs = [];
+    if (it.prev) {
+      const pv = equip2ById(it.prev);
+      needs.push(`<div class="eq2Need"><img src="${assetUrl(equip2Art(pv))}" style="filter:hue-rotate(${equip2Hue(pv)}deg)" alt=""><span>${Math.min(1, state.eq2Owned[it.prev] || 0)}/1</span></div>`);
+    }
+    for (const k in it.cost) {
+      const mat = getMaterial(k) || { name: k };
+      const hue = /^ore_t/.test(k) ? (Number(k.slice(-1)) - 1) * 60 : 0;
+      needs.push(`<div class="eq2Need"><img src="${assetUrl(ASSETS.materials[k] || ASSETS.materials.butter)}" style="filter:hue-rotate(${hue}deg)" alt=""><span>${fmt(Math.min(equip2HaveOf(k), it.cost[k]))}/${it.cost[k]}</span></div>`);
+    }
+    const can = equip2Afford(it) && !pausedForSkillChoice();
+    return `
+      <div class="eq2CraftRow">
+        <div class="eq2CraftItem"><img src="${assetUrl(equip2Art(it))}" style="filter:hue-rotate(${equip2Hue(it)}deg)" alt=""><b>${it.name}</b><span class="desc">全生産×${fmt(it.mult)}(固定値)</span></div>
+        <div class="eq2Needs">${needs.join("")}</div>
+        <button class="item eq2CraftBtn ${can ? "canBuy" : ""}" data-eq2craft="${it.id}">作成</button>
+      </div>`;
+  }).join("");
+  const questBox = `<div class="infoBox"><h3>固定クエスト</h3><div class="desc">${currentQuestText()}</div></div>`;
+  const craftSection = `
+    <div class="infoBox eq2CraftBox">
+      <h3>装備の作成(最初から使える)</h3>
+      ${craftRows || `<div class="desc">素材が揃うとレシピが並ぶ(モンスターの色素材+ステージ素材)</div>`}
     </div>`;
+  // 料理は既存の工房スキル解放のまま。装備と料理は工房タブ内で別タブ(2026-07-13)
+  const wsSub = state.wsSubTab === "dish" ? "dish" : "equip";
+  const subBar = `
+    <div class="buyModeBar" style="margin-bottom:8px">
+      <button class="item ${wsSub === "equip" ? "canBuy" : ""}" data-wssub="equip" style="width:auto;padding:6px 14px">装備</button>
+      <button class="item ${wsSub === "dish" ? "canBuy" : ""}" data-wssub="dish" style="width:auto;padding:6px 14px">料理</button>
+    </div>`;
+  const dishSection = workshopTabUnlocked()
+    ? `<div class="infoBox"><h3>料理(時限バフ・最大${MAX_ACTIVE_DISHES}品)</h3>${dishCards || `<div class="desc">素材を集めるとレシピが並ぶ</div>`}</div>`
+    : `<div class="infoBox"><h3>料理</h3><div class="desc">スキル「素材の嗅覚」を取得すると解放される</div></div>`;
+  box.innerHTML = subBar + questBox + (wsSub === "equip"
+    ? `${craftSection}
+      <div class="infoBox"><h3>素材庫</h3><div class="desc">${materialDropGuideHtml()}${materialSeen("omniFlour") ? "<br>標準方針の万能粉は不足素材の代用(核は不可)。" : ""}</div>${matRows}</div>`
+    : `${dishSection}
+      <div class="infoBox"><h3>記録(討伐マイルストーン)</h3>${recordRows}</div>`);
 
-  box.innerHTML = `
-    <div class="infoBox">
-      <h3>料理(時限バフ・最大${MAX_ACTIVE_DISHES}品)</h3>
-      ${dishCards || `<div class="desc">素材を集めるとレシピが並ぶ</div>`}
-    </div>
-    ${craftSection}
-    <div class="infoBox">
-      <h3>素材庫</h3>
-      <div class="desc">${materialDropGuideHtml()}${materialSeen("omniFlour") ? "<br>標準方針の万能粉は不足素材の代用(核は不可)。" : ""}</div>
-      ${matRows}
-    </div>
-    <div class="infoBox">
-      <h3>記録(討伐マイルストーン)</h3>
-      ${recordRows}
-    </div>
-  `;
-
+  box.querySelectorAll("[data-wssub]").forEach(b => b.onclick = () => { state.wsSubTab = b.dataset.wssub; renderWorkshop(); });
   box.querySelectorAll("[data-dish]").forEach(btn => addTap(btn, () => cookDish(btn.dataset.dish)));
-  box.querySelectorAll("[data-equip]").forEach(btn => addTap(btn, () => craftEquipment(btn.dataset.equip)));
-  box.querySelectorAll("[data-ascend]").forEach(btn => addTap(btn, () => ascendEquipment(btn.dataset.ascend)));
+  box.querySelectorAll("[data-eq2craft]").forEach(btn => addTap(btn, () => craftEquip2(btn.dataset.eq2craft)));
   box.dataset.sig = workshopStructSig();
 }
 
@@ -13613,6 +13721,7 @@ function renderActiveTab() {
   if (activeTab === "orderTab") renderOrder();
   if (activeTab === "infoTab") renderInfo();
   if (activeTab === "workshopTab") renderWorkshop();
+  if (activeTab === "equipTab") renderEquip2Tab();
   maskSkillWordIfPreFirstPrestige();
 }
 
@@ -14079,6 +14188,11 @@ function prestigeReset() {
   const keepStageUnlocked = Math.max(1, Math.min(MAX_STAGE_NO, Math.floor(Number(state.stageUnlocked) || 1)));
   const keepDeepLayer = Math.max(1, Math.floor(Number(state.deepLayer) || 1));
   const keepStageKills = { ...(state.stageKills || {}) };
+  // 新装備+固定クエスト(2026-07-13): 所持・装備中・発見レシピ・クエスト進捗は転生持ち越し。周回内作成カウントだけリセット
+  const keepEq2Owned = { ...(state.eq2Owned || {}) };
+  const keepEq2Equipped = { ...(state.eq2Equipped || {}) };
+  const keepEq2Seen = { ...(state.eq2Seen || {}) };
+  const keepQuestKills = { ...(state.questKills || {}) };
   const keepBossKills = { ...(state.bossKills || {}) };
   const keepTotalPlaySec = Math.max(0, Number(state.totalPlaySec) || 0);
   const keepMaxQuotaStageEver = Math.max(1, Math.floor(Number(state.maxQuotaStageEver) || 1));
@@ -14120,6 +14234,11 @@ function prestigeReset() {
   state.killRecords = keepKillRecords;
   state.workshopUnlocked = keepWorkshopUnlocked;
   state.stageUnlocked = keepStageUnlocked;
+  state.eq2Owned = keepEq2Owned;
+  state.eq2Equipped = keepEq2Equipped;
+  state.eq2Seen = keepEq2Seen;
+  state.questKills = keepQuestKills;
+  state.eq2MadeThisRun = {};
   state.deepLayer = keepDeepLayer;
   state.stageKills = keepStageKills;
   state.bossKills = keepBossKills;
