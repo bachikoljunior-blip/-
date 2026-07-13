@@ -608,6 +608,19 @@ const WS_EQ_PREF = {
 // レシピ=前ティア同カテゴリ装備1個+素材(1〜5種の枠内)。一度表示(素材が揃った)されたレシピは消えない。
 const EQUIP2_SLOTS = ['weapon', 'shield', 'armorTop', 'armorBottom', 'hands', 'hat', 'shoes', 'accA', 'accB'];
 const EQUIP2_CATS = ['weapon', 'shield', 'armorTop', 'armorBottom', 'hands', 'hat', 'shoes', 'accA', 'accB']; // アクセは2カテゴリ(甲/乙)=9カテゴリ×各54種(2026-07-14)
+// カテゴリの素材パレット(2026-07-14 特色レシピ): 武器=戦闘系素材・アクセ甲=金系…とカテゴリで顔が違う
+// 並びは入手時期順(先頭=序盤素材)。ティアtで使えるのは先頭からmax(1,t-1)種まで=低ティアは序盤素材のみ
+const EQUIP2_MAT_PALETTE = {
+  weapon: ['flour', 'lavaSugar', 'ironShard', 'silentCore'],
+  shield: ['butter', 'ironShard', 'frostSugar', 'silentCore'],
+  armorTop: ['butter', 'flour', 'cacao', 'stardust'],
+  armorBottom: ['flour', 'lavaSugar', 'spice', 'cometShard'],
+  hands: ['butter', 'ironShard', 'mint', 'goldDust'],
+  hat: ['flour', 'mint', 'frostSugar', 'stardust'],
+  shoes: ['butter', 'lavaSugar', 'silentCore', 'cometShard'],
+  accA: ['flour', 'goldDust', 'spice', 'stardust'],
+  accB: ['butter', 'mint', 'silentCore', 'goldDust']
+};
 let EQUIP2_ITEMS = null, EQUIP2_BY_ID = null;
 function equip2Items() {
   if (EQUIP2_ITEMS) return EQUIP2_ITEMS;
@@ -635,10 +648,20 @@ function equip2Items() {
         const stDef = P.ws.stages[Math.min(st1, P.ws.stages.length) - 1];
         const smatA = (stDef.c && stDef.c[0]) || 'butter';
         const smatB = (stDef.c && stDef.c[1]) || smatA;
-        const cost = { ['ore_t' + t]: E.oreNeed };
-        // 副素材は主ステージの素材(v1=色素材のみ)
-        if (v >= 2 && t >= 2) { const m = v <= 5 ? smatA : smatB; cost[m] = (cost[m] || 0) + E.stageMatNeed; }
-        if (v >= 6) cost['ore_t' + t] += 1;
+        // 特色レシピ(2026-07-14 ユーザー指示「必要素材もそれぞれ特色のあるように。おんなじようなのばっかにしない」):
+        // v1=色素材のみ(色と個数は品で変化・全ステージ作成保証の土台)。v2+はカテゴリの素材パレット+
+        // ステージ素材+色素材を、種類数1〜5・個数1〜6のパターンで組む。レア(ボス核/虚空糖)は高ティアの隠し味。
+        const PAL = EQUIP2_MAT_PALETTE[cat];
+        const oreTier = Math.max(1, Math.min(E.tiers, t + ((v % 3) - 1))); // 色素材の色も品で変える
+        const cost = { ['ore_t' + oreTier]: 2 + ((t + v) % 4) }; // 個数2〜5
+        if (v >= 2) {
+          const span = Math.max(1, Math.min(PAL.length, t - 1)); // ティアで素材解禁(t1-2=序盤素材のみ)
+          const m1 = PAL[(v + t) % span];
+          cost[m1] = (cost[m1] || 0) + 1 + ((v * t) % 5); // 個数1〜5
+          if (v >= 4 && t >= 3) { const m2 = PAL[(v + t + 2) % span]; if (m2 !== m1) cost[m2] = (cost[m2] || 0) + 1 + ((v + t) % 3); }
+          if (v >= 7 && t >= 3) { const m3 = v % 2 === 0 ? smatA : smatB; cost[m3] = (cost[m3] || 0) + 2; }
+          if (v === 9 && t >= 5) cost[t === 6 ? 'voidSugar' : 'bossCore'] = 1 + (t === 6 ? 1 : 0); // 最高級の隠し味
+        }
         EQUIP2_ITEMS.push({ id, cat, tier: t, variant: v, stages, stageNo: st1, prev: t > 1 ? `${cat}_t${t - 1}_v${v}` : null, cost });
       }
     }
@@ -658,10 +681,16 @@ function equip2Items() {
   // 保証: 各(ステージ,カテゴリ)に作成可能アイテム≥2(毎周回全カテゴリ作成の成立条件)
   for (let st = 1; st <= E.tiers; st++) {
     for (const cat of EQUIP2_CATS) {
+      // 色素材のみ(v1)の品を各(ステージ,カテゴリ)に必ず置く(≥2判定より先=序盤でも毎周回全カテゴリが立つ)
+      if (!EQUIP2_ITEMS.some(it => it.cat === cat && it.variant === 1 && it.stages.includes(st))) {
+        const v1s = EQUIP2_ITEMS.filter(it => it.cat === cat && it.variant === 1)
+          .sort((a, b) => Math.abs(a.tier - st) - Math.abs(b.tier - st));
+        if (v1s[0]) v1s[0].stages.push(st);
+      }
       const have = EQUIP2_ITEMS.filter(it => it.cat === cat && it.stages.includes(st));
       if (have.length >= 2) continue;
       const cands = EQUIP2_ITEMS.filter(it => it.cat === cat && !it.stages.includes(st))
-        .sort((a, b) => Math.abs(a.tier - st) - Math.abs(b.tier - st));
+        .sort((a, b) => ((a.variant === 1 ? 0 : 1) - (b.variant === 1 ? 0 : 1)) || (Math.abs(a.tier - st) - Math.abs(b.tier - st)));
       for (let k = 0; k < cands.length && have.length + k < 2; k++) cands[k].stages.push(st);
     }
   }
@@ -773,15 +802,18 @@ function equip2Tick(sim) {
     if (!it.stages.includes(curStage)) continue;
     const cap = 1; // 9カテゴリ各1個/周回(アクセは甲/乙で別カテゴリ)
     if (((r.eq2Made && r.eq2Made[it.cat]) || 0) >= cap) continue;
-    const havePrev = it.prev ? ((ws.eq2Owned[it.prev] || 0) >= 1) : true;
-    const afford = havePrev && equip2Afford(sim, it.cost);
+    // 前ティア装備は任意素材(2026-07-14 ユーザー仕様「装備がなかったりしてもいい」):
+    // あれば消費(通常レシピ)・なければ色素材+2で代替(連鎖切れ・他ステージ品でも作成が止まらない)
+    const havePrev = it.prev ? ((ws.eq2Owned[it.prev] || 0) >= 1) : false;
+    const cost = havePrev ? it.cost : (it.prev ? Object.assign({}, it.cost, { ['ore_t' + it.tier]: (it.cost['ore_t' + it.tier] || 0) + 2 }) : it.cost);
+    const afford = equip2Afford(sim, cost);
     // レシピ表示(発見式): 一度素材が揃えば以後表示は消えない
     if (!ws.eq2Seen[it.id]) { if (afford) ws.eq2Seen[it.id] = true; else continue; }
     if (!afford) continue;
-    // 合成: 素材+前ティア装備1個を消費
-    equip2Consume(sim, it.cost);
+    // 合成: 素材(+あれば前ティア装備1個)を消費
+    equip2Consume(sim, cost);
     let upgradedSlot = null;
-    if (it.prev) {
+    if (havePrev) {
       ws.eq2Owned[it.prev] = Math.max(0, (ws.eq2Owned[it.prev] || 0) - 1);
       for (const s of EQUIP2_SLOTS) if (ws.eq2Equipped[s] === it.prev && (ws.eq2Owned[it.prev] || 0) === 0) { upgradedSlot = s; break; }
     }
