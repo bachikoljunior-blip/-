@@ -39,16 +39,16 @@ module.exports = {
       click_1: 5, golden_1: 5, monster_1: 5, auto_1: 5, economy_1: 50 } },
 
   // ---- 生産系数値ノードの1ノードあたり目標倍率 ----
-  nodeM: { all: 1.6, cps: 1.6, click: 1.5 }, // 4/4/3→1.6/1.6/1.5(2026-07-13 サイクルA: 3分2倍の定常成長へ穏やか化) // 14/14/9->4/4/3 (2026-07-06: 安価⑲ラダー下で周回時間を帯域スケールへ減速)
+  nodeM: { all: 2.2, cps: 2.2, click: 2.0 }, // 4/4/3→2.2/2.2/2.0(2026-07-14 サイクルA確定: メトロノーム経済の瞬発源) // 14/14/9->4/4/3 (2026-07-06: 安価⑲ラダー下で周回時間を帯域スケールへ減速)
 
   // ---- スキル効果スケール(effect typeごとの倍率) ----
   // 2026-07-13 サイクルA: 全fxを約1/3〜1/4へ圧縮(倍率経済の穏やか化。①⑨⑬等の下限は各lift≥1.2/1.05なので余裕)
   fx: {
-    click: 4, cps: 2.5, all: 2.5, goldenRate: 2, goldenAmount: 1.6, goldenPower: 2,
-    monsterRate: 2, monsterDamageSkill: 3, monsterHpDown: 3, monsterStay: 2,
-    upgradeDiscount: 4, researchDiscount: 4, upgradePerkPower: 2.5,
-    rewardBonus: 2.5, startCookies: 5
-  },
+    click: 7, cps: 4, all: 4, goldenRate: 3, goldenAmount: 2.5, goldenPower: 3,
+    monsterRate: 3, monsterDamageSkill: 5, monsterHpDown: 5, monsterStay: 3,
+    upgradeDiscount: 6, researchDiscount: 6, upgradePerkPower: 4,
+    rewardBonus: 4, startCookies: 8
+  }, // 原値の約1/2(2026-07-14 サイクルA確定)
 
   // ---- 金クッキー ----
   golden: {
@@ -140,7 +140,9 @@ module.exports = {
   goldenDirect: { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 10, otherMul: { click: 0.3, balanced: 0.3, hunt: 0.3, default: 1 } }, // otherMul(第12次R続き・2026-07-10採用・方針別マップ)=click/balanced中盤の金直16-22%が打を圧迫する対策+huntは金直を絞ると討シェアが立ち29→34/43(C1a実測・②改34不変)。bakeに効かせると②改40→30に崩れる(C2b実測)ためdefault=1 // 投資量=金perk合計(㉘金≥30%へ増幅・huntDirectと同処方=投資連動で金特化の後半周回だけ強く効く)
   // 実績研究の固定コスト表(2026-07-11「コストはゲーム内で固定して」): build_ms_costs.js が
   // 10方針100hの測定から各研究の初回購入額(中央値・丸めq5)を焼き込む。無い間は動的フォールバック。
-  msResearch: { costTable: (function () { try { return require('./ms_costs.json'); } catch (e) { return null; } })() },
+  // massProd=量産体制(2026-07-13 メトロノーム): 繰り返し購入の間隔と倍率(新⑥の床=×1.25^4/3分=×2.44)
+  msResearch: { massProdMul: 1.25, massProdSec: 45,
+    costTable: (function () { try { return require('./ms_costs.json'); } catch (e) { return null; } })() },
 
   // huntDirect: satMax 15→14(2026-07-12 ②改2: huntのlift3.09が帯上限3.00超過→飽和を微絞り)
   // peddlerFrac 0.02→0.06(2026-07-11 hunt序盤対策) / otherMul.golden 0.9(2026-07-11) / 投資量=討伐perk8種・基準=金相場
@@ -202,23 +204,23 @@ module.exports = {
     // 全方針の初回liftが1.06-1.18に希釈。S7の初回1.182を帯内へ=①は「1方針が全周回≥1.2」で判定)
     // grandmaOwn(2026-07-13 新設・ユーザー指示「1台あたりの初期生産1のままもっと強く」): 1台あたり生産×(1.02)^台数
     grandmaOwn: 0.02,
-    grandmaSelf: 2.5, grandmaSup: [0.003, 0.003, 0.003], // 40→2.5(サイクルA穏やか化)
+    grandmaSelf: 6, grandmaSup: [0.003, 0.003, 0.003], // 40→6(2026-07-14 サイクルA確定)
     // 2026-07-06 第8次: ⑫(設備の文脈依存性)用に所持数指数を再配分。
     // factory一強(全方針の最効率=工場固定)を解消: oven 0.060→0.067 / spice 0.062→0.071 / factory 0.060→0.057
     // → 12h実測で最効率設備が factory 7方針 / oven 3方針 に分岐
-    ovenSelf: 2.5, ovenOwn: 0.02, ovenStage: 0.012, // 0.03→0.045(2026-07-11: 工場の助走カード追加でS10のovenBatch liftが6NG/36 min1.104に希釈→層ランプ増し。NG0/35 min1.281実測) // 0.012→0.03(2026-07-11 ①oven: surge減速で直送比のcpsが痩せ中盤以降のliftが1.02-1.12に沈む→層ランプで再係留。S10 NG9/23→0/24 min1.296)
-    factorySelf: 2.5, factoryLow: 0.002, factoryOwn: 0.017,
-    spiceOwn: 0.02, spiceGold: 4, spiceGoldOwn: 0.005, spiceGoldDur: 30000,
+    ovenSelf: 6, ovenOwn: 0.03, ovenStage: 0.012, // 0.03→0.045(2026-07-11: 工場の助走カード追加でS10のovenBatch liftが6NG/36 min1.104に希釈→層ランプ増し。NG0/35 min1.281実測) // 0.012→0.03(2026-07-11 ①oven: surge減速で直送比のcpsが痩せ中盤以降のliftが1.02-1.12に沈む→層ランプで再係留。S10 NG9/23→0/24 min1.296)
+    factorySelf: 6, factoryLow: 0.002, factoryOwn: 0.026,
+    spiceOwn: 0.032, spiceGold: 7, spiceGoldOwn: 0.006, spiceGoldDur: 30000,
     // 狩り窓(2026-07-09 ⑬作り替え): 窓は討伐が開く・維持する(金クッキー非関与)。portalHuntDur/Grow は旧・金開窓用=現在未使用(移植時に削除)。
     // portalHuntSpawnBase=窓に関係ない常時スポーン加速(研究解放中)/ portalHuntSpawn=窓中の追加加速(⑬延長狩りのコントラスト)。
-    portalSelf: 2.5, portalHuntDur: 5000, portalHuntGrow: 0.0042, portalHuntSpawn: 0.002, portalHuntSpawnBase: 0.007,
-    bankOwn: 0.012, bankSaved: 3.0,
-    moonBase: 4, moonStage: 0.001, moonOwn: 0.0004,
+    portalSelf: 6, portalHuntDur: 5000, portalHuntGrow: 0.0042, portalHuntSpawn: 0.002, portalHuntSpawnBase: 0.007,
+    bankOwn: 0.018, bankSaved: 5.0,
+    moonBase: 8, moonStage: 0.001, moonOwn: 0.0005,
     foldPortal: 0.002, foldMonster: 2.5, foldGold: 8,
-    galaxyTypes: 0.15, galaxyOwn: 0.01,
+    galaxyTypes: 0.22, galaxyOwn: 0.014,
     bhGlobal: 5, bhCompress: 0.0018,
-    quantumRes: 0.1, quantumOwn: 0.01,
-    antimatterOwn: 0.004, antimatterSkill: 0.014,
+    quantumRes: 0.17, quantumOwn: 0.014,
+    antimatterOwn: 0.005, antimatterSkill: 0.02,
     ctrlOven: 0.05, ctrlMoon: 0.07, ctrlBh: 0.10
   },
 

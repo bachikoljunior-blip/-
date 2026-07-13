@@ -1,0 +1,2 @@
+周回が少なすぎて割り当て不能
+saved weave_costs.json
