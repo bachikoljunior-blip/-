@@ -7530,10 +7530,13 @@ function msResearchCost(ms) {
 }
 function buyMilestone(id) {
   const ms = MILESTONE_RESEARCH.find(m => m.id === id);
-  if (!ms || msBought(id) || !ms.trig()) return;
+  // デバッグON中はトリガ未達成でも購入できる(通常研究のデバッグ購入と同じ扱い)
+  if (!ms || msBought(id) || (!debugMode && !ms.trig())) return;
   const cost = msResearchCost(ms);
-  if (state.cookies.lt(cost)) { showMessage("クッキーが足りない"); return; }
-  state.cookies = state.cookies.sub(cost);
+  if (!debugMode) {
+    if (state.cookies.lt(cost)) { showMessage("クッキーが足りない"); return; }
+    state.cookies = state.cookies.sub(cost);
+  }
   state.msResearch = state.msResearch && typeof state.msResearch === "object" ? state.msResearch : {};
   state.msResearch[id] = true;
   playSound("research");
@@ -13103,12 +13106,12 @@ function renderResearch() {
       const m = MILESTONE_RESEARCH.find(x => ("ms:" + x.id) === lockId);
       if (!m) return;
       const cost = msResearchCost(m);
-      btn.classList.toggle("canBuy", state.cookies.gte(cost) && !pausedForSkillChoice());
+      btn.classList.toggle("canBuy", (debugMode || state.cookies.gte(cost)) && !pausedForSkillChoice());
       btn.innerHTML = `
         <b>${m.name}</b>
         <div class="price">${fmtCost(cost)} クッキー</div>
         <div class="desc">${m.fxText}</div>
-        <div class="desc">実績: ${m.cond}(達成済み)</div>
+        <div class="desc">実績: ${m.cond}(${debugMode && !m.trig() ? "未達成・デバッグ購入可" : "達成済み"})</div>
       `;
       return;
     }
