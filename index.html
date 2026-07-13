@@ -9444,7 +9444,7 @@ function equipItemToSlot(itemId, slot) {
 }
 let equip2SubTab = "equipped"; // equipped | owned | mats
 let equip2ChoosingSlot = null;
-let equip2OwnedCat = "weapon"; // 所持装備タブ内のカテゴリ選択
+let equip2OwnedCat = "all"; // 所持装備タブ内のカテゴリ選択(最初は「全て」)
 // 所持装備を1個捨てる。装備中で在庫が0になったらスロットから外す(2026-07-13 ユーザー指示)
 function discardEquip2(id) {
   const owned = (state.eq2Owned || {})[id] || 0;
@@ -9488,16 +9488,29 @@ function renderEquip2Tab() {
         </button>${chooser}</div>`;
     }).join("");
   } else if (sub === "owned") {
-    // 所持装備はカテゴリごとのタブで切り替える(main側UI採用)+効果表示は新形式fxText(486種一意効果)
-    if (!EQUIP2_CATS.includes(equip2OwnedCat)) equip2OwnedCat = EQUIP2_CATS[0];
+    // 所持装備はカテゴリごとのタブで切り替える。先頭に「全て」を置き、最初はそれを開く(2026-07-13 ユーザー指示)
+    const ownedCats = ["all", ...EQUIP2_CATS];
+    if (!ownedCats.includes(equip2OwnedCat)) equip2OwnedCat = "all";
+    const rowFor = x => `<div class="infoRow"><img class="matIcon" src="${assetUrl(equip2Art(x))}" style="filter:hue-rotate(${equip2Hue(x)}deg)" alt=""><b>${x.name}</b> ×${fmt(state.eq2Owned[x.id])} / ${x.fxText}<button class="item eq2DiscardBtn" data-eq2discard="${x.id}" style="width:auto;padding:3px 10px;margin-left:auto">捨てる</button></div>`;
+    const ownedTotal = equip2Items().reduce((s, x) => s + (state.eq2Owned[x.id] || 0), 0);
     const catBar = `<div class="buyModeBar" style="margin-bottom:8px;flex-wrap:wrap;gap:4px">` +
+      `<button class="item ${equip2OwnedCat === "all" ? "canBuy" : ""}" data-eq2ownedcat="all" style="width:auto;padding:4px 9px">全て${ownedTotal > 0 ? `(${fmt(ownedTotal)})` : ""}</button>` +
       EQUIP2_CATS.map(cat => {
         const n = equip2Items().filter(x => x.cat === cat).reduce((s, x) => s + (state.eq2Owned[x.id] || 0), 0);
         return `<button class="item ${equip2OwnedCat === cat ? "canBuy" : ""}" data-eq2ownedcat="${cat}" style="width:auto;padding:4px 9px">${EQUIP2_CAT_NAMES[cat]}${n > 0 ? `(${fmt(n)})` : ""}</button>`;
       }).join("") + `</div>`;
-    const rows = equip2Items().filter(x => x.cat === equip2OwnedCat && (state.eq2Owned[x.id] || 0) > 0)
-      .map(x => `<div class="infoRow"><img class="matIcon" src="${assetUrl(equip2Art(x))}" style="filter:hue-rotate(${equip2Hue(x)}deg)" alt=""><b>${x.name}</b> ×${fmt(state.eq2Owned[x.id])} / ${x.fxText}<button class="item eq2DiscardBtn" data-eq2discard="${x.id}" style="width:auto;padding:3px 10px;margin-left:auto">捨てる</button></div>`).join("");
-    body = catBar + (rows || `<div class="desc">この種類の所持装備はない</div>`);
+    let ownedBody;
+    if (equip2OwnedCat === "all") {
+      // 全て: カテゴリ見出しごとに所持装備を並べる
+      ownedBody = EQUIP2_CATS.map(cat => {
+        const rows = equip2Items().filter(x => x.cat === cat && (state.eq2Owned[x.id] || 0) > 0).map(rowFor).join("");
+        return rows ? `<h3 style="margin:8px 0 4px">${EQUIP2_CAT_NAMES[cat]}</h3>${rows}` : "";
+      }).join("") || `<div class="desc">所持している装備はない</div>`;
+    } else {
+      const rows = equip2Items().filter(x => x.cat === equip2OwnedCat && (state.eq2Owned[x.id] || 0) > 0).map(rowFor).join("");
+      ownedBody = rows || `<div class="desc">この種類の所持装備はない</div>`;
+    }
+    body = catBar + ownedBody;
   } else {
     body = MATERIALS.filter(m => materialSeen(m.id) || /^ore_t/.test(m.id) && materialCount(m.id) > 0)
       .map(m => `<div class="infoRow">${matIconHtml(m.id, "matIcon")}<b>${m.name}</b> ×${fmt(materialCount(m.id))}</div>`).join("")
