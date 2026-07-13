@@ -357,24 +357,7 @@ const STRATEGIES = [
     },
     skillOrder: skillOrderByBranch(['core', 'monster', 'auto', 'reward', 'economy', 'research', 'click', 'golden', 'upgrade', 'start', 'master'])
   },
-  {
-    id: 'S10', name: 'のんびり放置型', noT1Cap: true, // 周回時間の上限なし(2026-07-12 ユーザー決定)
-    // タップ1/秒。金クッキーは60%だけ取る。買い物判断は30秒ごと: 効率最良<=50%、研究<=50%。
-    tapRate: 1, goldenTake: 0.6,
-    pickPolicy: sim => 'golden',
-    buy: function (sim, prod) {
-      if (sim.t % 30 !== 0) return;
-      for (const r of G.RESEARCH) buyResearchLine(sim, r.id, 0.50);
-      for (let i = 0; i < 30; i++) {
-        const u = G.bestEfficiency(sim, prod, null);
-        if (!u || !G.tryBuyUpgrade(sim, u, 0.50)) break;
-      }
-      buyAllResearch(sim, 0.50);
-    },
-    pickReward: pickRewardAffinityAware(['goldenAmount', 'huntingCore', 'beastHeatFerment', 'goldenRate', 'monsterDamage']),
-    shouldPrestige: prestigeWhen(600, 1.2),
-    skillOrder: cheapestFirst
-  }
+  // S10(のんびり放置型)は削除(2026-07-13 ユーザー指示「プレイ方針は総クッキーを増やすことを目指すので、のんびりとか論外」)
 ];
 
 module.exports = { STRATEGIES, cheapestNextSkillCost };

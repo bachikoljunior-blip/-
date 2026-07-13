@@ -61,7 +61,7 @@ function summarize(sim) {
   let doubleOk = 0, doubleAll = 0, gainOk = 0;
   for (let i = 1; i < full.length; i++) {
     doubleAll++;
-    if (full[i].runCookies >= 100 * full[i - 1].runCookies) doubleOk++;
+    if (full[i].runCookies >= 1e8 * full[i - 1].runCookies) doubleOk++; // ④ 100倍→1億倍(2026-07-13 ユーザー決定)
     if (full[i].gain >= 1 * full[i - 1].gain && full[i].gain <= 100 * full[i - 1].gain) gainOk++;
   }
   // ==== テンポ条件 T1〜T3b(2026-07-06 ユーザー確定。旧⑥⑦⑧㉒を置換・3-2反映済み) ====
@@ -173,7 +173,7 @@ function printBaseline(results) {
   // 「早い」の線引き【仮】: 方針ごとの周回時間の中央値が、全方針の中央値以下のもの。遅い方針は(対象外)。
   const meds = results.map(r => r.sum.medianDur).filter(x => Number.isFinite(x)).sort((a, b) => a - b);
   const cutoff = meds.length ? meds[meds.length >> 1] : Infinity;
-  console.log('ID  名称              周回数 総クッキー   ④x100  ⑤PT1-100 新⑥3分2倍 T1周回時間 T2解放≥1 T2第0回 (参考)T3a廃止 T3b維持±20%(早い方針) ⑭PT≥1 ㉑存在感 全解放 | 参考: 旧⑥ペース 旧㉒単調増');
+  console.log('ID  名称              周回数 総クッキー   ④x1e8  (参考:旧⑤) 新⑥3分2倍 T1周回時間 T2解放≥1 T2第0回 (参考)T3a廃止 T3b維持±20%(早い方針) ⑭PT≥1 ㉑存在感 全解放 | 参考: 旧⑥ペース 旧㉒単調増');
   for (const r of results) {
     const fullT = r.sum.fullT === Infinity ? '未' : fmtT(r.sum.fullT);
     const t2r0 = r.sum.t2Run0 ? `${r.sum.t2Run0.ok ? 'OK' : 'NG'}(中央値${r.sum.t2Run0.med.toFixed(2)})` : '-';
@@ -680,7 +680,7 @@ if (mode === 'baseline') {
   console.log(`戦略: ${s.id} ${s.name}`);
   printDetail(sim);
   const sum = summarize(sim);
-  console.log(`合計: ${fmtN(sum.total)} / 100倍達成 ${sum.doubleOk}/${sum.doubleAll} / PT2-100倍 ${sum.gainOk}/${sum.doubleAll} / ペース ${sum.paceOk}/${sum.paceAll}`);
+  console.log(`合計: ${fmtN(sum.total)} / 1億倍達成 ${sum.doubleOk}/${sum.doubleAll} / PT2-100倍 ${sum.gainOk}/${sum.doubleAll} / ペース ${sum.paceOk}/${sum.paceAll}`);
 } else if (mode === 'pacing') {
   const s = STRATEGIES.find(x => x.id === arg) || STRATEGIES[0];
   const sim = G.simulate(s, { hours });
