@@ -1363,7 +1363,14 @@ reachMinSec=600/reachMaxSec=6000。**T3b 379/421(90%)**。弱点は S10(頭8・T
 - **新ユーザー指示(2026-07-14・実装済み)**: (1)研究コストはゲーム内固定=段1+段2/3を絶対値固定表で焼き込み
   (RESEARCH_STAGE_COST・再焼き時はゲーム側も同時更新) (2)解放間隔30秒以上=解放ゲート機構
   (unlockGateOk/pushUnlock・ゲームUNLOCK_GAP_MS・転生も同ゲート・runner「T2下限30s」列)。
-- **実行中**: expect48h R19f+baseline100h R19b(全修正込みの再計測)。
+- **R19f/R19b実測(2026-07-14・全修正込み)**: ①13/14(トリオ+antimatter合格化・残=spiceBlendのみ)・
+  ③-c 20/20満点・③utility 12/12・⑨19/20(残=factoryNetwork:2のみ)・T2下限30s全方針OK(最小30s)・
+  ④S9 25/28回復・T3c/T2/T2r0/⑭/㉑ほぼ満点。
+- **portalHunt復元の余波(次の作業キュー)**: (1)⑬が逆転=窓復活でS7の比が帯上限2.0超え
+  (圧縮チャージ4.74・熟成2.42・観測ゆらぎ天文値)→spiceBurst/bhBoostCoef/portalHuntSpawnの低減掃引でS7を[1.05,2.0]へ
+  (2)③goldenFirstHit新NG(gm1.30)とgoldenRate 48h残(S3のper-run diag要)
+  (3)⑨factoryNetwork:2=stage2のhiKind項をglobal項側に乗せ替え検討 (4)⑫hunt1位消失(4/5)
+  (5)㉘balanced 8/28・T1(S4 9/27)・新⑥85-92%・T3b=tune再焼き領域。
 - **残NG(R19d/R19世代実測)**: ⑬圧縮チャージ(S7=1.000)/延長狩り(S7=0.956)=帯[1.05,2.0]に入る方針の設計
   (bhBoostCoef/Dur・portalHunt系レバー)・㉘balanced 8/28(中盤討3-7%・後半タップ0%)・
   T1後半周回の2h超過(周回26本/100h=tune再焼き領域)・新⑥85-90%・T3b・装備lift(a) 72/90(S8/S9の弱束周回)。
