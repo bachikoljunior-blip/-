@@ -218,9 +218,9 @@ const SKILL_HAND_ORDER = [
   'upgrade_universe', 'unlock_reward_chainPrep', 'unlock_reward_huntFocus',
   'upgrade_godfinger', 'unlock_reward_goldenTarget', 'upgrade_singularity',
   'unlock_reward_goldenFirstHit', 'unlock_reward_beastScent', 'reward_2',
-  'upgrade_quantum', 'unlock_reward_biteRecovery', 'unlock_reward_beastHeatFerment',
-  'unlock_reward_huntingCore', 'upgrade_antimatter', 'unlock_reward_brandHunt',
-  'unlock_reward_crushedMill', 'unlock_reward_deepPursuit', 'unlock_reward_goldenBeastMutation',
+  'upgrade_quantum', 'unlock_reward_biteRecovery', 'unlock_reward_brandHunt',
+  'unlock_reward_beastHeatFerment', 'unlock_reward_huntingCore', 'unlock_reward_deepPursuit',
+  'unlock_reward_crushedMill', 'unlock_reward_goldenBeastMutation', 'upgrade_antimatter',
   'master_final'
 ];
 
