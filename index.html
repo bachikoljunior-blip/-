@@ -7743,7 +7743,10 @@ function msArtOf(ms) {
 // ・owned: 購入済み(末尾にまとめて表示)
 function msResearchLists() {
   const unbought = MILESTONE_RESEARCH.filter(m => !msBought(m.id));
-  const avail = debugMode ? unbought : unbought.filter(m => m.trig());
+  // スキル解放型の実績研究(msk_/msk2_)は「スキル取得」が条件なので、対応スキルを取得するまでは
+  // デバッグ中でも出さない(スキル未解放なのに実績研究が並ぶバグの修正・2026-07-13 ユーザー指摘)。
+  const isSkillMs = m => m.id.startsWith("msk_") || m.id.startsWith("msk2_");
+  const avail = debugMode ? unbought.filter(m => !isSkillMs(m) || m.trig()) : unbought.filter(m => m.trig());
   const lockedAll = debugMode ? [] : unbought.filter(m => !m.trig());
   const nextOfSeries = {};
   lockedAll.forEach(m => {
