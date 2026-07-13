@@ -1634,6 +1634,11 @@
     }
 
     .cookieWrap { min-height: 158px; }
+    .stageArrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 6;
+      width: 40px; height: 56px; border: none; border-radius: 10px; background: rgba(30, 22, 14, .55);
+      color: #ffd76a; font-size: 22px; line-height: 1; cursor: pointer; }
+    .stageArrow:disabled { opacity: .25; cursor: default; }
+    #stageArrowL { left: 2px; } #stageArrowR { right: 2px; }
 
     #cookie {
       width: 150px;
@@ -5539,6 +5544,8 @@
     <div id="quotaBox" class="quotaBox"></div>
 
     <div class="cookieWrap">
+      <button id="stageArrowL" class="stageArrow" type="button" aria-label="前のステージへ" style="display:none">◀</button>
+      <button id="stageArrowR" class="stageArrow" type="button" aria-label="次のステージへ" style="display:none">▶</button>
       <button id="cookie" aria-label="クッキー">
         <span class="sparkle"></span>
       </button>
@@ -12025,6 +12032,7 @@ function statDeltaText(tracker, value) {
 }
 
 function updateTopOnly() {
+  if (typeof updateStageArrows === "function") updateStageArrows();
   $("cookies").textContent = fmtCookieCount(state.cookies);
   const cpsEl = $("cookieCps");
   if (cpsEl) {
@@ -12092,6 +12100,28 @@ function tapCookie() {
 }
 
 addTap($("cookie"), tapCookie);
+// ステージ矢印(2026-07-14 ユーザー指示): 2個目のステージ解放後、クッキー左右の矢印で周回中でもステージ移動できる
+function moveStageBy(dir) {
+  const cur = currentStageNo();
+  const next = Math.max(1, Math.min(maxUnlockedStageNo(), cur + dir));
+  if (next === cur) return;
+  state.stage = next;
+  applyStageTheme();
+  playScreenTransition();
+  showMessage(`「${stageInfo(next).name}」へ移動`);
+  saveGame(); updateTopOnly(); renderActiveTab();
+}
+function updateStageArrows() {
+  const show = maxUnlockedStageNo() >= 2 && normalPlayScreenActive();
+  const l = $("stageArrowL"), r = $("stageArrowR");
+  if (!l || !r) return;
+  l.style.display = show ? "" : "none";
+  r.style.display = show ? "" : "none";
+  l.disabled = currentStageNo() <= 1;
+  r.disabled = currentStageNo() >= maxUnlockedStageNo();
+}
+addTap($("stageArrowL"), () => moveStageBy(-1));
+addTap($("stageArrowR"), () => moveStageBy(1));
 
 function buyUpgrade(id) {
   if (pausedForSkillChoice()) {
@@ -16713,8 +16743,8 @@ function installDebugPanel() {
     });
     // 討伐数はクエスト(累計討伐)と実績研究(討伐)にも反映する(2026-07-13 ユーザー指示)
     state.msKills = (Number(state.msKills) || 0) + 100;
-    questProgressOnKill(state.stageUnlocked || 1, 100);
-    showMessage("全種の討伐記録 +100(クエストにも加算)");
+    questProgressOnKill(currentStageNo(), 100); // 修正(2026-07-14): クエストは「今いるステージ」の討伐だけ進む(フロンティア無条件加算をやめる)
+    showMessage("全種の討伐記録 +100(今のステージのクエストにも加算)");
     saveGame();
     updateTopOnly();
     renderAllTabs();
