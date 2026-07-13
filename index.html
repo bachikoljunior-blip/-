@@ -9353,24 +9353,18 @@ function matIconHtml(matId, cls, infoId) {
 // 色素材は上位が下位を代替(sim同期)
 function equip2OreHave(tier) { let n = 0; for (let t = tier; t <= EQUIP2_CFG.tiers; t++) n += materialCount("ore_t" + t); return n; }
 function equip2HaveOf(matId) { const m = /^ore_t(\d+)$/.exec(matId); return m ? equip2OreHave(Number(m[1])) : materialCount(matId); }
-function equip2CostNow(it) {
-  // 前ティア装備は任意素材(2026-07-14): あれば通常レシピ・なければ色素材+2で代替
-  if (!it.prev || (state.eq2Owned[it.prev] || 0) >= 1) return it.cost;
-  const c = Object.assign({}, it.cost);
-  c["ore_t" + it.tier] = (c["ore_t" + it.tier] || 0) + 2;
-  return c;
-}
 function equip2Afford(it) {
-  const cost = equip2CostNow(it);
-  for (const k in cost) if (equip2HaveOf(k) < cost[k]) return false;
+  // レシピ固定(2026-07-14): 装備入りレシピは前ティア所持が必須(実行時の代替なし)
+  if (it.prev && (state.eq2Owned[it.prev] || 0) < 1) return false;
+  for (const k in it.cost) if (equip2HaveOf(k) < it.cost[k]) return false;
   return true;
 }
 function equip2CraftableNow(it) { return (it.stages || [it.tier]).includes(Math.min(EQUIP2_CFG.tiers, currentStageNo())); } // ステージ配置ばらけ(2026-07-14)
 function craftEquip2(id) {
   const it = equip2ById(id);
   if (!it || !equip2Afford(it) || !equip2CraftableNow(it)) return;
-  const hadPrev = !!(it.prev && (state.eq2Owned[it.prev] || 0) >= 1);
-  const cost = equip2CostNow(it);
+  const hadPrev = !!it.prev; // レシピ固定: prevつきレシピはaffordで所持確認済み
+  const cost = it.cost;
   // 消費(色素材は低い方から充当)
   for (const k in cost) {
     const m = /^ore_t(\d+)$/.exec(k);
@@ -10462,8 +10456,9 @@ function equip2Items() {
         const scale = Math.pow(2, t - 1);
         const fxList = [];
         for (let i = 0; i < defs.length; i += 2) fxList.push([defs[i], defs[i + 1] * scale]);
+        // レシピは固定(2026-07-14): 色銘2,3,5,8=前ティア装備入り / 1,4,6,7,9=素材のみ(実行時の代替なし)
         EQUIP2_ITEMS_CACHE.push({
-          id, cat, tier: t, variant: v, stages, prev: t > 1 ? `${cat}_t${t - 1}_v${v}` : null, cost,
+          id, cat, tier: t, variant: v, stages, prev: (t > 1 && [2, 3, 5, 8].includes(v)) ? `${cat}_t${t - 1}_v${v}` : null, cost,
           name: EQUIP2_GRADE_NAMES[t - 1] + EQUIP2_ITEM_NAMES[cat][v - 1],
           fxList, // 効果は固定値で表示(2026-07-14 全面刷新)
           fxText: fxList.map(([k, val]) => {

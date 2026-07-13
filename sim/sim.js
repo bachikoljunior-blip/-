@@ -662,7 +662,10 @@ function equip2Items() {
           if (v >= 7 && t >= 3) { const m3 = v % 2 === 0 ? smatA : smatB; cost[m3] = (cost[m3] || 0) + 2; }
           if (v === 9 && t >= 5) cost[t === 6 ? 'voidSugar' : 'bossCore'] = 1 + (t === 6 ? 1 : 0); // 最高級の隠し味
         }
-        EQUIP2_ITEMS.push({ id, cat, tier: t, variant: v, stages, stageNo: st1, prev: t > 1 ? `${cat}_t${t - 1}_v${v}` : null, cost });
+        // レシピは固定(2026-07-14 ユーザー明確化「必要装備素材はゲーム内固定。固定の中身が裁量」):
+        // 色銘2,3,5,8=前ティア装備を要求する合成レシピ / 色銘1,4,6,7,9=素材のみのレシピ(固定・実行時の代替なし)
+        const hasPrevRecipe = t > 1 && [2, 3, 5, 8].includes(v);
+        EQUIP2_ITEMS.push({ id, cat, tier: t, variant: v, stages, stageNo: st1, prev: hasPrevRecipe ? `${cat}_t${t - 1}_v${v}` : null, cost });
       }
     }
   }
@@ -802,11 +805,10 @@ function equip2Tick(sim) {
     if (!it.stages.includes(curStage)) continue;
     const cap = 1; // 9カテゴリ各1個/周回(アクセは甲/乙で別カテゴリ)
     if (((r.eq2Made && r.eq2Made[it.cat]) || 0) >= cap) continue;
-    // 前ティア装備は任意素材(2026-07-14 ユーザー仕様「装備がなかったりしてもいい」):
-    // あれば消費(通常レシピ)・なければ色素材+2で代替(連鎖切れ・他ステージ品でも作成が止まらない)
-    const havePrev = it.prev ? ((ws.eq2Owned[it.prev] || 0) >= 1) : false;
-    const cost = havePrev ? it.cost : (it.prev ? Object.assign({}, it.cost, { ['ore_t' + it.tier]: (it.cost['ore_t' + it.tier] || 0) + 2 }) : it.cost);
-    const afford = equip2Afford(sim, cost);
+    // レシピ固定(2026-07-14): 装備入りレシピは前ティア所持が必須・素材のみレシピは素材だけ(実行時の代替なし)
+    const havePrev = it.prev ? ((ws.eq2Owned[it.prev] || 0) >= 1) : true;
+    const cost = it.cost;
+    const afford = havePrev && equip2Afford(sim, cost);
     // レシピ表示(発見式): 一度素材が揃えば以後表示は消えない
     if (!ws.eq2Seen[it.id]) { if (afford) ws.eq2Seen[it.id] = true; else continue; }
     if (!afford) continue;
