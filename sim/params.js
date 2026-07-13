@@ -244,7 +244,8 @@ module.exports = {
   // bhIdleDelay=満タン後に放置プレイヤーが気づくまでの遅延秒 / matureIdleMul=放置時の熟成爆発係数
   // ⑬対比の縮小(2026-07-14 R19f: portalHunt復元で窓が実体化しS7の最適/放置比が帯上限2.0超え
   // (圧縮4.74・熟成2.42・ゆらぎ天文値)へ逆転→放置側の効率を上げて対比を[1.05,2.0]へ。計測専用レバー=経済無影響)
-  timing: { waveOpt: 0.6366, waveIdle: 0.55, bhIdleDelay: 150, bhIdleEff: 0.8, matureIdleMul: 0.8 },
+  // 2段目の絞り(R19g実測: 延長狩りOK1.77・圧縮3.51・熟成2.27・ゆらぎ5.7e5→対数比で再見積もり)
+  timing: { waveOpt: 0.6366, waveIdle: 0.63, bhIdleDelay: 150, bhIdleEff: 0.9, matureIdleMul: 0.85 },
 
   // ---- 研究コスト ----
   // 第11次(値段割り・D'): weave.js が「1周回に中間目標1件」になるよう再配置した値を
