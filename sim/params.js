@@ -211,6 +211,9 @@ module.exports = {
     // → 12h実測で最効率設備が factory 7方針 / oven 3方針 に分岐
     ovenSelf: 10, ovenOwn: 0.03, ovenStage: 0.05, // ①ovenBatch 1.18→層ランプ増し(2026-07-14 2回目) // 0.03→0.045(2026-07-11: 工場の助走カード追加でS10のovenBatch liftが6NG/36 min1.104に希釈→層ランプ増し。NG0/35 min1.281実測) // 0.012→0.03(2026-07-11 ①oven: surge減速で直送比のcpsが痩せ中盤以降のliftが1.02-1.12に沈む→層ランプで再係留。S10 NG9/23→0/24 min1.296)
     factorySelf: 14, factoryLow: 0.002, factoryOwn: 0.026, // ①factory再係留2回目(2026-07-14: コスト100万はユーザー固定のため効果側で)
+    // 量産波及(2026-07-14 ①後半希釈対策): 研究ゲート付きの全生産×(1+係数)^台数。
+    // 後半周回(台数2500-3300)で×1.6-1.9=lift受け皿・序盤(台数40-90)は≈1.01で無害。
+    ovenGlobal: 0.0002, factoryGlobal: 0.0002,
     spiceOwn: 0.032, spiceGold: 7, spiceGoldOwn: 0.006, spiceGoldDur: 30000,
     // 狩り窓(2026-07-09 ⑬作り替え): 窓は討伐が開く・維持する(金クッキー非関与)。portalHuntDur/Grow は旧・金開窓用=現在未使用(移植時に削除)。
     // portalHuntSpawnBase=窓に関係ない常時スポーン加速(研究解放中)/ portalHuntSpawn=窓中の追加加速(⑬延長狩りのコントラスト)。

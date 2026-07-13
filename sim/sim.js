@@ -1270,6 +1270,12 @@ function computeProd(sim) {
     if (resStage3(sim, 'portalGlobalFold')) foldM *= 1 + P.res2.foldStageCoef * r.maxStage;
     globalRes *= foldM;
   }
+  // 一括焼成の量産波及(2026-07-14 ①後半希釈対策): オーブン台数で全生産が僅かに伸びる。
+  // 後半周回はオーブン自身の生産シェアが消えてliftが1.0へ潰れる(diag_trio実測: run11以降1.05未満)ため、
+  // 台数連動の全体項を受け皿にする。序盤は台数が少なく≈1.0で無害(序盤の受け持ちは既存のovenSelf)。
+  if (resActive(sim, 'ovenBatch')) globalRes *= lg(capOwn(r.upgrades.oven || 0), R.ovenGlobal || 0);
+  // 工場ネットワークの物流波及(同上・後半希釈対策): 工場台数で全生産が僅かに伸びる。
+  if (resActive(sim, 'factoryNetwork')) globalRes *= lg(capOwn(r.upgrades.factory || 0), R.factoryGlobal || 0);
   // 香料調合 段階2: 熟成の香り(金取得から12秒間、全生産バースト)
   if (resActive(sim, 'spiceBlend') && resStage2(sim, 'spiceBlend') && sim.t < (r.spiceAromaUntil || 0)) {
     globalRes *= r.spiceBurstM || 1;
