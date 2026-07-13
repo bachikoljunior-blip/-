@@ -1301,7 +1301,8 @@
       background:
         radial-gradient(circle at 50% 45%, rgba(var(--branch-rgb),0.18), transparent 62%);
       pointer-events: none;
-      animation: nodePulse 1.8s ease-in-out infinite alternate;
+      /* パフォーマンス: 全ノードで常時アニメさせると100個以上が同時に再描画されて重くなるため、
+         アニメは取得可能/選択中のノードだけにする(2026-07-13 スキルツリーが重い対策) */
     }
 
     .skillNode::after {
@@ -1311,8 +1312,17 @@
       background:
         conic-gradient(from 0deg, transparent, rgba(var(--branch-rgb),0.30), transparent 35%, transparent 100%);
       opacity: 0.24;
-      animation: nodeSpin 5s linear infinite;
       pointer-events: none;
+    }
+
+    /* アニメは注目させたいノード(取得可能・選択中)だけに限定して軽くする */
+    .skillNode.canBuy::before,
+    .skillNode.selected::before {
+      animation: nodePulse 1.8s ease-in-out infinite alternate;
+    }
+    .skillNode.canBuy::after,
+    .skillNode.selected::after {
+      animation: nodeSpin 5s linear infinite;
     }
 
     @keyframes nodePulse {
@@ -4931,6 +4941,9 @@
     .eq2CraftRow { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-bottom: 1px solid rgba(255,255,255,0.12); }
     .eq2CraftRow .eq2CraftItem { flex: 1 1 auto; display: flex; align-items: center; gap: 6px; min-width: 0; }
     .eq2CraftRow .eq2CraftItem img { width: 34px; height: 34px; object-fit: contain; }
+    /* 作成する装備のアイコン(名前・効果はタップで表示。行には載せない) */
+    .eq2CraftItemIcon { flex: 1 0 44px; width: 44px; height: 44px; max-width: 44px; object-fit: contain; cursor: pointer; }
+    .eq2Need img { border-radius: 5px; }
     .eq2Needs { display: flex; gap: 4px; flex: 0 0 auto; }
     .eq2Need { display: flex; flex-direction: column; align-items: center; font-size: 11px; border: 1px solid rgba(255,255,255,0.18); border-radius: 6px; padding: 2px 4px; }
     .eq2Need img { width: 22px; height: 22px; object-fit: contain; }
@@ -5293,7 +5306,7 @@
          ゲーム全体を等倍スケール。全端末で文字・画像・ボタン・プレイ画面の比率がすべて同一になる。
          倍率(--gameScale)はJS(applyGameScale)がリサイズ時に計算する */
       width: 375px !important;
-      height: 720px !important;
+      height: 667px !important;
       margin: 0 !important;
       transform: scale(var(--gameScale, 1));
       transform-origin: center center;
@@ -9321,6 +9334,22 @@ const EQUIP2_ART = { weapon: "goldenWhisk", shield: "masterTray", armorTop: "ove
   hands: "ovenMitt", hat: "stillFlask", shoes: "dimensionCompass", accA: "monsterAlmanac", accB: "stillFlask" };
 function equip2Art(it) { return (ASSETS.equipment && ASSETS.equipment[EQUIP2_ART[it.cat]]) || ASSETS.objects.cookieMonster; }
 function equip2Hue(it) { return ((it.tier - 1) * 55 + ((it.variant || 1) - 1) * 38) % 360; } // ティア+バリエーションで色相を回す
+// 同じ画像を色替えで使う素材(色粉 ore_t*)を、色でハッキリ見分けられるようにする(2026-07-13)。
+// 彩度・明度を強めた上で、素材テーマ色の枠(ボーダー)を付ける。
+const ORE_COLORS = ["#dfe3ea", "#e8b23a", "#38c76e", "#3f79ea", "#a44fe0", "#e35168"]; // 白銀/琥珀/翡翠/瑠璃/紫/紅
+function oreDecor(matId) {
+  const m = /^ore_t(\d+)$/.exec(matId);
+  if (!m) return { filter: "", color: "" };
+  const t = Number(m[1]);
+  return { filter: `hue-rotate(${(t - 1) * 60}deg) saturate(2.1) brightness(1.08) contrast(1.05)`, color: ORE_COLORS[t - 1] || "" };
+}
+// 素材アイコンのHTML(色粉は枠色つき)。infoIdを渡すとタップで名前が出る
+function matIconHtml(matId, cls, infoId) {
+  const d = oreDecor(matId);
+  const src = assetUrl(ASSETS.materials[matId] || ASSETS.materials.butter);
+  const style = `${d.filter ? `filter:${d.filter};` : ""}${d.color ? `border:2px solid ${d.color};box-shadow:0 0 5px ${d.color};` : ""}`;
+  return `<img class="${cls}"${infoId ? ` data-matinfo="${infoId}"` : ""} src="${src}" style="${style}" alt="" aria-hidden="true">`;
+}
 // 色素材は上位が下位を代替(sim同期)
 function equip2OreHave(tier) { let n = 0; for (let t = tier; t <= EQUIP2_CFG.tiers; t++) n += materialCount("ore_t" + t); return n; }
 function equip2HaveOf(matId) { const m = /^ore_t(\d+)$/.exec(matId); return m ? equip2OreHave(Number(m[1])) : materialCount(matId); }
@@ -9429,7 +9458,7 @@ function renderEquip2Tab() {
     body = catBar + (rows || `<div class="desc">この種類の所持装備はない</div>`);
   } else {
     body = MATERIALS.filter(m => materialSeen(m.id) || /^ore_t/.test(m.id) && materialCount(m.id) > 0)
-      .map(m => `<div class="infoRow"><img class="matIcon" src="${assetUrl(ASSETS.materials[m.id] || ASSETS.materials.butter)}" ${/^ore_t/.test(m.id) ? `style="filter:hue-rotate(${(Number(m.id.slice(-1)) - 1) * 60}deg)"` : ""} alt=""><b>${m.name}</b> ×${fmt(materialCount(m.id))}</div>`).join("")
+      .map(m => `<div class="infoRow">${matIconHtml(m.id, "matIcon")}<b>${m.name}</b> ×${fmt(materialCount(m.id))}</div>`).join("")
       || `<div class="desc">まだ素材がない</div>`;
   }
   box.innerHTML = tabBar + body;
@@ -9466,7 +9495,7 @@ function renderWorkshop() {
 
   const matRows = MATERIALS
     .filter(m => materialSeen(m.id))
-    .map(m => `<div class="infoRow"><img class="matIcon" src="${assetUrl(ASSETS.materials[m.id])}" alt="" aria-hidden="true"><b>${m.name}</b> ×${fmt(materialCount(m.id))}${m.tier === "r" ? "(レア)" : m.tier === "b" ? "(ボス核)" : ""}</div>`)
+    .map(m => `<div class="infoRow">${matIconHtml(m.id, "matIcon")}<b>${m.name}</b> ×${fmt(materialCount(m.id))}${m.tier === "r" ? "(レア)" : m.tier === "b" ? "(ボス核)" : ""}</div>`)
     .join("") || `<div class="desc">まだ素材がない</div>`;
 
   // v2: 討伐記録セクション(種ごとの累計/次のマイルストーン/現在ボーナス)
@@ -9490,18 +9519,17 @@ function renderWorkshop() {
     if (it.prev) {
       const pv = equip2ById(it.prev);
       // 分子は「所持数」をそのまま表示する(必要数で頭打ちにしない)(2026-07-13 ユーザー指示)
-      needs.push(`<div class="eq2Need"><img src="${assetUrl(equip2Art(pv))}" style="filter:hue-rotate(${equip2Hue(pv)}deg)" alt=""><span>${fmt(state.eq2Owned[it.prev] || 0)}/1</span></div>`);
+      needs.push(`<div class="eq2Need"><img data-matinfo="prev:${it.prev}" src="${assetUrl(equip2Art(pv))}" style="filter:hue-rotate(${equip2Hue(pv)}deg)" alt=""><span>${fmt(state.eq2Owned[it.prev] || 0)}/1</span></div>`);
     }
     for (const k in it.cost) {
-      const mat = getMaterial(k) || { name: k };
-      const hue = /^ore_t/.test(k) ? (Number(k.slice(-1)) - 1) * 60 : 0;
-      // 分子は所持数(equip2HaveOf)をそのまま表示する(必要数で頭打ちにしない)
-      needs.push(`<div class="eq2Need"><img src="${assetUrl(ASSETS.materials[k] || ASSETS.materials.butter)}" style="filter:hue-rotate(${hue}deg)" alt=""><span>${fmt(equip2HaveOf(k))}/${it.cost[k]}</span></div>`);
+      // 分子は所持数(equip2HaveOf)をそのまま表示。色粉は色を強調+枠色。アイコンタップで名前(2026-07-13)
+      needs.push(`<div class="eq2Need">${matIconHtml(k, "", "mat:" + k)}<span>${fmt(equip2HaveOf(k))}/${it.cost[k]}</span></div>`);
     }
     const can = equip2Afford(it) && !pausedForSkillChoice();
+    // 装備名・効果は行に載せず、アイコンタップで表示する(2026-07-13 ユーザー指示)
     return `
       <div class="eq2CraftRow">
-        <div class="eq2CraftItem"><img src="${assetUrl(equip2Art(it))}" style="filter:hue-rotate(${equip2Hue(it)}deg)" alt=""><b>${it.name}</b><span class="desc">${it.fxText}(固定値)</span></div>
+        <img class="eq2CraftItemIcon" data-eq2info="${it.id}" src="${assetUrl(equip2Art(it))}" style="filter:hue-rotate(${equip2Hue(it)}deg)" alt="">
         <div class="eq2Needs">${needs.join("")}</div>
         <button class="item eq2CraftBtn ${can ? "canBuy" : ""}" data-eq2craft="${it.id}">作成</button>
       </div>`;
@@ -9533,6 +9561,17 @@ function renderWorkshop() {
   box.querySelectorAll("[data-wssub]").forEach(b => addTap(b, () => { state.wsSubTab = b.dataset.wssub; renderWorkshop(); }));
   box.querySelectorAll("[data-dish]").forEach(btn => addTap(btn, () => cookDish(btn.dataset.dish)));
   box.querySelectorAll("[data-eq2craft]").forEach(btn => addTap(btn, () => craftEquip2(btn.dataset.eq2craft)));
+  // 必要素材アイコンをタップしたら名前を表示(2026-07-13)
+  box.querySelectorAll("[data-matinfo]").forEach(b => addTap(b, () => {
+    const v = b.dataset.matinfo;
+    if (v.startsWith("prev:")) { const pit = equip2ById(v.slice(5)); showMessage(pit ? pit.name : v.slice(5)); }
+    else if (v.startsWith("mat:")) { const m = getMaterial(v.slice(4)); showMessage(m ? m.name : v.slice(4)); }
+  }));
+  // 作成する装備のアイコンをタップしたら名前+効果を表示(行には載せない)(2026-07-13)
+  box.querySelectorAll("[data-eq2info]").forEach(b => addTap(b, () => {
+    const eit = equip2ById(b.dataset.eq2info);
+    if (eit) showMessage(`${eit.name} — ${eit.fxText}(固定値)`);
+  }));
   box.dataset.sig = workshopStructSig();
 }
 
@@ -11481,11 +11520,11 @@ function resumeAudioIfNeeded() {
 // iOSで時々起きるダブルタップ拡大の保険(全要素のtouch-action: manipulationに加えて)
 document.addEventListener("dblclick", e => { e.preventDefault(); }, { passive: false });
 
-// 画面サイズが変わっても内容の比率が一切変わらないよう、固定の基準サイズ(375×720=縦長)に対する
+// 画面サイズが変わっても内容の比率が一切変わらないよう、固定の基準サイズに対する
 // 等倍スケールを計算してゲーム全体に適用する(CSSの --gameScale)。全端末で完全に同じ比率。
-// 高さは従来の547より縦長にして、縦長スマホでの上下の黒帯(=小さく見える)を減らす。
+// 基準比率は端末画面の縦横比(750:1334=375:667)に合わせ、その端末で黒帯が出ないようにする。
 const GAME_BASE_W = 375;
-const GAME_BASE_H = 720;
+const GAME_BASE_H = 667;
 // 横並び(ワイド)レイアウトの基準サイズ: クッキー画面(375×234)とタブ画面(375×305)を
 // 縦画面と同じ比率のまま横に2列で並べる。全体は 750×305。
 const GAME_WIDE_W = 750;
@@ -11496,17 +11535,22 @@ const WIDE_ASPECT_THRESHOLD = 1.0;
 function applyGameScale() {
   let wide = false;
   try {
-    wide = (window.innerWidth / Math.max(1, window.innerHeight)) >= WIDE_ASPECT_THRESHOLD;
+    // Safariはツールバーの分 innerHeight が実際の可視領域とズレるため、可視領域(visualViewport)を使う。
+    // これで、ツールバー開閉で残ってしまう黒帯を防ぐ。
+    const vv = window.visualViewport;
+    const vw = (vv ? vv.width : window.innerWidth);
+    const vh = (vv ? vv.height : window.innerHeight);
+    wide = (vw / Math.max(1, vh)) >= WIDE_ASPECT_THRESHOLD;
     document.body.classList.toggle("wideLayout", wide);
-    const availH = window.innerHeight - 8;
+    const availH = vh - 8;
     if (wide) {
-      const availW = Math.min(window.innerWidth - 12, 1400);
+      const availW = Math.min(vw - 12, 1400);
       const k = Math.max(0.2, Math.min(availW / GAME_WIDE_W, availH / GAME_WIDE_H));
       document.documentElement.style.setProperty("--gameScale", String(k));
     } else {
-      // 縦画面: 固定基準(375×720)を等倍スケールで画面に収める。全端末で内容の比率は完全に同一。
-      // 端末比率が基準と違う分だけ上下または左右に黒帯が出るが、内容の大小関係は一切変わらない。
-      const availW = Math.min(window.innerWidth - 8, 900);
+      // 縦画面: 固定基準(375×667=端末画面と同じ比率)を等倍スケールで可視領域に収める。
+      // 全端末で内容の比率は完全に同一。基準と同じ比率の端末なら黒帯はほぼ出ない。
+      const availW = Math.min(vw - 8, 900);
       const k = Math.max(0.35, Math.min(availW / GAME_BASE_W, availH / GAME_BASE_H));
       document.documentElement.style.setProperty("--gameScale", String(k));
     }
@@ -11526,6 +11570,11 @@ function applyGameScale() {
 
 window.addEventListener("resize", applyGameScale);
 window.addEventListener("orientationchange", applyGameScale);
+// Safariのツールバー開閉(可視領域の変化)でも再フィットして黒帯を残さない
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", applyGameScale);
+  window.visualViewport.addEventListener("scroll", applyGameScale);
+}
 applyGameScale();
 
 // 自動再生制限のため、最初の操作(タップ)でBGMを開始する
@@ -12539,7 +12588,7 @@ function renderSkillChoiceScreen() {
         aria-label="${skill.name}"
       >
         ${ASSETS.skills && ASSETS.skills[skill.id]
-          ? `<img class="nodeArt" src="${assetUrl(ASSETS.skills[skill.id])}" alt="" aria-hidden="true">`
+          ? `<img class="nodeArt" src="${assetUrl(ASSETS.skills[skill.id])}" alt="" aria-hidden="true" decoding="async">`
           : `<span class="nodeMark">${skill.icon}</span>`}
       </button>
     `;
