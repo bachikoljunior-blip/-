@@ -6239,6 +6239,13 @@ const UPGRADE_UNLOCK_SKILLS = {
 // ==== 第7次 新要素: 素材・工房(料理/作成)・ステージ・モンスター種別 ====
 // 素材はクッキー経済と交差しない(クッキーで買えない・クッキーに変換できない)メタ進行資源。
 const MATERIALS = [
+  // 色素材(2026-07-13 新装備): モンスターの色=ノルマ層帯で変わるドロップ。上位色は下位の代わりに使える
+  { id: "ore_t1", name: "しろがね粉", tier: "c", oreTier: 1 },
+  { id: "ore_t2", name: "こはく粉", tier: "c", oreTier: 2 },
+  { id: "ore_t3", name: "ひすい粉", tier: "c", oreTier: 3 },
+  { id: "ore_t4", name: "るり粉", tier: "c", oreTier: 4 },
+  { id: "ore_t5", name: "むらさき粉", tier: "r", oreTier: 5 },
+  { id: "ore_t6", name: "べにばな粉", tier: "r", oreTier: 6 },
   { id: "butter", name: "濃厚バター", tier: "c" },
   { id: "flour", name: "石臼小麦粉", tier: "c" },
   { id: "cacao", name: "カカオ塊", tier: "c" },
@@ -6634,6 +6641,12 @@ function ensureState() {
   state.bakeStateUntil = Math.max(0, Number(state.bakeStateUntil) || 0);
   state.bakeStateSeed = Math.max(0, Math.floor(Number(state.bakeStateSeed) || 0));
   state.quotaPausedMs = Math.max(0, Number(state.quotaPausedMs) || 0);
+  // 新装備+固定クエスト(2026-07-13): いずれも転生持ち越し
+  state.eq2Owned = state.eq2Owned && typeof state.eq2Owned === "object" ? state.eq2Owned : {};
+  state.eq2Equipped = state.eq2Equipped && typeof state.eq2Equipped === "object" ? state.eq2Equipped : {};
+  state.eq2Seen = state.eq2Seen && typeof state.eq2Seen === "object" ? state.eq2Seen : {};
+  state.eq2MadeThisRun = state.eq2MadeThisRun && typeof state.eq2MadeThisRun === "object" ? state.eq2MadeThisRun : {};
+  state.questKills = state.questKills && typeof state.questKills === "object" ? state.questKills : {};
   state.quotaPauseStartedAt = Math.max(0, Number(state.quotaPauseStartedAt) || 0);
   state.activeOrder = state.activeOrder && typeof state.activeOrder === "object" ? state.activeOrder : null;
   state.completedOrders = Math.max(0, Math.floor(Number(state.completedOrders) || 0));
@@ -9072,14 +9085,16 @@ function grantMonsterDrops(typeId, level, overkill) {
       applyStageTheme();
       playScreenTransition();
       parts.push(`深層領域 第${deepLayerNo()}層へ到達！`);
-    } else if (first && (state.stageUnlocked || 1) < stageNo + 1) {
-      // ボス初回撃破で次ステージ解放(S6まで)
-      state.stageUnlocked = stageNo + 1;
-      playScreenTransition();
-      parts.push(`新ステージ「${stageInfo(stageNo + 1).name}」解放！`);
     }
+    // ステージ解放は固定クエスト(累計討伐)へ移管(2026-07-13)。ボスは核ドロップと深層進行のみ
   } else {
     state.stageKills[stageNo] = Math.floor(Number(state.stageKills[stageNo]) || 0) + 1;
+
+    // 固定クエスト(2026-07-13 ユーザー確定仕様): フロンティアステージ(=最新解放)での累計討伐で次ステージ解放。
+    // 制限時間なし・内容固定・周回を跨いで累積。進捗は注文ボードに常設表示。
+    questProgressOnKill(stageNo, (MONSTER_TYPES[typeId] && MONSTER_TYPES[typeId].count) || 1);
+    // 色素材(2026-07-13 新装備): ノルマ層の帯の色素材を討伐ごとにドロップ(工房スキル不要=最初から)
+    gainMaterial("ore_t" + layerOreTier(), EQUIP2_CFG.oreDropPerKill * ((MONSTER_TYPES[typeId] && MONSTER_TYPES[typeId].count) || 1));
 
     if (dropsEnabled) {
       // v4 §18 条件ドロップ制。倍率: ステージ補正×虚空タルト×次元コンパス(1+0.05×Lv)×討伐連鎖(1+0.02×N)
@@ -10011,7 +10026,7 @@ function baseClickPower() {
 function currentClickPower() {
   // 討伐連鎖: 倒し続けている間だけ全生産×(1+0.02×連鎖数)。基礎値(baseClickPower)には掛けない
   // (案Aの生産連動項が baseCps 経由で二重に受けないよう、最終段で一度だけ適用)
-  return baseClickPower() * goldenBoostMultiplier() * goldenAfterheatMultiplier() * challengeMultiplier() * chainProductionMultiplier() * ensembleMul;
+  return baseClickPower() * goldenBoostMultiplier() * goldenAfterheatMultiplier() * challengeMultiplier() * chainProductionMultiplier() * ensembleMul * equip2Mult(); // 新装備: 全生産×固定倍率
 }
 
 function baseCps() {
@@ -10044,7 +10059,7 @@ function baseCps() {
 
 function currentCps() {
   // 討伐連鎖: 全生産倍率は最終段で一度だけ適用
-  return baseCps() * goldenBoostMultiplier() * goldenAfterheatMultiplier() * challengeMultiplier() * chainProductionMultiplier() * ensembleMul;
+  return baseCps() * goldenBoostMultiplier() * goldenAfterheatMultiplier() * challengeMultiplier() * chainProductionMultiplier() * ensembleMul * equip2Mult(); // 新装備: 全生産×固定倍率
 }
 
 // ================= 直送収入システム(sim同期・第12次J〜R5: 2026-07-11 フル移植) =================
@@ -10052,6 +10067,63 @@ function currentCps() {
 // ゲート: 設備=オーブン大量焼成 段階2 / 金=香料調合 段階2 / 討伐=異世界接続網 段階2(行商スキルで先行2%)/
 // タップ=指先の型 段階2(屋台スキルで先行5%)/ 銀行=銀行クリック配当研究。
 // 旧・屋台/行商の簡易式(タップ力×0.05×20×√層 / 金相場×0.002×20×枚数×√層)を置換=sim(判定基準)と同じ経済に。
+// ==== 新装備システム+固定クエスト(2026-07-13 ユーザー確定仕様・sim同期) ====
+const EQUIP2_CFG = { tiers: 6, allMulPerTier: 2.0, layerBand: 5, oreDropPerKill: 5, oreNeed: 3, stageMatNeed: 3, dropAllMul: 2 };
+const QUEST_KILLS_NEED = [100, 130, 170, 220, 280]; // ステージ1→2 … 5→6(sim quest2同期)
+const EQUIP2_SLOTS = ["weapon", "shield", "armorTop", "armorBottom", "hands", "hat", "shoes", "acc1", "acc2"];
+const EQUIP2_CATS = ["weapon", "shield", "armorTop", "armorBottom", "hands", "hat", "shoes", "accessory"];
+const EQUIP2_CAT_NAMES = { weapon: "武器", shield: "盾", armorTop: "防具上", armorBottom: "防具下", hands: "手", hat: "帽子", shoes: "靴", accessory: "アクセサリー" };
+const EQUIP2_TIER_NAMES = ["見習いの", "旅人の", "職人の", "騎士の", "王家の", "星界の"]; // ティア1..6の接頭
+const EQUIP2_BASE_NAMES = { weapon: "めん棒", shield: "天板の盾", armorTop: "コックコート", armorBottom: "前掛け", hands: "ミトン", hat: "コック帽", shoes: "厨房ブーツ", accessory: "焼き印のお守り" };
+let EQUIP2_ITEMS_CACHE = null;
+function equip2Items() {
+  if (EQUIP2_ITEMS_CACHE) return EQUIP2_ITEMS_CACHE;
+  EQUIP2_ITEMS_CACHE = [];
+  for (let t = 1; t <= EQUIP2_CFG.tiers; t++) {
+    const smats = STAGE_MATERIALS[Math.min(t, 5)] || STAGE_MATERIALS[1];
+    const smatA = smats.normal, smatB = smats.tank || smats.normal;
+    for (const cat of EQUIP2_CATS) {
+      const variants = cat === "accessory" ? ["a", "b"] : [""];
+      for (const v of variants) {
+        const id = `${cat}${v ? "_" + v : ""}_t${t}`;
+        const cost = { ["ore_t" + t]: EQUIP2_CFG.oreNeed };
+        if (t >= 2) { const m = v === "b" ? smatB : smatA; cost[m] = (cost[m] || 0) + EQUIP2_CFG.stageMatNeed; }
+        EQUIP2_ITEMS_CACHE.push({
+          id, cat, tier: t, prev: t > 1 ? `${cat}${v ? "_" + v : ""}_t${t - 1}` : null, cost,
+          name: EQUIP2_TIER_NAMES[t - 1] + EQUIP2_BASE_NAMES[cat] + (v ? (v === "a" ? "・金" : "・銀") : ""),
+          mult: Math.pow(EQUIP2_CFG.allMulPerTier, t) // 効果は固定値で表示: 全生産×mult
+        });
+      }
+    }
+  }
+  return EQUIP2_ITEMS_CACHE;
+}
+function equip2ById(id) { for (const it of equip2Items()) if (it.id === id) return it; return null; }
+function equip2Mult() {
+  let m = 1;
+  const eq = state.eq2Equipped || {};
+  for (const slot of EQUIP2_SLOTS) { const it = eq[slot] ? equip2ById(eq[slot]) : null; if (it) m *= it.mult; }
+  return m;
+}
+// 固定クエスト: フロンティアステージでの累計討伐(周回持ち越し)。達成で次ステージ解放+次クエスト表示
+function questProgressOnKill(stageNo, units) {
+  if (stageNo !== (state.stageUnlocked || 1) || stageNo >= MAX_STAGE_NO) return;
+  state.questKills = state.questKills || {};
+  state.questKills[stageNo] = (state.questKills[stageNo] || 0) + (units || 1);
+  const need = QUEST_KILLS_NEED[stageNo - 1] || Infinity;
+  if (state.questKills[stageNo] >= need) {
+    state.stageUnlocked = stageNo + 1;
+    playScreenTransition();
+    dropMat(`クエスト達成！ 新ステージ「${stageInfo(stageNo + 1).name}」解放！`);
+  }
+}
+function currentQuestText() {
+  const st = state.stageUnlocked || 1;
+  if (st >= MAX_STAGE_NO) return "全ステージ解放済み";
+  const got = (state.questKills || {})[st] || 0;
+  const need = QUEST_KILLS_NEED[st - 1] || 0;
+  return `固定クエスト: 「${stageInfo(st).name}」でモンスターを ${need} 体討伐(${Math.min(got, need)}/${need}) → 「${stageInfo(st + 1).name}」解放`;
+}
 const DIRECT_CFG = {
   equip:  { coef: 0.06, stagePow: 0.5, countPow: 2,   ref: 70,  startStage: 5, satMax: 50, otherMul: { click: 0.08, default: 0.2 }, anchorGolden: 0.15 },
   golden: { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 10, otherMul: { click: 0.3, balanced: 0.3, hunt: 0.3, default: 1 } },
