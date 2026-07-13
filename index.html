@@ -6211,7 +6211,7 @@ const ASSETS = {
 const UPGRADES = [
   // クリックとおばあちゃんは基礎値1。香料棚を銀行〜異世界炉の中間に追加し、工場以降は緩やかに重くなる。
   { id: "finger", name: "強い指", type: "click", value: 1, base: 0.0184, growth: 1.32, desc: "1タップ +1。さらに毎秒生産の一部(0.4%×強い指補正)がタップ力に加算される" },
-  { id: "grandma", name: "おばあちゃん", type: "cps", value: 1, base: 1000, growth: 1.30, desc: "毎秒 +1(台数が増えるほど1台あたりが強くなる)" },
+  { id: "grandma", name: "おばあちゃん", type: "cps", value: 1, base: 500, growth: 1.30, desc: "毎秒 +1(台数が増えるほど1台あたりが強くなる)" },
   { id: "oven", name: "オーブン", type: "cps", value: 8, base: 520, growth: 1.35, desc: "毎秒 +8" },
   { id: "factory", name: "工場", type: "cps", value: 45, base: 7200, growth: 1.37, desc: "毎秒 +45" },
   { id: "bank", name: "クッキー銀行", type: "cps", value: 260, base: 54000, growth: 1.39, desc: "毎秒 +260" },
@@ -7658,84 +7658,11 @@ const RES_EQUIP = {
   eventHorizon: "blackHoleMixer", cosmicConvection: "universeOven",
   singularityFlow: "cookieSingularity", annihilationCore: "antimatterOven"
 };
-// ==== 実績研究(マイルストーン研究・2026-07-11 ユーザー指示) ====
-// 「第0回から研究を盛り沢山に。効果は永続の単純倍率(後で腐ってもよい)。設備数や実績・スキルで解放」。
-// コストは解放時点の毎秒生産×30秒ぶん(常に手が届く)。転生で買い直し(実績トリガは累計なので次周回もすぐ出る)。
-const MILESTONE_RESEARCH = (() => {
-  // 2026-07-11 ユーザー指示「第0回研究とスキル解放研究で100ずつぐらい、コストもばらけさせて」:
-  // 実績系≈94本+スキル解放研究≈112本の生成器(sim同期)。コスト=解放時点の毎秒生産×costSec秒ぶん
-  // (20秒=即買い〜1500秒=貯金目標)。効果は永続の単純倍率。転生で買い直し。
-  const eqName = id => (UPGRADES.find(u => u.id === id) || { name: id }).name;
-  const ROMA = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
-  const list = [];
-  const add = (id, name, cond, trig, fxText, fx, costSec) => list.push({ id, name, cond, trig, fxText, fx, costSec });
-  // 量産体制(2026-07-14 メトロノーム・sim同期): 工場1台以降、45秒ごとに繰り返し購入できる全生産×1.25。
-  // コスト=毎秒生産30秒ぶん(常に手が届く)。ゲーム全体の「3分で2倍」成長の下支え。
-  add("ms_massprod", "量産体制", "工場 1台(45秒ごとに繰り返し購入可)", () => (state.upgrades.factory || 0) >= 1, "全生産 ×1.25(繰り返し)", { all: 1.25 }, 30);
-  list[list.length - 1].repeatSec = 45;
-  // 設備の熟練 I〜IV(10/40/120/300台)
-  const eqTiers = [[10, 150], [40, 450], [120, 1200], [300, 3000]];
-  UPGRADES.forEach(u => {
-    eqTiers.forEach(([n, cs], ti) => {
-      const isClick = u.type === "click";
-      add("ms_" + u.id + "_t" + (ti + 1), eqName(u.id) + "の熟練 " + ROMA[ti], eqName(u.id) + " " + n + "台",
-        () => (state.upgrades[u.id] || 0) >= n,
-        isClick ? "タップ生産 ×1.35" : eqName(u.id) + "の生産 ×1.5",
-        isClick ? { click: 1.35 } : { up: { [u.id]: 1.5 } }, cs);
-    });
-  });
-  // 工場の早期強化 3段(2026-07-11 ユーザー指示・sim同期): 組立ライン網(段1研究)が高く買える前の
-  // 3/6/8台で工場の生産を先行強化。安価(即買い帯)
-  const facEarly = [[3, 40, 1.35], [6, 80, 1.4], [8, 120, 1.45]];
-  facEarly.forEach(([n, cs, m], i) => add("ms_factory_e" + (i + 1), "工場の助走 " + ROMA[i], "クッキー工場 " + n + "台",
-    () => (state.upgrades.factory || 0) >= n, "クッキー工場の生産 ×" + m, { up: { factory: m } }, cs));
-  // 討伐実績 8段(周回内・効果ローテ)
-  const killTiers = [[10, 100, { hunt: 1.3 }, "モンスターダメージ ×1.3"], [25, 200, { spawn: 0.85 }, "モンスター出現間隔 ×0.85"],
-    [50, 400, { stay: 1.2 }, "モンスター滞在時間 ×1.2"], [100, 800, { hunt: 1.3 }, "モンスターダメージ ×1.3"],
-    [200, 1600, { hp: 0.75 }, "モンスターHP ×0.75"], [400, 3000, { dropAdd: 1 }, "素材ドロップ +1個"],
-    [800, 4500, { hunt: 1.3 }, "モンスターダメージ ×1.3"], [1600, 6000, { stay: 1.2 }, "モンスター滞在時間 ×1.2"]];
-  killTiers.forEach(([n, cs, fx, ft], i) => add("ms_kills_k" + (i + 1), "狩りの実績 " + ROMA[i], "この周回で討伐 " + n + "体",
-    () => (state.msKills || 0) >= n, ft, fx, cs));
-  // 金クッキー実績 6段(周回内)
-  [[5, 100], [15, 300], [40, 750], [100, 2000], [250, 4000], [600, 7500]].forEach(([n, cs], i) =>
-    add("ms_golden_g" + (i + 1), "金運 " + ROMA[i], "この周回で金クッキー " + n + "枚",
-      () => (state.msGoldens || 0) >= n, "金クッキー即時獲得 ×1.3", { golden: 1.3 }, cs));
-  // タップ実績 6段(周回内)
-  [[300, 75], [1000, 200], [3000, 600], [8000, 1500], [20000, 3500], [50000, 7500]].forEach(([n, cs], i) =>
-    add("ms_taps_p" + (i + 1), "タップの鍛錬 " + ROMA[i], "この周回でタップ " + n.toLocaleString() + "回",
-      () => (state.msTaps || 0) >= n, "タップ生産 ×1.4", { click: 1.4 }, cs));
-  // ノルマ層実績 6段(周回内)
-  [[5, 150], [15, 450], [30, 1000], [60, 2000], [100, 4000], [150, 7500]].forEach(([n, cs], i) =>
-    add("ms_stage_s" + (i + 1), "深層踏破 " + ROMA[i], "この周回でノルマ第" + n + "層に到達",
-      () => maxQuotaStage() >= n, "全生産 ×1.15", { all: 1.15 }, cs));
-  // 転生実績 4段(通算)
-  [[2, 300], [5, 600], [10, 1500], [20, 3000]].forEach(([n, cs], i) =>
-    add("ms_prestige_r" + (i + 1), "輪廻 " + ROMA[i], "転生 " + n + "回",
-      () => (Number(state.prestigeRuns) || 0) >= n, "全生産 ×1.2", { all: 1.2 }, cs));
-  // --- スキル解放研究(各スキルで「応用」+生産系は「奥義」も) ---
-  const branchFx = id => {
-    if (id.startsWith("click_") || id === "upgrade_godfinger") return [{ click: 1.3 }, "タップ生産 ×1.3"];
-    if (id.startsWith("golden_")) return [{ golden: 1.25 }, "金クッキー即時獲得 ×1.25"];
-    if (id.startsWith("monster_") || id === "hunt_analysis" || id.startsWith("unlock_reward_")) return [{ hunt: 1.3 }, "モンスターダメージ ×1.3"];
-    if (id.startsWith("auto_") || id.startsWith("upgrade_")) return [{ cps: 1.3 }, "毎秒生産 ×1.3"];
-    if (id.startsWith("economy_") || id === "order_board") return [{ cps: 1.2 }, "毎秒生産 ×1.2"];
-    if (id.startsWith("research_")) return [{ all: 1.08 }, "全生産 ×1.08"];
-    if (id.startsWith("reward_")) return [{ hunt: 1.2 }, "モンスターダメージ ×1.2"];
-    if (id.startsWith("workshop_")) return [{ dropAdd: 1 }, "素材ドロップ +1個"];
-    if (id.startsWith("start_") || id === "offline_1" || id === "endless_oven") return [{ all: 1.05 }, "全生産 ×1.05"];
-    return [{ all: 1.1 }, "全生産 ×1.1"];
-  };
-  const csLadder = [100, 300, 900, 2500, 7000];
-  SKILL_NODES.forEach((n, i) => {
-    const [fx, ft] = branchFx(n.id);
-    add("msk_" + n.id, n.name + "の応用", "スキル「" + n.name + "」を取得", () => hasSkill(n.id), ft, fx, csLadder[i % 5]);
-    const t = Object.keys(fx)[0];
-    if (t === "click" || t === "cps" || t === "golden" || t === "hunt") {
-      add("msk2_" + n.id, n.name + "の奥義", "スキル「" + n.name + "」を取得", () => hasSkill(n.id), ft, fx, csLadder[(i + 2) % 5] * 3);
-    }
-  });
-  return list;
-})();
+// ==== 実績研究(マイルストーン研究) ====
+// 2026-07-13 ユーザー指示「実績研究全て消して」: 実績研究を全廃。
+// 生成リストを空にすることで、研究タブへのカード表示・購入・倍率適用(msMulOf)を全て無効化する。
+// (msMulOf などの参照はリストが空のため中立値=1倍/+0を返すので、他機能を壊さずに済む)
+const MILESTONE_RESEARCH = [];
 function skillNameOf(id) { const n = SKILL_NODES.find(x => x.id === id); return n ? n.name : id; }
 function maxQuotaStageEverSafe() { return Math.max(1, Math.floor(Number(state.maxQuotaStageEver) || 0), maxQuotaStage()); }
 function msBought(id) {
