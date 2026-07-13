@@ -5278,11 +5278,11 @@
     }
 
     body:not(.sectionFullscreen):not(.playFullscreenMode) .game {
-      /* 内容も含めて比率を完全固定する: 基準サイズ(375×547=24:35)でレイアウトし、
-         画面サイズに合わせてゲーム全体を等倍スケール(文字・画像・ボタンも同比率で拡縮)。
+      /* 横幅は基準375pxで固定(内容の横比率を一定に保つ)。高さはJSが画面いっぱいに合わせて
+         --gamePortraitH を計算し、プレイ画面が余白を吸収して黒帯なく画面を満たす。
          倍率(--gameScale)はJS(applyGameScale)がリサイズ時に計算する */
       width: 375px !important;
-      height: calc(375px * 35 / 24) !important;
+      height: var(--gamePortraitH, calc(375px * 35 / 24)) !important;
       margin: 0 !important;
       transform: scale(var(--gameScale, 1));
       transform-origin: center center;
@@ -11352,12 +11352,29 @@ function applyGameScale() {
   try {
     wide = (window.innerWidth / Math.max(1, window.innerHeight)) >= WIDE_ASPECT_THRESHOLD;
     document.body.classList.toggle("wideLayout", wide);
-    const baseW = wide ? GAME_WIDE_W : GAME_BASE_W;
-    const baseH = wide ? GAME_WIDE_H : GAME_BASE_H;
-    const availW = Math.min(window.innerWidth - 12, wide ? 1400 : 640);
-    const availH = window.innerHeight - 16;
-    const k = Math.max(0.2, Math.min(availW / baseW, availH / baseH));
-    document.documentElement.style.setProperty("--gameScale", String(k));
+    const availH = window.innerHeight - 8;
+    if (wide) {
+      const availW = Math.min(window.innerWidth - 12, 1400);
+      const k = Math.max(0.2, Math.min(availW / GAME_WIDE_W, availH / GAME_WIDE_H));
+      document.documentElement.style.setProperty("--gameScale", String(k));
+    } else {
+      // 縦画面は「横幅基準でスケール(内容の横比率は固定)」しつつ、高さは画面いっぱいに伸ばす。
+      // プレイ画面(.top)が余った縦の余白を吸収するので、上下の黒帯が出ず画面が小さく見えない。
+      const availW = Math.min(window.innerWidth - 8, 720);
+      const kWidth = availW / GAME_BASE_W;
+      let k, portraitH;
+      if (availH / kWidth >= GAME_BASE_H) {
+        k = kWidth;                  // 縦長端末: 横で合わせ、縦は画面を満たす
+        portraitH = availH / kWidth;
+      } else {
+        // ほぼ正方形に近い縦画面: はみ出さないよう基準比率でフィット
+        k = Math.min(kWidth, availH / GAME_BASE_H);
+        portraitH = GAME_BASE_H;
+      }
+      k = Math.max(0.4, k);
+      document.documentElement.style.setProperty("--gameScale", String(k));
+      document.documentElement.style.setProperty("--gamePortraitH", portraitH + "px");
+    }
   } catch (e) {}
   // 横並びに切り替わった時は全画面状態を解除しておく(全画面ボタンも無効化される)。
   // 変数がまだ宣言される前(初回呼び出し時)に触れても落ちないよう別のtryにする。
@@ -16387,17 +16404,11 @@ function installDebugPanel() {
   });
 
   addTap($("debugMaterialsBtn"), () => {
-    // デバッグ: workshop_1/workshop_2 未取得なら取得済みにする(素材が使える状態を作る)
-    let granted = false;
-    ["workshop_1", "workshop_2"].forEach(id => {
-      if (!hasSkill(id)) {
-        state.skills[id] = true;
-        granted = true;
-      }
-    });
+    // 素材を配るだけ。工房スキル(素材の嗅覚/工房の拡張)は取得させない。
+    // 取得させると実績研究「〜の応用」がスキル未解放なのに解放判定になってしまうため(2026-07-13 ユーザー指摘)。
     MATERIALS.forEach(m => gainMaterial(m.id, 100));
     updateWorkshopTabVisibility();
-    showMessage(granted ? "全素材 +100(工房スキルも取得済みにした)" : "全素材 +100");
+    showMessage("全素材 +100");
     saveGame();
     updateTopOnly();
     renderAllTabs();
