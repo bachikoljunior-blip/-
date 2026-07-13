@@ -286,6 +286,12 @@ function buildSkillCosts() {
       } else {
         tentative = P.skillCost.C0 * Math.pow(P.skillCost.rho || 4, myRung);
       }
+      // 相乗り段の人数割り(2026-07-14 ④修復): 同段のスキルは段コストを人数で割る
+      // =1回の転生PTで段の全スキルを買い切れる→毎転生がフル段(8.5桁)前進=④(1e8)が全ペアで立つ。
+      // (人数割りしないと2本目のために同じ8.5桁を再耕作する周回が生まれ、④比×1.0のペアが交互に出る=R18実測)
+      // 人数=この段に写像される生産スキルの本数(floor(i/share)==myRung の i の個数)
+      const sharers = Math.floor((myRung + 1) * share) - Math.ceil(myRung * share) + (Number.isInteger(myRung * share) ? 1 : 0);
+      tentative = tentative / Math.max(1, sharers);
       // ⑲改(2026-07-06 ユーザー承認・第9次): 「各ノードは少なくとも1本、コスト比10倍以内の辺で
       // 結ばれていればよい」へ変更。辺ごとのクランプは廃止(はしごコストがそのまま立つ・ライダーなし)。
       // 検証は runner.js の check19(⑲改判定)。関連効果どうしを結ぶ遠距離辺は距離自由。

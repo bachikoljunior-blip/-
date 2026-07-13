@@ -45,8 +45,11 @@ const cheapestFirst = function (sim) {
 };
 
 function cheapestNextSkillCost(sim) {
-  // プレイヤーは生産・解放に効くノードを転生目標にする(解析系QoLノードはついで取り)
-  let best = Infinity, bestAny = Infinity;
+  // プレイヤーは生産・解放に効くノードを転生目標にする(解析系QoLノードはついで取り)。
+  // 相乗り段バンドル(2026-07-14 ④修復): 同じ段(コスト同帯)の未取得スキルは1回の転生でまとめて
+  // 買い切る前提で「合計」を目標にする。pG平坦下では最安1本狙いだと2本目のために同じ8.5桁を
+  // 再耕作する周回(④比×1.0)が生まれる=R18実測。合計狙いなら同一しきい値で両方買えて毎転生フル段前進。
+  let best = Infinity, bestAny = Infinity, bundle = 0;
   for (const n of G.SKILL_NODES) {
     if (sim.skills[n.id]) continue;
     if (!n.prereqs.every(q => sim.skills[q])) continue;
@@ -54,7 +57,16 @@ function cheapestNextSkillCost(sim) {
     bestAny = Math.min(bestAny, c);
     if (!G.isUtilitySkill(n.id)) best = Math.min(best, c);
   }
-  if (best !== Infinity) return best;
+  if (best !== Infinity) {
+    for (const n of G.SKILL_NODES) {
+      if (sim.skills[n.id]) continue;
+      if (G.isUtilitySkill(n.id)) continue;
+      if (!n.prereqs.every(q => sim.skills[q])) continue;
+      const c = G.skillCostOf(n);
+      if (c <= best * 1.1) bundle += c; // 同帯(±10%)は同段の相乗り=まとめ買い対象
+    }
+    return Math.max(best, bundle);
+  }
   if (bestAny !== Infinity) return bestAny;
   return null;
 }
@@ -162,13 +174,22 @@ function nextTargetSkillCost(sim) {
 }
 function prestigeWhen(minElapsedSec, gainFactor) {
   // 「この周回の獲得予定PTだけで、次に欲しいスキルのコストに届いたら転生」
+  // 目標の単調化(2026-07-14 ④修復の恒久解): 目標 = max(次スキル束, 前回目標×1.57)。
+  // スキル束(入口4本=5PT等)や個別上書きで梯子の段差が×1.57未満になるペアは、前回目標×1.57が下駄になる
+  // =転生しきい値の比が常に≥×1.57(pG0.023で=10^8.5=④の1e8+余裕)。プレイヤー語: 「前回より上を目指してから転生」。
   return function (sim) {
     if (sim.t - sim.run.startT < minElapsedSec) return false;
     if (sim.run.cookies < G.prestigeCostOf(sim)) return false; // 転生には所持クッキー(10のべき乗・前回より大)が必要
-    const next = cheapestNextSkillCost(sim); // 系統ターゲット基準は差し戻し(2026-07-12実測: ④89.5%と改善なし・T1 96.4→93.9・周回構造激変=S3 49→20周回。nextTargetSkillCostは温存)
+    const next = cheapestNextSkillCost(sim);
     if (next === null) return false; // ツリー完了後はPTの使い道がないため転生しない
+    const floor157 = (sim._prTarget || 0) * 1.57;
+    const target = Math.max(next, floor157);
     const gain = G.prestigeGainOf(sim.run.runCookies);
-    return gain >= next * gainFactor && gain >= 1;
+    if (gain >= target * gainFactor && gain >= 1) {
+      sim._prTarget = target; // 達成した目標を記録(次回の単調床)
+      return true;
+    }
+    return false;
   };
 }
 
