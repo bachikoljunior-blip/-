@@ -150,7 +150,9 @@
     .cookieCount {
       width: 100%;
       min-width: 0;
-      font-size: clamp(24px, 7.5vw, 32px);
+      /* ゲームは375px基準ボックスを等倍スケールするため、vw(ビューポート相対)ではなく
+         固定pxにして画面幅に依らず同じ比率で表示する(7.5vw@375px相当) */
+      font-size: 28px;
       line-height: 1.05;
       font-weight: 900;
       margin: 2px 0;
@@ -161,12 +163,22 @@
 
     /* クッキー画面の合計毎秒生産(小さめのサブ表示) */
     .cookieCps {
-      display: block;
+      /* 毎秒とダメージを左右半分ずつの固定枠に置き、増分(+X)が出ても
+         もう一方の表示位置がずれないようにする */
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       font-size: 12px;
       font-weight: 700;
       line-height: 1.2;
       color: #f2d9a8;
       opacity: 0.9;
+    }
+
+    .cookieCps .statHalf {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: center;
     }
 
     #cookies {
@@ -1457,7 +1469,7 @@
       backdrop-filter: blur(8px);
     }
 
-    @media (max-width: 520px) {
+    @media (min-width: 0px) { /* 常時適用: ゲームは基準375pxレイアウトを等倍スケールするため、モバイル版デザインを全画面サイズで使う */
       .skillScreenInner {
         height: calc(100dvh - 16px);
       }
@@ -4612,7 +4624,8 @@
     }
 
     .cookieCount {
-      font-size: clamp(21px, 6.2vw, 27px) !important;
+      /* 固定px(6.2vw@375px相当)。ビューポート幅で文字比率が変わらないようにする */
+      font-size: 23px !important;
       margin: 1px 0 !important;
     }
 
@@ -4754,7 +4767,7 @@
       font-size: 11px;
       color: rgba(255, 224, 150, 0.72);
     }
-    @media (max-width: 380px) {
+    @media (max-width: 0px) { /* 無効化: 縮小フィットは等倍スケールが担うため小画面専用の調整は不要 */
       #policyChoiceRow { gap: 8px; }
       #policyChoiceRow .policyChoiceBtn { min-height: 178px; padding: 12px 6px; }
       #policyChoiceRow .choiceIcon { width: 66px; height: 66px; }
@@ -5122,8 +5135,14 @@
     }
 
     /* ===== 直近要望: 表示崩れ対策 ===== */
-    /* ダブルタップでの画面拡大を無効化(スクロール・パンは維持) */
+    /* ダブルタップでの画面拡大を無効化(スクロール・パンは維持)。
+       iOSは「タップされた要素自身」のtouch-actionを見るため、html/bodyだけでは
+       子要素上のダブルタップで時々拡大してしまう。全要素に適用して確実に止める */
     html, body {
+      touch-action: manipulation;
+    }
+
+    *, *::before, *::after {
       touch-action: manipulation;
     }
 
@@ -5236,6 +5255,74 @@
       transform: none !important;
       background-position: center right !important;
       background-size: contain !important;
+    }
+
+    /* ゲーム全体の縦横比をiPhoneスクリーンショット基準(≒24:35)に固定(2026-07-11 ユーザー指示)。
+       どの端末でもこの比率で表示し、余った画面は背景のレターボックスにする。
+       タブ全画面・クッキー全画面モードは従来どおり画面いっぱいを使う */
+    body:not(.sectionFullscreen):not(.playFullscreenMode) {
+      display: grid;
+      place-items: center;
+      /* 端末画面に合わせてゲーム全体が見えるよう縮め、余白は黒のレターボックスにする */
+      background: #000 !important;
+    }
+
+    html {
+      background: #000;
+    }
+
+    body:not(.sectionFullscreen):not(.playFullscreenMode) .game {
+      /* 内容も含めて比率を完全固定する: 基準サイズ(375×547=24:35)でレイアウトし、
+         画面サイズに合わせてゲーム全体を等倍スケール(文字・画像・ボタンも同比率で拡縮)。
+         倍率(--gameScale)はJS(applyGameScale)がリサイズ時に計算する */
+      width: 375px !important;
+      height: calc(375px * 35 / 24) !important;
+      margin: 0 !important;
+      transform: scale(var(--gameScale, 1));
+      transform-origin: center center;
+    }
+
+    /* ── 横並び(ワイド)レイアウト ──
+       端末の横幅が広い時、クッキー画面(.top)とタブ画面(.tabPages+.tabs)を、
+       縦画面と同じ比率のまま左右2列で並べる。全体は 750×305 を等倍スケール。 */
+    body.wideLayout:not(.sectionFullscreen):not(.playFullscreenMode) .game {
+      display: grid !important;
+      grid-template-columns: 375px 375px !important;
+      grid-template-rows: 252px 53px !important;
+      width: 750px !important;
+      height: 305px !important;
+      margin: 0 !important;
+      transform: scale(var(--gameScale, 1));
+      transform-origin: center center;
+    }
+    /* 左列: クッキー画面。縦画面と同じ 375×234 の比率を保ち、縦方向は中央寄せ */
+    body.wideLayout .top {
+      grid-column: 1 !important;
+      grid-row: 1 / span 2 !important;
+      align-self: center !important;
+      flex: none !important;
+      height: 234px !important;
+      min-height: 234px !important;
+      max-height: 234px !important;
+      overflow: hidden !important;
+    }
+    /* 右列上: タブ内容。縦画面と同じ 375×252 */
+    body.wideLayout .tabPages {
+      grid-column: 2 !important;
+      grid-row: 1 !important;
+      flex: none !important;
+      height: 252px !important;
+      min-height: 252px !important;
+      max-height: 252px !important;
+    }
+    /* 右列下: タブバー */
+    body.wideLayout .tabs {
+      grid-column: 2 !important;
+      grid-row: 2 !important;
+    }
+    /* 横並び中はクッキー画面の全画面ボタンを隠す */
+    body.wideLayout #playFullscreenBtn {
+      display: none !important;
     }
 
   </style>
@@ -6980,6 +7067,8 @@ function relayoutMonsters() {
 }
 
 function togglePlayFullscreen() {
+  // 横並びレイアウト中は全画面を禁止する
+  if (document.body.classList.contains("wideLayout")) return;
   playFullscreenOn = !playFullscreenOn;
   document.body.classList.toggle("playFullscreenMode", playFullscreenOn);
   const btn = $("playFullscreenBtn");
@@ -7590,10 +7679,13 @@ function msResearchCost(ms) {
 }
 function buyMilestone(id) {
   const ms = MILESTONE_RESEARCH.find(m => m.id === id);
-  if (!ms || msBought(id) || !ms.trig()) return;
+  // デバッグON中はトリガ未達成でも購入できる(通常研究のデバッグ購入と同じ扱い)
+  if (!ms || msBought(id) || (!debugMode && !ms.trig())) return;
   const cost = msResearchCost(ms);
-  if (state.cookies.lt(cost)) { showMessage("クッキーが足りない"); return; }
-  state.cookies = state.cookies.sub(cost);
+  if (!debugMode) {
+    if (state.cookies.lt(cost)) { showMessage("クッキーが足りない"); return; }
+    state.cookies = state.cookies.sub(cost);
+  }
   state.msResearch = state.msResearch && typeof state.msResearch === "object" ? state.msResearch : {};
   state.msResearch[id] = true;
   playSound("research");
@@ -11209,6 +11301,49 @@ function resumeAudioIfNeeded() {
   } catch (e) {}
 }
 
+// iOSで時々起きるダブルタップ拡大の保険(全要素のtouch-action: manipulationに加えて)
+document.addEventListener("dblclick", e => { e.preventDefault(); }, { passive: false });
+
+// 画面サイズが変わっても内容の比率が変わらないよう、基準サイズ(375×547=24:35)に対する
+// 等倍スケールを計算してゲーム全体に適用する(CSSの --gameScale)
+const GAME_BASE_W = 375;
+const GAME_BASE_H = 375 * 35 / 24;
+// 横並び(ワイド)レイアウトの基準サイズ: クッキー画面(375×234)とタブ画面(375×305)を
+// 縦画面と同じ比率のまま横に2列で並べる。全体は 750×305。
+const GAME_WIDE_W = 750;
+const GAME_WIDE_H = 305;
+// 端末の縦横比(横/縦)がこの値以上になったら横並びに切り替える
+const WIDE_ASPECT_THRESHOLD = 1.0;
+
+function applyGameScale() {
+  let wide = false;
+  try {
+    wide = (window.innerWidth / Math.max(1, window.innerHeight)) >= WIDE_ASPECT_THRESHOLD;
+    document.body.classList.toggle("wideLayout", wide);
+    const baseW = wide ? GAME_WIDE_W : GAME_BASE_W;
+    const baseH = wide ? GAME_WIDE_H : GAME_BASE_H;
+    const availW = Math.min(window.innerWidth - 12, wide ? 1400 : 640);
+    const availH = window.innerHeight - 16;
+    const k = Math.max(0.2, Math.min(availW / baseW, availH / baseH));
+    document.documentElement.style.setProperty("--gameScale", String(k));
+  } catch (e) {}
+  // 横並びに切り替わった時は全画面状態を解除しておく(全画面ボタンも無効化される)。
+  // 変数がまだ宣言される前(初回呼び出し時)に触れても落ちないよう別のtryにする。
+  if (wide) {
+    try {
+      if (playFullscreenOn) {
+        playFullscreenOn = false;
+        document.body.classList.remove("playFullscreenMode");
+      }
+      if (pageFullscreenId) closeTabPageFullscreen();
+    } catch (e) {}
+  }
+}
+
+window.addEventListener("resize", applyGameScale);
+window.addEventListener("orientationchange", applyGameScale);
+applyGameScale();
+
 // 自動再生制限のため、最初の操作(タップ)でBGMを開始する
 document.addEventListener("pointerdown", () => { try { startBgm(); } catch (e) {} }, { once: true });
 // 一度中断した音を以降の操作・再表示で必ず復帰させる
@@ -11573,10 +11708,38 @@ function checkQuotaStageTransition() {
   box.classList.add(up ? "layerUp" : "layerDown");
 }
 
+// 毎秒/ダメージの「増えた分」を5秒間表示するためのトラッカー。
+// 増加が重なったら増分を加算して、そこからまた5秒表示する。減少時は基準だけ静かに更新。
+const statDeltaCps = { last: null, acc: 0, until: 0 };
+const statDeltaDmg = { last: null, acc: 0, until: 0 };
+
+function statDeltaText(tracker, value) {
+  const now = Date.now();
+  if (tracker.last != null && Number.isFinite(value) && Number.isFinite(tracker.last)) {
+    if (value > tracker.last * (1 + 1e-9) + 1e-9) {
+      if (now > tracker.until) tracker.acc = 0; // 表示が切れた後の増加は積算をやり直す
+      tracker.acc += value - tracker.last;
+      tracker.until = now + 5000;
+    }
+  }
+  tracker.last = value;
+  return (now <= tracker.until && tracker.acc > 0) ? ` (+${fmt(tracker.acc)})` : "";
+}
+
 function updateTopOnly() {
   $("cookies").textContent = fmtCookieCount(state.cookies);
   const cpsEl = $("cookieCps");
-  if (cpsEl) cpsEl.textContent = pausedForSkillChoice() ? "合計毎秒 準備中" : "合計毎秒 " + fmt(currentCps() + directIncomeTotalCps());
+  if (cpsEl) {
+    if (pausedForSkillChoice()) {
+      cpsEl.innerHTML = `<span class="statHalf">合計毎秒 準備中</span><span class="statHalf"></span>`;
+    } else {
+      // ノルマゲージ上の行に、毎秒とモンスターダメージを左右の固定枠で並べて表示する
+      const cps = currentCps() + directIncomeTotalCps();
+      const dmg = monsterBaseDamage() * monsterDamageMultiplier();
+      cpsEl.innerHTML = `<span class="statHalf">毎秒 ${fmt(cps)}${statDeltaText(statDeltaCps, cps)}</span>`
+        + `<span class="statHalf">ダメージ ${fmt(dmg)}${statDeltaText(statDeltaDmg, dmg)}</span>`;
+    }
+  }
 
   $("cookie").classList.toggle("boost-all", goldenBoostActive());
   updateBhGaugeButton();
@@ -12812,25 +12975,31 @@ function researchArt(r) {
   return "⌬";
 }
 
-function upgradeShopEffectRows(u) {
+function upgradeShopEffectRows(u, buyCount) {
   const owned = state.upgrades[u.id] || 0;
+  // 追加分「+X」は実際に購入する台数ぶんの増加にする。×10/×100/MAX の時に
+  // +1ぶんしか出さないと、購入後に増える合計毎秒とズレて見えるため(2026-07-13 ユーザー指摘)。
+  const count = Math.max(1, buyCount || 1);
   const isCps = u.type === "cps";
   const measure = () => (isCps ? currentCps() : currentClickPower());
 
   // 最終値で表示する(2026-07-11 ユーザー指示): 全ての倍率・ブースト込みの実際の生産で、
   // 台数を一時的に変えて本物のパイプラインの差分を取る(連携・系列ボーナス等の波及も含む)。
   const cur = measure();
-  let withoutV, plusOneV;
+  let withoutV, plusNV;
   try {
     state.upgrades[u.id] = 0;
     withoutV = measure();
-    state.upgrades[u.id] = owned + 1;
-    plusOneV = measure();
+    state.upgrades[u.id] = owned + count;
+    plusNV = measure();
   } finally {
     state.upgrades[u.id] = owned;
   }
-  const total = Math.max(0, cur - withoutV);
-  const add = Math.max(0, plusOneV - cur);
+  // タップ設備の「合計」は素手ぶん(基礎タップ×倍率)も含む実際の1タップ量にする。
+  // 設備ぶんだけの差分だと、実際にタップした数値とずれて見えるため(2026-07-11 ユーザー指摘)。
+  // 毎秒設備は従来どおり「その設備の寄与ぶん」。
+  const total = isCps ? Math.max(0, cur - withoutV) : cur;
+  const add = Math.max(0, plusNV - cur);
   const kind = isCps ? "毎秒" : "タップ";
 
   // 追加分は「+X」、合計は「毎秒 X(タップ X)」のみを表示する
@@ -12899,7 +13068,7 @@ function renderShop() {
     }
 
     const efficiency = upgradeEfficiencyText(u);
-    const eff = upgradeShopEffectRows(u);
+    const eff = upgradeShopEffectRows(u, plan.count);
 
     btn.classList.toggle("canBuy", (debugMode || plan.affordable) && !pausedForSkillChoice());
     const surgeNow = surgeMultiplier(u.id, 0);
@@ -13317,12 +13486,12 @@ function renderResearch() {
       const m = MILESTONE_RESEARCH.find(x => ("ms:" + x.id) === lockId);
       if (!m) return;
       const cost = msResearchCost(m);
-      btn.classList.toggle("canBuy", state.cookies.gte(cost) && !pausedForSkillChoice());
+      btn.classList.toggle("canBuy", (debugMode || state.cookies.gte(cost)) && !pausedForSkillChoice());
       btn.innerHTML = `
         <b>${m.name}</b>
         <div class="price">${fmtCost(cost)} クッキー</div>
         <div class="desc">${m.fxText}</div>
-        <div class="desc">実績: ${m.cond}(達成済み)</div>
+        <div class="desc">実績: ${m.cond}(${debugMode && !m.trig() ? "未達成・デバッグ購入可" : "達成済み"})</div>
       `;
       return;
     }
@@ -13977,6 +14146,8 @@ function closeTabPageFullscreen() {
 
 function toggleTabPageFullscreen(targetId) {
   if (!targetId) return;
+  // 横並びレイアウト中は全画面を禁止する
+  if (document.body.classList.contains("wideLayout")) return;
 
   if (pageFullscreenId === targetId) {
     closeTabPageFullscreen();
@@ -14887,7 +15058,9 @@ function scheduleMonster() {
 function rectRelativeToHost(el, host) {
   const r = el.getBoundingClientRect();
   const h = host.getBoundingClientRect();
-  return { left: r.left - h.left, top: r.top - h.top, right: r.right - h.left, bottom: r.bottom - h.top };
+  // ゲーム全体をtransform: scaleしているため、画面座標をレイアウト座標(style.left/top と同じ系)へ戻す
+  const k = h.width / Math.max(1, host.clientWidth || h.width);
+  return { left: (r.left - h.left) / k, top: (r.top - h.top) / k, right: (r.right - h.left) / k, bottom: (r.bottom - h.top) / k };
 }
 
 // クッキー本体・金クッキー・他のモンスターと重ならないようにするための配置済み矩形一覧
