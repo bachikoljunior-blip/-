@@ -678,7 +678,12 @@ function equip2Tick(sim) {
   const tier = Math.max(1, Math.min(E.tiers, r.wsStage || 1));
   // 作れるのは現ステージのティア以下(ステージが進むと新ティアが加わる)。高ティア優先で1カテゴリ1個(アクセ2個)/周回。
   // 下位ティアも作れるので「前ティア装備を消費する合成連鎖」が在庫切れで止まらない
-  const items = equip2Items().slice().sort((a, b) => b.tier - a.tier);
+  // カテゴリ優先を周回ごとにローテーション(2026-07-13: 固定順だと末尾カテゴリ(hat/shoes/acc)が
+  // いつも素材切れ後=周回終盤の初作成になり装備lift(a)と作成テンポ(c)を落とす)
+  const rot = (sim.prestigeRuns || 0) % EQUIP2_CATS.length;
+  const catOrder = {};
+  EQUIP2_CATS.forEach((c, i) => { catOrder[c] = (i - rot + EQUIP2_CATS.length) % EQUIP2_CATS.length; });
+  const items = equip2Items().slice().sort((a, b) => (b.tier - a.tier) || (catOrder[a.cat] - catOrder[b.cat]));
   for (const it of items) {
     if (it.tier > tier) continue;
     const cap = it.cat === 'accessory' ? 2 : 1;
