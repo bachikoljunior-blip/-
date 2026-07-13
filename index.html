@@ -9389,7 +9389,9 @@ function craftEquip2(id) {
   state.eq2Owned[it.id] = (state.eq2Owned[it.id] || 0) + 1;
   state.eq2MadeThisRun[it.cat] = (state.eq2MadeThisRun[it.cat] || 0) + 1;
   if (upgradedSlot) state.eq2Equipped[upgradedSlot] = it.id; // 合成で消えた装備の枠は新装備に置き換え
-  dropMat(`${it.name} を作成！`);
+  // dropMatは別関数内のローカル変数でここでは未定義。これで落ちて以降のrenderActiveTabが
+  // 実行されず、所持素材の減りがすぐ反映されなかった。showMessageに修正(2026-07-13)。
+  showMessage(`${it.name} を作成！`);
   playSound("buy");
   saveGame(); renderActiveTab(); updateTopOnly();
 }
