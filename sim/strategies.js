@@ -92,6 +92,19 @@ function pickRewardByPriority(priority) {
 // 直前に倒した種類の相性が2倍以上のカテゴリに「自分が欲しい札」があれば、それを先に拾う。
 // 「同じ1枠でも実入りが2倍以上になる瞬間はそれを拾うのが得。ただし欲しくない札(反動つきの
 // リスク札など)は相性が良くても取らない」というプレイヤー判断。
+// 毎周回1枚確保(2026-07-14): リストの札を「この周回でまだ0枚」の間だけ最優先で拾い、
+// 確保後は基本ピッカーに戻る。優先リスト末尾の札が周回によって取り漏れて③-c
+// (毎周回取る方針の実在)が崩れる問題への対処(プレイヤー挙動=「回復系は毎周回1枚は確保」)。
+function pickRewardOncePerRunFirst(onceList, basePicker) {
+  return function (sim, offer) {
+    for (const want of onceList) {
+      if ((sim.run.perks[want] || 0) > 0) continue;
+      const c = offer.find(o => o.kind === 'perk' && o.id === want);
+      if (c) return c;
+    }
+    return basePicker(sim, offer);
+  };
+}
 function pickRewardAffinityAware(priority) {
   const base = pickRewardByPriority(priority);
   const catOf = {}; G.REWARD_POOL.forEach(r => catOf[r.id] = r.category);
@@ -276,7 +289,7 @@ const STRATEGIES = [
       }
       buyAllResearch(sim, 0.30);
     },
-    pickReward: pickRewardByPriority(['monsterRate', 'monsterDamage', 'beastHeatFerment', 'huntingCore', 'crackedFang', 'monsterStay', 'chainPrep', 'biteRecovery']),
+    pickReward: pickRewardOncePerRunFirst(['biteRecovery'], pickRewardByPriority(['monsterRate', 'monsterDamage', 'beastHeatFerment', 'huntingCore', 'crackedFang', 'monsterStay', 'chainPrep', 'biteRecovery'])),
     shouldPrestige: prestigeWhen(120, 1.2),
     skillOrder: skillOrderByBranch(['core', 'monster', 'auto', 'economy', 'research', 'reward', 'click', 'golden', 'upgrade', 'start', 'master'])
   },
