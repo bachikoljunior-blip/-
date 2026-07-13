@@ -4949,8 +4949,11 @@
     .eq2CraftRow { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-bottom: 1px solid rgba(255,255,255,0.12); }
     .eq2CraftRow .eq2CraftItem { flex: 1 1 auto; display: flex; align-items: center; gap: 6px; min-width: 0; }
     .eq2CraftRow .eq2CraftItem img { width: 34px; height: 34px; object-fit: contain; }
-    /* 作成する装備のアイコン(名前・効果はタップで表示。行には載せない) */
-    .eq2CraftItemIcon { flex: 1 0 44px; width: 44px; height: 44px; max-width: 44px; object-fit: contain; cursor: pointer; }
+    /* 作成する装備のアイコン(名前・効果はタップで表示。行には載せない)。個数はアイコン右下に重ねる */
+    .eq2CraftItemWrap { position: relative; flex: 0 0 auto; width: 50px; height: 50px; cursor: pointer; }
+    .eq2CraftItemIcon { width: 50px; height: 50px; object-fit: contain; }
+    /* アイコン右下に重ねる個数/分数バッジ(共通) */
+    .eq2Badge { position: absolute; right: -3px; bottom: -3px; font-size: 10px; font-weight: 800; line-height: 1; padding: 1px 3px; border-radius: 6px; background: rgba(20,12,6,0.92); border: 1px solid rgba(255,213,138,0.55); color: #ffe9c2; pointer-events: none; white-space: nowrap; }
     .eq2Need img { border-radius: 5px; }
     /* アイコン近くに出す情報ポップアップ(名前・効果) */
     .infoPopup {
@@ -4970,9 +4973,10 @@
       white-space: normal;
       pointer-events: auto;
     }
-    .eq2Needs { display: flex; gap: 4px; flex: 0 0 auto; }
-    .eq2Need { display: flex; flex-direction: column; align-items: center; font-size: 11px; border: 1px solid rgba(255,255,255,0.18); border-radius: 6px; padding: 2px 4px; }
-    .eq2Need img { width: 22px; height: 22px; object-fit: contain; }
+    .eq2Needs { display: flex; gap: 8px; flex: 1 1 auto; flex-wrap: wrap; }
+    /* 必要素材アイコンは作成する装備より少しだけ小さく。分数はアイコン右下に重ねる */
+    .eq2Need { position: relative; width: 42px; height: 42px; cursor: pointer; }
+    .eq2Need img { width: 42px; height: 42px; object-fit: contain; }
     .eq2CraftBtn { flex: 0 0 auto; width: auto; padding: 8px 14px; }
     @media (max-width: 700px) { .eq2CraftBox { width: 100%; } }
     /* 小粒(群れ)は他より一回り小さく(2026-07-13)。基準160に対して小さめ */
@@ -9581,18 +9585,21 @@ function renderWorkshop() {
     const needs = [];
     if (it.prev) {
       const pv = equip2ById(it.prev);
-      // 分子は「所持数」をそのまま表示する(必要数で頭打ちにしない)(2026-07-13 ユーザー指示)
-      needs.push(`<div class="eq2Need"><img data-matinfo="prev:${it.prev}" src="${assetUrl(equip2Art(pv))}" style="filter:hue-rotate(${equip2Hue(pv)}deg)" alt=""><span>${fmt(state.eq2Owned[it.prev] || 0)}/1</span></div>`);
+      // 分子は「所持数」をそのまま表示する(必要数で頭打ちにしない)。分数はアイコン右下に重ねる(2026-07-14)
+      needs.push(`<div class="eq2Need" data-matinfo="prev:${it.prev}"><img src="${assetUrl(equip2Art(pv))}" style="filter:hue-rotate(${equip2Hue(pv)}deg)" alt=""><span class="eq2Badge">${fmt(state.eq2Owned[it.prev] || 0)}/1</span></div>`);
     }
     for (const k in it.cost) {
-      // 分子は所持数(equip2HaveOf)をそのまま表示。色粉は色を強調+枠色。アイコンタップで名前(2026-07-13)
-      needs.push(`<div class="eq2Need">${matIconHtml(k, "", "mat:" + k)}<span>${fmt(equip2HaveOf(k))}/${it.cost[k]}</span></div>`);
+      // 分子は所持数(equip2HaveOf)をそのまま表示。色粉は色を強調+枠色。分数はアイコン右下に重ねる。アイコンタップで名前(2026-07-14)
+      needs.push(`<div class="eq2Need" data-matinfo="mat:${k}">${matIconHtml(k, "")}<span class="eq2Badge">${fmt(equip2HaveOf(k))}/${it.cost[k]}</span></div>`);
     }
     const can = equip2Afford(it) && !pausedForSkillChoice();
-    // 装備名・効果は行に載せず、アイコンタップで表示する(2026-07-13 ユーザー指示)
+    // 装備名・効果は行に載せず、アイコンタップで表示する。作成する装備の個数(所持数)はアイコン右下に重ねる(2026-07-14 ユーザー指示)
     return `
       <div class="eq2CraftRow">
-        <img class="eq2CraftItemIcon" data-eq2info="${it.id}" src="${assetUrl(equip2Art(it))}" style="filter:hue-rotate(${equip2Hue(it)}deg)" alt="">
+        <div class="eq2CraftItemWrap" data-eq2info="${it.id}">
+          <img class="eq2CraftItemIcon" src="${assetUrl(equip2Art(it))}" style="filter:hue-rotate(${equip2Hue(it)}deg)" alt="">
+          <span class="eq2Badge">×${fmt(state.eq2Owned[it.id] || 0)}</span>
+        </div>
         <div class="eq2Needs">${needs.join("")}</div>
         <button class="item eq2CraftBtn ${can ? "canBuy" : ""}" data-eq2craft="${it.id}">作成</button>
       </div>`;
