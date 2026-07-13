@@ -7593,6 +7593,10 @@ const MILESTONE_RESEARCH = (() => {
   const ROMA = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
   const list = [];
   const add = (id, name, cond, trig, fxText, fx, costSec) => list.push({ id, name, cond, trig, fxText, fx, costSec });
+  // 量産体制(2026-07-14 メトロノーム・sim同期): 工場1台以降、45秒ごとに繰り返し購入できる全生産×1.25。
+  // コスト=毎秒生産30秒ぶん(常に手が届く)。ゲーム全体の「3分で2倍」成長の下支え。
+  add("ms_massprod", "量産体制", "工場 1台(45秒ごとに繰り返し購入可)", () => (state.upgrades.factory || 0) >= 1, "全生産 ×1.25(繰り返し)", { all: 1.25 }, 30);
+  list[list.length - 1].repeatSec = 45;
   // 設備の熟練 I〜IV(10/40/120/300台)
   const eqTiers = [[10, 150], [40, 450], [120, 1200], [300, 3000]];
   UPGRADES.forEach(u => {
@@ -7658,15 +7662,23 @@ const MILESTONE_RESEARCH = (() => {
 })();
 function skillNameOf(id) { const n = SKILL_NODES.find(x => x.id === id); return n ? n.name : id; }
 function maxQuotaStageEverSafe() { return Math.max(1, Math.floor(Number(state.maxQuotaStageEver) || 0), maxQuotaStage()); }
-function msBought(id) { return !!((state.msResearch || {})[id]); }
+function msBought(id) {
+  const ms = MILESTONE_RESEARCH.find(m => m.id === id);
+  if (ms && ms.repeatSec) {
+    const last = (state.msRepeatAt || {})[id] || 0;
+    return Date.now() - last < ms.repeatSec * 1000; // クールダウン中は「購入済み」扱い(=カード非表示)
+  }
+  return !!((state.msResearch || {})[id]);
+}
 function msMulOf(kind, upId) {
   let m = kind === "dropAdd" ? 0 : 1;
   const b = state.msResearch || {};
   for (const ms of MILESTONE_RESEARCH) {
     if (!b[ms.id]) continue;
-    if (kind === "up") { if (ms.fx.up && ms.fx.up[upId]) m *= ms.fx.up[upId]; }
-    else if (kind === "dropAdd") { if (ms.fx.dropAdd) m += ms.fx.dropAdd; }
-    else if (ms.fx[kind]) m *= ms.fx[kind];
+    const times = ms.repeatSec ? Math.max(1, Number(b[ms.id]) || 1) : 1;
+    if (kind === "up") { if (ms.fx.up && ms.fx.up[upId]) m *= Math.pow(ms.fx.up[upId], times); }
+    else if (kind === "dropAdd") { if (ms.fx.dropAdd) m += ms.fx.dropAdd * times; }
+    else if (ms.fx[kind]) m *= Math.pow(ms.fx[kind], times);
   }
   return m;
 }
@@ -7687,7 +7699,11 @@ function buyMilestone(id) {
     state.cookies = state.cookies.sub(cost);
   }
   state.msResearch = state.msResearch && typeof state.msResearch === "object" ? state.msResearch : {};
-  state.msResearch[id] = true;
+  if (ms.repeatSec) {
+    state.msResearch[id] = (Number(state.msResearch[id]) || 0) + 1; // 回数を積む(倍率^回数)
+    state.msRepeatAt = state.msRepeatAt || {};
+    state.msRepeatAt[id] = Date.now();
+  } else state.msResearch[id] = true;
   playSound("research");
   showMessage(`実績研究「${ms.name}」: ${ms.fxText}`);
   saveGame(); updateTopOnly(); renderActiveTab();
