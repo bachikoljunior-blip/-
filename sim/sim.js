@@ -259,7 +259,7 @@ function buildSkillCosts() {
   SKILL_RIDERS = new Set();
   const have = {};
   if (SKILL_HAND_ORDER.length !== SKILL_NODES.length) throw new Error('order length mismatch');
-  let rank = 0, rung = 0;
+  let rank = 0, rung = 0, prodIdx = 0;
   let lastRungCost = P.skillCost.C0;
   for (const id of SKILL_HAND_ORDER) {
     const n = SKILL_BY_ID[id];
@@ -274,19 +274,22 @@ function buildSkillCosts() {
       const base = n.prereqs.length ? Math.max(...n.prereqs.map(q => SKILL_COST_MAP[q] || P.skillCost.C0)) : lastRungCost;
       SKILL_COST_MAP[id] = q5cost(base * (P.skillCost.utilRatio || 0.35));
     } else {
+      // 相乗り段(2026-07-13 第13次): ④=1億倍(8.5桁/段)×48段=約400桁はfloat64上限(約308桁)超え。
+      // rungShare本ごとに1段を共有し(share=1.45→48本≈34段=289桁)、総スパンを浮動小数の範囲に収める。
+      const share = P.skillCost.rungShare || 1;
+      const myRung = Math.floor(prodIdx / share);
       let tentative;
-      if (P.skillCost.rungCosts && P.skillCost.rungCosts[rung] != null) {
-        tentative = P.skillCost.rungCosts[rung];
-      } else if (rung === 0) {
-        tentative = P.skillCost.C0;
+      if (P.skillCost.rungCosts && P.skillCost.rungCosts[myRung] != null) {
+        tentative = P.skillCost.rungCosts[myRung];
       } else {
-        tentative = lastRungCost * (P.skillCost.rho || 4);
+        tentative = P.skillCost.C0 * Math.pow(P.skillCost.rho || 4, myRung);
       }
       // ⑲改(2026-07-06 ユーザー承認・第9次): 「各ノードは少なくとも1本、コスト比10倍以内の辺で
       // 結ばれていればよい」へ変更。辺ごとのクランプは廃止(はしごコストがそのまま立つ・ライダーなし)。
       // 検証は runner.js の check19(⑲改判定)。関連効果どうしを結ぶ遠距離辺は距離自由。
+      prodIdx++;
       lastRungCost = tentative;
-      rung++;
+      rung = myRung;
       SKILL_COST_MAP[id] = q5cost(tentative); // 丸め規則(有効数字3桁=5の倍数)を内部値にも適用
     }
     if (OV && OV[id] != null) SKILL_COST_MAP[id] = OV[id]; // ⑲改の個別上書き(q5準拠値)

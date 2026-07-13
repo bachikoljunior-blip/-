@@ -26,16 +26,16 @@ module.exports = {
   // rungCosts はチューナ(tune.js)が焼き込む。空なら C0×rho^k を使う。
   // C0=13: coreの子ノード群(≤10×core=130)がチューナの序盤閾値(dec≈21-26)を収容できる水準
   // rungCosts: tune.js の出力(rung_costs.json)を自動読込(なければ C0×rho^k)
-  skillCost: { mode: 'ladder', C0: 13, rho: 1.57, edgeCap: 10, utilRatio: 0.35, segments: [],
+  skillCost: { mode: 'ladder', C0: 13, rho: 1.57, edgeCap: 10, utilRatio: 0.35, segments: [], rungShare: 1.45, // 相乗り段(2026-07-13): 48本→約34段=総スパン289桁<float上限
     rungCosts: (function () { try { return require('./rung_costs.json'); } catch (e) { return []; } })(),
     // ⑲改の辺間隔上書き(2026-07-11): 梯子リチューン後に「比≤10倍の辺なし」となった5ノードを、最も近い
     // 隣接ノードのちょうど10倍(q5準拠)へ引き下げ。click_2=click_1×10 / click_3=golden_2×10 /
     // auto_3=auto_2×10 / upgrade_moon=economy_2×10 / unlock_reward_huntFocus=crackedFang×10
-    overrides: { click_2: 50, click_3: 15500, auto_3: 38500, upgrade_moon: 63500, unlock_reward_huntFocus: 78000000000,
+    // 旧・個別上書き(click_3/auto_3/upgrade_moon/huntFocus)は旧梯子(サージ経済バーク)向けのため撤去(2026-07-13)。
+    // 新梯子(相乗り段・素のC0×rho^段)でのcheck19結果を見て必要な辺だけ再上書きする。
+    overrides: { click_2: 50,
       // 2026-07-13 ユーザー指示「スキル最初のやつ(core)に繋がってるものは初回転生でどれでも一つは取れるくらいに」:
       // 初回転生PT≈16・core10 → 入口4本を5PTに(core+入口=15≤16。ensemble3/amp8は元から圏内)
-      // ⑲改の追修正: click_2 250→50(=click_1 5×10)・economy_1 175→50(=auto_1 5×10)。
-      // click_3はgolden_2×10・economy_2はupgrade_moon(自分×10の子)の辺で合格継続
       click_1: 5, golden_1: 5, monster_1: 5, auto_1: 5, economy_1: 50 } },
 
   // ---- 生産系数値ノードの1ノードあたり目標倍率 ----

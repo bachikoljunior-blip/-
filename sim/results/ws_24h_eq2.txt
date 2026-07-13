@@ -1,0 +1,10 @@
+⑮の2 工房の制作項目(枝分かれ比べ・中央値≥1.05)
+  OK 料理:butterCookie          S9 中央値比=8.450 (n=10)
+  NG 料理:chocoFondant          どの方針も未使用
+  NG 料理:mintIce               S3 中央値比=1.003 (n=3)
+  OK 料理:hunterStew            S9 中央値比=1.335 (n=9)
+  NG 料理:frostCake             S3 中央値比=1.005 (n=3)
+  NG 料理:stardustParfait       どの方針も未使用
+  OK 料理:voidTart              S9 中央値比=1.195 (n=7)
+⑮の2 合計 3/7(料理のみ・旧装備は廃止)
+㉙ 注文ボードの報酬(枝分かれ比べ・稼ぎ比≥1.2)
