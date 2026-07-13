@@ -4902,6 +4902,11 @@
     /* 種類差は大きさ・光り方で表現し、色(hue)は通常クッキーモンスターのまま変えない。
        大きさは通常(200px)基準に、swarm/speedyは少し小さく・tank/bossは少し大きく自然な範囲で */
     /* こつぶ群れは小さく、枠(HPバー含む)も本体に合わせて細くして3体が並べられるようにする */
+    /* 種類の色変え(2026-07-13 15種化): 変種は --mtype-hue で既存画像の色を回す */
+    .monsterInstance .cookieMonsterButton img,
+    .monsterInstance .cookieMonsterButton { filter: hue-rotate(var(--mtype-hue, 0deg)); }
+    /* ノルマ層の色帯: 討伐で落ちる色素材のオーラ(種類色とは別チャンネル) */
+    .monsterInstance .cookieMonsterButton { filter: hue-rotate(var(--mtype-hue, 0deg)) drop-shadow(0 0 10px var(--layer-ore-color, transparent)); }
     .monsterInstance.mtype-swarm {
       width: 116px;
     }
@@ -6287,17 +6292,17 @@ const EQUIPMENT_MAX_LV = 10;
 // ステージ: 現在地は転生でリセット、最大解放・討伐数は持ち越し。
 // 補正はモンスター/金クッキー系のみ(設備生産・研究・転生式には触れない)。
 const STAGES = [
-  { no: 1, name: "バター草原", roster: ["normal", "swarm"], hpMul: 1, stayMul: 1, dropAdd: 0, dropMul: 1, goldenGainMul: 1, goldenSpawnMul: 1, rewardLvAdd: 0, goldenBeastBonus: 0, bossCycleAdj: 0 },
-  { no: 2, name: "チョコレート火山", roster: ["normal", "swarm", "tank", "speedy"], hpMul: 3, stayMul: 1, dropAdd: 1, dropMul: 1, goldenGainMul: 1.10, goldenSpawnMul: 1, rewardLvAdd: 0, goldenBeastBonus: 0, bossCycleAdj: 0 },
-  { no: 3, name: "ミントの氷河", roster: ["normal", "swarm", "tank", "speedy", "goldenBeast"], hpMul: 8, stayMul: 0.85, dropAdd: 0, dropMul: 2, goldenGainMul: 1, goldenSpawnMul: 1, rewardLvAdd: 0, goldenBeastBonus: 0, bossCycleAdj: 0 },
-  { no: 4, name: "香料の砂丘", roster: ["normal", "swarm", "tank", "speedy", "goldenBeast"], hpMul: 20, stayMul: 1, dropAdd: 0, dropMul: 1, goldenGainMul: 1, goldenSpawnMul: 0.9, rewardLvAdd: 8, goldenBeastBonus: 0.15, bossCycleAdj: 0 },
-  { no: 5, name: "星屑の銀河", roster: ["normal", "swarm", "tank", "speedy", "goldenBeast"], hpMul: 60, stayMul: 1, dropAdd: 0, dropMul: 3, goldenGainMul: 1, goldenSpawnMul: 1, rewardLvAdd: 0, goldenBeastBonus: 0, bossCycleAdj: -10 }
+  { no: 1, name: "バター草原", roster: ["normal", "normal2", "normal3", "swarm", "swarm2", "swarm3"], hpMul: 1, stayMul: 1, dropAdd: 0, dropMul: 1, goldenGainMul: 1, goldenSpawnMul: 1, rewardLvAdd: 0, goldenBeastBonus: 0, bossCycleAdj: 0 },
+  { no: 2, name: "チョコレート火山", roster: ["normal", "normal2", "normal3", "swarm", "swarm2", "swarm3", "tank", "tank2", "tank3", "speedy", "speedy2", "speedy3"], hpMul: 3, stayMul: 1, dropAdd: 1, dropMul: 1, goldenGainMul: 1.10, goldenSpawnMul: 1, rewardLvAdd: 0, goldenBeastBonus: 0, bossCycleAdj: 0 },
+  { no: 3, name: "ミントの氷河", roster: ["normal", "normal2", "normal3", "swarm", "swarm2", "swarm3", "tank", "tank2", "tank3", "speedy", "speedy2", "speedy3", "goldenBeast", "goldenBeast2", "goldenBeast3"], hpMul: 8, stayMul: 0.85, dropAdd: 0, dropMul: 2, goldenGainMul: 1, goldenSpawnMul: 1, rewardLvAdd: 0, goldenBeastBonus: 0, bossCycleAdj: 0 },
+  { no: 4, name: "香料の砂丘", roster: ["normal", "normal2", "normal3", "swarm", "swarm2", "swarm3", "tank", "tank2", "tank3", "speedy", "speedy2", "speedy3", "goldenBeast", "goldenBeast2", "goldenBeast3"], hpMul: 20, stayMul: 1, dropAdd: 0, dropMul: 1, goldenGainMul: 1, goldenSpawnMul: 0.9, rewardLvAdd: 8, goldenBeastBonus: 0.15, bossCycleAdj: 0 },
+  { no: 5, name: "星屑の銀河", roster: ["normal", "normal2", "normal3", "swarm", "swarm2", "swarm3", "tank", "tank2", "tank3", "speedy", "speedy2", "speedy3", "goldenBeast", "goldenBeast2", "goldenBeast3"], hpMul: 60, stayMul: 1, dropAdd: 0, dropMul: 3, goldenGainMul: 1, goldenSpawnMul: 1, rewardLvAdd: 0, goldenBeastBonus: 0, bossCycleAdj: -10 }
 ];
 
 // v3: ステージは有限6個(S1〜S5+S6「深層領域」)。S6は内部に「層」(state.deepLayer、
 // S6ボス撃破ごとに+1、転生持ち越し、無限)を持つ。層LのHP等スケールは旧S6+式(60×4^L、上限なし)。
 const MAX_STAGE_NO = 6;
-const DEEP_STAGE_ROSTER = ["normal", "swarm", "tank", "speedy", "goldenBeast"];
+const DEEP_STAGE_ROSTER = ["normal", "normal2", "normal3", "swarm", "swarm2", "swarm3", "tank", "tank2", "tank3", "speedy", "speedy2", "speedy3", "goldenBeast", "goldenBeast2", "goldenBeast3"];
 
 function deepLayerNo() {
   return Math.max(1, Math.floor(Number(state.deepLayer) || 1));
@@ -6331,25 +6336,47 @@ function maxUnlockedStageNo() {
 }
 
 // モンスター種類: HP・滞在はtype倍率を従来式に乗せるだけ。goldenBeast/bossは重み抽選外。
+// モンスター15種(2026-07-13 ユーザー指示「種類も色を変えて、3倍にして」): 5系統×3色変種。
+// 変種は同系統の画像を色変え(hueフィルタ)で使う。色相は種類固有、ノルマ層の色(輪郭オーラ)とは別チャンネルで被らない。
 const MONSTER_TYPES = {
-  normal: { id: "normal", name: "クッキーモンスター", hpMul: 1, stayMul: 1, weight: 50, count: 1, dropCountMul: 1, rewardLvAdd: 0 },
-  swarm: { id: "swarm", name: "こつぶ群れ", hpMul: 0.22, stayMul: 1, weight: 22, count: 3, dropCountMul: 1, rewardLvAdd: 0 },
-  tank: { id: "tank", name: "鉄焼きガード", hpMul: 6, stayMul: 1.5, weight: 14, count: 1, dropCountMul: 1, rewardLvAdd: 18 },
-  speedy: { id: "speedy", name: "はやての運び屋", hpMul: 0.45, stayMul: 0.55, weight: 14, count: 1, dropCountMul: 2, rewardLvAdd: 0 },
-  goldenBeast: { id: "goldenBeast", name: "黄金獣", hpMul: 2.5, stayMul: 1, weight: 0, count: 1, dropCountMul: 1, rewardLvAdd: 0 },
-  boss: { id: "boss", name: "ステージボス", hpMul: 12, stayMul: 1, weight: 0, count: 1, dropCountMul: 1, rewardLvAdd: 0 }
+  normal:       { id: "normal", name: "クッキーモンスター", base: "normal", hue: 0,   hpMul: 1,    stayMul: 1,    weight: 26, count: 1, dropCountMul: 1, rewardLvAdd: 0 },
+  normal2:      { id: "normal2", name: "金環クッキーモンスター", base: "normal", hue: 120, hpMul: 1.2,  stayMul: 1.1,  weight: 12, count: 1, dropCountMul: 1, rewardLvAdd: 0 },
+  normal3:      { id: "normal3", name: "堅焼きクッキーモンスター", base: "normal", hue: 240, hpMul: 0.85, stayMul: 0.9,  weight: 12, count: 1, dropCountMul: 1, rewardLvAdd: 0 },
+  swarm:        { id: "swarm", name: "こつぶ群れ", base: "swarm", hue: 0,   hpMul: 0.22, stayMul: 1,    weight: 12, count: 3, dropCountMul: 1, rewardLvAdd: 0 },
+  swarm2:       { id: "swarm2", name: "あわつぶ群れ", base: "swarm", hue: 120, hpMul: 0.27, stayMul: 1.1,  weight: 5,  count: 3, dropCountMul: 1, rewardLvAdd: 0 },
+  swarm3:       { id: "swarm3", name: "くろつぶ群れ", base: "swarm", hue: 240, hpMul: 0.18, stayMul: 0.9,  weight: 5,  count: 3, dropCountMul: 1, rewardLvAdd: 0 },
+  tank:         { id: "tank", name: "鉄焼きガード", base: "tank", hue: 0,   hpMul: 6,    stayMul: 1.5,  weight: 8,  count: 1, dropCountMul: 1, rewardLvAdd: 18 },
+  tank2:        { id: "tank2", name: "銀焼きガード", base: "tank", hue: 150, hpMul: 7,    stayMul: 1.65, weight: 3,  count: 1, dropCountMul: 1, rewardLvAdd: 18 },
+  tank3:        { id: "tank3", name: "黒鉄ガード", base: "tank", hue: 280, hpMul: 5,    stayMul: 1.35, weight: 3,  count: 1, dropCountMul: 1, rewardLvAdd: 18 },
+  speedy:       { id: "speedy", name: "はやての運び屋", base: "speedy", hue: 0,   hpMul: 0.45, stayMul: 0.55, weight: 8,  count: 1, dropCountMul: 2, rewardLvAdd: 0 },
+  speedy2:      { id: "speedy2", name: "かぜの運び屋", base: "speedy", hue: 130, hpMul: 0.5,  stayMul: 0.6,  weight: 3,  count: 1, dropCountMul: 2, rewardLvAdd: 0 },
+  speedy3:      { id: "speedy3", name: "よあけの運び屋", base: "speedy", hue: 260, hpMul: 0.4,  stayMul: 0.5,  weight: 3,  count: 1, dropCountMul: 2, rewardLvAdd: 0 },
+  goldenBeast:  { id: "goldenBeast", name: "黄金獣", base: "goldenBeast", hue: 0,   hpMul: 2.5, stayMul: 1,   weight: 0, count: 1, dropCountMul: 1, rewardLvAdd: 0 },
+  goldenBeast2: { id: "goldenBeast2", name: "白金獣", base: "goldenBeast", hue: 160, hpMul: 3,   stayMul: 1.1, weight: 0, count: 1, dropCountMul: 1, rewardLvAdd: 0 },
+  goldenBeast3: { id: "goldenBeast3", name: "緋金獣", base: "goldenBeast", hue: 300, hpMul: 2.2, stayMul: 0.9, weight: 0, count: 1, dropCountMul: 1, rewardLvAdd: 0 },
+  boss: { id: "boss", name: "ステージボス", base: "boss", hue: 0, hpMul: 12, stayMul: 1, weight: 0, count: 1, dropCountMul: 1, rewardLvAdd: 0 }
 };
 
 // モンスター種類×報酬カテゴリの相性(2026-07-06 ユーザー承認)。
 // 報酬Lvの増分 = max(1, floor(基本量 × 相性倍率))。「欲しい報酬に合わせて狩る相手を選ぶ」要素。
 // こつぶ群れは1体あたり×0.5(3体同時で計×1.5)。数値はすべて調整対象。
 const REWARD_AFFINITY = {
-  normal: { golden: 1.0, hunt: 1.0, equipment: 1.0, risk: 1.0 },
-  swarm: { golden: 0.5, hunt: 0.5, equipment: 0.5, risk: 0.5 },
-  tank: { golden: 0.5, hunt: 2.0, equipment: 3.5, risk: 1.0 },
-  speedy: { golden: 3.0, hunt: 0.5, equipment: 0.5, risk: 1.5 },
-  goldenBeast: { golden: 3.5, hunt: 1.0, equipment: 0.5, risk: 2.0 },
-  boss: { golden: 4.0, hunt: 4.0, equipment: 4.0, risk: 4.0 }
+  normal:       { golden: 1.0, hunt: 1.0, equipment: 1.0, risk: 1.0 },
+  normal2:      { golden: 1.6, hunt: 0.8, equipment: 0.8, risk: 0.8 },
+  normal3:      { golden: 0.8, hunt: 0.8, equipment: 1.6, risk: 0.8 },
+  swarm:        { golden: 0.6, hunt: 1.6, equipment: 0.8, risk: 1.0 },
+  swarm2:       { golden: 1.0, hunt: 1.4, equipment: 0.6, risk: 1.0 },
+  swarm3:       { golden: 0.5, hunt: 1.3, equipment: 1.2, risk: 1.0 },
+  tank:         { golden: 0.5, hunt: 2.0, equipment: 3.5, risk: 1.0 },
+  tank2:        { golden: 1.5, hunt: 1.5, equipment: 3.0, risk: 1.0 },
+  tank3:        { golden: 0.5, hunt: 3.0, equipment: 2.5, risk: 1.0 },
+  speedy:       { golden: 3.0, hunt: 0.5, equipment: 0.5, risk: 1.5 },
+  speedy2:      { golden: 2.0, hunt: 0.5, equipment: 0.5, risk: 2.5 },
+  speedy3:      { golden: 2.5, hunt: 1.0, equipment: 1.0, risk: 1.0 },
+  goldenBeast:  { golden: 3.5, hunt: 1.0, equipment: 0.5, risk: 2.0 },
+  goldenBeast2: { golden: 2.5, hunt: 0.5, equipment: 1.0, risk: 3.0 },
+  goldenBeast3: { golden: 3.0, hunt: 2.0, equipment: 1.0, risk: 1.0 },
+  boss:         { golden: 4.0, hunt: 4.0, equipment: 4.0, risk: 4.0 }
 };
 
 function rewardAffinityMultiplier(typeId, category) {
@@ -8971,7 +8998,8 @@ function pickMonsterTypeId() {
 
   // 黄金獣: 金ブースト中のみ通常出現枠を置換(基本35%、S4は+15%)。v4で方針補正は全廃
   if (stage.roster.includes("goldenBeast") && goldenBoostActive() && Math.random() < 0.35 + (stage.goldenBeastBonus || 0)) {
-    return "goldenBeast";
+    const gv = ["goldenBeast", "goldenBeast2", "goldenBeast3"];
+    return gv[Math.floor(Math.random() * gv.length)];
   }
 
   const pool = stage.roster.filter(t => (MONSTER_TYPES[t] || {}).weight > 0);
@@ -8993,7 +9021,8 @@ function dropMaterialIdFor(stageNo, typeId) {
   // S1はspeedy不在のため、normalが低確率30%で小麦粉を落とす
   if (stageNo === 1 && typeId === "normal" && Math.random() < 0.30) return "flour";
   const table = STAGE_MATERIALS[stageNo] || STAGE_MATERIALS[1];
-  return table[typeId] || table.normal;
+  const baseType = (MONSTER_TYPES[typeId] && MONSTER_TYPES[typeId].base) || typeId; // 変種はbase系統の素材
+  return table[baseType] || table.normal;
 }
 
 // v4 §18 条件ドロップ制: 素材は「どう倒したか」で決まる(方針の直接倍率は全廃)。
@@ -9098,8 +9127,8 @@ function grantMonsterDrops(typeId, level, overkill) {
     }
   }
 
-  // はやての運び屋: 撃破すると次の金クッキー出現間隔×0.5
-  if (typeId === "speedy") {
+  // はやて系(3変種とも): 撃破すると次の金クッキー出現間隔×0.5
+  if (typeId && typeId.startsWith("speedy")) {
     state.nextGoldenSpawnMultiplier = (state.nextGoldenSpawnMultiplier || 1) * 0.5;
     parts.push("次の金クッキーが早くなる");
   }
@@ -15018,14 +15047,25 @@ function syncMonsterVisible() {
   monster = monsters[0] || { level: 1, hp: 1, maxHp: 1 };
 }
 
+// ノルマ層の色帯(2026-07-13「モンスターはノルマ層ごとに色が変わり、ドロップする素材が変わる」):
+// 層÷5の帯で輪郭オーラ色が変わる=色素材ore_t1..t6の色。種類の色(hue回転)とは別チャンネルで被らない。
+const LAYER_ORE_COLORS = ["#b8c4cc", "#e0a35c", "#5cb85c", "#4aa3df", "#a76ddf", "#e05c8a"]; // t1..t6
+function layerOreTier() {
+  const layer = Math.max(0, (state.maxQuotaStage || 0));
+  return Math.max(1, Math.min(LAYER_ORE_COLORS.length, 1 + Math.floor(layer / 5)));
+}
 function createMonsterElement(mon) {
   const type = MONSTER_TYPES[mon.typeId] || MONSTER_TYPES.normal;
   const wrap = document.createElement("div");
-  wrap.className = "monsterInstance mtype-" + type.id;
+  wrap.className = "monsterInstance mtype-" + (type.base || type.id);
   wrap.dataset.monsterId = String(mon.id);
-  let monArt = (ASSETS.monsters && ASSETS.monsters[type.id]) || ASSETS.objects.cookieMonster;
+  // 種類の色: 変種は既存画像の色変え(hue回転・2026-07-13「画像のないものは既存のものを色を変えてつかう」)
+  if (type.hue) wrap.style.setProperty("--mtype-hue", type.hue + "deg");
+  // 層の色: 討伐で落ちる色素材のオーラ
+  wrap.style.setProperty("--layer-ore-color", LAYER_ORE_COLORS[layerOreTier() - 1]);
+  let monArt = (ASSETS.monsters && ASSETS.monsters[type.base || type.id]) || ASSETS.objects.cookieMonster;
   // こつぶ群れは3体それぞれ別の絵にする
-  if (type.id === "swarm" && Array.isArray(ASSETS.swarmVariants) && ASSETS.swarmVariants.length) {
+  if ((type.base || type.id) === "swarm" && Array.isArray(ASSETS.swarmVariants) && ASSETS.swarmVariants.length) {
     monArt = ASSETS.swarmVariants[(mon.variant || 0) % ASSETS.swarmVariants.length];
   }
   wrap.style.setProperty("--monster-art", `url("${assetUrl(monArt)}")`);
@@ -15117,7 +15157,7 @@ function showMonster(forcedTypeId) {
         : 1,
       goldenFirstHitReady: firstHitReady,
       firstHitUsed: false,
-      maxHp: Math.max(typeId === "swarm" ? 12 : 40, Math.floor(monsterHpValue(level) * hpMulShared)),
+      maxHp: Math.max((MONSTER_TYPES[typeId] && MONSTER_TYPES[typeId].base) === "swarm" ? 12 : 40, Math.floor(monsterHpValue(level) * hpMulShared)),
       hp: 1,
       el: null,
       hideTimer: null
@@ -15128,7 +15168,7 @@ function showMonster(forcedTypeId) {
 
     monsters.push(mon);
 
-    if (typeId === "swarm" && (type.count || 1) > 1) {
+    if ((type.base || type.id) === "swarm" && (type.count || 1) > 1) {
       // こつぶ群れは重ならないよう横に3分割で配置する
       placeSwarmMember(mon.el, i, type.count);
     } else {
