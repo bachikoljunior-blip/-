@@ -210,11 +210,11 @@ module.exports = {
     // factory一強(全方針の最効率=工場固定)を解消: oven 0.060→0.067 / spice 0.062→0.071 / factory 0.060→0.057
     // → 12h実測で最効率設備が factory 7方針 / oven 3方針 に分岐
     ovenSelf: 10, ovenOwn: 0.03, ovenStage: 0.05, // ①ovenBatch 1.18→層ランプ増し(2026-07-14 2回目) // 0.03→0.045(2026-07-11: 工場の助走カード追加でS10のovenBatch liftが6NG/36 min1.104に希釈→層ランプ増し。NG0/35 min1.281実測) // 0.012→0.03(2026-07-11 ①oven: surge減速で直送比のcpsが痩せ中盤以降のliftが1.02-1.12に沈む→層ランプで再係留。S10 NG9/23→0/24 min1.296)
-    factorySelf: 10, factoryLow: 0.002, factoryOwn: 0.026, // ①factory再係留(2026-07-14)
+    factorySelf: 14, factoryLow: 0.002, factoryOwn: 0.026, // ①factory再係留2回目(2026-07-14: コスト100万はユーザー固定のため効果側で)
     spiceOwn: 0.032, spiceGold: 7, spiceGoldOwn: 0.006, spiceGoldDur: 30000,
     // 狩り窓(2026-07-09 ⑬作り替え): 窓は討伐が開く・維持する(金クッキー非関与)。portalHuntDur/Grow は旧・金開窓用=現在未使用(移植時に削除)。
     // portalHuntSpawnBase=窓に関係ない常時スポーン加速(研究解放中)/ portalHuntSpawn=窓中の追加加速(⑬延長狩りのコントラスト)。
-    portalSelf: 6, portalHuntDur: 9000, portalHuntGrow: 0.012, // ⑬延長狩り1.000→再係留(2026-07-14) portalHuntSpawn: 0.002, portalHuntSpawnBase: 0.007,
+    portalSelf: 6, portalHuntDur: 9000, portalHuntGrow: 0.03, // ⑬延長狩り再係留2回目(2026-07-14) portalHuntSpawn: 0.002, portalHuntSpawnBase: 0.007,
     bankOwn: 0.018, bankSaved: 5.0,
     moonBase: 8, moonStage: 0.001, moonOwn: 0.0005,
     foldPortal: 0.002, foldMonster: 2.5, foldGold: 8,
@@ -242,7 +242,7 @@ module.exports = {
   // 第11次(値段割り・D'): weave.js が「1周回に中間目標1件」になるよう再配置した値を
   // weave_costs.json に保存し、ここで上書き読込する(研究コスト=調整項目・ユーザー確認済み)
   resCost: Object.assign({
-    fingerTechnique: 2500, grandmaCrowd: 12000, ovenBatch: 30000,
+    fingerTechnique: 2500, grandmaCrowd: 100000, ovenBatch: 300000, // ①初回希釈対策(2026-07-14): 第0回取得を第1回以降へ=金アンカー圏外
     factoryNetwork: 150000, spiceBlend: 400000, portalNetwork: 1200000,
     bankClickDividend: 4000000, moonGlobalYeast: 40000000,
     portalGlobalFold: 400000000, galaxyAssembly: 6000000000,
@@ -400,7 +400,7 @@ module.exports = {
     moonMarginDiv: 10, moonResCount: 0.05,
     foldKillCoef: 0.002, foldStageCoef: 0.001,
     galaxyBonusCoef: 0.05, galaxySat: 120, galaxyStageCoef: 0.0008,
-    bhChargeFull: 2500, bhBoostCoef: 0.9, bhBoostDur: 90, bhBoostStageCoef: 0.002, // ⑬圧縮チャージ1.000→再係留(2026-07-14)
+    bhChargeFull: 2500, bhBoostCoef: 1.8, bhBoostDur: 120, bhBoostStageCoef: 0.002, // ⑬圧縮チャージ再係留2回目(2026-07-14)
     bhCompStageCoef: 0.001,
     waveAmpBase: 0.45, waveAmpPerRes: 0.05, wavePeriod: 90, waveStageCoef: 0.001,
     antiStageCoef: 0.0008, antiPrestigeCoef: 0.03
