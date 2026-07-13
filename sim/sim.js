@@ -825,9 +825,20 @@ function equip2Tick(sim) {
   // 現ステージのラインナップに無い(ばらけ配置)場合に全方針が同じ銘へフォールバックして重なる。
   // 円環距離にすると、同ティア同カテゴリの選好順が方針ごとに巡回シフトし、フォールバック先も分散する。
   const laneDist = it => (((it.variant - laneV(it)) % 9) + 9) % 9;
+  // ティア階段(2026-07-14 (b)カバレッジ76-78/486不動の本修正): 旧・高ティア優先だとステージ解放と同時に
+  // t6へ跳び、ティアアップ限定装備と合わせて各方針が9-10種しか装備しない(=カバレッジ頭打ち)。
+  // カテゴリごとに「装備中ティア+1」だけを作る階段方式なら、各方針が54段(9カテゴリ×6ティア)を
+  // レーン銘で踏み、9方針で486種がちょうど一巡する。
+  // 作成対象は「解放済みの全ステージのラインナップ」: ステージ矢印(2026-07-14 ユーザー機能=周回中でも
+  // ステージ移動可)で任意の解放済みステージの工房ラインナップに行けるため。
+  const eqTierOf = cat => { const id = ws.eq2Equipped[cat]; const cur = id ? equip2ById(id) : null; return cur ? cur.tier : 0; };
+  const nextTier = {};
+  EQUIP2_CATS.forEach(c => { nextTier[c] = Math.min(E.tiers, eqTierOf(c) + 1); });
+  const maxStage = Math.max(1, Math.min(E.tiers, ws.stageUnlocked || 1));
   const items = equip2Items().slice().sort((a, b) => (b.tier - a.tier) || (catOrder[a.cat] - catOrder[b.cat]) || (laneDist(a) - laneDist(b)));
   for (const it of items) {
-    if (!it.stages.includes(curStage)) continue;
+    if (it.tier !== nextTier[it.cat]) continue;
+    if (!it.stages.some(st => st <= maxStage)) continue;
     const cap = 1; // 9カテゴリ各1個/周回(アクセは甲/乙で別カテゴリ)
     if (((r.eq2Made && r.eq2Made[it.cat]) || 0) >= cap) continue;
     // レシピ固定(2026-07-14): 装備入りレシピは前ティア所持が必須・素材のみレシピは素材だけ(実行時の代替なし)
