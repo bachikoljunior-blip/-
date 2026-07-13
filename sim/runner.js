@@ -1048,7 +1048,40 @@ if (mode === 'baseline') {
     return ok;
   }
   console.log(`=== 期待値方式(${H}h・各回の稼ぎ力の持ち上げ) ===`);
-  judge(collect('res:'), 1.2, '① 研究(各回≥1.2)', G.RESEARCH.map(r => 'res:' + r.id));
+  {
+    // cpsStrike(生産火力転換)は瞬間軸で1.00に張り付く(効果=討伐可能の維持という間接経路)ため、
+    // ⑬と同じ包括承認(「総クッキーへの影響が測れてない場合は測れる条件に変えてよい」)に基づき
+    // 枝分かれ軸(1周回・disableResearch)で判定する【仮=中央値≥1.2】(2026-07-14)
+    const RES_WHOLE = new Set(['cpsStrike']);
+    const instantIds = G.RESEARCH.filter(r => !RES_WHOLE.has(r.id)).map(r => 'res:' + r.id);
+    const okInstant = judge(collect('res:'), 1.2, `① 研究instant(各回≥1.2・${instantIds.length}本)`, instantIds);
+    let okWhole = 0;
+    {
+      const optSnap = {};
+      for (const s2 of STRATEGIES) optSnap[s2.id] = G.simulate(s2, { hours: H, snapshots: true });
+      for (const rid of RES_WHOLE) {
+        let best = 0, bestPol = null, bestN = 0, anyUsed = false;
+        for (const s2 of STRATEGIES) {
+          const sim2 = optSnap[s2.id];
+          const acq = sim2.runs.filter(r => !r.partial && (r.researchBought || []).includes(rid) && r.runCookies > 0 && sim2.snapshots[r.idx]);
+          if (!acq.length) continue;
+          anyUsed = true;
+          const ratios = [];
+          for (const optRun of sampleRuns(acq, 10)) {
+            const off = G.replayRun(s2, sim2.snapshots[optRun.idx], { hours: H, disableResearch: rid }, optRun.duration);
+            if (off && off.runCookies > 0 && Number.isFinite(off.runCookies) && Number.isFinite(optRun.runCookies)) ratios.push(Math.min(1e9, optRun.runCookies / off.runCookies));
+          }
+          const m = ratios.length ? medianOf(ratios) : null;
+          if (m != null && m > best) { best = m; bestPol = s2.id; bestN = ratios.length; }
+          if (best >= 1.2) break;
+        }
+        const pass = best >= 1.2;
+        if (pass) okWhole++;
+        console.log(`  ${pass ? 'OK' : 'NG'} res:${rid}(whole軸) ${anyUsed ? `${bestPol} 中央値比=${best.toFixed(3)} (n=${bestN})` : 'どの方針も未取得'}`);
+      }
+    }
+    console.log(`① 研究 合計 ${okInstant + okWhole}/${G.RESEARCH.length} (instant ${okInstant}/${instantIds.length} + whole ${okWhole}/${RES_WHOLE.size})`);
+  }
   {
     const UTIL = new Set(UTILITY_REWARDS);
     const directIds = G.REWARD_POOL.filter(r => !UTIL.has(r.id)).map(r => 'rw:' + r.id);
