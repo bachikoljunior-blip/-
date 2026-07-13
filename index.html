@@ -13396,12 +13396,13 @@ function upgradeShopEffectRows(u, buyCount) {
   const cur = measure();
   // その設備自身の合計生産(自分の倍率だけ乗せた最終値。他設備への相乗ぶんは含まない)
   const ownBefore = upgradeEffectiveContribution(u);
-  let withoutV, ownAfter;
+  let withoutV, ownAfter, curAfter;
   try {
     state.upgrades[u.id] = 0;
     withoutV = measure();
     state.upgrades[u.id] = owned + count;
     ownAfter = upgradeEffectiveContribution(u);
+    curAfter = measure(); // 購入後の合計(タップ=実際の1タップ量 / 毎秒=合計毎秒)
   } finally {
     state.upgrades[u.id] = owned;
   }
@@ -13409,8 +13410,10 @@ function upgradeShopEffectRows(u, buyCount) {
   // 設備ぶんだけの差分だと、実際にタップした数値とずれて見えるため(2026-07-11 ユーザー指摘)。
   // 毎秒設備は従来どおり「その設備の寄与ぶん(cur-withoutV)」。
   const total = isCps ? Math.max(0, cur - withoutV) : cur;
-  // 生産増加数=「その設備の合計生産(=その設備自身の総生産)が増える分」。他設備への相乗ぶんは含めない(2026-07-13 ユーザー指示)。
-  const add = Math.max(0, ownAfter - ownBefore);
+  // 生産増加数:
+  //  ・毎秒 = その設備自身の総生産が増える分(他設備への相乗は含めない・2026-07-13 ユーザー指示)。
+  //  ・タップ = 合計タップ(実際の1タップ量)が増える分(全体倍率への波及も含む・2026-07-14 ユーザー指示)。
+  const add = isCps ? Math.max(0, ownAfter - ownBefore) : Math.max(0, curAfter - cur);
   const kind = isCps ? "毎秒" : "タップ";
 
   // 追加分は「+X」、合計は「毎秒 X(タップ X)」のみを表示する
