@@ -5194,6 +5194,17 @@
       filter: brightness(1.3);
     }
 
+    /* 工房で新しく作成できるものが揃ったら工房タブを点滅(研究タブと同じ演出。開くと解除) */
+    .tab.workshopNotify {
+      animation: researchTabBlink 0.8s ease-in-out infinite;
+    }
+
+    body.fxOff .tab.workshopNotify {
+      animation: none;
+      box-shadow: inset 0 0 0 3px rgba(255, 224, 140, 1), 0 0 14px rgba(255, 205, 100, 0.8);
+      filter: brightness(1.3);
+    }
+
     /* ===== 直近要望: 表示崩れ対策 ===== */
     /* ダブルタップでの画面拡大を無効化(スクロール・パンは維持)。
        iOSは「タップされた要素自身」のtouch-actionを見るため、html/bodyだけでは
@@ -8332,6 +8343,48 @@ function checkResearchUnlockNotify() {
 function clearResearchTabNotify() {
   const tab = document.querySelector('.tab[data-tab="researchTab"]');
   if (tab) tab.classList.remove("researchNotify");
+}
+
+// ==== 工房の新規作成可能の通知(工房タブを光らせて点滅、開くと解除) ====
+// 研究タブと同じ挙動。素材(と前ティア装備)が揃って新しく作成/調理できるものが現れたら点滅する。
+let lastCraftAvailKey = null;
+
+function craftAvailIdsNow() {
+  const ids = [];
+  try {
+    // 装備: このステージで作成でき、素材(と前ティア装備)が揃っているもの
+    equip2Items().forEach(it => { if (equip2CraftableNow(it) && equip2Afford(it)) ids.push("eq:" + it.id); });
+    // 料理: レシピ判明済みで素材が揃い、枠が空いている(または効果中)もの(工房解放後のみ)
+    if (workshopTabUnlocked()) {
+      const active = activeDishList();
+      DISHES.filter(dishRecipeRevealed).forEach(d => {
+        const act = active.find(x => x.id === d.id);
+        if (canAffordMaterials(d.cost) && (act || active.length < MAX_ACTIVE_DISHES)) ids.push("dish:" + d.id);
+      });
+    }
+  } catch (e) {}
+  return ids;
+}
+
+function checkWorkshopUnlockNotify() {
+  try {
+    const ids = craftAvailIdsNow();
+    const key = ids.join(",");
+    if (lastCraftAvailKey === null) { lastCraftAvailKey = key; return; } // 初回は基準を覚えるだけ
+    if (key === lastCraftAvailKey) return;
+    const prev = new Set(lastCraftAvailKey.split(","));
+    const added = ids.some(id => !prev.has(id));
+    lastCraftAvailKey = key;
+    if (added && activeTab !== "workshopTab") {
+      const tab = document.querySelector('.tab[data-tab="workshopTab"]');
+      if (tab) tab.classList.add("workshopNotify");
+    }
+  } catch (e) {}
+}
+
+function clearWorkshopTabNotify() {
+  const tab = document.querySelector('.tab[data-tab="workshopTab"]');
+  if (tab) tab.classList.remove("workshopNotify");
 }
 
 // ==== 周回序盤のクッキーモンスター(2026-07-11 ユーザー指示) ====
@@ -14276,6 +14329,7 @@ function switchTab(tabId) {
   activeTab = tabId;
   if (tabId === "orderTab") clearOrderTabNotify();
   if (tabId === "researchTab") clearResearchTabNotify();
+  if (tabId === "workshopTab") clearWorkshopTabNotify();
   updatePrestigeTabLabel();
 
   document.body.classList.toggle("playTabActive", normalPlayScreenActive());
@@ -16988,6 +17042,9 @@ setInterval(() => {
 
   // 研究の新規解放を監視して研究タブを点滅させる(開くと解除)
   checkResearchUnlockNotify();
+
+  // 工房で新しく作成できるものが揃ったら工房タブを点滅させる(開くと解除)
+  checkWorkshopUnlockNotify();
 
   // 周回序盤のクッキーモンスター(30秒おき×5体)
   checkEarlyRunSpawns();
