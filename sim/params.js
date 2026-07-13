@@ -217,7 +217,10 @@ module.exports = {
     spiceOwn: 0.032, spiceGold: 7, spiceGoldOwn: 0.006, spiceGoldDur: 30000,
     // 狩り窓(2026-07-09 ⑬作り替え): 窓は討伐が開く・維持する(金クッキー非関与)。portalHuntDur/Grow は旧・金開窓用=現在未使用(移植時に削除)。
     // portalHuntSpawnBase=窓に関係ない常時スポーン加速(研究解放中)/ portalHuntSpawn=窓中の追加加速(⑬延長狩りのコントラスト)。
-    portalSelf: 6, portalHuntDur: 9000, portalHuntGrow: 0.03, // ⑬延長狩り再係留2回目(2026-07-14) portalHuntSpawn: 0.002, portalHuntSpawnBase: 0.007,
+    // ⑬延長狩り再係留2回目(2026-07-14)。※同日修復: 前の編集でportalHuntSpawn/SpawnBaseが行中コメントに
+    // 飲まれて未定義化(窓の加速=延長狩りの実体が死んでS7比0.956/S9比1.000の一因)。独立行に復元。
+    portalSelf: 6, portalHuntDur: 9000, portalHuntGrow: 0.03,
+    portalHuntSpawn: 0.002, portalHuntSpawnBase: 0.007,
     bankOwn: 0.018, bankSaved: 5.0,
     moonBase: 8, moonStage: 0.001, moonOwn: 0.0005,
     foldPortal: 0.002, foldMonster: 2.5, foldGold: 8,
