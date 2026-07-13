@@ -2361,12 +2361,13 @@ function advanceTick(sim, strategy) {
     for (const a of r.afterheats) if (sim.t >= a.from) ahM *= a.mult;
 
     const cpsNow = prod.cps * ahM;
-    // 新条件「毎秒生産が3分おきに2倍以上」(2026-07-13 ユーザー追加): 周回内で180秒ごとにCPSをサンプル
+    // 新条件「毎秒生産が3分おきに2倍以上」(2026-07-13 ユーザー追加): 周回内で180秒ごとにCPSをサンプル。
+    // 一時ブースト(金ブースト/余熱)抜きの地力CPS(baseCps)で測る=バフ切れの下振れを「成長の停滞」に数えない
     {
       const k = Math.floor((sim.t - r.startT) / 180);
       if (k > (r._cpsK === undefined ? -1 : r._cpsK)) {
         r._cpsK = k;
-        (r._cpsSamples || (r._cpsSamples = [])).push(cpsNow);
+        (r._cpsSamples || (r._cpsSamples = [])).push(prod.baseCps);
       }
     }
     const clickNow = prod.clickEV * ahM;
