@@ -606,25 +606,31 @@ const WS_EQ_PREF = {
 // 9部位(武器/盾/防具上/防具下/手/帽子/靴/アクセ×2枠)の付け替え式。工房スキル不要=最初から解放。
 // 効果=全生産×(allMulPerTier^ティア)の固定倍率。素材=色素材ore_t*(モンスターの色=ノルマ層帯)+ステージ素材。
 // レシピ=前ティア同カテゴリ装備1個+素材(1〜5種の枠内)。一度表示(素材が揃った)されたレシピは消えない。
-const EQUIP2_SLOTS = ['weapon', 'shield', 'armorTop', 'armorBottom', 'hands', 'hat', 'shoes', 'acc1', 'acc2'];
-const EQUIP2_CATS = ['weapon', 'shield', 'armorTop', 'armorBottom', 'hands', 'hat', 'shoes', 'accessory'];
+const EQUIP2_SLOTS = ['weapon', 'shield', 'armorTop', 'armorBottom', 'hands', 'hat', 'shoes', 'accA', 'accB'];
+const EQUIP2_CATS = ['weapon', 'shield', 'armorTop', 'armorBottom', 'hands', 'hat', 'shoes', 'accA', 'accB']; // アクセは2カテゴリ(甲/乙)=9カテゴリ×各54種(2026-07-14)
 let EQUIP2_ITEMS = null, EQUIP2_BY_ID = null;
 function equip2Items() {
   if (EQUIP2_ITEMS) return EQUIP2_ITEMS;
   const E = P.equip2; EQUIP2_ITEMS = [];
   if (!E) return EQUIP2_ITEMS;
+  // 9カテゴリ×各54種(2026-07-14 ユーザー確認「装備は9カテゴリそれぞれで54種?」→各カテゴリ54種に拡張):
+  // 各カテゴリ = 6ティア(ステージ連動)× 9バリエーション(色銘: 銅/銀/金/翠/蒼/紅/紫/白/黒)。
+  // 効果の本体はティア(全生産×allMulPerTier^t)・バリエーションは色素材の配合違い(横持ち)。
+  // 合成連鎖は同バリエーションの前ティアを消費。バリエーション1(v1)は下位色素材のみ=入口。
+  const VARIANTS = E.variants || 9;
   for (let t = 1; t <= E.tiers; t++) {
     const stage = P.ws.stages[Math.min(t, P.ws.stages.length) - 1];
     const smatA = (stage.c && stage.c[0]) || 'butter';
     const smatB = (stage.c && stage.c[1]) || smatA;
     for (const cat of EQUIP2_CATS) {
-      const variants = cat === 'accessory' ? ['a', 'b'] : [''];
-      for (const v of variants) {
-        const id = `${cat}${v ? '_' + v : ''}_t${t}`;
+      for (let v = 1; v <= VARIANTS; v++) {
+        const id = `${cat}_t${t}_v${v}`;
         const cost = { ['ore_t' + t]: E.oreNeed };
-        // ティア1=色素材のみ(装備は最初から解放=工房スキル前でも作れる)。ティア2+でステージ素材が加わる
-        if (t >= 2) cost[v === 'b' ? smatB : smatA] = (cost[v === 'b' ? smatB : smatA] || 0) + E.stageMatNeed;
-        EQUIP2_ITEMS.push({ id, cat, tier: t, stageNo: stage.no, prev: t > 1 ? `${cat}${v ? '_' + v : ''}_t${t - 1}` : null, cost });
+        // バリエーションごとに副素材が変わる: v1=色素材のみ / v2-5=ステージ素材A / v6-9=ステージ素材B。
+        // 高バリエーションほど色素材が1個多い(見た目のレア度)
+        if (v >= 2 && t >= 2) { const m = v <= 5 ? smatA : smatB; cost[m] = (cost[m] || 0) + E.stageMatNeed; }
+        if (v >= 6) cost['ore_t' + t] += 1;
+        EQUIP2_ITEMS.push({ id, cat, tier: t, variant: v, stageNo: stage.no, prev: t > 1 ? `${cat}_t${t - 1}_v${v}` : null, cost });
       }
     }
   }
@@ -691,10 +697,13 @@ function equip2Tick(sim) {
   const rot = (sim.prestigeRuns || 0) % EQUIP2_CATS.length;
   const catOrder = {};
   EQUIP2_CATS.forEach((c, i) => { catOrder[c] = (i - rot + EQUIP2_CATS.length) % EQUIP2_CATS.length; });
-  const items = equip2Items().slice().sort((a, b) => (b.tier - a.tier) || (catOrder[a.cat] - catOrder[b.cat]));
+  // バリエーションもローテ(2026-07-14 486種のカバレッジ用): 今周回の狙いv=runs%9+1に近い順に作る
+  const vWant = ((sim.prestigeRuns || 0) % 9) + 1;
+  const vDist = v => Math.min(Math.abs((v || 1) - vWant), 9 - Math.abs((v || 1) - vWant));
+  const items = equip2Items().slice().sort((a, b) => (b.tier - a.tier) || (catOrder[a.cat] - catOrder[b.cat]) || (vDist(a.variant) - vDist(b.variant)));
   for (const it of items) {
     if (it.tier > tier) continue;
-    const cap = it.cat === 'accessory' ? 2 : 1;
+    const cap = 1; // 9カテゴリ各1個/周回(アクセは甲/乙で別カテゴリ)
     if (((r.eq2Made && r.eq2Made[it.cat]) || 0) >= cap) continue;
     const havePrev = it.prev ? ((ws.eq2Owned[it.prev] || 0) >= 1) : true;
     const afford = havePrev && equip2Afford(sim, it.cost);
@@ -715,16 +724,15 @@ function equip2Tick(sim) {
       ws.eq2Equipped[upgradedSlot] = it.id;
       (r.eq2NewEquipped || (r.eq2NewEquipped = [])).push(it.id);
     } else {
-      const slots = it.cat === 'accessory' ? ['acc1', 'acc2'] : [it.cat];
-      let best = null, bestTier = Infinity;
-      for (const s of slots) {
-        if (it.cat === 'accessory' && ws.eq2Equipped[s] === it.id) { best = null; break; } // 同一アクセの重複装備禁止
-        const cur = ws.eq2Equipped[s] ? equip2ById(ws.eq2Equipped[s]) : null;
-        const ct = cur ? cur.tier : 0;
-        if (ct < bestTier) { bestTier = ct; best = s; }
-      }
-      if (best !== null && bestTier < it.tier) {
-        ws.eq2Equipped[best] = it.id;
+      // スロット=カテゴリ名。ティアが上なら装備。同ティアでも未装備実績のバリエーションなら
+      // ローテ装備(カバレッジ条件「全装備がどこかの方針で1回は装備される」用)
+      const slot = it.cat;
+      const cur = ws.eq2Equipped[slot] ? equip2ById(ws.eq2Equipped[slot]) : null;
+      const ct = cur ? cur.tier : 0;
+      const everKey = 'eq2ever:' + it.id;
+      if (ct < it.tier || (ct === it.tier && !ws.everWs[everKey])) {
+        ws.eq2Equipped[slot] = it.id;
+        ws.everWs[everKey] = true;
         (r.eq2NewEquipped || (r.eq2NewEquipped = [])).push(it.id);
       }
     }

@@ -933,7 +933,7 @@ if (mode === 'baseline') {
     const notEquipped = items.filter(it => !equippedEver.has(it.id)).map(it => it.id);
     console.log(`新装備(b) カバレッジ: ${items.length - notEquipped.length}/${items.length} 装備済み${notEquipped.length ? ' 未装備: ' + notEquipped.join(',') : ''}`);
     // (c) 作成テンポ: 毎周回全カテゴリ(方針×周回で集計)
-    const cats = ['weapon', 'shield', 'armorTop', 'armorBottom', 'hands', 'hat', 'shoes', 'accessory'];
+    const cats = ['weapon', 'shield', 'armorTop', 'armorBottom', 'hands', 'hat', 'shoes', 'accA', 'accB']; // 9カテゴリ(2026-07-14)
     let mkOk = 0, mkAll = 0;
     for (const st of STRATEGIES) {
       const full = optSnap[st.id].runs.filter(r => !r.partial);

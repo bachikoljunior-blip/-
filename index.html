@@ -9292,9 +9292,9 @@ function renderWorkshop() {
 // ==== 新装備システム: ヘルパ・タブ描画・作成(2026-07-13) ====
 // 画像: 既存装備画像をカテゴリに割当て、ティアでhue回転(「画像のないものは既存のものを色を変えてつかう」)
 const EQUIP2_ART = { weapon: "goldenWhisk", shield: "masterTray", armorTop: "ovenMitt", armorBottom: "pressExtractor",
-  hands: "ovenMitt", hat: "stillFlask", shoes: "dimensionCompass", accessory: "monsterAlmanac" };
+  hands: "ovenMitt", hat: "stillFlask", shoes: "dimensionCompass", accA: "monsterAlmanac", accB: "stillFlask" };
 function equip2Art(it) { return (ASSETS.equipment && ASSETS.equipment[EQUIP2_ART[it.cat]]) || ASSETS.objects.cookieMonster; }
-function equip2Hue(it) { return ((it.tier - 1) * 55 + (it.id.includes("_b_") ? 30 : 0)); }
+function equip2Hue(it) { return ((it.tier - 1) * 55 + ((it.variant || 1) - 1) * 38) % 360; } // ティア+バリエーションで色相を回す
 // 色素材は上位が下位を代替(sim同期)
 function equip2OreHave(tier) { let n = 0; for (let t = tier; t <= EQUIP2_CFG.tiers; t++) n += materialCount("ore_t" + t); return n; }
 function equip2HaveOf(matId) { const m = /^ore_t(\d+)$/.exec(matId); return m ? equip2OreHave(Number(m[1])) : materialCount(matId); }
@@ -9329,13 +9329,10 @@ function craftEquip2(id) {
   playSound("buy");
   saveGame(); renderActiveTab(); updateTopOnly();
 }
-function equip2SlotLabel(slot) { return slot === "acc1" ? "アクセ1" : slot === "acc2" ? "アクセ2" : EQUIP2_CAT_NAMES[slot]; }
+function equip2SlotLabel(slot) { return EQUIP2_CAT_NAMES[slot] || slot; }
 function equipItemToSlot(itemId, slot) {
   const it = equip2ById(itemId);
-  if (!it) return;
-  const slots = it.cat === "accessory" ? ["acc1", "acc2"] : [it.cat];
-  if (!slots.includes(slot)) return;
-  if (it.cat === "accessory") { const other = slot === "acc1" ? "acc2" : "acc1"; if (state.eq2Equipped[other] === itemId) return; }
+  if (!it || it.cat !== slot) return; // スロット=カテゴリ(9部位・2026-07-14)
   state.eq2Equipped[slot] = itemId;
   playSound("buy"); saveGame(); renderEquip2Tab(); updateTopOnly();
 }
@@ -9359,7 +9356,7 @@ function renderEquip2Tab() {
       const choosing = equip2ChoosingSlot === slot;
       let chooser = "";
       if (choosing) {
-        const cat = slot.startsWith("acc") ? "accessory" : slot;
+        const cat = slot;
         const cands = equip2Items().filter(x => x.cat === cat && (state.eq2Owned[x.id] || 0) > 0);
         chooser = cands.length
           ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">` + cands.map(c =>
@@ -10290,27 +10287,29 @@ function currentCps() {
 // ==== 新装備システム+固定クエスト(2026-07-13 ユーザー確定仕様・sim同期) ====
 const EQUIP2_CFG = { tiers: 6, allMulPerTier: 2.0, layerBand: 5, oreDropPerKill: 5, oreNeed: 3, stageMatNeed: 3, dropAllMul: 2 };
 const QUEST_KILLS_NEED = [100, 130, 170, 220, 280]; // ステージ1→2 … 5→6(sim quest2同期)
-const EQUIP2_SLOTS = ["weapon", "shield", "armorTop", "armorBottom", "hands", "hat", "shoes", "acc1", "acc2"];
-const EQUIP2_CATS = ["weapon", "shield", "armorTop", "armorBottom", "hands", "hat", "shoes", "accessory"];
-const EQUIP2_CAT_NAMES = { weapon: "武器", shield: "盾", armorTop: "防具上", armorBottom: "防具下", hands: "手", hat: "帽子", shoes: "靴", accessory: "アクセサリー" };
+const EQUIP2_SLOTS = ["weapon", "shield", "armorTop", "armorBottom", "hands", "hat", "shoes", "accA", "accB"];
+const EQUIP2_CATS = ["weapon", "shield", "armorTop", "armorBottom", "hands", "hat", "shoes", "accA", "accB"]; // 9カテゴリ×各54種(2026-07-14)
+const EQUIP2_CAT_NAMES = { weapon: "武器", shield: "盾", armorTop: "防具上", armorBottom: "防具下", hands: "手", hat: "帽子", shoes: "靴", accA: "アクセサリー甲", accB: "アクセサリー乙" };
 const EQUIP2_TIER_NAMES = ["見習いの", "旅人の", "職人の", "騎士の", "王家の", "星界の"]; // ティア1..6の接頭
-const EQUIP2_BASE_NAMES = { weapon: "めん棒", shield: "天板の盾", armorTop: "コックコート", armorBottom: "前掛け", hands: "ミトン", hat: "コック帽", shoes: "厨房ブーツ", accessory: "焼き印のお守り" };
+const EQUIP2_BASE_NAMES = { weapon: "めん棒", shield: "天板の盾", armorTop: "コックコート", armorBottom: "前掛け", hands: "ミトン", hat: "コック帽", shoes: "厨房ブーツ", accA: "焼き印のお守り", accB: "香り袋" };
+const EQUIP2_VARIANT_NAMES = ["銅", "銀", "金", "翠", "蒼", "紅", "紫", "白", "黒"]; // 9バリエーションの色銘
 let EQUIP2_ITEMS_CACHE = null;
 function equip2Items() {
   if (EQUIP2_ITEMS_CACHE) return EQUIP2_ITEMS_CACHE;
   EQUIP2_ITEMS_CACHE = [];
+  // 9カテゴリ×各54種(6ティア×9バリエーション・2026-07-14 sim同期)
   for (let t = 1; t <= EQUIP2_CFG.tiers; t++) {
     const smats = STAGE_MATERIALS[Math.min(t, 5)] || STAGE_MATERIALS[1];
     const smatA = smats.normal, smatB = smats.tank || smats.normal;
     for (const cat of EQUIP2_CATS) {
-      const variants = cat === "accessory" ? ["a", "b"] : [""];
-      for (const v of variants) {
-        const id = `${cat}${v ? "_" + v : ""}_t${t}`;
+      for (let v = 1; v <= 9; v++) {
+        const id = `${cat}_t${t}_v${v}`;
         const cost = { ["ore_t" + t]: EQUIP2_CFG.oreNeed };
-        if (t >= 2) { const m = v === "b" ? smatB : smatA; cost[m] = (cost[m] || 0) + EQUIP2_CFG.stageMatNeed; }
+        if (v >= 2 && t >= 2) { const m = v <= 5 ? smatA : smatB; cost[m] = (cost[m] || 0) + EQUIP2_CFG.stageMatNeed; }
+        if (v >= 6) cost["ore_t" + t] += 1;
         EQUIP2_ITEMS_CACHE.push({
-          id, cat, tier: t, prev: t > 1 ? `${cat}${v ? "_" + v : ""}_t${t - 1}` : null, cost,
-          name: EQUIP2_TIER_NAMES[t - 1] + EQUIP2_BASE_NAMES[cat] + (v ? (v === "a" ? "・金" : "・銀") : ""),
+          id, cat, tier: t, variant: v, prev: t > 1 ? `${cat}_t${t - 1}_v${v}` : null, cost,
+          name: EQUIP2_TIER_NAMES[t - 1] + EQUIP2_BASE_NAMES[cat] + "・" + EQUIP2_VARIANT_NAMES[v - 1],
           mult: Math.pow(EQUIP2_CFG.allMulPerTier, t) // 効果は固定値で表示: 全生産×mult
         });
       }
