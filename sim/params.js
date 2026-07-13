@@ -82,7 +82,7 @@ module.exports = {
     lvEarlyDiv: 92,
     lvLateDiv: 320, lvLatePow: 1.22,
     dmgSqrtCoef: 0.45,
-    ratePerLv: 0.26, // 0.14→0.16(2026-07-10 第12次R: surge0.45の経済移動で③monsterRate中央値が再び1.1割れ=マージン積み増し)
+    ratePerLv: 0.26, // ③monsterRate再係留(2026-07-14) // 0.14→0.16(2026-07-10 第12次R: surge0.45の経済移動で③monsterRate中央値が再び1.1割れ=マージン積み増し)
     rateKillBonus: 0.6, rateKillHalf: 2, // 0.35→0.5(2026-07-10 novelty導入で③monsterRateの中央値が1.1を割れ=専用の討伐手数ボーナスで回復)
     satKps: 2.0, // 討伐頻度の飽和半価点(2026-07-10): kill項の1体価値逓減。高テンポ期の討伐56-63%独走を[30,52]帯へ(balanced序盤0.02-0.05体/秒はほぼ線形)
     killValueSec: 7, // 8→7(2026-07-12 ②改2: huntのlift3.05-3.09が帯上限3.00超過。直送絞りでは動かず本体=討伐報酬項を微減。序盤の役割はpeddlerFrac0.06が引き継ぎ済み) // 討伐1体の価値=生産◯秒ぶん(第12次R3・params駆動化)。7→8: ㉘hunt序盤(直送ゲート前)run8/20が討31-32%で合格化・balanced+1・click②改+2・bake影響なし(100h実測)。9/10はhunt+3〜4だがbalancedの打が7-9%に潰れ(−1〜2)・hunt後半②改−2=不採用
@@ -136,8 +136,8 @@ module.exports = {
   // 各稼ぎ口に、そのジャンルへ投資したプレイヤーだけ強く効く独立収入を用意し、各方針の主役を後半も≥30%に立たせる。
   // すべて skill→research→効果 でゲート(設備=ovenBatch段2/金=spiceBlend段2/討伐=portalNetwork段2/タップ=fingerTechnique段2)。
   // coef=0 で各無効。tune で全体最良点を掃引(㉘の各主役≥30%と経済/テンポ非破綻の両立)。調整項目。
-  equipDirect:  { coef: 0.06, stagePow: 0.5, countPow: 2, ref: 70, startStage: 5, satMax: 50, otherMul: { click: 0.08, default: 0.2 }, anchorGolden: 0.15 }, // otherMul.click 0.08(2026-07-11: ref70でclick中盤の設備31-40%が打25-29%を圧迫→click周回だけ設直を絞る。(a)24→26/49・②改48/49。clickBonus3.6併用は②改−5で不採用) // ref 100→70(2026-07-11 R5: surge減速で台数rampが遅れ設備シェアが沈む→投資係数の基準台数を引き下げ。bake㉘31→42/49・②改47/49実測) // アンカー=max(base, 0.15×金相場)(第12次R続き・2026-07-10採用): 後半はbase係留の設直だけ沈む(bake後半設直30→5-7%)ため金相場へ部分連動。100h実測: bake(a)23→46/47・②改43→40/47・balanced10→25/48。1.0は設71%独走で②改7/47に崩壊・0.25でも遷移帯が超過=0.15が均衡 // coef 0.11実験は㉘129→125・②改137→131と希釈で逆効果(2026-07-10実測)=0.06に戻し // 投資量=オーブン所持数。coef0.05無効の正体はゲート(ovenBatch段2コスト=run15相当)。段2コスト前倒しとセットで増幅(2026-07-10)。satMax=独走防止 25→50(第12次R: 100h後半周回で設備シェアが討伐/金perk積み上げに沈む=balanced10/48・bake23/47の対策)。otherMul=焼成方針以外は従来規模(全方針等倍だとbalanced0/32・click5/25に崩壊=実測)
-  goldenDirect: { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 10, otherMul: { click: 0.3, balanced: 0.3, hunt: 0.3, default: 1 } }, // otherMul(第12次R続き・2026-07-10採用・方針別マップ)=click/balanced中盤の金直16-22%が打を圧迫する対策+huntは金直を絞ると討シェアが立ち29→34/43(C1a実測・②改34不変)。bakeに効かせると②改40→30に崩れる(C2b実測)ためdefault=1 // 投資量=金perk合計(㉘金≥30%へ増幅・huntDirectと同処方=投資連動で金特化の後半周回だけ強く効く)
+  equipDirect:  { coef: 0.04, stagePow: 0.5, countPow: 2,   ref: 70,  startStage: 5, satMax: 50, otherMul: { click: 0.08, default: 0.2 }, anchorGolden: 0.15 }, // 新経済向け再スケール(2026-07-14) // otherMul.click 0.08(2026-07-11: ref70でclick中盤の設備31-40%が打25-29%を圧迫→click周回だけ設直を絞る。(a)24→26/49・②改48/49。clickBonus3.6併用は②改−5で不採用) // ref 100→70(2026-07-11 R5: surge減速で台数rampが遅れ設備シェアが沈む→投資係数の基準台数を引き下げ。bake㉘31→42/49・②改47/49実測) // アンカー=max(base, 0.15×金相場)(第12次R続き・2026-07-10採用): 後半はbase係留の設直だけ沈む(bake後半設直30→5-7%)ため金相場へ部分連動。100h実測: bake(a)23→46/47・②改43→40/47・balanced10→25/48。1.0は設71%独走で②改7/47に崩壊・0.25でも遷移帯が超過=0.15が均衡 // coef 0.11実験は㉘129→125・②改137→131と希釈で逆効果(2026-07-10実測)=0.06に戻し // 投資量=オーブン所持数。coef0.05無効の正体はゲート(ovenBatch段2コスト=run15相当)。段2コスト前倒しとセットで増幅(2026-07-10)。satMax=独走防止 25→50(第12次R: 100h後半周回で設備シェアが討伐/金perk積み上げに沈む=balanced10/48・bake23/47の対策)。otherMul=焼成方針以外は従来規模(全方針等倍だとbalanced0/32・click5/25に崩壊=実測)
+  goldenDirect: { coef: 0.3, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 10, otherMul: { click: 0.3, balanced: 0.3, hunt: 0.3, default: 1 } }, // 新経済向け再スケール(2026-07-14) // otherMul(第12次R続き・2026-07-10採用・方針別マップ)=click/balanced中盤の金直16-22%が打を圧迫する対策+huntは金直を絞ると討シェアが立ち29→34/43(C1a実測・②改34不変)。bakeに効かせると②改40→30に崩れる(C2b実測)ためdefault=1 // 投資量=金perk合計(㉘金≥30%へ増幅・huntDirectと同処方=投資連動で金特化の後半周回だけ強く効く)
   // 実績研究の固定コスト表(2026-07-11「コストはゲーム内で固定して」): build_ms_costs.js が
   // 10方針100hの測定から各研究の初回購入額(中央値・丸めq5)を焼き込む。無い間は動的フォールバック。
   // massProd=量産体制(2026-07-13 メトロノーム): 繰り返し購入の間隔と倍率(新⑥の床=×1.25^4/3分=×2.44)
@@ -148,7 +148,7 @@ module.exports = {
   // peddlerFrac 0.02→0.06(2026-07-11 hunt序盤対策) / otherMul.golden 0.9(2026-07-11) / 投資量=討伐perk8種・基準=金相場
   // otherMul.click 0.15→0.08(2026-07-12 ㉘click後半: 討直29-31%がタップ主役25%を圧迫。診断=partsDetail)
   // otherMul.balanced 0.15→0.18(2026-07-12 ㉘balanced中盤run13-19: 討伐8-9%<10%=タップ9.0倍の圧迫の再均衡)
-  huntDirect:   { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 12, otherMul: { click: 0.08, balanced: 0.22, golden: 0.9, default: 0.3 }, peddlerFrac: 0.06 },
+  huntDirect:   { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 12, otherMul: { click: 0.08, balanced: 0.35, golden: 0.9, default: 0.3 }, peddlerFrac: 0.06 }, // 新経済向け(2026-07-14 掃引r2)
   // tapDirect: clickBonus 5.0→5.6(2026-07-12 ②改2: clickのlift1.46が最弱=底上げで帯上限を引き上げhuntを収容)
   // clickBonus5.0+satMax150(2026-07-11 複合=中盤+22%・後半飽和) / otherMul.balanced7.0(echo対応) / anchorGolden0.5=神指前のみ
   // satMax 150→400・otherMul.balanced 7.0→9.0(2026-07-12 ㉘後半対策: click run33-47 打12-21%<25%・
@@ -162,12 +162,12 @@ module.exports = {
   // clickBonusLate 18→21(2026-07-12 ㉘click残り: run33/47 タップ22-23%の押し込み)
   // satMaxLate 800→1200・otherMul.balanced 9.0→8.0(2026-07-12 最終: click後半は21-25%境界のノイズフリップ
   // =マージン確保で28-31%へ。balanced中盤はタップ38%が討伐8-9%を圧迫=hunt 0.22と対で再配分)
-  tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5, clickBonus: 5.6, clickBonusLate: 21, satMax: 150, satMaxLate: 1200, anchorGolden: 0.5, stallFrac: 0.05, otherMul: { golden: 0.6, balanced: 8.0, default: 1 } },
+  tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5, clickBonus: 3, clickBonusLate: 14, satMax: 150, satMaxLate: 400, anchorGolden: 0.2, stallFrac: 0.05, otherMul: { golden: 0.6, balanced: 4.0, default: 1 } }, // 新経済向け再スケール(2026-07-14 掃引r2)
   // 銀行配当(直送・第12次J-3 腐り解消): bankClickDividend研究の独立収入。クリック方針で厚く効かせ①の各回minを満たす。
   // 全体cps倍率をやめ加算収入へ(他機能のlift希釈を回避)。所持数はlog10で床あり=早い周回でも効く。増加方向のみ。
   // countPow 1.6は棄却→1.8へ差し戻し(2026-07-12: ①bankの真の束縛はS2 run25-32(count300-800=ratio>1域)で
   // 指数減はここも−13〜28%痩せさせ1.179どまり。㉘click後半はclickBonusLateへ一本化)
-  bankDirect:   { coef: 0.42, ownRate: 0.5, savedCoef: 0.05, clickBonus: 2.8, countCoef: 0.9, countPow: 1.8, ref: 150, anchorGolden: 0.12, otherMul: 0.5 }, // clickBonus 2.5→2.8(2026-07-11: echo金インフレで①bankのS2が1周回だけ1.2割れ=マージン) // 投資量=銀行所持数+貯蓄(総クッキー桁)。coef 0.34→0.42(2026-07-10 第12次R: surge経済移動で①bank研究が1.2割れ=マージン)
+  bankDirect:   { coef: 0.2, ownRate: 0.5, savedCoef: 0.05, clickBonus: 1.8, countCoef: 0.9, countPow: 1.8, ref: 150, anchorGolden: 0.12, otherMul: 0.5 }, // 新経済向け再スケール(2026-07-14: click設備70%対策でclickBonusも減) // clickBonus 2.5→2.8(2026-07-11: echo金インフレで①bankのS2が1周回だけ1.2割れ=マージン) // 投資量=銀行所持数+貯蓄(総クッキー桁)。coef 0.34→0.42(2026-07-10 第12次R: surge経済移動で①bank研究が1.2割れ=マージン)
   // 研究連動の全生産倍率(第12次L・提案A): 異世界接続網/銀河合成/量子証明が解放されている間、全生産(クリック＋毎秒)に
   // 一律の倍率を掛ける。floor で研究購入直後から立つ(①の各回min≥1.2)、所持数(log10)と最高層で伸びる。
   // 【重要】全生産倍率は設備/金/討伐/タップを同率で持ち上げる=㉘の稼ぎ口シェアが不変(相殺)、③/⑨の他機能liftも

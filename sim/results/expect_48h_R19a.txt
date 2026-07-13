@@ -1,0 +1,27 @@
+=== 期待値方式(48h・各回の稼ぎ力の持ち上げ) ===
+① 研究(各回≥1.2) 10/14
+  OK res:fingerTechnique          S2 min=2.54
+  NG res:grandmaCrowd             取得あり・全周回≥1.2に未達(最大幾何平均7675320.24)
+  NG res:ovenBatch                取得あり・全周回≥1.2に未達(最大幾何平均1.18)
+  NG res:factoryNetwork           取得あり・全周回≥1.2に未達(最大幾何平均2.02)
+  OK res:spiceBlend               S3 min=1.26
+  OK res:portalNetwork            S8 min=1.25
+  OK res:bankClickDividend        S2 min=1.46
+  OK res:moonGlobalYeast          S8 min=17.56
+  OK res:portalGlobalFold         S7 min=1.83
+  OK res:galaxyAssembly           S7 min=1.25
+  OK res:blackHoleCompression     S5 min=5.00
+  OK res:quantumProofing          S6 min=1.25
+  OK res:antimatterRecipe         S7 min=10217072.36
+  NG res:cpsStrike                取得あり・全周回≥1.2に未達(最大幾何平均1.00)
+③-a 報酬instant(全周回≥1.1・2026-07-13ユーザー変更) 5/8
+  NG rw:goldenRate                取得あり・全周回≥1.1に未達(最大幾何平均6.85)
+  OK rw:goldenPower               S3 min=1.28
+  OK rw:goldenAmount              S7 min=1.19
+  NG rw:monsterRate               取得あり・全周回≥1.1に未達(最大幾何平均1.12)
+  OK rw:goldenTarget              S2 min=2.19
+  NG rw:goldenFirstHit            取得あり・全周回≥1.1に未達(最大幾何平均1.32)
+  OK rw:beastHeatFerment          S4 min=29672.58
+  OK rw:huntingCore               S4 min=27024.57
+③-c 毎回取る方針の実在 16/20 NG: brandHunt,deepPursuit,crushedMill,goldenBeastMutation
+③ 報酬utility軸(短い枝分かれ比べ・同一状態から1周回ぶん・総クッキー比の中央値 ≥1.1)
