@@ -28,7 +28,10 @@ module.exports = {
     // ⑲改の辺間隔上書き(2026-07-11): 梯子リチューン後に「比≤10倍の辺なし」となった5ノードを、最も近い
     // 隣接ノードのちょうど10倍(q5準拠)へ引き下げ。click_2=click_1×10 / click_3=golden_2×10 /
     // auto_3=auto_2×10 / upgrade_moon=economy_2×10 / unlock_reward_huntFocus=crackedFang×10
-    overrides: { click_2: 250, click_3: 15500, auto_3: 38500, upgrade_moon: 63500, unlock_reward_huntFocus: 78000000000 } },
+    overrides: { click_2: 250, click_3: 15500, auto_3: 38500, upgrade_moon: 63500, unlock_reward_huntFocus: 78000000000,
+      // 2026-07-13 ユーザー指示「スキル最初のやつ(core)に繋がってるものは初回転生でどれでも一つは取れるくらいに」:
+      // 初回転生PT≈16・core10 → 入口4本を5PTに(core+入口=15≤16。ensemble3/amp8は元から圏内)
+      click_1: 5, golden_1: 5, monster_1: 5, auto_1: 5 } },
 
   // ---- 生産系数値ノードの1ノードあたり目標倍率 ----
   nodeM: { all: 4, cps: 4, click: 3 }, // 14/14/9->4/4/3 (2026-07-06: 安価⑲ラダー下で周回時間を帯域スケールへ減速)
@@ -178,7 +181,8 @@ module.exports = {
   // 効果はすべて連鎖数Nに線形(共鳴のような雪だるまにならない):
   //  prodCoef=全生産×(1+prodCoef×N) / dropCoef=素材ドロップ量×(1+dropCoef×N)(素材は現状ゲームのみ) /
   //  rewardCoef=報酬レベル+floor(rewardCoef×N)
-  chain: { prodCoef: 0.02, dropCoef: 0.02, rewardCoef: 0.05, breakSec: 90 },
+  // 討伐連鎖は廃止(2026-07-13 ユーザー指示「チェインも消す」)。null=全効果無効(コードはP.chainガードで休眠)
+  chain: null,
 
   // ---- 研究効果 ----
   // 2026-07-06 第8次: ①(各研究の有効性)で弱かった5研究の「所持数指数」(垂直吸収されない動的項)を強化:
@@ -190,6 +194,8 @@ module.exports = {
     fingerBase: 0.01, fingerSqrt: 0.045, fingerStage: 0.002, fingerCritBase: 2.2, fingerCritGrow: 10.0, // critBase 2.0→2.2(2026-07-11 ①finger: S2 run1のlift1.1996=基準1.2を丸め1つ分割れ。会心率(㉓固定)は不変・倍率の基礎項のみ)
     // grandmaSelf 30→40(2026-07-12 ①grandmaCrowd: 金アンカー(第0回タップ40回分)で第0回の地力が膨らみ
     // 全方針の初回liftが1.06-1.18に希釈。S7の初回1.182を帯内へ=①は「1方針が全周回≥1.2」で判定)
+    // grandmaOwn(2026-07-13 新設・ユーザー指示「1台あたりの初期生産1のままもっと強く」): 1台あたり生産×(1.02)^台数
+    grandmaOwn: 0.02,
     grandmaSelf: 40, grandmaSup: [0.007, 0.008, 0.009],
     // 2026-07-06 第8次: ⑫(設備の文脈依存性)用に所持数指数を再配分。
     // factory一強(全方針の最効率=工場固定)を解消: oven 0.060→0.067 / spice 0.062→0.071 / factory 0.060→0.057
@@ -233,7 +239,10 @@ module.exports = {
     portalGlobalFold: 400000000, galaxyAssembly: 6000000000,
     blackHoleCompression: 160000000000, quantumProofing: 3200000000000,
     antimatterRecipe: 64000000000000
-  }, (function () { try { return require('./weave_costs.json').resCost || {}; } catch (e) { return {}; } })()),
+  }, (function () { try { return require('./weave_costs.json').resCost || {}; } catch (e) { return {}; } })(), {
+    // 2026-07-13 ユーザー指定の固定コスト(weave焼き込みより優先): 工場段1=100万・香料調合段1=2000万
+    factoryNetwork: 1000000, spiceBlend: 20000000
+  }),
 
   // ---- モンスター報酬効果 ----
   rw: {
@@ -323,7 +332,7 @@ module.exports = {
   goldenEcho: { p: 0.35, amountMul: 1.0 },
   // 提案13「編成の心得」(2026-07-11 承認・バランス方針限定): 4稼ぎ口のそろい具合u=min(1,4×最小シェア)で全生産×(1+maxBonus×u)
   ensemble: { maxBonus: 0.15, updateSec: 30 },
-  upSurge: { perBuy: 0.9, halfSec: 120 }, // 0.5/75→0.9/120(2026-07-11 T1再ペーシング): 研究200本経済の末期成長は
+  upSurge: { perBuy: 0, halfSec: 120 }, // まとめ買い割増は廃止(2026-07-13 ユーザー指示「割り増しを消す」。perBuy=0で休眠) // 0.5/75→0.9/120(2026-07-11 T1再ペーシング): 研究200本経済の末期成長は
   // 1桁/6秒の購入テンポ律速=転生コスト・PT梯子の桁レバーが無力(+3桁で周回時間が1秒も動かないと実測)。
   // まとめ買い割増こそが成長率レバー。掃引: 0.5/75(S3 15/48・S1 33/48)→0.8/75(28・47)→0.9/120(S3 46/48・S1 48/48)。
   // 第0回はS3 3982s・S1 2715s=2時間帯内。

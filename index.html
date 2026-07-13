@@ -6026,7 +6026,7 @@ const ASSETS = {
 const UPGRADES = [
   // クリックとおばあちゃんは基礎値1。香料棚を銀行〜異世界炉の中間に追加し、工場以降は緩やかに重くなる。
   { id: "finger", name: "強い指", type: "click", value: 1, base: 0.0184, growth: 1.32, desc: "1タップ +1。さらに毎秒生産の一部(0.4%×強い指補正)がタップ力に加算される" },
-  { id: "grandma", name: "おばあちゃん", type: "cps", value: 1, base: 40, growth: 1.30, desc: "毎秒 +1" },
+  { id: "grandma", name: "おばあちゃん", type: "cps", value: 1, base: 1000, growth: 1.30, desc: "毎秒 +1(台数が増えるほど1台あたりが強くなる)" },
   { id: "oven", name: "オーブン", type: "cps", value: 8, base: 520, growth: 1.35, desc: "毎秒 +8" },
   { id: "factory", name: "工場", type: "cps", value: 45, base: 7200, growth: 1.37, desc: "毎秒 +45" },
   { id: "bank", name: "クッキー銀行", type: "cps", value: 260, base: 54000, growth: 1.39, desc: "毎秒 +260" },
@@ -6049,8 +6049,8 @@ const RESEARCH = [
   { id: "fingerTechnique", name: "指先の型", cost: 2500, detail: "式：会心率=1-e^-score、倍率=2.2+score×10(score=0.01+√強い指×0.045+0.002×最高到達層。開始1%から育つ)。段階2(スキル「連打の呼吸」で購入可):会心コンボ=会心ごとに+1(上限なし、30秒途切れでリセット)、会心倍率×(1+0.03×コンボ)。段階3(スキル「神経直結」で購入可):会心の余熱=会心のたびに毎秒生産×0.025%×最高到達層を追加獲得。", desc: "タップ会心を解放する。段階購入でコンボと会心の余熱が追加" },
   { id: "grandmaCrowd", name: "おばあちゃん連携", cost: 12000, detail: "式：支援=1.002〜1.003^おばあちゃん(強い指・オーブン・工場)。段階2(スキル「炉の列」で購入可):支援先に銀行・香料棚を追加(×1.008^おばあちゃん)。段階3(スキル「無人ライン」で購入可):全支援×(1+0.001×最高到達層)。", desc: "おばあちゃんが強い指・オーブン・工場を支援する。段階購入で銀行・香料棚も支援＋層効果が追加" },
   { id: "ovenBatch", name: "オーブン大量焼成", cost: 30000, detail: "式：9×1.008^オーブン×1.004^(最高到達層-1)。段階2(スキル「同期炉」で購入可):オーブン強化倍率×1.35。段階3(スキル「無人ライン」で購入可):オーブン個別強化Lv×(1+0.05×Lv)。", desc: "最高到達層とオーブン数でオーブンを強化する。段階購入で強化倍率と個別強化連動が追加" },
-  { id: "factoryNetwork", name: "工場ネットワーク", cost: 7700000000, detail: "式：9×1.002^(指+婆+炉)×1.008^工場。段階2(スキル「無人ライン」で購入可):銀行以上の所持設備種類×(1+0.15×種類数)。段階3(スキル「まとめ買い」で購入可):×(1+0.0012×最高到達層)。", desc: "下位設備と工場数で工場を強化する。段階購入で上位設備種類と層効果が追加" },
-  { id: "spiceBlend", name: "香料調合", cost: 1950000000000000, detail: "式：金取得後30秒 香料棚×8×1.006^棚。段階2(スキル「金色の匂い」で購入可):風味の熟成=金取得から12秒間、全生産×(1+0.6%×前回の金からの経過秒)。段階3(スキル「輝き増幅」で購入可):熟成×(1+0.0015×最高到達層)。", desc: "金クッキー取得後に香料棚を強化する。段階購入で熟成バーストが追加" },
+  { id: "factoryNetwork", name: "工場ネットワーク", cost: 1000000, detail: "式：9×1.002^(指+婆+炉)×1.008^工場。段階2(スキル「無人ライン」で購入可):銀行以上の所持設備種類×(1+0.15×種類数)。段階3(スキル「まとめ買い」で購入可):×(1+0.0012×最高到達層)。", desc: "下位設備と工場数で工場を強化する。段階購入で上位設備種類と層効果が追加" },
+  { id: "spiceBlend", name: "香料調合", cost: 20000000, detail: "式：金取得後30秒 香料棚×8×1.006^棚。段階2(スキル「金色の匂い」で購入可):風味の熟成=金取得から12秒間、全生産×(1+0.6%×前回の金からの経過秒)。段階3(スキル「輝き増幅」で購入可):熟成×(1+0.0015×最高到達層)。", desc: "金クッキー取得後に香料棚を強化する。段階購入で熟成バーストが追加" },
   { id: "portalNetwork", name: "異世界接続網", cost: 815000000000000000, detail: "式：金取得後の狩り窓=20秒×1.0042^異世界炉、窓中の出現間隔×0.990^異世界炉。段階2(スキル「砕ける皮」で購入可):窓中の討伐1体ごとに窓+2秒。段階3(スキル「群れ読み」で購入可):窓中の出現×e^(-0.0008×最高到達層)。", desc: "金クッキー取得後にモンスターの狩り窓を開く。段階購入で窓延長と層効果が追加" },
   { id: "bankClickDividend", name: "銀行クリック配当", cost: 4550000000000, detail: "式：クリック×1.008^銀行×(1+log(貯蓄)×8)。段階2(スキル「まとめ買い」で購入可):複利利息=所持×0.5%×log10(1+銀行)を毎秒獲得(毎秒生産×8付近から逓減、打ち止めなし)。段階3(スキル「経済分析」で購入可):逓減基準×(1+0.08×最高到達層)。", desc: "銀行と貯蓄でクリックを強化する。段階購入で複利利息が追加" },
   { id: "moonGlobalYeast", name: "月面発酵", cost: 2.9000000000000003e+41, detail: "式：9×1.003^(最高到達層-2)×1.001^月面 ※第3層以降。段階2(スキル「時空免許」で購入可):log10(1+ノルマ余裕率)/10で発酵が進む。段階3(スキル「研究解析」で購入可):×(1+5%×取得研究数)。", desc: "最高到達層で全体生産を強化する。段階購入で余裕率連動と研究数連動が追加" },
@@ -6119,13 +6119,13 @@ const SKILL_NODES = [
   { id: "core", name: "分岐炉心", branchId: "core", cost: 10, x: 1000, y: 1120, icon: "◎", prereqs: [], desc: "転生後に周回方針を選べるようにする。", effects: [{ type: "unlockSystem", target: "runPolicy" }] },
 
   // 左上：タップ型
-  { id: "click_1", name: "会心の指", branchId: "click", cost: 25, x: 800, y: 980, icon: "◆", prereqs: ["core"], desc: "タップ生産 +200%。", effects: [{ type: "click", value: 2 }] },
+  { id: "click_1", name: "会心の指", branchId: "click", cost: 5, x: 800, y: 980, icon: "◆", prereqs: ["core"], desc: "タップ生産 +200%。", effects: [{ type: "click", value: 2 }] },
   { id: "click_2", name: "連打の呼吸", branchId: "click", cost: 250, x: 620, y: 860, icon: "◆", prereqs: ["click_1"], desc: "タップ生産 x7。", effects: [{ type: "click", value: 6 }] },
   { id: "click_3", name: "焼き印タップ", branchId: "click", cost: 15500, x: 440, y: 740, icon: "◆", prereqs: ["click_2", "golden_2"], desc: "タップ生産 x16、金獲得量 +30%。", effects: [{ type: "click", value: 15 }, { type: "goldenAmount", value: 0.3 }] },
   { id: "click_4", name: "神経直結", branchId: "click", cost: 13500000, x: 260, y: 620, icon: "◆", prereqs: ["click_3", "auto_4"], desc: "タップ生産 +24%、全生産 x641。銀行配当の増幅先。", effects: [{ type: "click", value: 0.24 }, { type: "all", value: 640 }] },
 
   // 左下：金クッキー型
-  { id: "golden_1", name: "金色の匂い", branchId: "golden", cost: 45, x: 800, y: 1260, icon: "✦", prereqs: ["core"], desc: "金クッキー出現間隔を短縮。", effects: [{ type: "goldenRate", value: 0.24 }] },
+  { id: "golden_1", name: "金色の匂い", branchId: "golden", cost: 5, x: 800, y: 1260, icon: "✦", prereqs: ["core"], desc: "金クッキー出現間隔を短縮。", effects: [{ type: "goldenRate", value: 0.24 }] },
   // 方針入口の増幅スキル(2026-07-11): 分岐炉心の各方針入口を選んだ直後に、その方針の主役効果を安価に増幅する
   { id: "click_amp", name: "速射の指", branchId: "click", cost: 8, x: 620, y: 1120, icon: "◆", prereqs: ["click_1"], desc: "タップ生産 +75%。", effects: [{ type: "click", value: 0.75 }] },
   { id: "golden_amp", name: "金箔集め", branchId: "golden", cost: 15, x: 780, y: 1120, icon: "✦", prereqs: ["golden_1"], desc: "金クッキー即時獲得量 +50%。", effects: [{ type: "goldenAmount", value: 0.5 }] },
@@ -6142,13 +6142,13 @@ const SKILL_NODES = [
   { id: "golden_4", name: "太陽反応", branchId: "golden", cost: 490000000, x: 80, y: 1740, icon: "✦", prereqs: ["golden_3"], desc: "金出現間隔を大きく短縮、金獲得量 +125%。", effects: [{ type: "goldenRate", value: 0.48 }, { type: "goldenAmount", value: 1.25 }] },
 
   // 右上：自動焼成型
-  { id: "auto_1", name: "火種", branchId: "auto", cost: 110, x: 1200, y: 980, icon: "◇", prereqs: ["core"], desc: "毎秒生産 +300%。", effects: [{ type: "cps", value: 3 }] },
+  { id: "auto_1", name: "火種", branchId: "auto", cost: 5, x: 1200, y: 980, icon: "◇", prereqs: ["core"], desc: "毎秒生産 +300%。", effects: [{ type: "cps", value: 3 }] },
   { id: "auto_2", name: "炉の列", branchId: "auto", cost: 3850, x: 1380, y: 860, icon: "◇", prereqs: ["auto_1", "monster_2"], desc: "毎秒生産 x11。", effects: [{ type: "cps", value: 10 }] },
   { id: "auto_3", name: "同期炉", branchId: "auto", cost: 38500, x: 1560, y: 740, icon: "◇", prereqs: ["auto_2", "monster_2"], desc: "毎秒生産 x41、モンスターダメージ +60%。", effects: [{ type: "cps", value: 40 }, { type: "monsterDamageSkill", value: 0.6 }] },
   { id: "auto_4", name: "無人ライン", branchId: "auto", cost: 3500000, x: 1740, y: 620, icon: "◇", prereqs: ["auto_3"], desc: "毎秒生産 +24%、全生産 x161。工場ネットワークの増幅先。", effects: [{ type: "cps", value: 0.24 }, { type: "all", value: 160 }] },
 
   // 右下：怪物狩り型
-  { id: "monster_1", name: "狩りの合図", branchId: "monster", cost: 70, x: 1200, y: 1260, icon: "◉", prereqs: ["core"], desc: "モンスター出現間隔を短縮。", effects: [{ type: "monsterRate", value: 0.24 }] },
+  { id: "monster_1", name: "狩りの合図", branchId: "monster", cost: 5, x: 1200, y: 1260, icon: "◉", prereqs: ["core"], desc: "モンスター出現間隔を短縮。", effects: [{ type: "monsterRate", value: 0.24 }] },
   { id: "monster_2", name: "急所割り", branchId: "monster", cost: 2450, x: 1380, y: 1380, icon: "◉", prereqs: ["monster_1", "golden_2"], desc: "モンスター最終ダメージ +160%。", effects: [{ type: "monsterDamageSkill", value: 1.6 }] },
   { id: "monster_3", name: "砕ける皮", branchId: "monster", cost: 1350000, x: 1560, y: 1500, icon: "◉", prereqs: ["monster_2"], desc: "モンスターHP -50%。", effects: [{ type: "monsterHpDown", value: 0.7000000000000001 }] },
   // v2: 工房解放スキル(monster枝の序盤から分岐。x=1200列のy=1440/1600は空き)
@@ -8101,7 +8101,7 @@ function clearResearchTabNotify() {
 // ==== 周回序盤のクッキーモンスター(2026-07-11 ユーザー指示) ====
 // 周回の初めに30秒おきに通常種クッキーモンスターを1体ずつ、計5体出す。
 // ノルマ達成前でも出る(強制出現)。経過はノルマ時計基準(モーダル中などは進まない)。
-const EARLY_RUN_MONSTER_COUNT = 5;
+const EARLY_RUN_MONSTER_COUNT = 0; // 廃止(2026-07-13 ユーザー指示)
 const EARLY_RUN_MONSTER_INTERVAL_SEC = 30;
 
 function checkEarlyRunSpawns() {
@@ -9605,6 +9605,7 @@ function spiceRackMultiplier() {
 function researchUpgradeMultiplier(u) {
   let m = 1;
 
+  if (u.id === "grandma") m *= Math.pow(1.02, state.upgrades.grandma || 0); // 所持数スケール(sim grandmaOwn 0.02同期・2026-07-13「1台目1のままもっと強く」)
   if (u.id === "grandma" && state.research.grandmaCrowd) m *= 12; // 9→12(sim grandmaSelf 30→40同期・シム比1/3スケール維持。①希釈対策 2026-07-12)
   if (u.id === "oven" && state.research.ovenBatch) m *= 9 * ovenStageMultiplier();
   if (u.id === "oven") m *= 1 + 0.12 * equipLv("ovenMitt"); // 断熱オーブン手袋(焼き加減廃止で再係留・sim同期)
@@ -9863,7 +9864,7 @@ function q5cost(v) { return Math.max(1, Math.floor(q5round(v))); }
 // まとめ買い割増(2026-07-06 ユーザー採用): 同じ設備を短時間に連続購入するほど値段に割増がつき、
 // 時間で元に戻る。割増倍率 = (1+SURGE_PER_BUY)^熱量。熱量は購入ごとに+1、SURGE_HALF_SEC秒ごとに半減。
 // 目的: 終盤の駆け込みまとめ買いをゆっくりにする(待てば必ず元の値段に戻る)。係数は調整項目。
-const SURGE_PER_BUY = 0.9; // 0.25→0.45(第12次R)→0.5(R3)→0.9(R5・sim同期): 研究200本経済の再ペーシング(周回時間をT1帯へ)
+const SURGE_PER_BUY = 0; // まとめ買い割増は廃止(2026-07-13 ユーザー指示) // 0.25→0.45(第12次R)→0.5(R3)→0.9(R5・sim同期): 研究200本経済の再ペーシング(周回時間をT1帯へ)
 const SURGE_HALF_SEC = 120; // 75→120(同上)
 
 function surgeHeat(id) {
@@ -10171,10 +10172,10 @@ function quotaControlMultiplier() {
 // モンスターを1体倒すたびに連鎖+1。最後の討伐からCHAIN_BREAK_SEC以内に次を倒せば継続、
 // 過ぎたら0、転生でも0。上限なし。効果は連鎖数Nに線形(雪だるま式にならない):
 // 全生産×(1+CHAIN_PROD_COEF×N) / 素材ドロップ量×(1+CHAIN_DROP_COEF×N) / 報酬レベル+floor(CHAIN_REWARD_COEF×N)
-const CHAIN_PROD_COEF = 0.02;
-const CHAIN_DROP_COEF = 0.02;
-const CHAIN_REWARD_COEF = 0.05;
-const CHAIN_BREAK_SEC = 90;
+const CHAIN_PROD_COEF = 0; // 討伐連鎖は廃止(2026-07-13 ユーザー指示)
+const CHAIN_DROP_COEF = 0;
+const CHAIN_REWARD_COEF = 0;
+const CHAIN_BREAK_SEC = 0; // 0=連鎖数が常に0(表示も出ない)
 function chainCount() {
   const last = Number(state.chainLastKillEl);
   if (!Number.isFinite(last) || quotaElapsedSeconds() - last > CHAIN_BREAK_SEC) return 0;

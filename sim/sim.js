@@ -6,7 +6,7 @@ const P = require('./params.js');
 // ================= 静的データ =================
 const UPGRADES = [
   { id: 'finger', type: 'click', value: 1, base: 0.0506, growth: 1.32 },
-  { id: 'grandma', type: 'cps', value: 1, base: 40, growth: 1.30 },
+  { id: 'grandma', type: 'cps', value: 1, base: 1000, growth: 1.30 }, // base 40→1000(2026-07-13 ユーザー指定「初期コストは1000」。1台目の生産は1のまま=強化は所持数スケール側)
   { id: 'oven', type: 'cps', value: 8, base: 390, growth: 1.35 },
   { id: 'factory', type: 'cps', value: 45, base: 2600, growth: 1.37 },
   // 第12次R3: 初台ボーナス(presence)が第0回の中位チェーン(工場→銀行→香料棚→異世界炉)を加速し
@@ -1080,6 +1080,8 @@ function computeProd(sim) {
     const boostRate = Math.max(P.upPerk.floor, P.upPerk.base - i * P.upPerk.slope) * upPerkPower;
     const personal = 1 + (r.upgradePerks[u.id] || 0) * boostRate;
     let resM = 1;
+    // おばあちゃんの所持数スケール(2026-07-13): 1台目=1/秒のまま台数で伸びる(下 upgradeUnitMult と同式)
+    if (u.id === 'grandma') resM *= lg(capOwn(owned), R.grandmaOwn || 0);
     if (u.id === 'grandma' && resActive(sim, 'grandmaCrowd')) resM *= R.grandmaSelf;
     // 断熱オーブン手袋(焼き加減廃止に伴う再係留・2026-07-10): オーブン生産×(1+mittPerLv×Lv)。
     // ⑮の2のovenMitt判定経路(旧・こんがり倍率/焼き上がり底上げ)をオーブン直結へ置換=研究非依存で確実に効く。
@@ -2199,6 +2201,7 @@ function doPrestige(sim) {
     quotaHold: r.quotaHoldSeconds,
     maxStage: r.maxStage,
     kills: r.kills, golden: r.goldenTaken, chainMax: r.chainMax,
+    cpsSamples: r._cpsSamples || [],
     gain,
     researchBought: Object.keys(r.research).filter(k => r.research[k]),
     stages2: Object.keys(r.research2).filter(k => r.research2[k]),
@@ -2358,6 +2361,14 @@ function advanceTick(sim, strategy) {
     for (const a of r.afterheats) if (sim.t >= a.from) ahM *= a.mult;
 
     const cpsNow = prod.cps * ahM;
+    // 新条件「毎秒生産が3分おきに2倍以上」(2026-07-13 ユーザー追加): 周回内で180秒ごとにCPSをサンプル
+    {
+      const k = Math.floor((sim.t - r.startT) / 180);
+      if (k > (r._cpsK === undefined ? -1 : r._cpsK)) {
+        r._cpsK = k;
+        (r._cpsSamples || (r._cpsSamples = [])).push(cpsNow);
+      }
+    }
     const clickNow = prod.clickEV * ahM;
 
     // タップとモンスター
@@ -2466,23 +2477,7 @@ function advanceTick(sim, strategy) {
       scheduleGolden(sim);
     }
 
-    // 周回序盤の強制出現(2026-07-11 main同期「周回の初めに30秒おきにクッキーモンスターを1体ずつ計5体」):
-    // ノルマ達成前でも通常種が出る。ゲームは出現中でも重ねて出すが、simは1体モデルのため空き待ち(期待値近似)。
-    if (!r.monster && (r.earlyMonsters || 0) < 5 && (sim.t - r.startT) >= ((r.earlyMonsters || 0) + 1) * 30) {
-      r.earlyMonsters = (r.earlyMonsters || 0) + 1;
-      const level = monsterLevel(sim);
-      const maxHp = Math.max(40, Math.floor(monsterHpValue(sim, level) * (r.nextMonsterHpMultiplier || 1)));
-      r.nextMonsterHpMultiplier = 1;
-      r.monster = {
-        typeId: 'normal', level, hp: maxHp, maxHp,
-        stayLeft: monsterStayMs(sim) / 1000,
-        goldenChainMultiplier: r.goldenChainReady ? 1 + (r.perks.goldenChain || 0) * effRw(sim, 'goldenChain') : 1,
-        goldenFirstHitReady: r.goldenFirstHitReady,
-        firstHitUsed: !r.goldenFirstHitReady
-      };
-      r.goldenChainReady = false;
-      r.goldenFirstHitReady = false;
-    }
+    // 周回序盤の強制出現(30秒おき×5体)は廃止(2026-07-13 ユーザー指示「序盤の30秒おきモンスターは消して」)
     // モンスター出現
     if (!r.monster) {
       r.monsterTimer -= dt;
@@ -2636,7 +2631,7 @@ function simulate(strategy, opts) {
     idx: sim.runs.length, startT: r.startT, endT: sim.t,
     duration: sim.t - r.startT, runCookies: r.runCookies,
     quotaHold: r.quotaHoldSeconds, maxStage: r.maxStage,
-    kills: r.kills, golden: r.goldenTaken,
+    kills: r.kills, golden: r.goldenTaken, cpsSamples: r._cpsSamples || [],
     gain: prestigeGainOf(r.runCookies), partial: true,
     researchBought: Object.keys(r.research).filter(k => r.research[k]),
     stages2: Object.keys(r.research2).filter(k => r.research2[k]),
@@ -2747,6 +2742,9 @@ function upgradeUnitMult(sim, u) {
   const personal = 1 + (r.upgradePerks[u.id] || 0) * boostRate;
   let resM = 1;
   const stage = currentStage(sim);
+  // おばあちゃんの所持数スケール(2026-07-13 ユーザー指示「1台あたりの初期生産は1のまま、もっと強く」):
+  // 1台目=1/秒は不変。台数が増えるほど1台あたりが伸びる(研究非依存の地力)
+  if (u.id === 'grandma') resM *= lg(capOwn(owned), R.grandmaOwn || 0);
   if (u.id === 'grandma' && resActive(sim, 'grandmaCrowd')) resM *= R.grandmaSelf;
   if (u.id === 'oven' && resActive(sim, 'ovenBatch')) resM *= R.ovenSelf * lg(owned, R.ovenOwn) * lg(Math.max(0, stage - 1), R.ovenStage);
   if (u.id === 'factory' && resActive(sim, 'factoryNetwork')) {
