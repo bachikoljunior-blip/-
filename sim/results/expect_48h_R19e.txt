@@ -60,3 +60,4 @@
   OK stage:antimatterRecipe:2     S7 min=1.18
 ⑨ 段階whole軸(短い枝分かれ比べ・同一状態から1周回ぶん・総クッキー比の中央値 ≥1.05・利息/余熱)
   OK stage:bankClickDividend:2    S6 中央値比=1000000000.000 (n=12)
+  OK stage:bankClickDividend:3    S6 中央値比=1000000000.000 (n=12)
