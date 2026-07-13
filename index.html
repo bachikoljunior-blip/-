@@ -7872,13 +7872,41 @@ function researchStageCost(r, stageNo) {
 }
 
 // detail文中の「段階2…」「段階3…」の説明を段階カード用に切り出す
+// 段階2/3カードは平易な要約だけ載せ、細かい式は図鑑(研究タブ)に出す(2026-07-14 ユーザー指示)。
+const RESEARCH_STAGE_TEXT = {
+  fingerTechnique: { s2: "会心コンボ：会心を続けるほど会心倍率が上がる(途切れるとリセット)。", s3: "会心の余熱：会心のたびに毎秒生産に応じたクッキーを追加獲得。" },
+  grandmaCrowd: { s2: "支援先に銀行・香料棚を追加する。", s3: "すべての支援が最高到達層が深いほど強まる。" },
+  ovenBatch: { s2: "オーブンの強化倍率がさらに上がる。", s3: "オーブンの個別強化がLvに応じて強まる。" },
+  factoryNetwork: { s2: "銀行以上の設備の種類数で工場が強まる。", s3: "最高到達層が深いほど工場がさらに強まる。" },
+  spiceBlend: { s2: "風味の熟成：金クッキー取得後の一定時間、全生産が上がる。", s3: "熟成の効果が最高到達層が深いほど強まる。" },
+  portalNetwork: { s2: "狩り窓中に討伐するたび、窓の時間が延びる。", s3: "窓中のモンスター出現が最高到達層が深いほど速まる。" },
+  bankClickDividend: { s2: "複利利息：所持クッキーと銀行数に応じたクッキーを毎秒獲得。", s3: "複利利息の伸びが最高到達層が深いほど強まる。" },
+  moonGlobalYeast: { s2: "ノルマの余裕率が高いほど発酵(全体生産)が進む。", s3: "取得した研究数が多いほど発酵が強まる。" },
+  portalGlobalFold: { s2: "折込連鎖：ノルマ中の討伐数が多いほど全生産が上がる。", s3: "連鎖が最高到達層が深いほど強まる。" },
+  galaxyAssembly: { s2: "編成ボーナス：設備をまんべんなく揃えるほど全生産が上がる。", s3: "編成ボーナスが最高到達層が深いほど強まる。" },
+  blackHoleCompression: { s2: "圧縮ゲージ：溜めて発動すると一定時間 全生産が大きく上がる。", s3: "発動回数+1。倍率と圧縮が最高到達層が深いほど強まる。" },
+  quantumProofing: { s2: "観測ゆらぎ：90秒周期で全生産が波打ち、研究数で振れ幅が増える。", s3: "ゆらぎの振れ幅が最高到達層が深いほど強まる。" },
+  antimatterRecipe: { s2: "全生産が最高到達層が深いほど強まる。", s3: "対消滅：転生するほど全生産が恒久的に上がる。" }
+};
+
 function researchStageDesc(r, stageNo) {
+  const t = RESEARCH_STAGE_TEXT[r.id];
+  if (t) { const s = stageNo === 2 ? t.s2 : t.s3; if (s) return s; }
+  // フォールバック(要約が無い場合のみ)：detailの該当段階を切り出す
   const d = String(r.detail || "");
   const i2 = d.indexOf("段階2");
   const i3 = d.indexOf("段階3");
   if (stageNo === 2 && i2 >= 0) return d.slice(i2, i3 > i2 ? i3 : d.length).replace(/。$/, "") + "。";
   if (stageNo === 3 && i3 >= 0) return d.slice(i3);
   return r.desc;
+}
+
+// 図鑑(研究タブ)用：段階2/3の細かい式をdetailから取り出す(研究解析で解禁)
+function researchStageFormulaText(r) {
+  const d = String(r.detail || "");
+  const i2 = d.indexOf("段階2");
+  if (i2 < 0) return "";
+  return d.slice(i2);
 }
 
 function researchUnlocked(r) {
@@ -9638,10 +9666,10 @@ function renderWorkshop() {
 
   // 新装備の作成欄(2026-07-13 ユーザー指定レイアウト): 全体は従来の1/2幅。
   // 左=作れる装備(欄いっぱい)・横=必要なもの(画像+「所持/必要」の分数・少し小さめ)・右=作成ボタン。
-  // 発見式: 素材が一度揃ったレシピ(state.eq2Seen)は素材が無くなっても表示が消えない。背景画像は使わない。
-  // 表示解禁は素材が必要数に達したら(前ティア装備の所持は不要)。作成可否は別途equip2Affordで判定(2026-07-14 ユーザー指示)
+  // 作成できる装備は最初から全て表示する(素材の発見を待たない・2026-07-14 ユーザー指示)。
+  // 作成可否(ボタンの有効化)は別途equip2Affordで判定。背景画像は使わない。
   for (const it of equip2Items()) { if (!state.eq2Seen[it.id] && equip2CraftableNow(it) && equip2MatsAfford(it)) state.eq2Seen[it.id] = true; }
-  const craftRows = equip2Items().filter(it => state.eq2Seen[it.id] && equip2CraftableNow(it)).map(it => {
+  const craftRows = equip2Items().filter(it => equip2CraftableNow(it)).map(it => {
     const needs = [];
     if (it.prev) {
       const pv = equip2ById(it.prev);
@@ -12872,7 +12900,8 @@ function codexResearchHtml() {
     if (analyzed) {
       const f = researchFormulaText(r);
       const cur = researchCurrentEffectText(r);
-      const combined = `${f ? `<div>${f}</div>` : ""}${cur ? `<div class="codexSub">${cur}</div>` : ""}`;
+      const stageF = researchStageFormulaText(r); // 段階2/3の細かい式(カードからは外し、図鑑に集約)
+      const combined = `${f ? `<div>${f}</div>` : ""}${stageF ? `<div>${stageF}</div>` : ""}${cur ? `<div class="codexSub">${cur}</div>` : ""}`;
       body = combined || `<div>${r.desc}</div>`;
     } else {
       body = `<div>${r.desc}</div><div class="codexLock">スキル「研究解析」を解放すると効果の式が表示されます。</div>`;
