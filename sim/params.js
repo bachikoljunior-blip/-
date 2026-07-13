@@ -28,10 +28,12 @@ module.exports = {
     // ⑲改の辺間隔上書き(2026-07-11): 梯子リチューン後に「比≤10倍の辺なし」となった5ノードを、最も近い
     // 隣接ノードのちょうど10倍(q5準拠)へ引き下げ。click_2=click_1×10 / click_3=golden_2×10 /
     // auto_3=auto_2×10 / upgrade_moon=economy_2×10 / unlock_reward_huntFocus=crackedFang×10
-    overrides: { click_2: 250, click_3: 15500, auto_3: 38500, upgrade_moon: 63500, unlock_reward_huntFocus: 78000000000,
+    overrides: { click_2: 50, click_3: 15500, auto_3: 38500, upgrade_moon: 63500, unlock_reward_huntFocus: 78000000000,
       // 2026-07-13 ユーザー指示「スキル最初のやつ(core)に繋がってるものは初回転生でどれでも一つは取れるくらいに」:
       // 初回転生PT≈16・core10 → 入口4本を5PTに(core+入口=15≤16。ensemble3/amp8は元から圏内)
-      click_1: 5, golden_1: 5, monster_1: 5, auto_1: 5 } },
+      // ⑲改の追修正: click_2 250→50(=click_1 5×10)・economy_1 175→50(=auto_1 5×10)。
+      // click_3はgolden_2×10・economy_2はupgrade_moon(自分×10の子)の辺で合格継続
+      click_1: 5, golden_1: 5, monster_1: 5, auto_1: 5, economy_1: 50 } },
 
   // ---- 生産系数値ノードの1ノードあたり目標倍率 ----
   nodeM: { all: 4, cps: 4, click: 3 }, // 14/14/9->4/4/3 (2026-07-06: 安価⑲ラダー下で周回時間を帯域スケールへ減速)
