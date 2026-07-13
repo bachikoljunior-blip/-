@@ -346,6 +346,30 @@
       transform: scale(0.95);
     }
 
+    /* クッキー画面のクッキー本体は廃止(2026-07-13 ユーザー指示)。表示・タップ判定とも無効化する。 */
+    #cookie { display: none !important; }
+
+    /* 金クッキーブーストはブースト中のテキストのみ表示する(2026-07-13 ユーザー指示)。 */
+    .boostBanner {
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 60;
+      display: none;
+      padding: 4px 14px;
+      border-radius: 999px;
+      background: rgba(212, 160, 40, 0.92);
+      color: #2a1a00;
+      font-weight: 800;
+      font-size: 15px;
+      letter-spacing: 0.04em;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    .boostBanner.on { display: block; }
+
     #cookie.boost-all {
       background:
         radial-gradient(circle at 28% 28%, rgba(255,255,255,0.36) 0 12px, transparent 13px),
@@ -5578,6 +5602,8 @@
       <div id="monsterHpText">HP</div>
     </div>
 
+    <div id="boostBanner" class="boostBanner">ブースト中</div>
+
     <div id="message"></div>
   </section>
 
@@ -6227,6 +6253,17 @@ const UPGRADES = [
   { id: "quantumBakery", name: "量子ベーカリー", type: "cps", value: 2100000000, base: 320000000000000, growth: 1.55, desc: "毎秒 +21億" },
   { id: "antimatterOven", name: "反物質オーブン", type: "cps", value: 22000000000, base: 7000000000000000, growth: 1.57, desc: "毎秒 +220億" }
 ];
+
+// 設備の攻撃間隔(秒): 各設備は自分の間隔ごとに「その秒数ぶんの生産量」をダメージとしてクッキーモンスターに与える。
+// 2026-07-13 ユーザー指示: 固定値で、後半ほど長くなる傾向だが完全な単調増加ではない。
+// type:"click"(強い指・神の指)はタップでクッキーを稼ぐ役割なので自動攻撃には参加しない。
+const FACILITY_ATTACK_INTERVAL = {
+  grandma: 1.0, oven: 1.5, factory: 2.5, bank: 2.0, spiceRack: 3.0,
+  portal: 3.5, moonBakery: 2.8, timeOven: 4.0, galaxyFactory: 4.5,
+  blackHoleMixer: 3.5, universeOven: 5.0, cookieSingularity: 5.5,
+  quantumBakery: 4.5, antimatterOven: 6.0
+};
+let facilityAttackAccum = {};
 
 const RESEARCH = [
   // 序盤は体感しやすい研究。研究改造室以降は、設備ごとの特殊効果を一つずつ広げる。
@@ -8108,10 +8145,16 @@ function overlayFreezesGame() {
   return Boolean((codex && codex.classList.contains("active")) || (settings && settings.classList.contains("active")));
 }
 
+// 工房タブを全画面表示している間は、全ての進行(生産・ノルマ・出現・戦闘)を一時停止する。
+// ただし総プレイ時間だけは進む。各周回時間(ノルマ時計)は止まる(2026-07-13 ユーザー指示)。
+function workshopPaused() {
+  return typeof pageFullscreenId !== "undefined" && pageFullscreenId === "workshopTab";
+}
+
 function quotaClockPaused() {
   // ゲームを閉じている・バックグラウンド/画面ロック中(タブ非表示)もノルマを止める。
-  // 図鑑・設定を開いている間も止める。
-  return pausedForSkillChoice() || rewardModalOpen() || titleScreenActive() || document.hidden || overlayFreezesGame();
+  // 図鑑・設定を開いている間・工房タブ全画面中も止める(各周回時間は進めない)。
+  return pausedForSkillChoice() || rewardModalOpen() || titleScreenActive() || document.hidden || overlayFreezesGame() || workshopPaused();
 }
 
 function startQuotaPause() {
@@ -10847,7 +10890,8 @@ function monsterQuotaRequiredAtElapsed(seconds) {
 function monsterQuotaRequired() {
   if (state.quotaFailed) return null;
 
-  const baseQuota = monsterQuotaRequiredAtElapsed(quotaElapsedSeconds());
+  // ノルマ量 = 経過時間ぶん + モンスター逃走ぶん(逃したモンスターの強さの累積・2026-07-13 ユーザー指示)
+  const baseQuota = monsterQuotaRequiredAtElapsed(quotaElapsedSeconds()) + (Number(state.quotaEscapePenalty) || 0);
   if (!baseQuota || baseQuota <= 0) return baseQuota;
 
   if (!state.blackHoleCompressionUsed && state.research.blackHoleCompression) {
@@ -10870,11 +10914,13 @@ function monsterQuotaMet() {
 }
 
 function failQuota(message) {
+  // ノルマ未達=強制終了。周回を終了してスキルツリー画面へ転移する(2026-07-13 ユーザー指示)。
   state.quotaFailed = true;
   state.quotaActive = false;
   clearMonsterSpawnTimer();
   hideMonster(false);
-  showMessage(message);
+  if (pausedForSkillChoice()) return; // 既にスキル画面(多重発火防止)
+  prestigeReset(true);
 }
 
 function checkQuotaState() {
@@ -10883,20 +10929,11 @@ function checkQuotaState() {
   const quota = monsterQuotaRequired();
   const elapsed = quotaElapsedSeconds();
 
-  // 到達連動ノルマ(提案9): 進行比 ρ=経過秒/max(前回周回長,REACH_MIN_SEC) が ρ* を越えたら未達。
-  // 層ゲージ(monsterQuotaRequired)には触れず、ここの未達判定にだけ到達項を max で上乗せする。
-  let need = (quota !== null && quota > 0) ? D(quota) : null;
-  // 第0回はreach非適用(sim同期2026-07-11: 前回長が無く床600秒基準で発火→ノルマ維持が22%に潰れるため)
-  if (need !== null && REACH_COEF && (state.prevDuration || 0) > 0) {
-    let denom = Math.max(state.prevDuration || 0, REACH_MIN_SEC);
-    if (REACH_MAX_SEC) denom = Math.min(denom, REACH_MAX_SEC);
-    if (denom > 0) {
-      const reach = state.runCookies.mul(REACH_COEF * Math.pow(elapsed / denom, REACH_POW));
-      if (reach.gt(need)) need = reach;
-    }
-  }
+  // 未達判定(2026-07-13 ユーザー指示): ノルマ量(経過時間+モンスター逃走の累積)を
+  // 累計クッキー(この周回の獲得)が下回ったら未達=強制終了。
+  const need = (quota !== null && quota > 0) ? D(quota) : null;
   if (need !== null && state.runCookies.lt(need)) {
-    failQuota("ノルマ終了：この周回のモンスターチャンス終了");
+    failQuota("ノルマ未達：強制終了");
     return;
   }
 
@@ -10904,7 +10941,8 @@ function checkQuotaState() {
 }
 
 function canMonsterAppear() {
-  return !pausedForSkillChoice() && monsterQuotaMet();
+  // モンスターは周回開始時から出現する(ノルマ達成待ちはしない・2026-07-13 ユーザー指示)。
+  return !pausedForSkillChoice() && !state.quotaFailed;
 }
 
 function quotaLayerWidth(progressRatio, layerIndex) {
@@ -12071,7 +12109,9 @@ function updateTopOnly() {
     }
   }
 
-  $("cookie").classList.toggle("boost-all", goldenBoostActive());
+  // 金クッキーブーストは「ブースト中」テキストのみで表す(2026-07-13 ユーザー指示)
+  const boostBanner = $("boostBanner");
+  if (boostBanner) boostBanner.classList.toggle("on", goldenBoostActive());
   updateBhGaugeButton();
 
   updatePrestigeTabLabel();
@@ -14558,6 +14598,16 @@ document.addEventListener("keydown", e => {
 document.querySelectorAll(".tab").forEach(btn => {
   addTap(btn, () => {
     const tabId = btn.dataset.tab;
+    // 工房タブは押すと全画面になり、全ての進行が一時停止する(2026-07-13 ユーザー指示)。もう一度押すと解除。
+    if (tabId === "workshopTab") {
+      if (playFullscreenOn) { playFullscreenOn = false; document.body.classList.remove("playFullscreenMode"); }
+      if (pageFullscreenId === "workshopTab") { closeTabPageFullscreen(); return; }
+      pageFullscreenId = "workshopTab";
+      switchTab("workshopTab");
+      syncTabPageFullscreen();
+      renderActiveTab();
+      return;
+    }
     const inFs = Boolean(pageFullscreenId) || playFullscreenOn;
     if (inFs) {
       // 全画面中にタブを押したら、遷移先も全画面のままにする
@@ -14711,15 +14761,20 @@ function redoCurrentRun() {
   showMessage("この周回を最初からやり直します");
 }
 
-function prestigeReset() {
+function prestigeReset(forced) {
   const gain = prestigeGain();
-  if (gain <= 0 || pausedForSkillChoice()) return;
-  if (state.cookies.lt(prestigeCookieCost())) return;
+  // forced=ノルマ未達による強制終了。転生コスト・獲得下限のチェックは行わない(2026-07-13 ユーザー指示)。
+  if (!forced) {
+    if (gain <= 0 || pausedForSkillChoice()) return;
+    if (state.cookies.lt(prestigeCookieCost())) return;
+  } else if (pausedForSkillChoice()) {
+    return;
+  }
 
   // 転生前の状態を保存(スキル画面から取り消せるように)。周回開始で破棄する。
   try { localStorage.setItem(PREREBIRTH_KEY, JSON.stringify(state)); } catch (e) {}
 
-  state.cookies = state.cookies.sub(prestigeCookieCost());
+  if (!forced) state.cookies = state.cookies.sub(prestigeCookieCost());
   const keepLastPrestigeCps = Number(currentCps()) || 0; // 次回コストの基準=この瞬間の毎秒生産
 
   const keepTotal = state.totalCookies;
@@ -14838,7 +14893,7 @@ function prestigeReset() {
   $("rewardModal").style.display = "none";
 
   playSound("upgrade");
-  showMessage(`転生ポイント +${fmt(gain)}`);
+  showMessage(forced ? `ノルマ未達：強制終了(転生ポイント +${fmt(gain)})` : `転生ポイント +${fmt(gain)}`);
   saveGame();
   // 「この周回をやり直す」用に、周回開始(転生直後)時点のスナップショットを保存
   try { localStorage.setItem(RUN_START_KEY, JSON.stringify(state)); } catch (e) {}
@@ -15284,7 +15339,7 @@ function clearMonsterSpawnTimer() {
 // 報酬選択モーダルが開いている間、金クッキー・モンスターの出現カウントダウンを
 // 一時停止し、閉じたときに残り時間から再開する(ノルマと同様にじっくり考えられるように)
 function updateSpawnTimerPauseState() {
-  const shouldPause = rewardModalOpen() || overlayFreezesGame();
+  const shouldPause = rewardModalOpen() || overlayFreezesGame() || workshopPaused();
 
   // 停止条件が続く間は毎フレーム、動いているタイマーを止め続ける(遷移時だけでなく継続)。
   // 報酬選択中に金クッキーが消える/次モンスターが組まれると新しいタイマーが立つため、
@@ -15322,8 +15377,8 @@ function updateSpawnTimerPauseState() {
 // バフ/ブーストの残り時間・金クッキー/モンスターの滞在時間を凍結し、閉じたら残り時間から再開する。
 function updateGameClockFreeze() {
   const now = Date.now();
-  const buffFrozen = rewardModalOpen() || overlayFreezesGame();
-  // 出現物(金クッキー/モンスター)の滞在時間は凍結しない。タブ全画面中も通常どおり進む。
+  const buffFrozen = rewardModalOpen() || overlayFreezesGame() || workshopPaused();
+  // 出現物(金クッキー/モンスター)の滞在時間は、報酬選択中・オーバーレイ中・工房全画面中は凍結する。
   const spawnFrozen = buffFrozen;
 
   // (A) バフ・ブースト等の残り時間: 停止が続く間は毎フレーム前方へずらして凍結する
@@ -15433,14 +15488,13 @@ function scheduleMonster() {
     return;
   }
 
-  const level = monsterLevel();
-  const levelFactor = 1 - 0.10 * (1 - Math.exp(-level / 8));
+  // 出現頻度: 周回開始時は10秒に1回。経過時間とともに段々早くなり、最短2秒まで縮む(2026-07-13 ユーザー指示)。
+  const elapsed = quotaElapsedSeconds();
+  const baseInterval = 2000 + 8000 * Math.exp(-elapsed / 120); // 10秒 → 2秒へ漸近(時定数120秒)
   const spawnCut = 1 + Math.max(0, equip2Fx().spawnMul - 1); // 新装備: 出現短縮系
-  const min = 42000 * levelFactor * monsterSpawnFactor() / spawnCut;
-  const max = 60000 * levelFactor * monsterSpawnFactor() / spawnCut;
   const chainWaitMultiplier = state.nextMonsterSpawnMultiplier || 1;
-  const raw = (min + Math.random() * Math.max(0.0001, max - min)) * chainWaitMultiplier;
-  const wait = protectedWait(raw, 1000);
+  const raw = baseInterval * monsterSpawnFactor() * chainWaitMultiplier / spawnCut;
+  const wait = protectedWait(raw, 800);
   state.nextMonsterSpawnMultiplier = 1;
 
   setMonsterSpawnTimer(fireMonsterSpawn, wait);
@@ -15459,11 +15513,9 @@ function rectRelativeToHost(el, host) {
 // (タップ判定は見た目の丸みに関係なく要素の矩形全体なので、矩形のまま扱う)
 function occupiedRects(host, excludeEl) {
   const rects = [];
-  const cookie = $("cookie");
 
-  // 通常クッキーは画面いっぱいの大きさで避けきれず、出現物は元々クッキーの上に浮いてタップする設計。
-  // そのため回避優先度は低くする(weight小)=「できるだけ避けるが、他のモンスター・金クッキーを優先」。
-  if (cookie) rects.push({ rect: rectRelativeToHost(cookie, host), weight: 0.15 });
+  // クッキー本体は廃止(2026-07-13 ユーザー指示)。クッキーモンスターはクッキーがあった場所にも出現してよいので、
+  // 回避対象からクッキーを外す(中央にも自由に配置できる)。
 
   const golden = $("goldenCookie");
   if (goldenVisible && golden && golden !== excludeEl) rects.push({ rect: rectRelativeToHost(golden, host), weight: 1 });
@@ -15621,6 +15673,26 @@ function placeSwarmMember(el, index, total) {
 }
 
 
+// 金クッキーはモンスターの上に出現する(2026-07-13 ユーザー指示)。モンスターがいなければ通常配置。
+function placeGoldenAboveMonster(btn) {
+  const host = document.querySelector(".top");
+  const front = (monsters || []).find(m => m && m.el && m.el.isConnected);
+  if (host && front) {
+    const mr = rectRelativeToHost(front.el, host);
+    const gw = btn.offsetWidth || 90;
+    const gh = btn.offsetHeight || 90;
+    const hostW = host.clientWidth || 375;
+    let left = mr.left + (mr.right - mr.left) / 2 - gw / 2;
+    let top = mr.top - gh - 6;
+    left = Math.max(4, Math.min(hostW - gw - 4, left));
+    top = Math.max(4, top);
+    btn.style.left = left + "px";
+    btn.style.top = top + "px";
+    return;
+  }
+  placeFixedElement(btn, 90, 90, 90);
+}
+
 function showGoldenCookie() {
   if (pausedForSkillChoice()) return;
   if (goldenVisible) return;
@@ -15637,9 +15709,8 @@ function showGoldenCookie() {
   const top = document.querySelector(".top");
   if (btn && top && btn.parentElement !== top) top.appendChild(btn);
 
-  placeFixedElement(btn, 90, 90, 90);
-
   btn.style.display = "block";
+  placeGoldenAboveMonster(btn);
 
   goldenHideDeadline = Date.now() + 10000;
   goldenHideTimer = setTimeout(() => {
@@ -15662,9 +15733,8 @@ function forceGoldenCookie() {
 
   const btn = $("goldenCookie");
 
-  placeFixedElement(btn, 90, 90, 90);
-
   btn.style.display = "block";
+  placeGoldenAboveMonster(btn);
 
   goldenHideDeadline = Date.now() + 7000;
   goldenHideTimer = setTimeout(() => {
@@ -15773,8 +15843,10 @@ function collectGoldenCookie() {
 
 addTap($("goldenCookie"), collectGoldenCookie);
 
+// モンスターの強さはノルマ量ではなく経過時間で決まる。強くなる速さは従来の5倍(2026-07-13 ユーザー指示)。
+const MONSTER_STRENGTH_TIME_MUL = 5;
 function monsterLevel() {
-  const s = quotaElapsedSeconds();
+  const s = quotaElapsedSeconds() * MONSTER_STRENGTH_TIME_MUL;
   const early = Math.floor(Math.max(0, s - 45) / 92);
   const late = Math.floor(Math.pow(Math.max(0, s - 720) / 320, 1.22));
 
@@ -15782,9 +15854,10 @@ function monsterLevel() {
 }
 
 function monsterHpValue(level) {
-  const s = quotaElapsedSeconds();
-  const timePressure = 1 + Math.pow(Math.max(0, s - 45) / 430, 1.95);
-  let hp = 30 * Math.pow(1.235, Math.max(0, level - 1)) * timePressure;
+  const s = quotaElapsedSeconds() * MONSTER_STRENGTH_TIME_MUL;
+  // 初期HPは100(経過0秒・Lv1で100)。経過時間で強くなる(5倍速)。
+  const timePressure = 1 + Math.pow(Math.max(0, s) / 430, 1.95);
+  let hp = 100 * Math.pow(1.235, Math.max(0, level - 1)) * timePressure;
   hp *= Math.exp(-Math.max(0, skillEffect("monsterHpDown")));
   hp *= deepPursuitHpPenalty();
   hp *= bakeBurntMonsterHpMultiplier();
@@ -15866,14 +15939,8 @@ function showMonster(forcedTypeId) {
 
   if (!forcedTypeId) clearMonsterSpawnTimer();
 
-  // 出現中のモンスターが残っている間は新たに出さず、出現待ちとして溜める。
-  // 場が空いたら hideMonster 経由で flushPendingMonsterSpawn が1体ずつ順に消化する。
-  // 待機できる時間は「その時点の標準滞在時間」まで(=画面に居られたはずの時間だけ待てる)。
-  // (強制出現は30秒おきに確実に出すため、出現中でも重ねて出す)
-  if (!forcedTypeId && monsters.length > 0) {
-    pendingMonsterSpawns.push({ queuedAt: Date.now(), expireMs: monsterStayEstimateMs() });
-    return;
-  }
+  // 出現の「待ち」は廃止(2026-07-13 ユーザー指示)。残っている敵がいても待たせず、
+  // その下に重ねて即出現させる(placeFixedElement が既存モンスターの下へ配置する)。
 
   // 種類はステージのロスターから抽選(ボス化・黄金獣置換を含む)。強制出現は指定種で固定
   const typeId = forcedTypeId || pickMonsterTypeId();
@@ -16024,15 +16091,21 @@ function hideMonster(idOrShouldReschedule, shouldRescheduleMaybe) {
       showMessage("狩猟集中失敗：次HP低下・報酬Lv-1");
     }
 
+    // モンスターが逃走(滞在切れ=shouldReschedule)した時、そのモンスターの強さ(最大HP)ぶん
+    // ノルマ量が増える(2026-07-13 ユーザー指示)。撃破時(shouldReschedule=false)は増えない。
+    if (shouldReschedule) {
+      state.quotaEscapePenalty = (Number(state.quotaEscapePenalty) || 0) + (Number(mon.maxHp) || 0);
+    }
+
     // ボスを倒しきれず時間切れ(shouldReschedule=時間切れ、撃破時は false)なら、
     // そのステージのボスまでの討伐数を前回ボス到達時点に戻す(ボスまで再度貯め直し)。
+    // ボスが消えた時のテキストは出さない(2026-07-13 ユーザー指示)。
     if (shouldReschedule && mon.typeId === "boss") {
       const sno = currentStageNo();
       const cycle = bossCycleFor(sno);
       const defeated = Math.max(0, Math.floor(Number((state.bossKills || {})[sno]) || 0));
       state.stageKills = state.stageKills && typeof state.stageKills === "object" ? state.stageKills : {};
       state.stageKills[sno] = cycle * defeated;
-      showMessage("ボスを逃した：討伐数がリセットされました");
     }
 
     clearTimeout(mon.hideTimer);
@@ -16090,42 +16163,38 @@ function renderMonsterHp(id) {
 }
 
 function hitMonster(id) {
-  // 直前の撃破の報酬画面が出るまでは、別のモンスターを攻撃・撃破できないようにする
+  // クッキーモンスターをタップすると、タップ力に応じたクッキーがもらえる(2026-07-13 ユーザー指示)。
+  // 討伐(ダメージ)は各設備の自動攻撃が担う。タップはダメージを与えず、クッキー獲得のみ。
   if (rewardPending || rewardModalOpen()) return;
+  if (pausedForSkillChoice()) { openSkillChoiceScreen(); return; }
 
   const mon = findMonster(id);
   if (!mon) return;
 
-  let damage = Math.max(1, Math.ceil(monsterBaseDamage() * monsterDamageMultiplier(mon)));
+  state.msTaps = (Number(state.msTaps) || 0) + 1;
 
-  if ((state.huntFocusLv || 0) > 0) {
-    damage = Math.ceil(damage * (1 + state.huntFocusLv));
+  let tapPower = currentClickPower();
+  let critical = false;
+
+  if (Math.random() < fingerCritChance()) {
+    tapPower *= fingerCritMultiplier();
+    critical = true;
+    if (resStage2("fingerTechnique")) {
+      if (Date.now() - (state.lastCritAt || 0) > 30000) state.critCombo = 0;
+      state.critCombo = (state.critCombo || 0) + 1;
+      state.lastCritAt = Date.now();
+    }
+    if (resStage3("fingerTechnique")) {
+      earn(currentCps() * 0.00025 * maxQuotaStage());
+    }
   }
 
-  if (mon.goldenFirstHitReady && !mon.firstHitUsed) {
-    damage = Math.ceil(damage * (1 + (state.perks.goldenFirstHit || 0) * 2.5));
-    mon.firstHitUsed = true;
-  }
+  const gained = earn(tapPower);
 
-  const biteRecoveryLv = state.perks.biteRecovery || 0;
+  state.totalClicks += 1;
+  trackOrderProgress("click", null, 1);
 
-  if (biteRecoveryLv > 0) {
-    const rawRecovery = damage * currentClickPower() * 0.50 * biteRecoveryLv;
-    const softLine = Math.max(1, currentCps() * 2);
-
-    // 以前のようにCPSで打ち止めにせず、CPS付近から逓減しながら伸び続ける。
-    const gained = rawRecovery / (1 + rawRecovery / softLine)
-      + Math.log1p(rawRecovery / softLine) * softLine * 0.08;
-
-    earn(gained);
-  }
-
-  // §18: オーバーキル撃破判定(残HPの5倍以上のダメージ)
-  mon.overkill = damage >= mon.hp * OVERKILL_MUL;
-  mon.hp -= damage;
-
-  playSound("monster");
-  renderMonsterHp(mon.id);
+  playSound(critical ? "crit" : "monster");
 
   if (mon.el) {
     mon.el.classList.remove("hit");
@@ -16133,7 +16202,8 @@ function hitMonster(id) {
     mon.el.classList.add("hit");
   }
 
-  if (mon.hp <= 0) defeatMonster(mon.id);
+  showFloat((critical ? "会心 +" : "+") + fmt(gained), critical);
+  updateTopOnly();
 }
 
 function defeatMonster(id) {
@@ -16214,7 +16284,7 @@ function defeatMonster(id) {
   }
 
   playSound("golden");
-  showMessage(message);
+  if (defeatedTypeId !== "boss") showMessage(message); // ボスが消えた時のテキストは出さない(2026-07-13 ユーザー指示)
 
   // 報酬レベル判定: tankは+18層ぶん、香料の砂丘は+8層ぶん扱い、討伐連鎖は+floor(0.05×連鎖数)
   const rewardLevel = defeatedLevel
@@ -16882,6 +16952,40 @@ $("titleAboutOverlay").addEventListener("click", e => {
   if (e.target === $("titleAboutOverlay")) $("titleAboutOverlay").classList.remove("active");
 });
 
+// 設備の自動攻撃(2026-07-13 ユーザー指示): 各設備は自分の攻撃間隔ごとに、その秒数ぶんの生産量を
+// ダメージとしてクッキーモンスターに与える。ダメージ量=その設備がその間隔で稼ぐクッキー(実効cps×間隔)。
+// クッキーは通常どおり生産で貯まり続けるので「与えたダメージ分だけクッキーも貯まる」関係が保たれる。
+function facilityCombatCps(u) {
+  const raw = rawUpgradeCps(u);
+  if (!(raw > 0)) return 0;
+  const base = baseCps();
+  if (!(base > 0)) return 0;
+  return raw * (currentCps() / base); // 全体倍率(金ブースト等)を反映した1台あたり毎秒
+}
+
+function runFacilityAttacks(dt) {
+  if (rewardPending || rewardModalOpen()) return;
+  if (!monsters.length) return;
+  for (const u of UPGRADES) {
+    if (u.type !== "cps") continue;
+    if ((state.upgrades[u.id] || 0) <= 0) continue;
+    const interval = FACILITY_ATTACK_INTERVAL[u.id] || 3;
+    facilityAttackAccum[u.id] = (facilityAttackAccum[u.id] || 0) + dt;
+    if (facilityAttackAccum[u.id] < interval) continue;
+    const times = Math.floor(facilityAttackAccum[u.id] / interval);
+    facilityAttackAccum[u.id] -= times * interval;
+    const front = monsters[0];
+    if (!front) break;
+    const dmg = facilityCombatCps(u) * interval * times;
+    if (!(dmg > 0)) continue;
+    front.overkill = dmg >= front.hp * OVERKILL_MUL;
+    front.hp -= dmg;
+    if (front.el) { front.el.classList.remove("hit"); void front.el.offsetWidth; front.el.classList.add("hit"); }
+    renderMonsterHp(front.id);
+    if (front.hp <= 0) { defeatMonster(front.id); break; } // 1tickの撃破は1体まで(報酬モーダルが以降を止める)
+  }
+}
+
 let earnEmaTick = 0;
 let _lastTotalClicksSample = 0;
 const EARN_EMA_A = Math.exp(-1 / 90); // 直近稼ぎ率EMAの毎秒減衰(時定数90秒・sim同期)
@@ -16892,10 +16996,13 @@ setInterval(() => {
   updateSpawnTimerPauseState();
   updateGameClockFreeze(); // 報酬選択中・図鑑/設定中はバフ/出現物の時間を凍結
   if (!pausedForSkillChoice()) {
+    // 総プレイ時間は工房タブ全画面中(全進行一時停止中)も進む(各周回時間=ノルマ時計は止まる)。
+    state.totalPlaySec = (state.totalPlaySec || 0) + 0.05; // v4: 総プレイ秒(転生持ち越し)
+  }
+  if (!pausedForSkillChoice() && !workshopPaused()) {
     // クッキーの自動生産は、図鑑・設定を開いている間も止めない(見えている生産は続く)。
     // ノルマ・注文・出現・各種ボーナスなど、その他の進行は従来どおりオーバーレイ中は止める。
     const overlayOpen = overlayFreezesGame();
-    state.totalPlaySec = (state.totalPlaySec || 0) + 0.05; // v4: 総プレイ秒(転生持ち越し)
     earn((currentCps() + directIncomeTotalCps()) / 20);
     if (orderCookieActive()) earn((currentCps() + directIncomeTotalCps()) / 20 * ORDER_COOKIE_MUL); // 注文報酬cookie=時間窓の上乗せ(sim同期)
     // 直近稼ぎ率EMA(時定数90秒・sim同期2026-07-11): 毎秒1回、runCookiesの増分から更新
@@ -16949,6 +17056,7 @@ setInterval(() => {
         state.bhFullSince = 0;
       }
     }
+    runFacilityAttacks(0.05); // 各設備がクッキーモンスターに自動攻撃(その秒数ぶんの生産をダメージに)
     checkQuotaState();
     if (!rewardModalOpen()) { tickOrderProgress(1 / 20); checkOrderExpiry(); }
     }
