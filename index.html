@@ -9598,20 +9598,27 @@ function renderWorkshop() {
   // 料理タブは解放(スキル「素材の嗅覚」取得)するまで出さない(2026-07-13 ユーザー指示)
   const dishUnlocked = workshopTabUnlocked();
   const wsSub = (dishUnlocked && state.wsSubTab === "dish") ? "dish" : "equip";
-  const subBar = `
+  // 装備(所持・装備中の管理)は工房の1番上のボタンから開く(一覧タブから移設・2026-07-13)
+  const equipTopBar = `
     <div class="buyModeBar" style="margin-bottom:8px">
-      <button class="item ${wsSub === "equip" ? "canBuy" : ""}" data-wssub="equip" style="width:auto;padding:6px 14px">装備</button>
-      ${dishUnlocked ? `<button class="item ${wsSub === "dish" ? "canBuy" : ""}" data-wssub="dish" style="width:auto;padding:6px 14px">料理</button>` : ""}
+      <button class="item" id="wsOpenEquipBtn" style="width:auto;padding:6px 14px">🛡 装備</button>
     </div>`;
+  // 料理を解放するまではサブタブを出さず作成欄を直接表示。解放後に「装備/料理」の2タブを出す(2026-07-13)
+  const subBar = dishUnlocked ? `
+    <div class="buyModeBar" style="margin-bottom:8px">
+      <button class="item ${wsSub === "equip" ? "canBuy" : ""}" data-wssub="equip" style="width:auto;padding:6px 14px">作成</button>
+      <button class="item ${wsSub === "dish" ? "canBuy" : ""}" data-wssub="dish" style="width:auto;padding:6px 14px">料理</button>
+    </div>` : "";
   const dishSection = workshopTabUnlocked()
     ? `<div class="infoBox"><h3>料理(時限バフ・最大${MAX_ACTIVE_DISHES}品)</h3>${dishCards || `<div class="desc">素材を集めるとレシピが並ぶ</div>`}</div>`
     : `<div class="infoBox"><h3>料理</h3><div class="desc">スキル「素材の嗅覚」を取得すると解放される</div></div>`;
-  box.innerHTML = subBar + (wsSub === "equip"
+  box.innerHTML = equipTopBar + subBar + (wsSub === "equip"
     ? `${craftSection}
       <div class="infoBox"><h3>素材の入手</h3><div class="desc">${materialDropGuideHtml()}${materialSeen("omniFlour") ? "<br>標準方針の万能粉は不足素材の代用(核は不可)。" : ""}</div></div>`
     : `${dishSection}
       <div class="infoBox"><h3>記録(討伐マイルストーン)</h3>${recordRows}</div>`);
 
+  const wsEquipBtn = $("wsOpenEquipBtn"); if (wsEquipBtn) addTap(wsEquipBtn, openEquip);
   box.querySelectorAll("[data-wssub]").forEach(b => addTap(b, () => { state.wsSubTab = b.dataset.wssub; renderWorkshop(); }));
   box.querySelectorAll("[data-dish]").forEach(btn => addTap(btn, () => cookDish(btn.dataset.dish)));
   box.querySelectorAll("[data-eq2craft]").forEach(btn => addTap(btn, () => craftEquip2(btn.dataset.eq2craft)));
@@ -14099,7 +14106,6 @@ function renderInfo() {
     <div class="infoBox">
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="item" id="infoOpenCodexBtn" style="width:auto;padding:8px 16px">📖 図鑑</button>
-        <button class="item" id="infoOpenEquipBtn" style="width:auto;padding:8px 16px">🛡 装備</button>
       </div>
     </div>
 
@@ -14166,7 +14172,6 @@ function renderInfo() {
 
   // 図鑑・装備は一覧タブ内のボタンから開く(2026-07-13 ユーザー指示で上部アイコンから移設)
   const cbtn = $("infoOpenCodexBtn"); if (cbtn) addTap(cbtn, openCodex);
-  const ebtn = $("infoOpenEquipBtn"); if (ebtn) addTap(ebtn, openEquip);
 
   box.scrollTop = savedScroll;
 }
