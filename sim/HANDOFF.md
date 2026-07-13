@@ -1354,6 +1354,21 @@ reachMinSec=600/reachMaxSec=6000。**T3b 379/421(90%)**。弱点は S10(頭8・T
 - **レシピの緩和**: 装備+素材あわせて1〜5種(装備が入らなくても・素材が入らなくてもよい)。
 - T2第0回=上限のみ・③=全周回+毎回取る方針の実在・T3c(討伐可能維持8割)は3-2表に反映済み。
 
+**第13次サイクルB進行中(2026-07-14・再係留の作業キュー=ここから続行)**:
+- 確定済み土台: メトロノーム+④単調化(転生目標=max(次スキル束,前回×1.57)・strategies.js prestigeWhen)
+  +相乗り段の人数割り(sim.js buildSkillCosts)+直送r2構成(params本適用済み)。
+  スモーク: ④22/24(比8.5桁整列)・T1中央値52分・T3c満点・新装備3条件ほぼ満点・㉙3/3・③-c(毎回取得)20/20→16/20。
+- **作業キュー(優先順)**:
+  1. ①残NG: grandmaCrowd(初回希釈系)・ovenBatch1.18(ovenStage 0.03→0.05へ)・factoryNetwork(単発割れ)・
+     cpsStrike(瞬間軸1.00=枝分かれ軸へ移行。⑬行のユーザー包括承認「測れてない場合は測れる条件に変えてよい」適用)
+  2. ③: instant3本(goldenRate/monsterRate/goldenFirstHit)+④単調化の深周回化で未取得になった4報酬
+     (brandHunt/deepPursuit/crushedMill/goldenBeastMutation=解放スキルの位置確認)
+  3. ㉘: balanced中盤討3-6%・click設備70%(bank clickBonus1.8で再測)・後半シーソー(方針×フェーズ分離レバー)
+  4. ⑬圧縮チャージ/延長狩り(バッチ1適用済み・R19a未確認)・⑫3/5・⑮の2 frostCake0.45(ws再測)
+  5. 収束後: tune再焼き(単調化でペース変化)→R19フル→ゲーム経済値同期(fx/nodeM/研究/直送/frost)→
+     prestige/ms表焼き→HANDOFF確定→mainマージ
+- probeツール: scratchpad/share_probe.js(㉘/②改2高速)・s6_runs.js(周回別)・pace_probe.js・inc_diag.js(partsDetail)
+
 **第13次サイクルA確定(2026-07-14 未明・ペーシングの背骨=量産体制メトロノーム)**:
 - **新機構「量産体制」(ms_massprod)**: 工場1台以降、**45秒ごとに繰り返し購入できる実績研究カード**
   (全生産×1.25/回・コスト=毎秒生産30秒ぶん=常に手が届く)。sim+ゲーム両実装。

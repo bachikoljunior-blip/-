@@ -25,3 +25,50 @@
   OK rw:huntingCore               S4 min=27024.57
 ③-c 毎回取る方針の実在 16/20 NG: brandHunt,deepPursuit,crushedMill,goldenBeastMutation
 ③ 報酬utility軸(短い枝分かれ比べ・同一状態から1周回ぶん・総クッキー比の中央値 ≥1.1)
+  OK rw:monsterDamage        S6 中央値比=1000000000.000 (n=12)
+  OK rw:monsterStay          S3 中央値比=1000000000.000 (n=12)
+  OK rw:crackedFang          S4 中央値比=1000000000.000 (n=11)
+  NG rw:brandHunt            どの方針も未取得
+  NG rw:deepPursuit          どの方針も未取得
+  OK rw:chainPrep            S4 中央値比=1000000000.000 (n=8)
+  OK rw:huntFocus            S6 中央値比=1000000000.000 (n=8)
+  OK rw:biteRecovery         S6 中央値比=1000000000.000 (n=2)
+  NG rw:crushedMill          どの方針も未取得
+  NG rw:goldenBeastMutation  どの方針も未取得
+  OK rw:goldenChain          S5 中央値比=158.479 (n=8)
+  OK rw:beastScent           S6 中央値比=1000000000.000 (n=5)
+③ utility軸 8/12
+③ 報酬 合計 13/20 (instant 5/8 + utility 8/12)
+⑨-a 段階instant(各回≥1.05・⑬タイミング段は除外) 16/17
+  OK stage:ovenBatch:2            S5 min=1.50
+  OK stage:spiceBlend:2           S7 min=1.08
+  OK stage:fingerTechnique:2      S2 min=8.55
+  OK stage:grandmaCrowd:2         S3 min=636893.68
+  OK stage:spiceBlend:3           S8 min=1.06
+  OK stage:moonGlobalYeast:2      S4 min=2.32
+  OK stage:moonGlobalYeast:3      S7 min=1.50
+  OK stage:grandmaCrowd:3         S4 min=1.15
+  OK stage:ovenBatch:3            S5 min=1.06
+  NG stage:factoryNetwork:2       取得あり・全周回≥1.05に未達(最大幾何平均1.00)
+  OK stage:factoryNetwork:3       S2 min=1.06
+  OK stage:portalNetwork:2        S9 min=2.52
+  OK stage:portalNetwork:3        S7 min=1.06
+  OK stage:galaxyAssembly:2       S8 min=1.70
+  OK stage:portalGlobalFold:2     S4 min=4.77
+  OK stage:galaxyAssembly:3       S8 min=1.14
+  OK stage:antimatterRecipe:2     S7 min=1.17
+⑨ 段階whole軸(短い枝分かれ比べ・同一状態から1周回ぶん・総クッキー比の中央値 ≥1.05・利息/余熱)
+  OK stage:bankClickDividend:2    S9 中央値比=1.797 (n=12)
+  OK stage:bankClickDividend:3    S9 中央値比=1.806 (n=12)
+  OK stage:fingerTechnique:3      S6 中央値比=1000000000.000 (n=11)
+⑨ whole軸 3/3
+⑨ 段階 合計 19/20 (instant 16/17 + whole 3/3・⑬タイミング段3件は⑬で判定のため除外)
+⑬ タイミング機能(短い枝分かれ比べ・最適操作/その機能だけ完全放置の1周回総クッキー比の中央値, 要求[1.05,2.00])
+  OK 観測ゆらぎ(量子発酵 段2)             S7=1.168✓(n=2)
+  OK 圧縮チャージ(重力圧縮 段2)            S1=500404973.227(n=4) S2=1000000000.000(n=1) S3=1000000000.000(n=3) S4=500410115.461(n=4) S5=279.973(n=3) S6=1000000000.000(n=4) S7=1.001(n=5) S8=1000000000.000(n=3) S9=1.800✓(n=3)
+  OK 熟成(香料調合 段2)                S1=500408621.147(n=12) S2=1000000000.000(n=12) S3=1000000000.000(n=12) S4=1000000000.000(n=12) S5=938036.357(n=12) S6=1000000000.000(n=12) S7=1.163✓(n=12) S8=1000000000.000(n=12) S9=1.081✓(n=12)
+  NG 延長狩り(異世界接続網 段2)            S1=1000000000.000(n=10) S2=1000000000.000(n=8) S3=1000000000.000(n=11) S4=1000000000.000(n=10) S5=937404.784(n=10) S6=1000000000.000(n=11) S7=0.984(n=8) S8=1000000000.000(n=9) S9=1.001(n=10)
+⑬ タイミング 3/4
+参考 討伐連鎖lift: (討伐なし)
+参考 研究lift分散(旧②・合否対象外=②改2は income で判定): S1 研究lift[1.00..5157695.50] 平均33.27 / S2 研究lift[1.00..244483.71] 平均24.48 / S3 研究lift[1.00..366001312.04] 平均68.25 / S4 研究lift[1.00..3046609.74] 平均33.25 / S5 研究lift[1.00..4221884.95] 平均41.19 / S6 研究lift[1.00..4724083.04] 平均33.87 / S7 研究lift[1.00..12746307.32] 平均91.34 / S8 研究lift[1.00..826328.43] 平均30.15 / S9 研究lift[1.00..1552231.49] 平均36.50
+⑫ 周回方針の1位が実在: balanced,click,bake (3/5)
