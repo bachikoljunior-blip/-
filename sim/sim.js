@@ -821,7 +821,11 @@ function equip2Tick(sim) {
   // 9方針×54種のレーンで486種のカバレッジがちょうど一巡する。
   const stratIdx = Math.max(0, parseInt(String(sim.strat && sim.strat.id || 'S1').replace(/\D/g, ''), 10) - 1) % 9;
   const laneV = it => ((stratIdx + it.tier + EQUIP2_CATS.indexOf(it.cat)) % 9) + 1;
-  const items = equip2Items().slice().sort((a, b) => (b.tier - a.tier) || (catOrder[a.cat] - catOrder[b.cat]) || ((a.variant === laneV(a) ? 0 : 1) - (b.variant === laneV(b) ? 0 : 1)));
+  // レーン距離(2026-07-14 カバレッジ76/486不動の修正): 旧・二値(レーン一致か否か)だと、レーン銘が
+  // 現ステージのラインナップに無い(ばらけ配置)場合に全方針が同じ銘へフォールバックして重なる。
+  // 円環距離にすると、同ティア同カテゴリの選好順が方針ごとに巡回シフトし、フォールバック先も分散する。
+  const laneDist = it => (((it.variant - laneV(it)) % 9) + 9) % 9;
+  const items = equip2Items().slice().sort((a, b) => (b.tier - a.tier) || (catOrder[a.cat] - catOrder[b.cat]) || (laneDist(a) - laneDist(b)));
   for (const it of items) {
     if (!it.stages.includes(curStage)) continue;
     const cap = 1; // 9カテゴリ各1個/周回(アクセは甲/乙で別カテゴリ)
