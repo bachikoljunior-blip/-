@@ -75,14 +75,14 @@ module.exports = {
   monster: {
     spawnMin: 42000, spawnMax: 60000,
     stayBase: 16000,
-    stayPerLv: 0.04, rateLvHalf: 80,
+    stayPerLv: 0.09, rateLvHalf: 80, // ③monsterStay 1.017→再係留(2026-07-14)
     hpBase: 30,
     hpGrowth: 1.235,
     hpPressureDiv: 430, hpPressurePow: 1.95,
     lvEarlyDiv: 92,
     lvLateDiv: 320, lvLatePow: 1.22,
     dmgSqrtCoef: 0.45,
-    ratePerLv: 0.18, // 0.14→0.16(2026-07-10 第12次R: surge0.45の経済移動で③monsterRate中央値が再び1.1割れ=マージン積み増し)
+    ratePerLv: 0.26, // 0.14→0.16(2026-07-10 第12次R: surge0.45の経済移動で③monsterRate中央値が再び1.1割れ=マージン積み増し)
     rateKillBonus: 0.6, rateKillHalf: 2, // 0.35→0.5(2026-07-10 novelty導入で③monsterRateの中央値が1.1を割れ=専用の討伐手数ボーナスで回復)
     satKps: 2.0, // 討伐頻度の飽和半価点(2026-07-10): kill項の1体価値逓減。高テンポ期の討伐56-63%独走を[30,52]帯へ(balanced序盤0.02-0.05体/秒はほぼ線形)
     killValueSec: 7, // 8→7(2026-07-12 ②改2: huntのlift3.05-3.09が帯上限3.00超過。直送絞りでは動かず本体=討伐報酬項を微減。序盤の役割はpeddlerFrac0.06が引き継ぎ済み) // 討伐1体の価値=生産◯秒ぶん(第12次R3・params駆動化)。7→8: ㉘hunt序盤(直送ゲート前)run8/20が討31-32%で合格化・balanced+1・click②改+2・bake影響なし(100h実測)。9/10はhunt+3〜4だがbalancedの打が7-9%に潰れ(−1〜2)・hunt後半②改−2=不採用
@@ -204,16 +204,16 @@ module.exports = {
     // 全方針の初回liftが1.06-1.18に希釈。S7の初回1.182を帯内へ=①は「1方針が全周回≥1.2」で判定)
     // grandmaOwn(2026-07-13 新設・ユーザー指示「1台あたりの初期生産1のままもっと強く」): 1台あたり生産×(1.02)^台数
     grandmaOwn: 0.02,
-    grandmaSelf: 6, grandmaSup: [0.003, 0.003, 0.003], // 40→6(2026-07-14 サイクルA確定)
+    grandmaSelf: 12, grandmaSup: [0.003, 0.003, 0.003], // 6→12(2026-07-14 ①再係留: 初回周回の希釈対策)
     // 2026-07-06 第8次: ⑫(設備の文脈依存性)用に所持数指数を再配分。
     // factory一強(全方針の最効率=工場固定)を解消: oven 0.060→0.067 / spice 0.062→0.071 / factory 0.060→0.057
     // → 12h実測で最効率設備が factory 7方針 / oven 3方針 に分岐
-    ovenSelf: 6, ovenOwn: 0.03, ovenStage: 0.012, // 0.03→0.045(2026-07-11: 工場の助走カード追加でS10のovenBatch liftが6NG/36 min1.104に希釈→層ランプ増し。NG0/35 min1.281実測) // 0.012→0.03(2026-07-11 ①oven: surge減速で直送比のcpsが痩せ中盤以降のliftが1.02-1.12に沈む→層ランプで再係留。S10 NG9/23→0/24 min1.296)
-    factorySelf: 6, factoryLow: 0.002, factoryOwn: 0.026,
+    ovenSelf: 10, ovenOwn: 0.03, ovenStage: 0.03, // ①ovenBatch 1.05→再係留(2026-07-14) // 0.03→0.045(2026-07-11: 工場の助走カード追加でS10のovenBatch liftが6NG/36 min1.104に希釈→層ランプ増し。NG0/35 min1.281実測) // 0.012→0.03(2026-07-11 ①oven: surge減速で直送比のcpsが痩せ中盤以降のliftが1.02-1.12に沈む→層ランプで再係留。S10 NG9/23→0/24 min1.296)
+    factorySelf: 10, factoryLow: 0.002, factoryOwn: 0.026, // ①factory再係留(2026-07-14)
     spiceOwn: 0.032, spiceGold: 7, spiceGoldOwn: 0.006, spiceGoldDur: 30000,
     // 狩り窓(2026-07-09 ⑬作り替え): 窓は討伐が開く・維持する(金クッキー非関与)。portalHuntDur/Grow は旧・金開窓用=現在未使用(移植時に削除)。
     // portalHuntSpawnBase=窓に関係ない常時スポーン加速(研究解放中)/ portalHuntSpawn=窓中の追加加速(⑬延長狩りのコントラスト)。
-    portalSelf: 6, portalHuntDur: 5000, portalHuntGrow: 0.0042, portalHuntSpawn: 0.002, portalHuntSpawnBase: 0.007,
+    portalSelf: 6, portalHuntDur: 9000, portalHuntGrow: 0.012, // ⑬延長狩り1.000→再係留(2026-07-14) portalHuntSpawn: 0.002, portalHuntSpawnBase: 0.007,
     bankOwn: 0.018, bankSaved: 5.0,
     moonBase: 8, moonStage: 0.001, moonOwn: 0.0005,
     foldPortal: 0.002, foldMonster: 2.5, foldGold: 8,
@@ -392,14 +392,14 @@ module.exports = {
     supExtra: 0.008, supStageCoef: 0.001,
     ovenBakeMulBake: 1.7, ovenBakeMulOther: 1.2,
     ovenS3Flat: 0.06, ovenStageCoef: 0.008,
-    factoryHiKind: 0.15, factoryStageCoef: 0.0012,
+    factoryHiKind: 0.4, factoryStageCoef: 0.0012,
     matureRate: 0.006, aromaDur: 12, spiceStageCoef: 0.0015,
     huntExtendSec: 40, huntStageCoef: 0.0008,
     bankIntRate: 0.005, bankIntCapCps: 8.0, bankIntEmaFrac: 0.05, bankCapStageCoef: 0.08, // bankIntEmaFrac(2026-07-11): ソフトキャップ=max(cps, 直近稼ぎ率EMA×0.05)×8=直送主流の周回でも利息が総収入の最大〜40%で見える(⑨bank1.000対策)
     moonMarginDiv: 10, moonResCount: 0.05,
     foldKillCoef: 0.002, foldStageCoef: 0.001,
     galaxyBonusCoef: 0.05, galaxySat: 120, galaxyStageCoef: 0.0008,
-    bhChargeFull: 2500, bhBoostCoef: 0.25, bhBoostDur: 60, bhBoostStageCoef: 0.002,
+    bhChargeFull: 2500, bhBoostCoef: 0.9, bhBoostDur: 90, bhBoostStageCoef: 0.002, // ⑬圧縮チャージ1.000→再係留(2026-07-14)
     bhCompStageCoef: 0.001,
     waveAmpBase: 0.45, waveAmpPerRes: 0.05, wavePeriod: 90, waveStageCoef: 0.001,
     antiStageCoef: 0.0008, antiPrestigeCoef: 0.03
