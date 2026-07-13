@@ -98,6 +98,13 @@ function summarize(sim) {
   // 初転生後の各周回で新規解放1件以上(件数の上限3は撤廃=盛り沢山OK)。
   // 第0回は間隔y÷帯域Y(120+8√x)の中央値が ≤1 のみ(速い側0.5は撤廃)。
   let t2Ok = 0, t2All = 0, t2Run0 = null;
+  // T2下限(2026-07-14 ユーザー指示「開放間隔は30秒以上」・同一秒統合後の全イベント間隔): 最小間隔と30秒未満の件数
+  let gapMin = Infinity, gapNg = 0;
+  for (let i = 0; i + 1 < ev.length; i++) {
+    const y = ev[i + 1].t - ev[i].t;
+    if (y < gapMin) gapMin = y;
+    if (y < 30) gapNg++;
+  }
   {
     const r0 = full[0];
     if (r0) {
@@ -160,7 +167,7 @@ function summarize(sim) {
     if (ratio >= 1) prOk++;
     if (!prWorst || ratio < prWorst.ratio) prWorst = { id: c.id, runIdx: c.runIdx, ratio };
   }
-  return { total, runs: sim.runs.length, doubleOk, doubleAll, gainOk, t1Ok, t1All, dblOk, dblAll, t3cOk, t3cAll, t2Ok, t2All, t2Run0, t3bOk, medianDur, paceOk, paceAll, events: ev.length, fullT, failOk, failAll: full.length, pwOk, pwAll, durOk, durAll, prOk, prAll, prWorst };
+  return { total, runs: sim.runs.length, doubleOk, doubleAll, gainOk, t1Ok, t1All, dblOk, dblAll, t3cOk, t3cAll, t2Ok, t2All, t2Run0, gapMin, gapNg, t3bOk, medianDur, paceOk, paceAll, events: ev.length, fullT, failOk, failAll: full.length, pwOk, pwAll, durOk, durAll, prOk, prAll, prWorst };
 }
 
 function runBaseline(hours, only) {
@@ -180,14 +187,15 @@ function printBaseline(results) {
   // 「早い」の線引き【仮】: 方針ごとの周回時間の中央値が、全方針の中央値以下のもの。遅い方針は(対象外)。
   const meds = results.map(r => r.sum.medianDur).filter(x => Number.isFinite(x)).sort((a, b) => a - b);
   const cutoff = meds.length ? meds[meds.length >> 1] : Infinity;
-  console.log('ID  名称              周回数 総クッキー   ④x1e8  (参考:旧⑤) 新⑥3分2倍 T3c討伐維持 T1周回時間 T2解放≥1 T2第0回 (参考)T3a廃止 T3b維持±20%(早い方針) ⑭PT≥1 ㉑存在感 全解放 | 参考: 旧⑥ペース 旧㉒単調増');
+  console.log('ID  名称              周回数 総クッキー   ④x1e8  (参考:旧⑤) 新⑥3分2倍 T3c討伐維持 T1周回時間 T2解放≥1 T2第0回 T2下限30s (参考)T3a廃止 T3b維持±20%(早い方針) ⑭PT≥1 ㉑存在感 全解放 | 参考: 旧⑥ペース 旧㉒単調増');
   for (const r of results) {
     const fullT = r.sum.fullT === Infinity ? '未' : fmtT(r.sum.fullT);
     const t2r0 = r.sum.t2Run0 ? `${r.sum.t2Run0.ok ? 'OK' : 'NG'}(中央値${r.sum.t2Run0.med.toFixed(2)})` : '-';
+    const gapT = r.sum.gapMin === Infinity ? '-' : `${r.sum.gapNg === 0 ? 'OK' : 'NG' + r.sum.gapNg + '件'}(最小${Math.round(r.sum.gapMin)}s)`;
     const fast = r.sum.medianDur <= cutoff;
     const t3bText = fast ? `${r.sum.t3bOk}/${r.sum.failAll}` : `(対象外:${r.sum.t3bOk}/${r.sum.failAll})`;
     console.log(
-      `${r.s.id.padEnd(3)} ${r.s.name.padEnd(14)} ${String(r.sum.runs).padStart(4)}  ${fmtN(r.sum.total).padStart(10)}  ${r.sum.doubleOk}/${r.sum.doubleAll}   ${r.sum.gainOk}/${r.sum.doubleAll}   ${r.sum.dblOk}/${r.sum.dblAll}   ${r.sum.t3cOk}/${r.sum.t3cAll}   ${r.sum.t1Ok}/${r.sum.t1All}   ${r.sum.t2Ok}/${r.sum.t2All}  ${t2r0}  ${r.sum.failOk}/${r.sum.failAll}  ${t3bText}  ${r.sum.pwOk}/${r.sum.pwAll}  ${r.sum.prOk}/${r.sum.prAll}  ${fullT} | ${r.sum.paceOk}/${r.sum.paceAll} ${r.sum.durOk}/${r.sum.durAll}  (${r.ms}ms)` +
+      `${r.s.id.padEnd(3)} ${r.s.name.padEnd(14)} ${String(r.sum.runs).padStart(4)}  ${fmtN(r.sum.total).padStart(10)}  ${r.sum.doubleOk}/${r.sum.doubleAll}   ${r.sum.gainOk}/${r.sum.doubleAll}   ${r.sum.dblOk}/${r.sum.dblAll}   ${r.sum.t3cOk}/${r.sum.t3cAll}   ${r.sum.t1Ok}/${r.sum.t1All}   ${r.sum.t2Ok}/${r.sum.t2All}  ${t2r0}  ${gapT}  ${r.sum.failOk}/${r.sum.failAll}  ${t3bText}  ${r.sum.pwOk}/${r.sum.pwAll}  ${r.sum.prOk}/${r.sum.prAll}  ${fullT} | ${r.sum.paceOk}/${r.sum.paceAll} ${r.sum.durOk}/${r.sum.durAll}  (${r.ms}ms)` +
       (r.sum.prWorst && r.sum.prWorst.ratio < 1 ? `  ㉑最悪: ${r.sum.prWorst.id}@run${r.sum.prWorst.runIdx} x${r.sum.prWorst.ratio.toFixed(2)}` : '')
     );
   }

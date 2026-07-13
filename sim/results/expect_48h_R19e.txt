@@ -26,3 +26,37 @@
   OK rw:huntingCore               S7 min=43376.50
 ③-c 毎回取る方針の実在 15/20 NG: brandHunt,deepPursuit,biteRecovery,crushedMill,goldenBeastMutation
 ③ 報酬utility軸(短い枝分かれ比べ・同一状態から1周回ぶん・総クッキー比の中央値 ≥1.1)
+  OK rw:monsterDamage        S6 中央値比=1000000000.000 (n=12)
+  OK rw:monsterStay          S3 中央値比=1000000000.000 (n=12)
+  OK rw:crackedFang          S1 中央値比=1000000000.000 (n=9)
+  NG rw:brandHunt            どの方針も未取得
+  NG rw:deepPursuit          どの方針も未取得
+  OK rw:chainPrep            S6 中央値比=1000000000.000 (n=8)
+  OK rw:huntFocus            S6 中央値比=1000000000.000 (n=8)
+  OK rw:biteRecovery         S6 中央値比=1000000000.000 (n=2)
+  NG rw:crushedMill          どの方針も未取得
+  NG rw:goldenBeastMutation  どの方針も未取得
+  OK rw:goldenChain          S6 中央値比=1000000000.000 (n=8)
+  OK rw:beastScent           S6 中央値比=1000000000.000 (n=5)
+③ utility軸 8/12
+③ 報酬 合計 14/20 (instant 6/8 + utility 8/12)
+⑨-a 段階instant(各回≥1.05・⑬タイミング段は除外) 16/17
+  OK stage:ovenBatch:2            S8 min=1.45
+  OK stage:spiceBlend:2           S7 min=1.09
+  OK stage:fingerTechnique:2      S2 min=7.94
+  OK stage:grandmaCrowd:2         S3 min=438586.47
+  OK stage:spiceBlend:3           S4 min=1.06
+  OK stage:moonGlobalYeast:2      S4 min=1.44
+  OK stage:moonGlobalYeast:3      S9 min=1.54
+  OK stage:grandmaCrowd:3         S9 min=1.15
+  OK stage:ovenBatch:3            S1 min=1.06
+  NG stage:factoryNetwork:2       取得あり・全周回≥1.05に未達(最大幾何平均1.00)
+  OK stage:factoryNetwork:3       S2 min=1.06
+  OK stage:portalNetwork:2        S9 min=3.71
+  OK stage:portalNetwork:3        S5 min=1.06
+  OK stage:galaxyAssembly:2       S8 min=1.70
+  OK stage:portalGlobalFold:2     S4 min=7.83
+  OK stage:galaxyAssembly:3       S6 min=1.15
+  OK stage:antimatterRecipe:2     S7 min=1.18
+⑨ 段階whole軸(短い枝分かれ比べ・同一状態から1周回ぶん・総クッキー比の中央値 ≥1.05・利息/余熱)
+  OK stage:bankClickDividend:2    S6 中央値比=1000000000.000 (n=12)

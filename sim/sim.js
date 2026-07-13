@@ -398,6 +398,7 @@ function newSim(strategy, opts) {
     skills: {},
     everUpgrade: {}, everResearch: {}, everStage: {},
     unlockEvents: [],           // {t, kind, id}
+    lastUnlockT: -Infinity,     // 解放ゲート(2026-07-14 ユーザー指示「開放間隔は30秒以上」)の直前解放時刻
     firstResearchBuy: {}, firstPerk: {}, firstStageBuy: {},
     runs: [],                   // 各周回の結果
     // 工房・素材・ステージ・注文(第12次P統合・転生持ち越し)
@@ -555,9 +556,10 @@ function wsRevealRecipes(sim) {
   const ws = sim.ws;
   for (const rc of P.ws.recipes) {
     if (ws.everWs['recipe:' + rc.id]) continue;
+    if (!unlockGateOk(sim)) break;
     if (wsRecipeRevealStage(rc) <= ws.stageUnlocked) {
       ws.everWs['recipe:' + rc.id] = true;
-      sim.unlockEvents.push({ t: sim.t, kind: 'ws', id: 'recipe:' + rc.id });
+      pushUnlock(sim, 'ws', 'recipe:' + rc.id);
     }
   }
 }
@@ -959,9 +961,9 @@ function wsDropMaterials(sim, mon, overkill) {
     const stNo = ws.stageUnlocked;
     ws.questKills[stNo] = (ws.questKills[stNo] || 0) + units;
     const need = P.quest2.killsNeed[stNo - 1] || Infinity;
-    if (ws.questKills[stNo] >= need) {
+    if (ws.questKills[stNo] >= need && unlockGateOk(sim)) {
       ws.stageUnlocked++;
-      sim.unlockEvents.push({ t: sim.t, kind: 'ws', id: 'stage:' + ws.stageUnlocked });
+      pushUnlock(sim, 'ws', 'stage:' + ws.stageUnlocked);
       wsRevealRecipes(sim); // 新ステージの素材で作れるレシピを同秒で開示
     }
   }
@@ -1784,6 +1786,7 @@ function tryBuyMilestones(sim, prod) {
       if ((r._msRepeatT && r._msRepeatT[m.id] || -Infinity) + m.repeatSec > sim.t) continue;
     } else if (r.ms.bought[m.id]) continue;
     if (!m.trig(sim)) continue;
+    if ((!sim.everMs || !sim.everMs[m.id]) && !unlockGateOk(sim)) continue;
     const costSec = m.costSec != null ? m.costSec : ((P.msResearch && P.msResearch.costSec != null) ? P.msResearch.costSec : 30);
     // コストはゲーム内で固定(2026-07-11 ユーザー指示): 完成版測定の焼き込み表(ms_costs.json)を優先。
     // 表に無いidだけ動的式(=表の生成にも使う)。丸め規則はビルド時に適用済み。
@@ -1806,7 +1809,7 @@ function tryBuyMilestones(sim, prod) {
     if (m.fx.stay) r.ms.stay = (r.ms.stay || 1) * m.fx.stay;
     if (m.fx.hp) r.ms.hp = (r.ms.hp || 1) * m.fx.hp;
     if (!sim.everMs) sim.everMs = {};
-    if (!sim.everMs[m.id]) { sim.everMs[m.id] = true; sim.unlockEvents.push({ t: sim.t, kind: 'research', id: m.id }); } // 解放イベントは初回のみ(買い直しはT2の「新規解放」に数えない)
+    if (!sim.everMs[m.id]) { sim.everMs[m.id] = true; pushUnlock(sim, 'research', m.id); } // 解放イベントは初回のみ(買い直しはT2の「新規解放」に数えない)
   }
 }
 
@@ -2550,7 +2553,7 @@ function doPrestige(sim) {
       }
     }
   }
-  if (bought.length > 0) sim.unlockEvents.push({ t: sim.t, kind: 'skill', id: bought.join('+'), n: bought.length });
+  if (bought.length > 0) pushUnlock(sim, 'skill', bought.join('+'), bought.length);
   wsRevealRecipes(sim); // 工房スキル取得と同秒に、既に拓けているステージのレシピを開示(T2統合)
   sim.runs[sim.runs.length - 1].skillsBought = bought.length;
   sim.runs[sim.runs.length - 1].skillIds = bought;
@@ -2873,8 +2876,9 @@ function advanceTick(sim, strategy) {
     // 購入(戦略)
     strategy.buy(sim, prod);
 
-    // 転生判断
-    if (prestigeUnlockedFn(sim) && strategy.shouldPrestige(sim)) {
+    // 転生判断。解放ゲート(30秒)が閉じている間は転生も待つ(転生時のスキル取得=解放イベントが
+    // 直前の解放と30秒未満で並ぶのを防ぐ。遅延は最大30秒=経済影響なし)
+    if (prestigeUnlockedFn(sim) && unlockGateOk(sim) && strategy.shouldPrestige(sim)) {
       return doPrestige(sim);
     }
   }
@@ -2965,7 +2969,22 @@ function simulate(strategy, opts) {
 }
 
 // 購入ヘルパー(unlockイベント記録込み)
+// 解放ゲート(2026-07-14 ユーザー指示・当初1分→同日「いや30秒以上でいい」): 直前の解放イベントから
+// unlockGap秒(既定30)経つまで、新種の初取得・新規開示を待たせる=入荷の小出し。
+// 同一秒に複数の解放が出るのは1イベント扱い(T2の同一秒統合)なので通す。
+// 既所持種の買い増し・研究の買い直しは対象外。ゲーム側も同じゲートで同期する。
+function unlockGateOk(sim) {
+  const gap = (P.t2 && P.t2.unlockGap != null) ? P.t2.unlockGap : 30;
+  return sim.t === sim.lastUnlockT || sim.t - sim.lastUnlockT >= gap;
+}
+function pushUnlock(sim, kind, id, n) {
+  sim.lastUnlockT = sim.t;
+  const ev = { t: sim.t, kind, id };
+  if (n != null) ev.n = n;
+  sim.unlockEvents.push(ev);
+}
 function tryBuyUpgrade(sim, u, budgetRatio) {
+  if (!sim.everUpgrade[u.id] && !unlockGateOk(sim)) return false;
   const cost = upgradeCost(sim, u);
   if (cost > sim.run.cookies * budgetRatio) return false;
   if (cost > sim.run.cookies) return false;
@@ -2982,7 +3001,7 @@ function tryBuyUpgrade(sim, u, budgetRatio) {
   }
   if (!sim.everUpgrade[u.id]) {
     sim.everUpgrade[u.id] = true;
-    sim.unlockEvents.push({ t: sim.t, kind: 'upgrade', id: u.id });
+    pushUnlock(sim, 'upgrade', u.id);
     // 条件㉑(新設備の存在感): 初めて買った瞬間の「その1台の実生産(系列・熟練など固有能力込み、
     // 研究・スキル倍率も自然に通る)」を、購入直前の実CPSと比較する。Δ生産方式(2026-07-06 解釈更新):
     // Δ = 購入後の生産 − 購入直前の生産。判定は Δ ≥ 購入直前CPS × 1/5(runner側)
@@ -3012,6 +3031,7 @@ function tryBuyUpgrade(sim, u, budgetRatio) {
 function tryBuyResearch(sim, id, budgetRatio) {
   const r = sim.run;
   if (r.research[id]) return false;
+  if (!sim.everResearch[id] && !unlockGateOk(sim)) return false;
   // 無効化(disableResearch)でも購入行動は同じ: 効果だけがゼロになる
   const def = RESEARCH.find(x => x.id === id);
   if (!def || !researchUnlocked(sim, def)) return false;
@@ -3022,7 +3042,7 @@ function tryBuyResearch(sim, id, budgetRatio) {
   if (sim.firstResearchBuy[id] === undefined) sim.firstResearchBuy[id] = sim.t;
   if (!sim.everResearch[id]) {
     sim.everResearch[id] = true;
-    sim.unlockEvents.push({ t: sim.t, kind: 'research', id });
+    pushUnlock(sim, 'research', id);
   }
   return true;
 }
@@ -3030,6 +3050,7 @@ function tryBuyResearch(sim, id, budgetRatio) {
 function tryBuyResearchStage(sim, id, stage, budgetRatio) {
   const r = sim.run;
   if (stage === 2 ? r.research2[id] : r.research3[id]) return false;
+  if (!sim.everStage[id + ':' + stage] && !unlockGateOk(sim)) return false;
   // 無効化(disableStage)でも購入行動は同じ: 効果だけがゼロになる
   if (!researchStageUnlocked(sim, id, stage)) return false;
   const cost = researchStageCostOf(sim, id, stage);
@@ -3041,7 +3062,7 @@ function tryBuyResearchStage(sim, id, stage, budgetRatio) {
   if (!sim.everStage[key]) {
     sim.everStage[key] = true;
     // 段階購入も「解放イベント」として記録(帯域判定⑥の対象)
-    sim.unlockEvents.push({ t: sim.t, kind: 'stage', id: key });
+    pushUnlock(sim, 'stage', key);
   }
   return true;
 }
