@@ -766,9 +766,12 @@ function equip2OreHave(sim, tier) {
   return n;
 }
 function equip2Afford(sim, cost) {
+  // 料理リザーブ(2026-07-14): 装備作成は料理素材の在庫を食い潰さない(残量リザーブを残せる時だけ作る)。
+  // 装備レシピと料理が同じ素材(バター等)を取り合い、作った周回が料理バフを失って凍結枝に負ける(lift0.92)対策
+  const reserve = (P.equip2 && P.equip2.dishReserve != null) ? P.equip2.dishReserve : 40;
   for (const k in cost) {
     const m = /^ore_t(\d+)$/.exec(k);
-    const have = m ? equip2OreHave(sim, Number(m[1])) : (sim.ws.mats[k] || 0);
+    const have = m ? equip2OreHave(sim, Number(m[1])) : Math.max(0, (sim.ws.mats[k] || 0) - reserve);
     if (have < cost[k]) return false;
   }
   return true;
