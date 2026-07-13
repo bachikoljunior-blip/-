@@ -13,3 +13,16 @@
   OK res:blackHoleCompression     S6 min=5.00
   OK res:quantumProofing          S8 min=1.25
   OK res:antimatterRecipe         S7 min=9422739.71
+  OK res:cpsStrike(whole軸) S1 中央値比=186405.354 (n=10)
+① 研究 合計 11/14 (instant 10/13 + whole 1/1)
+③-a 報酬instant(全周回≥1.1・2026-07-13ユーザー変更) 6/8
+  NG rw:goldenRate                取得あり・全周回≥1.1に未達(最大幾何平均4.86)
+  OK rw:goldenPower               S3 min=1.23
+  OK rw:goldenAmount              S7 min=1.90
+  NG rw:monsterRate               取得あり・全周回≥1.1に未達(最大幾何平均1.18)
+  OK rw:goldenTarget              S2 min=2.41
+  OK rw:goldenFirstHit            S4 min=1.69
+  OK rw:beastHeatFerment          S8 min=72037.14
+  OK rw:huntingCore               S7 min=43376.50
+③-c 毎回取る方針の実在 15/20 NG: brandHunt,deepPursuit,biteRecovery,crushedMill,goldenBeastMutation
+③ 報酬utility軸(短い枝分かれ比べ・同一状態から1周回ぶん・総クッキー比の中央値 ≥1.1)
