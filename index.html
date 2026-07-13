@@ -2655,7 +2655,7 @@
 
     .monsterInstance {
       display: block;
-      width: 236px;
+      width: 190px;
       text-align: center;
       pointer-events: auto;
       filter:
@@ -2665,8 +2665,8 @@
     }
 
     .monsterInstance .cookieMonsterButton {
-      width: 200px;
-      height: 200px;
+      width: 150px;
+      height: 150px;
       margin-top: 4px;
       border: none;
       border-radius: 28px;
@@ -2681,7 +2681,7 @@
     }
 
     .monsterInstance .monsterHp {
-      width: 236px !important;
+      width: 190px !important;
       height: 14px !important;
       background: rgba(0,0,0,0.72) !important;
       border-radius: 999px;
@@ -2750,8 +2750,8 @@
     }
 
     .tabPages {
-      flex: 0 0 50% !important;
-      max-height: 50% !important;
+      flex: 0 0 40% !important;
+      max-height: 40% !important;
       min-height: 140px !important;
     }
 
@@ -3503,7 +3503,7 @@
 
     .monsterInstance {
       display: block;
-      width: 236px;
+      width: 190px;
       text-align: center;
       pointer-events: auto;
       filter:
@@ -3513,8 +3513,8 @@
     }
 
     .monsterInstance .cookieMonsterButton {
-      width: 200px;
-      height: 200px;
+      width: 150px;
+      height: 150px;
       margin-top: 4px;
       border: none;
       border-radius: 28px;
@@ -3529,7 +3529,7 @@
     }
 
     .monsterInstance .monsterHp {
-      width: 236px !important;
+      width: 190px !important;
       height: 14px !important;
       background: rgba(0,0,0,0.72) !important;
       border-radius: 999px;
@@ -4377,7 +4377,8 @@
     }
 
     /* ===== 図鑑 ===== */
-    #codexBtn {
+    #codexBtn,
+    #equipBtn {
       position: absolute;
       top: 10px;
       left: 54px;
@@ -4395,6 +4396,11 @@
       font-size: 18px;
       line-height: 1;
       touch-action: manipulation;
+    }
+
+    /* 装備ボタンは図鑑ボタンの右隣に同じ大きさで置く(2026-07-13) */
+    #equipBtn {
+      left: 98px;
     }
 
     .codexIntro {
@@ -4930,25 +4936,35 @@
     .eq2Need img { width: 22px; height: 22px; object-fit: contain; }
     .eq2CraftBtn { flex: 0 0 auto; width: auto; padding: 8px 14px; }
     @media (max-width: 700px) { .eq2CraftBox { width: 100%; } }
+    /* 小粒(群れ)は他より一回り小さく(2026-07-13)。基準160に対して小さめ */
     .monsterInstance.mtype-swarm {
-      width: 116px;
+      width: 128px;
     }
     .monsterInstance.mtype-swarm .cookieMonsterButton {
-      width: 104px;
-      height: 104px;
+      width: 112px;
+      height: 112px;
     }
     .monsterInstance.mtype-swarm .monsterHp {
-      width: 116px !important;
+      width: 128px !important;
     }
+    /* 枠(インスタンス幅)とHPバー幅も種類の大きさに合わせる。縦が詰まった端末で縮小されても、
+       大きい種類ほど横幅が広く見えて大小関係が保たれる(2026-07-13) */
+    .monsterInstance.mtype-speedy { width: 172px; }
+    .monsterInstance.mtype-tank { width: 212px; }
+    .monsterInstance.mtype-boss { width: 232px; }
+    .monsterInstance.mtype-speedy .monsterHp { width: 172px !important; }
+    .monsterInstance.mtype-tank .monsterHp { width: 212px !important; }
+    .monsterInstance.mtype-boss .monsterHp { width: 232px !important; }
 
+    /* タンクは一回り大きく(2026-07-13) */
     .monsterInstance.mtype-tank .cookieMonsterButton {
-      width: 230px;
-      height: 230px;
+      width: 166px;
+      height: 166px;
     }
 
     .monsterInstance.mtype-speedy .cookieMonsterButton {
-      width: 175px;
-      height: 175px;
+      width: 134px;
+      height: 134px;
     }
 
     .monsterInstance.mtype-goldenBeast .cookieMonsterButton {
@@ -4957,9 +4973,10 @@
         0 11px 24px rgba(0, 0, 0, 0.40);
     }
 
+    /* ボスはもっと大きく(2026-07-13)。はみ出しはplaceFixedElementが縮小して防ぐ */
     .monsterInstance.mtype-boss .cookieMonsterButton {
-      width: 250px;
-      height: 250px;
+      width: 182px;
+      height: 182px;
       /* 四角い枠(矩形box-shadow)は出さない。赤い光は絵の形に沿うdrop-shadowで付ける。 */
       box-shadow: none;
       filter:
@@ -5272,11 +5289,11 @@
     }
 
     body:not(.sectionFullscreen):not(.playFullscreenMode) .game {
-      /* 内容も含めて比率を完全固定する: 基準サイズ(375×547=24:35)でレイアウトし、
-         画面サイズに合わせてゲーム全体を等倍スケール(文字・画像・ボタンも同比率で拡縮)。
+      /* 内容も含めて比率を完全固定: 固定基準サイズ(375×720)でレイアウトし、画面に合わせて
+         ゲーム全体を等倍スケール。全端末で文字・画像・ボタン・プレイ画面の比率がすべて同一になる。
          倍率(--gameScale)はJS(applyGameScale)がリサイズ時に計算する */
       width: 375px !important;
-      height: calc(375px * 35 / 24) !important;
+      height: 720px !important;
       margin: 0 !important;
       transform: scale(var(--gameScale, 1));
       transform-origin: center center;
@@ -5464,11 +5481,22 @@
   </div>
 </div>
 
+<div id="equipOverlay" class="settingsOverlay codexOverlay">
+  <div class="settingsPanel codexPanel">
+    <div class="settingsHead">
+      <h2>装備</h2>
+      <button id="equipCloseBtn" type="button" class="titleAboutCloseBtn" aria-label="閉じる">✕</button>
+    </div>
+    <div id="equipPanel" class="codexBody"></div>
+  </div>
+</div>
+
 <main class="game">
   <section class="top">
     <button id="settingsBtn" type="button" aria-label="設定">⚙</button>
     <button id="playFullscreenBtn" type="button" aria-label="クッキー画面を全画面">⛶</button>
     <button id="codexBtn" type="button" aria-label="図鑑">📖</button>
+    <button id="equipBtn" type="button" aria-label="装備">🛡</button>
 
     <div class="cookieCount">
       <span id="cookies">0</span>
@@ -5503,7 +5531,6 @@
     <button class="tab" data-tab="researchTab">研究</button>
     <button class="tab" data-tab="prestigeTab">?</button>
     <button class="tab" data-tab="orderTab">?</button>
-    <button class="tab" data-tab="equipTab">装備</button>
     <button class="tab" data-tab="workshopTab">?</button>
     <button class="tab" data-tab="infoTab">一覧</button>
   </nav>
@@ -5553,13 +5580,6 @@
       </div>
       <button id="backToTitleBtn" type="button" class="backToTitleBtn">タイトル画面に戻る</button>
       <div id="infoPanel" class="pageScroll"></div>
-    </section>
-
-    <section id="equipTab" class="tabPage">
-      <div class="tabPageHead" data-full-target="equipTab">
-        <h2>装備</h2>
-      </div>
-      <div id="equipPanel" class="pageScroll"></div>
     </section>
 
     <section id="workshopTab" class="tabPage">
@@ -6939,8 +6959,9 @@ const TAB_META = {
   shopTab: { name: "強化", locked: () => false },
   researchTab: { name: "研究", locked: () => false },
   prestigeTab: { name: "転生", locked: () => (typeof prestigeUnlocked === "function" ? !prestigeUnlocked() : false) },
-  orderTab: { name: "注文", locked: () => (typeof orderBoardUnlocked === "function" ? !orderBoardUnlocked() : false) },
-  workshopTab: { name: "工房", locked: () => (typeof workshopTabUnlocked === "function" ? !workshopTabUnlocked() : false) },
+  // 注文ボード・工房は最初からシルエットなしで表示する(2026-07-13 ユーザー指示)
+  orderTab: { name: "注文", locked: () => false },
+  workshopTab: { name: "工房", locked: () => false },
   infoTab: { name: "一覧", locked: () => false }
 };
 
@@ -7733,7 +7754,10 @@ function msArtOf(ms) {
 // ・owned: 購入済み(末尾にまとめて表示)
 function msResearchLists() {
   const unbought = MILESTONE_RESEARCH.filter(m => !msBought(m.id));
-  const avail = debugMode ? unbought : unbought.filter(m => m.trig());
+  // スキル解放型の実績研究(msk_/msk2_)は「スキル取得」が条件なので、対応スキルを取得するまでは
+  // デバッグ中でも出さない(スキル未解放なのに実績研究が並ぶバグの修正・2026-07-13 ユーザー指摘)。
+  const isSkillMs = m => m.id.startsWith("msk_") || m.id.startsWith("msk2_");
+  const avail = debugMode ? unbought.filter(m => !isSkillMs(m) || m.trig()) : unbought.filter(m => m.trig());
   const lockedAll = debugMode ? [] : unbought.filter(m => !m.trig());
   const nextOfSeries = {};
   lockedAll.forEach(m => {
@@ -8504,21 +8528,21 @@ function renderOrder() {
   const box = $("orderPanel");
   if (!box) return;
 
-  // 固定クエスト(2026-07-13): 注文ボードに常設表示。達成で次のステージ解放+次のクエスト表示。
-  // 制限時間なし・内容固定・進捗は周回を跨いで累積。
+  // クエスト(2026-07-13): 注文ボードにのみ常設表示。達成で次のステージ解放+次のクエスト表示。
+  // 制限時間なし・内容固定・進捗は周回を跨いで累積。制限時間注文の「下」に置く(2026-07-13 ユーザー指示)。
   const questBoxHtml = `
     <div class="infoBox orderBoardBox">
-      <h3>固定クエスト</h3>
+      <h3>クエスト</h3>
       <div class="desc">${currentQuestText()}</div>
     </div>`;
 
   if (!orderBoardUnlocked()) {
-    box.innerHTML = questBoxHtml + `
+    box.innerHTML = `
       <div class="infoBox orderBoardBox">
         <h3>？？？</h3>
         <div class="desc">まだ解放されていない機能です。ゲームを進めると解放されます。</div>
       </div>
-    `;
+    ` + questBoxHtml;
     box.dataset.sig = orderStructSig();
     return;
   }
@@ -8537,7 +8561,7 @@ function renderOrder() {
         </div>
         <div class="desc">達成済み注文：${fmt(state.completedOrders || 0)}${(state.expiredOrders ? ` ／ 期限切れ：${fmt(state.expiredOrders)}` : "")}</div>
       </div>
-    `;
+    ` + questBoxHtml;
     box.dataset.sig = orderStructSig();
     return;
   }
@@ -8553,7 +8577,7 @@ function renderOrder() {
   const remainSec = Math.ceil(remainMs / 1000);
   const timeClass = remainMs <= 30000 ? " orderTimeFill--low" : "";
 
-  box.innerHTML = questBoxHtml + `
+  box.innerHTML = `
     <div class="infoBox orderBoardBox">
       <h3>注文ボード</h3>
       <div class="desc">短期の依頼が1件ずつ届く。要求・報酬は今の生産に合わせて決まる。制限時間内に達成で報酬、時間切れは次の注文へ。選び直しは不可。</div>
@@ -8570,7 +8594,7 @@ function renderOrder() {
       </div>
       <div class="desc">達成済み注文：${fmt(state.completedOrders || 0)}${(state.expiredOrders ? ` ／ 期限切れ：${fmt(state.expiredOrders)}` : "")}</div>
     </div>
-  `;
+  ` + questBoxHtml;
   box.dataset.sig = orderStructSig();
 }
 
@@ -9289,8 +9313,9 @@ function grantMonsterDrops(typeId, level, overkill) {
 }
 
 // ==== 工房タブの描画 ====
-function renderWorkshop() {
 // ==== 新装備システム: ヘルパ・タブ描画・作成(2026-07-13) ====
+// これらは renderWorkshop の外＝グローバルに置く。装備は図鑑横のボタン(openEquip)からも
+// renderEquip2Tab を呼ぶため、内側にネストしていると参照できずバグる(2026-07-13 修正)。
 // 画像: 既存装備画像をカテゴリに割当て、ティアでhue回転(「画像のないものは既存のものを色を変えてつかう」)
 const EQUIP2_ART = { weapon: "goldenWhisk", shield: "masterTray", armorTop: "ovenMitt", armorBottom: "pressExtractor",
   hands: "ovenMitt", hat: "stillFlask", shoes: "dimensionCompass", accA: "monsterAlmanac", accB: "stillFlask" };
@@ -9339,6 +9364,19 @@ function equipItemToSlot(itemId, slot) {
 }
 let equip2SubTab = "equipped"; // equipped | owned | mats
 let equip2ChoosingSlot = null;
+let equip2OwnedCat = "weapon"; // 所持装備タブ内のカテゴリ選択
+// 所持装備を1個捨てる。装備中で在庫が0になったらスロットから外す(2026-07-13 ユーザー指示)
+function discardEquip2(id) {
+  const owned = (state.eq2Owned || {})[id] || 0;
+  if (owned <= 0) return;
+  const it = equip2ById(id);
+  if (!confirm(`「${it ? it.name : id}」を1個捨てる？`)) return;
+  state.eq2Owned[id] = owned - 1;
+  if (state.eq2Owned[id] <= 0) {
+    for (const sl of EQUIP2_SLOTS) if (state.eq2Equipped[sl] === id) state.eq2Equipped[sl] = null;
+  }
+  playSound("tab"); saveGame(); renderEquip2Tab(); updateTopOnly();
+}
 function renderEquip2Tab() {
   const box = $("equipPanel");
   if (!box) return;
@@ -9370,22 +9408,30 @@ function renderEquip2Tab() {
         </button>${chooser}</div>`;
     }).join("");
   } else if (sub === "owned") {
-    body = EQUIP2_CATS.map(cat => {
-      const rows = equip2Items().filter(x => x.cat === cat && (state.eq2Owned[x.id] || 0) > 0)
-        .map(x => `<div class="infoRow"><img class="matIcon" src="${assetUrl(equip2Art(x))}" style="filter:hue-rotate(${equip2Hue(x)}deg)" alt=""><b>${x.name}</b> ×${fmt(state.eq2Owned[x.id])} / 効果: ${x.fxText}(固定値)</div>`).join("");
-      return `<h3>${EQUIP2_CAT_NAMES[cat]}</h3>` + (rows || `<div class="desc">未所持</div>`);
-    }).join("");
+    // 所持装備はカテゴリごとのタブで切り替える(main側UI採用)+効果表示は新形式fxText(486種一意効果)
+    if (!EQUIP2_CATS.includes(equip2OwnedCat)) equip2OwnedCat = EQUIP2_CATS[0];
+    const catBar = `<div class="buyModeBar" style="margin-bottom:8px;flex-wrap:wrap;gap:4px">` +
+      EQUIP2_CATS.map(cat => {
+        const n = equip2Items().filter(x => x.cat === cat).reduce((s, x) => s + (state.eq2Owned[x.id] || 0), 0);
+        return `<button class="item ${equip2OwnedCat === cat ? "canBuy" : ""}" data-eq2ownedcat="${cat}" style="width:auto;padding:4px 9px">${EQUIP2_CAT_NAMES[cat]}${n > 0 ? `(${fmt(n)})` : ""}</button>`;
+      }).join("") + `</div>`;
+    const rows = equip2Items().filter(x => x.cat === equip2OwnedCat && (state.eq2Owned[x.id] || 0) > 0)
+      .map(x => `<div class="infoRow"><img class="matIcon" src="${assetUrl(equip2Art(x))}" style="filter:hue-rotate(${equip2Hue(x)}deg)" alt=""><b>${x.name}</b> ×${fmt(state.eq2Owned[x.id])} / ${x.fxText}<button class="item eq2DiscardBtn" data-eq2discard="${x.id}" style="width:auto;padding:3px 10px;margin-left:auto">捨てる</button></div>`).join("");
+    body = catBar + (rows || `<div class="desc">この種類の所持装備はない</div>`);
   } else {
     body = MATERIALS.filter(m => materialSeen(m.id) || /^ore_t/.test(m.id) && materialCount(m.id) > 0)
       .map(m => `<div class="infoRow"><img class="matIcon" src="${assetUrl(ASSETS.materials[m.id] || ASSETS.materials.butter)}" ${/^ore_t/.test(m.id) ? `style="filter:hue-rotate(${(Number(m.id.slice(-1)) - 1) * 60}deg)"` : ""} alt=""><b>${m.name}</b> ×${fmt(materialCount(m.id))}</div>`).join("")
       || `<div class="desc">まだ素材がない</div>`;
   }
   box.innerHTML = tabBar + body;
-  box.querySelectorAll("[data-eq2sub]").forEach(b => b.onclick = () => { equip2SubTab = b.dataset.eq2sub; equip2ChoosingSlot = null; renderEquip2Tab(); });
-  box.querySelectorAll("[data-eq2choose]").forEach(b => b.onclick = () => { equip2ChoosingSlot = equip2ChoosingSlot === b.dataset.eq2choose ? null : b.dataset.eq2choose; renderEquip2Tab(); });
-  box.querySelectorAll("[data-eq2equip]").forEach(b => b.onclick = () => { equip2ChoosingSlot = null; equipItemToSlot(b.dataset.eq2equip, b.dataset.eq2slot); });
+  box.querySelectorAll("[data-eq2sub]").forEach(b => addTap(b, () => { equip2SubTab = b.dataset.eq2sub; equip2ChoosingSlot = null; renderEquip2Tab(); }));
+  box.querySelectorAll("[data-eq2ownedcat]").forEach(b => addTap(b, () => { equip2OwnedCat = b.dataset.eq2ownedcat; renderEquip2Tab(); }));
+  box.querySelectorAll("[data-eq2discard]").forEach(b => addTap(b, () => discardEquip2(b.dataset.eq2discard)));
+  box.querySelectorAll("[data-eq2choose]").forEach(b => addTap(b, () => { equip2ChoosingSlot = equip2ChoosingSlot === b.dataset.eq2choose ? null : b.dataset.eq2choose; renderEquip2Tab(); }));
+  box.querySelectorAll("[data-eq2equip]").forEach(b => addTap(b, () => { equip2ChoosingSlot = null; equipItemToSlot(b.dataset.eq2equip, b.dataset.eq2slot); }));
 }
 
+function renderWorkshop() {
   const box = $("workshopPanel");
   if (!box) return;
 
@@ -9434,12 +9480,14 @@ function renderEquip2Tab() {
     const needs = [];
     if (it.prev) {
       const pv = equip2ById(it.prev);
-      needs.push(`<div class="eq2Need"><img src="${assetUrl(equip2Art(pv))}" style="filter:hue-rotate(${equip2Hue(pv)}deg)" alt=""><span>${Math.min(1, state.eq2Owned[it.prev] || 0)}/1</span></div>`);
+      // 分子は「所持数」をそのまま表示する(必要数で頭打ちにしない)(2026-07-13 ユーザー指示)
+      needs.push(`<div class="eq2Need"><img src="${assetUrl(equip2Art(pv))}" style="filter:hue-rotate(${equip2Hue(pv)}deg)" alt=""><span>${fmt(state.eq2Owned[it.prev] || 0)}/1</span></div>`);
     }
     for (const k in it.cost) {
       const mat = getMaterial(k) || { name: k };
       const hue = /^ore_t/.test(k) ? (Number(k.slice(-1)) - 1) * 60 : 0;
-      needs.push(`<div class="eq2Need"><img src="${assetUrl(ASSETS.materials[k] || ASSETS.materials.butter)}" style="filter:hue-rotate(${hue}deg)" alt=""><span>${fmt(Math.min(equip2HaveOf(k), it.cost[k]))}/${it.cost[k]}</span></div>`);
+      // 分子は所持数(equip2HaveOf)をそのまま表示する(必要数で頭打ちにしない)
+      needs.push(`<div class="eq2Need"><img src="${assetUrl(ASSETS.materials[k] || ASSETS.materials.butter)}" style="filter:hue-rotate(${hue}deg)" alt=""><span>${fmt(equip2HaveOf(k))}/${it.cost[k]}</span></div>`);
     }
     const can = equip2Afford(it) && !pausedForSkillChoice();
     return `
@@ -9449,29 +9497,31 @@ function renderEquip2Tab() {
         <button class="item eq2CraftBtn ${can ? "canBuy" : ""}" data-eq2craft="${it.id}">作成</button>
       </div>`;
   }).join("");
-  const questBox = `<div class="infoBox"><h3>固定クエスト</h3><div class="desc">${currentQuestText()}</div></div>`;
+  // クエストは注文ボードのみに表示する(工房タブには出さない・2026-07-13 ユーザー指示)
   const craftSection = `
     <div class="infoBox eq2CraftBox">
       <h3>装備の作成(最初から使える)</h3>
       ${craftRows || `<div class="desc">素材が揃うとレシピが並ぶ(モンスターの色素材+ステージ素材)</div>`}
     </div>`;
   // 料理は既存の工房スキル解放のまま。装備と料理は工房タブ内で別タブ(2026-07-13)
-  const wsSub = state.wsSubTab === "dish" ? "dish" : "equip";
+  // 料理タブは解放(スキル「素材の嗅覚」取得)するまで出さない(2026-07-13 ユーザー指示)
+  const dishUnlocked = workshopTabUnlocked();
+  const wsSub = (dishUnlocked && state.wsSubTab === "dish") ? "dish" : "equip";
   const subBar = `
     <div class="buyModeBar" style="margin-bottom:8px">
       <button class="item ${wsSub === "equip" ? "canBuy" : ""}" data-wssub="equip" style="width:auto;padding:6px 14px">装備</button>
-      <button class="item ${wsSub === "dish" ? "canBuy" : ""}" data-wssub="dish" style="width:auto;padding:6px 14px">料理</button>
+      ${dishUnlocked ? `<button class="item ${wsSub === "dish" ? "canBuy" : ""}" data-wssub="dish" style="width:auto;padding:6px 14px">料理</button>` : ""}
     </div>`;
   const dishSection = workshopTabUnlocked()
     ? `<div class="infoBox"><h3>料理(時限バフ・最大${MAX_ACTIVE_DISHES}品)</h3>${dishCards || `<div class="desc">素材を集めるとレシピが並ぶ</div>`}</div>`
     : `<div class="infoBox"><h3>料理</h3><div class="desc">スキル「素材の嗅覚」を取得すると解放される</div></div>`;
-  box.innerHTML = subBar + questBox + (wsSub === "equip"
+  box.innerHTML = subBar + (wsSub === "equip"
     ? `${craftSection}
       <div class="infoBox"><h3>素材庫</h3><div class="desc">${materialDropGuideHtml()}${materialSeen("omniFlour") ? "<br>標準方針の万能粉は不足素材の代用(核は不可)。" : ""}</div>${matRows}</div>`
     : `${dishSection}
       <div class="infoBox"><h3>記録(討伐マイルストーン)</h3>${recordRows}</div>`);
 
-  box.querySelectorAll("[data-wssub]").forEach(b => b.onclick = () => { state.wsSubTab = b.dataset.wssub; renderWorkshop(); });
+  box.querySelectorAll("[data-wssub]").forEach(b => addTap(b, () => { state.wsSubTab = b.dataset.wssub; renderWorkshop(); }));
   box.querySelectorAll("[data-dish]").forEach(btn => addTap(btn, () => cookDish(btn.dataset.dish)));
   box.querySelectorAll("[data-eq2craft]").forEach(btn => addTap(btn, () => craftEquip2(btn.dataset.eq2craft)));
   box.dataset.sig = workshopStructSig();
@@ -10408,7 +10458,9 @@ function questProgressOnKill(stageNo, units) {
   if (state.questKills[stageNo] >= need) {
     state.stageUnlocked = stageNo + 1;
     playScreenTransition();
-    dropMat(`クエスト達成！ 新ステージ「${stageInfo(stageNo + 1).name}」解放！`);
+    // dropMatは別関数内のローカル変数でここでは未定義だったため、グローバルのshowMessageに修正
+    // (クエスト達成時に必ず落ちていた不具合の修正・2026-07-13)
+    showMessage(`クエスト達成！ 新ステージ「${stageInfo(stageNo + 1).name}」解放！`);
   }
 }
 function currentQuestText() {
@@ -10416,7 +10468,7 @@ function currentQuestText() {
   if (st >= MAX_STAGE_NO) return "全ステージ解放済み";
   const got = (state.questKills || {})[st] || 0;
   const need = QUEST_KILLS_NEED[st - 1] || 0;
-  return `固定クエスト: 「${stageInfo(st).name}」でモンスターを ${need} 体討伐(${Math.min(got, need)}/${need}) → 「${stageInfo(st + 1).name}」解放`;
+  return `クエスト: 「${stageInfo(st).name}」でモンスターを ${need} 体討伐(${Math.min(got, need)}/${need}) → 「${stageInfo(st + 1).name}」解放`;
 }
 const DIRECT_CFG = {
   equip:  { coef: 0.06, stagePow: 0.5, countPow: 2,   ref: 70,  startStage: 5, satMax: 50, otherMul: { click: 0.08, default: 0.2 }, anchorGolden: 0.15 },
@@ -11394,10 +11446,11 @@ function resumeAudioIfNeeded() {
 // iOSで時々起きるダブルタップ拡大の保険(全要素のtouch-action: manipulationに加えて)
 document.addEventListener("dblclick", e => { e.preventDefault(); }, { passive: false });
 
-// 画面サイズが変わっても内容の比率が変わらないよう、基準サイズ(375×547=24:35)に対する
-// 等倍スケールを計算してゲーム全体に適用する(CSSの --gameScale)
+// 画面サイズが変わっても内容の比率が一切変わらないよう、固定の基準サイズ(375×720=縦長)に対する
+// 等倍スケールを計算してゲーム全体に適用する(CSSの --gameScale)。全端末で完全に同じ比率。
+// 高さは従来の547より縦長にして、縦長スマホでの上下の黒帯(=小さく見える)を減らす。
 const GAME_BASE_W = 375;
-const GAME_BASE_H = 375 * 35 / 24;
+const GAME_BASE_H = 720;
 // 横並び(ワイド)レイアウトの基準サイズ: クッキー画面(375×234)とタブ画面(375×305)を
 // 縦画面と同じ比率のまま横に2列で並べる。全体は 750×305。
 const GAME_WIDE_W = 750;
@@ -11410,12 +11463,18 @@ function applyGameScale() {
   try {
     wide = (window.innerWidth / Math.max(1, window.innerHeight)) >= WIDE_ASPECT_THRESHOLD;
     document.body.classList.toggle("wideLayout", wide);
-    const baseW = wide ? GAME_WIDE_W : GAME_BASE_W;
-    const baseH = wide ? GAME_WIDE_H : GAME_BASE_H;
-    const availW = Math.min(window.innerWidth - 12, wide ? 1400 : 640);
-    const availH = window.innerHeight - 16;
-    const k = Math.max(0.2, Math.min(availW / baseW, availH / baseH));
-    document.documentElement.style.setProperty("--gameScale", String(k));
+    const availH = window.innerHeight - 8;
+    if (wide) {
+      const availW = Math.min(window.innerWidth - 12, 1400);
+      const k = Math.max(0.2, Math.min(availW / GAME_WIDE_W, availH / GAME_WIDE_H));
+      document.documentElement.style.setProperty("--gameScale", String(k));
+    } else {
+      // 縦画面: 固定基準(375×720)を等倍スケールで画面に収める。全端末で内容の比率は完全に同一。
+      // 端末比率が基準と違う分だけ上下または左右に黒帯が出るが、内容の大小関係は一切変わらない。
+      const availW = Math.min(window.innerWidth - 8, 900);
+      const k = Math.max(0.35, Math.min(availW / GAME_BASE_W, availH / GAME_BASE_H));
+      document.documentElement.style.setProperty("--gameScale", String(k));
+    }
   } catch (e) {}
   // 横並びに切り替わった時は全画面状態を解除しておく(全画面ボタンも無効化される)。
   // 変数がまだ宣言される前(初回呼び出し時)に触れても落ちないよう別のtryにする。
@@ -12857,6 +12916,18 @@ function openCodex() {
 addTap($("codexBtn"), openCodex);
 addTap($("codexCloseBtn"), () => {
   $("codexOverlay").classList.remove("active");
+  playSound("tab");
+});
+
+// 装備は図鑑と同じくオーバーレイで開く(2026-07-13: 下タブから図鑑の横のボタンへ移動)
+function openEquip() {
+  renderEquip2Tab();
+  $("equipOverlay").classList.add("active");
+  playSound("tab");
+}
+if ($("equipBtn")) addTap($("equipBtn"), openEquip);
+if ($("equipCloseBtn")) addTap($("equipCloseBtn"), () => {
+  $("equipOverlay").classList.remove("active");
   playSound("tab");
 });
 
@@ -14559,6 +14630,10 @@ function completeReset() {
   oldSaveKeys.forEach(key => localStorage.removeItem(key));
 
   state = freshState();
+  // freshStateに無いフィールド(eq2Seen/eq2Owned/eq2Equipped/msResearch/questKills等)も
+  // ensureStateで空に初期化する。これが無いと素材・発見レシピ・実績研究などが未定義のまま残り、
+  // renderWorkshop等がundefined参照で落ちてタブが反応しなくなる(2026-07-13 完全リセットのバグ修正)。
+  ensureState();
   applyStageTheme();
   updateWorkshopTabVisibility();
   clearGoldenBoosts();
@@ -15262,8 +15337,10 @@ function placeFixedElement(el, width, height, minY) {
   const stackCap = monCount <= 1
     ? 1
     : Math.min(1, (availH - pad * (monCount + 1)) / (monCount * naturalH));
-  const floor = monCount <= 1 ? 0.78 : 0.42; // 複数時はタップできる範囲で小さくしてよい
-  const scale = Math.max(floor, Math.min(fitScale, stackCap));
+  const floor = monCount <= 1 ? 0.7 : 0.4; // 複数時はタップできる範囲で小さくしてよい
+  // fitScale(＝.top内に収まる上限)は絶対に超えない。floorがfitScaleより大きい端末でも
+  // はみ出さないよう最後にfitScaleで頭打ちにする(2026-07-13「全部おさまるように」)
+  const scale = Math.min(fitScale, Math.max(floor, Math.min(fitScale, stackCap)));
   const best = tryPlace(naturalW * scale, naturalH * scale);
 
   el.style.transform = scale < 0.999 ? `translateZ(0) scale(${scale.toFixed(3)})` : "translateZ(0)";
@@ -16430,17 +16507,11 @@ function installDebugPanel() {
   });
 
   addTap($("debugMaterialsBtn"), () => {
-    // デバッグ: workshop_1/workshop_2 未取得なら取得済みにする(素材が使える状態を作る)
-    let granted = false;
-    ["workshop_1", "workshop_2"].forEach(id => {
-      if (!hasSkill(id)) {
-        state.skills[id] = true;
-        granted = true;
-      }
-    });
+    // 素材を配るだけ。工房スキル(素材の嗅覚/工房の拡張)は取得させない。
+    // 取得させると実績研究「〜の応用」がスキル未解放なのに解放判定になってしまうため(2026-07-13 ユーザー指摘)。
     MATERIALS.forEach(m => gainMaterial(m.id, 100));
     updateWorkshopTabVisibility();
-    showMessage(granted ? "全素材 +100(工房スキルも取得済みにした)" : "全素材 +100");
+    showMessage("全素材 +100");
     saveGame();
     updateTopOnly();
     renderAllTabs();
@@ -16483,7 +16554,10 @@ function installDebugPanel() {
     Object.keys(MONSTER_TYPES).forEach(t => {
       state.killRecords[t] = killRecordCount(t) + 100;
     });
-    showMessage("全種の討伐記録 +100");
+    // 討伐数はクエスト(累計討伐)と実績研究(討伐)にも反映する(2026-07-13 ユーザー指示)
+    state.msKills = (Number(state.msKills) || 0) + 100;
+    questProgressOnKill(state.stageUnlocked || 1, 100);
+    showMessage("全種の討伐記録 +100(クエストにも加算)");
     saveGame();
     updateTopOnly();
     renderAllTabs();
