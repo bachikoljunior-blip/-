@@ -12,7 +12,9 @@ module.exports = {
   //   実値: 第0回=5,000,000 / 第1回=10^7 / 第2回=10^8 / 第3回=10^9 …(costExp0=6,costStep=1)。
   //   firstCost だけ500万の固定値で、以降はきっちり10のべき乗ぶん増える(前回より必ず大)。costStep は調整項目。
   //   ※旧・第0回コスト再算定ルール(costExp0=floor(log10(最小所持)))は本仕様変更で上書き=初回は500万固定。
-  prestige: { pA: 0, pD1: 200000, pB: 11, pD2: 10000, pG: 0.075, pMin: 10000, firstCost: 100000000, costCpsMul: 500,
+  // pG 0.075→0.05・pB 11→13(2026-07-13 第13次再ペーシング: チェイン/サージ撤去で成長が高速化。
+  // 段間隔を2.6桁→3.9桁に広げ周回を延ばす(24hプローブ: S1中央値6分→24分)。pB 13で初回PT≈16維持=入口5PT規則)
+  prestige: { pA: 0, pD1: 200000, pB: 13, pD2: 10000, pG: 0.05, pMin: 10000, firstCost: 100000000, costCpsMul: 500,
     // 転生コストの固定テーブル(2026-07-11 確定形): build_prestige_table.js が基準方針(S1)の100h測定から
     // 「第n回の転生時の毎秒×500の10べき切捨て」を焼き込む。無い間は動的フォールバック。
     costTable: (function () { try { return require('./prestige_costs.json'); } catch (e) { return []; } })() },
