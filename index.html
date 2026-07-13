@@ -5529,8 +5529,7 @@
   <section class="top">
     <button id="settingsBtn" type="button" aria-label="設定">⚙</button>
     <button id="playFullscreenBtn" type="button" aria-label="クッキー画面を全画面">⛶</button>
-    <button id="codexBtn" type="button" aria-label="図鑑">📖</button>
-    <button id="equipBtn" type="button" aria-label="装備">🛡</button>
+    <!-- 図鑑・装備は一覧タブ内のボタンへ移動(2026-07-13 ユーザー指示) -->
 
     <div class="cookieCount">
       <span id="cookies">0</span>
@@ -9609,7 +9608,7 @@ function renderWorkshop() {
     : `<div class="infoBox"><h3>料理</h3><div class="desc">スキル「素材の嗅覚」を取得すると解放される</div></div>`;
   box.innerHTML = subBar + (wsSub === "equip"
     ? `${craftSection}
-      <div class="infoBox"><h3>素材庫</h3><div class="desc">${materialDropGuideHtml()}${materialSeen("omniFlour") ? "<br>標準方針の万能粉は不足素材の代用(核は不可)。" : ""}</div>${matRows}</div>`
+      <div class="infoBox"><h3>素材の入手</h3><div class="desc">${materialDropGuideHtml()}${materialSeen("omniFlour") ? "<br>標準方針の万能粉は不足素材の代用(核は不可)。" : ""}</div></div>`
     : `${dishSection}
       <div class="infoBox"><h3>記録(討伐マイルストーン)</h3>${recordRows}</div>`);
 
@@ -13055,7 +13054,7 @@ function openCodex() {
   playSound("tab");
 }
 
-addTap($("codexBtn"), openCodex);
+if ($("codexBtn")) addTap($("codexBtn"), openCodex);
 addTap($("codexCloseBtn"), () => {
   $("codexOverlay").classList.remove("active");
   playSound("tab");
@@ -14098,6 +14097,13 @@ function renderInfo() {
 
   box.innerHTML = `
     <div class="infoBox">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="item" id="infoOpenCodexBtn" style="width:auto;padding:8px 16px">📖 図鑑</button>
+        <button class="item" id="infoOpenEquipBtn" style="width:auto;padding:8px 16px">🛡 装備</button>
+      </div>
+    </div>
+
+    <div class="infoBox">
       <h3>生産の実数値</h3>
       <div class="infoRow">クリック（タップ1回の生産）：${fmt(currentClickPower())}</div>
       <div class="infoRow">毎秒（CPS・自動生産）：${pausedForSkillChoice() ? "準備中" : fmt(currentCps())}</div>
@@ -14157,6 +14163,10 @@ function renderInfo() {
       ${upgradeRows}
     </div>
   `;
+
+  // 図鑑・装備は一覧タブ内のボタンから開く(2026-07-13 ユーザー指示で上部アイコンから移設)
+  const cbtn = $("infoOpenCodexBtn"); if (cbtn) addTap(cbtn, openCodex);
+  const ebtn = $("infoOpenEquipBtn"); if (ebtn) addTap(ebtn, openEquip);
 
   box.scrollTop = savedScroll;
 }
