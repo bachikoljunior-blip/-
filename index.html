@@ -6258,8 +6258,8 @@ const RESEARCH = [
 
 const REWARD_POOL = [
   { id: "goldenRate", name: "金クッキー出現率アップ", category: "golden", desc: n => `金クッキーの出現間隔を短縮。取るたびにさらに短くなる Lv.${n}` },
-  { id: "goldenPower", name: "金ブースト倍率アップ", category: "golden", desc: n => `金ブースト倍率 +${(0.25 * n / (1 + n / 60)).toFixed(2)}、ブースト時間も延長(どちらも重ねるほど1回分の伸びは緩やか)` },
-  { id: "goldenAmount", name: "金クッキー獲得量アップ", category: "golden", desc: n => `金クッキー即時獲得量 +${Math.round(45 * n / (1 + n / 45))}%、ブースト時間も延長(重ねるほど1回分の伸びは緩やか)` },
+  { id: "goldenPower", name: "金ブースト倍率アップ", category: "golden", desc: n => `金ブースト倍率 +${(0.25 * n / (1 + n / 60)).toFixed(2)}、ブースト時間も延長` },
+  { id: "goldenAmount", name: "金クッキー獲得量アップ", category: "golden", desc: n => `金クッキー即時獲得量 +${Math.round(45 * n / (1 + n / 45))}%、ブースト時間も延長` },
   { id: "monsterDamage", name: "対モンスターダメージアップ", category: "hunt", desc: n => `モンスターへの最終ダメージ +${550 * n}%相当` },
   { id: "monsterRate", name: "モンスター出現率アップ", category: "hunt", desc: n => `モンスターの出現間隔を短縮。取るたびにさらに短くなる Lv.${n}` },
   { id: "monsterStay", name: "濃い餌", category: "hunt", desc: n => `モンスター滞在時間が伸びる Lv.${n}` },
@@ -6316,11 +6316,11 @@ const SKILL_NODES = [
   { id: "click_amp", name: "速射の指", branchId: "click", cost: 8, x: 620, y: 1120, icon: "◆", prereqs: ["click_1"], desc: "タップ生産 +75%。", effects: [{ type: "click", value: 0.75 }] },
   { id: "golden_amp", name: "金箔集め", branchId: "golden", cost: 15, x: 780, y: 1120, icon: "✦", prereqs: ["golden_1"], desc: "金クッキー即時獲得量 +50%。", effects: [{ type: "goldenAmount", value: 0.5 }] },
   { id: "golden_echo", name: "金は金を呼ぶ", branchId: "golden", cost: 5, x: 780, y: 1040, icon: "✧", prereqs: ["golden_amp"], desc: "金クッキーを取った瞬間、35%の確率で追いの金クッキーが1枚すぐに現れる(追いの金からは連鎖しない)。", effects: [{ type: "unlockSystem", target: "goldenEcho" }] },
-  { id: "ensemble", name: "編成の心得", branchId: "core", cost: 3, x: 1000, y: 1040, icon: "❖", prereqs: ["core"], desc: "周回方針が通常型のとき、4つの稼ぎ方(設備・金・討伐・タップ)の収入がそろっているほど全生産が上がる(最大 +15%。そろい具合は毎秒判定)。", effects: [{ type: "unlockSystem", target: "ensemble" }] },
+  { id: "ensemble", name: "編成の心得", branchId: "core", cost: 3, x: 1000, y: 1040, icon: "❖", prereqs: ["core"], desc: "通常型のとき、4つの稼ぎ方(設備・金・討伐・タップ)の収入がそろうほど全生産が上がる(最大 +15%)。", effects: [{ type: "unlockSystem", target: "ensemble" }] },
   { id: "monster_amp", name: "仕留めの一撃", branchId: "monster", cost: 20, x: 1220, y: 1120, icon: "◉", prereqs: ["monster_1"], desc: "モンスター最終ダメージ +60%。", effects: [{ type: "monsterDamageSkill", value: 0.6 }] },
   // 提案10/11(2026-07-11 承認): タップ/討伐の換金収入を安いスキルで先行開始(研究の段階2でフル。消えずに出続ける)
-  { id: "click_stall", name: "土産の屋台", branchId: "click", cost: 2, x: 480, y: 1040, icon: "◆", prereqs: ["click_amp"], desc: "タップで焼いたクッキーのおすそ分けを屋台で売る。指系設備への投資量と到達層に応じた毎秒収入を追加(研究「指先の型」の段階2でフル稼働=それまでは5%)。", effects: [{ type: "unlockSystem", target: "tapStall" }] },
-  { id: "monster_peddler", name: "戦利品の行商", branchId: "monster", cost: 20, x: 1520, y: 1200, icon: "◉", prereqs: ["monster_1"], desc: "行商人が戦利品を買い取る。討伐系報酬の所持枚数と到達層に応じた毎秒収入(金相場基準)を追加(研究「異世界接続網」の段階2でフル稼働=それまでは6%)。", effects: [{ type: "unlockSystem", target: "huntPeddler" }] },
+  { id: "click_stall", name: "土産の屋台", branchId: "click", cost: 2, x: 480, y: 1040, icon: "◆", prereqs: ["click_amp"], desc: "タップ収入の一部を屋台で毎秒収入に換える(研究「指先の型」段階2でフル稼働)。", effects: [{ type: "unlockSystem", target: "tapStall" }] },
+  { id: "monster_peddler", name: "戦利品の行商", branchId: "monster", cost: 20, x: 1520, y: 1200, icon: "◉", prereqs: ["monster_1"], desc: "討伐報酬を行商人が買い取り、毎秒収入に換える(研究「異世界接続網」段階2でフル稼働)。", effects: [{ type: "unlockSystem", target: "huntPeddler" }] },
   { id: "auto_amp", name: "炉の熱気", branchId: "auto", cost: 35, x: 1380, y: 1120, icon: "◇", prereqs: ["auto_1"], desc: "毎秒生産 +75%。", effects: [{ type: "cps", value: 0.75 }] },
   { id: "golden_2", name: "金粉回収", branchId: "golden", cost: 1550, x: 620, y: 1380, icon: "✦", prereqs: ["golden_1"], desc: "金クッキー即時獲得量 +75%。", effects: [{ type: "goldenAmount", value: 0.75 }] },
   { id: "golden_3", name: "輝き増幅", branchId: "golden", cost: 550000, x: 440, y: 1500, icon: "✦", prereqs: ["golden_2"], desc: "金ブースト倍率 +2.1。", effects: [{ type: "goldenPower", value: 2.1 }] },
@@ -6453,12 +6453,12 @@ const MATERIALS = [
 
 // 料理: 消費・時限バフ(基本600秒)。転生で効果消滅、レシピ開示は持ち越し。同時有効3品まで。
 const DISHES = [
-  { id: "butterCookie", name: "バタークッキー生地", cost: { butter: 5, flour: 3 }, desc: "全生産 ×(1+0.02×最高到達層)" },
-  { id: "chocoFondant", name: "濃厚ショコラ", cost: { cacao: 4, butter: 3 }, desc: "クリックの生産連動係数 ×2(0.4%→0.8%)" },
+  { id: "butterCookie", name: "バタークッキー生地", cost: { butter: 5, flour: 3 }, desc: "全生産アップ(最高到達層が深いほど強い)" },
+  { id: "chocoFondant", name: "濃厚ショコラ", cost: { cacao: 4, butter: 3 }, desc: "タップの生産連動係数 ×2" },
   { id: "mintIce", name: "ミントアイスサンド", cost: { mint: 6, frostSugar: 3 }, desc: "金クッキー出現間隔 ×0.75" },
   { id: "hunterStew", name: "狩人のシチュー", cost: { ironShard: 2, spice: 4 }, desc: "モンスター出現間隔 ×0.75、モンスターダメージ ×1.5" },
-  { id: "frostCake", name: "霜降りケーキ", cost: { frostSugar: 5, silentCore: 1 }, desc: "ノルマの進行を55%遅らせ、モンスター生成ノルマを達成しやすくする" },
-  { id: "stardustParfait", name: "星屑パフェ", cost: { stardust: 8, cometShard: 1 }, desc: "効果中に購入した設備はその周回中、生産 ×1.25" },
+  { id: "frostCake", name: "霜降りケーキ", cost: { frostSugar: 5, silentCore: 1 }, desc: "ノルマの進行を55%遅らせる(達成に余裕ができる)" },
+  { id: "stardustParfait", name: "星屑パフェ", cost: { stardust: 8, cometShard: 1 }, desc: "効果中に買った設備は周回終了まで生産 ×1.25" },
   // v2: エンドコンテンツ料理。レシピはS6(深層領域)到達で開示
   { id: "voidTart", name: "虚空タルト", cost: { voidSugar: 10, cometShard: 2 }, desc: "素材ドロップ ×2、モンスター出現間隔 ×0.7" }
 ];
@@ -8654,7 +8654,7 @@ function renderOrder() {
         <div class="desc">達成か期限切れのあと、次の注文まで少し間隔がある(転生で短縮)。</div>
         <div class="orderCard">
           <div class="orderHead"><span>次の注文まで</span><span class="orderWaitVal">${fmtTime(Math.ceil(waitMs / 1000))}</span></div>
-          <div class="desc">間隔 = 1800×0.85^転生回数 秒(現在 ${fmtTime(Math.round(orderSpawnIntervalMs() / 1000))})</div>
+          <div class="desc">現在の間隔 ${fmtTime(Math.round(orderSpawnIntervalMs() / 1000))}(転生するほど短くなる)</div>
         </div>
         <div class="desc">達成済み注文：${fmt(state.completedOrders || 0)}${(state.expiredOrders ? ` ／ 期限切れ：${fmt(state.expiredOrders)}` : "")}</div>
       </div>
@@ -8677,7 +8677,7 @@ function renderOrder() {
   box.innerHTML = `
     <div class="infoBox orderBoardBox">
       <h3>注文ボード</h3>
-      <div class="desc">短期の依頼が1件ずつ届く。要求・報酬は今の生産に合わせて決まる。制限時間内に達成で報酬、時間切れは次の注文へ。選び直しは不可。</div>
+      <div class="desc">短期の依頼が1件ずつ届く。制限時間内に達成で報酬(仕組みの詳細は図鑑)。</div>
       <div class="orderCard">
         <div class="orderHead"><span><img class="orderIcon" src="${assetUrl(ASSETS.orders[def.id])}" alt="" aria-hidden="true">${def.name}</span><span class="orderProgressVal">${progressText} / ${needText}${def.unit}</span></div>
         <div class="desc">条件：${def.desc}</div>
@@ -9050,7 +9050,7 @@ function materialCostText(cost) {
 
 // 素材の入手法ガイド(1行ずつ改行)。深層素材は深層ステージ到達後のみ表示する。
 function materialDropGuideHtml() {
-  const lines = ["通常＝基本素材", "金ブースト中＝黄金粉", "オーバーキル＝レア", "狩り窓3連続＝ボス核", "余裕率2倍＝発酵系"];
+  const lines = ["通常撃破＝基本素材", "金ブースト中に撃破＝黄金粉", "オーバーキル(残HPの5倍ダメージで撃破)＝レア素材", "狩り中に3体連続撃破＝ボス核", "ノルマに2倍以上の余裕で撃破＝発酵系"];
   if (maxUnlockedStageNo() > STAGES.length) lines.push("深層＝虚空糖・深層核");
   return "入手法：<br>" + lines.map(s => "・" + s).join("<br>");
 }
@@ -9667,7 +9667,7 @@ function renderWorkshop() {
   // クエストは注文ボードのみに表示する(工房タブには出さない・2026-07-13 ユーザー指示)
   const craftSection = `
     <div class="infoBox eq2CraftBox">
-      <h3>装備の作成(最初から使える)</h3>
+      <h3>装備の作成</h3>
       ${craftRows || `<div class="desc">素材が揃うとレシピが並ぶ(モンスターの色素材+ステージ素材)</div>`}
     </div>`;
   // 料理は既存の工房スキル解放のまま。装備と料理は工房タブ内で別タブ(2026-07-13)
@@ -9690,7 +9690,7 @@ function renderWorkshop() {
     : `<div class="infoBox"><h3>料理</h3><div class="desc">スキル「素材の嗅覚」を取得すると解放される</div></div>`;
   box.innerHTML = equipTopBar + subBar + (wsSub === "equip"
     ? `${craftSection}
-      <div class="infoBox"><h3>素材の入手</h3><div class="desc">${materialDropGuideHtml()}${materialSeen("omniFlour") ? "<br>標準方針の万能粉は不足素材の代用(核は不可)。" : ""}</div></div>`
+      <div class="infoBox"><h3>素材の入手</h3><div class="desc">${materialDropGuideHtml()}${materialSeen("omniFlour") ? "<br>万能粉は足りない素材の代わりに使える(ボス核の代用は不可)。" : ""}</div></div>`
     : `${dishSection}
       <div class="infoBox"><h3>記録(討伐マイルストーン)</h3>${recordRows}</div>`);
 
@@ -12894,7 +12894,7 @@ function codexWorkshopHtml() {
     dishes.forEach(d => {
       const cooked = state.codex && state.codex.dishes && state.codex.dishes[d.id];
       parts.push(cooked
-        ? codexItem(d.name, `<div>効果：${d.desc}</div><div class="codexSub">効果時間 ${Math.round(dishDurationMs() / 1000)}秒 / 同時 最大${MAX_ACTIVE_DISHES}品</div>`)
+        ? codexItem(d.name, `<div>効果：${d.desc}</div>${DISH_FORMULA[d.id] ? `<div>式：${DISH_FORMULA[d.id]}</div>` : ""}<div class="codexSub">効果時間 ${Math.round(dishDurationMs() / 1000)}秒 / 同時 最大${MAX_ACTIVE_DISHES}品</div>`)
         : codexHiddenItem());
     });
   }
@@ -12914,6 +12914,12 @@ function codexWorkshopHtml() {
 
   return parts.join("");
 }
+
+// 料理の「式(細かい数値)」。カードには簡潔な効果だけ載せ、詳しい式は図鑑に出す(2026-07-14)
+const DISH_FORMULA = {
+  butterCookie: "全生産 ×(1 + 0.02×最高到達層)。",
+  chocoFondant: "クリックの生産連動係数 ×2(0.4%→0.8%)。"
+};
 
 // 装備の「式(Lvごとの伸び方)」をゲーム内の言葉で説明する
 const EQUIP_FORMULA = {
@@ -12940,6 +12946,7 @@ function codexOrderHtml() {
     + `<div>制限時間は、プレイ時間が長くなるほど少しずつ伸びる。</div>`
     + `<div>次の注文までの間隔は、転生するほど短くなる。</div>`
     + `<div>要求量は、そのときの生産力や討伐ペースに合わせて決まる（放置では届かないが、動けば届く量）。</div>`
+    + `<div>式：制限時間 = 240 + 4×√総プレイ秒 / 次の注文間隔 = 1800 × 0.85^転生回数 秒。</div>`
     + `<div class="codexSub">現在：制限時間 ${Math.round(orderTimeLimitMs() / 1000)}秒 / 次の注文間隔 ${Math.round(orderSpawnIntervalMs() / 1000)}秒 / 達成数 ${fmt(done)}</div>`,
     orderIcon));
 
@@ -13812,7 +13819,7 @@ function renderResearch() {
         btn.innerHTML = `
           <b>${l.sp.r.name} 段階${l.sp.stageNo}</b>
           <div class="desc">解放条件: スキル「${skillNameOf(gate)}」を取得</div>
-          <div class="desc">取得すると効果とコストが開示され、購入できるようになる</div>
+          <div class="desc">取得すると効果とコストが判明する</div>
         `;
       } else {
         // 実績研究の予告(未達成): 実績の内容だけ見せ、効果とコストは解除まで伏せる
@@ -13820,7 +13827,7 @@ function renderResearch() {
         btn.innerHTML = `
           <b>${l.m.name}</b>
           <div class="desc">実績: ${l.m.cond}</div>
-          <div class="desc">達成すると効果とコストが開示され、購入できるようになる</div>
+          <div class="desc">達成すると効果とコストが判明する</div>
         `;
       }
       box.appendChild(btn);
@@ -14039,7 +14046,7 @@ function renderPrestige() {
     <div class="infoBox">
       <h3>周回方針</h3>
       <div class="desc">この周回の方針：<b>${runPolicyName()}</b></div>
-      <div class="desc">方針は転生直後にのみ選択でき、周回の途中では変更できません。</div>
+      <div class="desc">方針は転生直後のみ選べます(周回中は変更不可)。</div>
     </div>
   ` : "";
 
@@ -14055,7 +14062,7 @@ function renderPrestige() {
       <div class="infoRow">今回の総クッキー：${fmt(state.runCookies)}</div>
       <div class="infoRow">今回のノルマ維持記録：${fmtTime(state.quotaHoldSeconds || 0)} / ノルマ中討伐 ${fmt(state.quotaMonsterKills || 0)}体</div>
       <div class="infoRow">今回獲得できるPT：+${fmt(gain)}</div>
-      <div class="infoRow">転生には所持クッキー ${fmt(prestigeCost)} を消費します(現在:${fmt(state.cookies)})。必要量は周回ごとに決まっています(10のべき乗)</div>
+      <div class="infoRow">転生には所持クッキー ${fmt(prestigeCost)} を消費します(現在:${fmt(state.cookies)})。必要量は周回ごとに上がります。</div>
       <button id="prestigeBtn" class="item ${canPrestige ? "canBuy" : "locked"}">${canPrestige ? `転生する(${fmt(prestigeCost)}クッキー消費)` : (gain <= 0 ? "未獲得PTなし" : `クッキー${fmt(prestigeCost)}が必要`)}</button>
       <button id="resetBtn" class="item danger">完全リセット</button>
     </div>
@@ -14249,8 +14256,8 @@ function renderInfo() {
       <div class="infoRow">ノルマ：${state.quotaFailed ? "終了" : fmt(state.runCookies) + " / " + fmt(monsterQuotaRequired())}</div>
       <div class="infoRow">今回のノルマ維持記録：${fmtTime(state.quotaHoldSeconds || 0)} / ノルマ中討伐 ${fmt(state.quotaMonsterKills || 0)}体</div>
       <div class="infoRow">モンスター出現：${canMonsterAppear() ? "可能" : "ノルマ未達"}</div>
-      <div class="infoRow">討伐連鎖：×${fmt(chainCount())}(全生産 x${chainProductionMultiplier().toFixed(2)})<div class="desc">連鎖が伸びるほど全生産が上がる。90秒以内に次のモンスターを倒すと連鎖が続き、途切れる・転生すると0に戻る。素材ドロップと報酬レベルも連鎖数に応じて増える</div></div>
-      <div class="infoRow">層の試練：ノルマ必要量 x${quotaTrialMultiplier() >= 100 ? fmt(Math.round(quotaTrialMultiplier())) : quotaTrialMultiplier().toFixed(2)}<div class="desc">層が深いほどノルマが重くなる(第${QUOTA_TRIAL_START_LAYER}層から)。深く潜った周回ほど、後半にノルマが稼ぎを追い越しやすい</div></div>
+      <div class="infoRow">討伐連鎖：×${fmt(chainCount())}(全生産 x${chainProductionMultiplier().toFixed(2)})<div class="desc">90秒以内に次を倒すと連鎖継続(途切れ・転生で0)。連鎖数ほど全生産・ドロップ・報酬Lvが上がる。</div></div>
+      <div class="infoRow">層の試練：ノルマ必要量 x${quotaTrialMultiplier() >= 100 ? fmt(Math.round(quotaTrialMultiplier())) : quotaTrialMultiplier().toFixed(2)}<div class="desc">第${QUOTA_TRIAL_START_LAYER}層から層が深いほどノルマが重くなる。</div></div>
       <div class="infoRow">モンスター基本ダメージ：${fmt(monsterBaseDamage())}</div>
       <div class="infoRow">モンスター最終ダメージ：${fmt(monsterBaseDamage() * monsterDamageMultiplier())}</div>
     </div>
