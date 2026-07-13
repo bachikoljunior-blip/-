@@ -262,7 +262,10 @@ module.exports = {
   }, (function () { try { return require('./weave_costs.json').resCost || {}; } catch (e) { return {}; } })(), {
     // 2026-07-13 ユーザー指定の固定コスト(weave焼き込みより優先): 工場段1=100万・香料調合段1=2000万・
     // 生産火力転換(cpsStrike)=3000万「モンスターダメージに毎秒生産が乗るようになる」
-    factoryNetwork: 1000000, spiceBlend: 20000000, cpsStrike: 30000000
+    factoryNetwork: 1000000, spiceBlend: 20000000, cpsStrike: 30000000,
+    // ①初回希釈対策の固定(2026-07-14): grandmaCrowd/ovenBatchはR19fの①合格構成(この値+買い控えゲート)。
+    // weave再焼きがgrandmaCrowdを1.4e56へ動かした(ゲート後の初買い観測のため)がこちらを優先する。
+    grandmaCrowd: 100000, ovenBatch: 300000
   }),
 
   // ---- モンスター報酬効果 ----
