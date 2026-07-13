@@ -140,6 +140,11 @@ function pickRewardUpgradeFirst(fallback) {
 
 // 研究購入枠: 段1に加え、解放済みの段2/段3カードも同じ予算基準で買う(購入対象リストが増えるだけ)
 function buyResearchLine(sim, id, ratio) {
+  // 支援研究は支援先が育ってから買う(2026-07-14 ①grandmaCrowd序盤希釈対策)。
+  // 大量雇用(支援型=×1.003^おばあちゃん台数)は run0(1台)/run1(15-33台)ではほぼ無効果
+  // (lift1.00-1.02のNG源)。台数200以降(diag実測でlift1.5超に立ち上がる帯)まで買い控えるのは
+  // プレイヤー挙動としても自然。コスト側を動かさないので weave/⑨段階の梯子には無影響。
+  if (id === 'grandmaCrowd' && ((sim.run.upgrades.grandma || 0) < 200)) return;
   G.tryBuyResearch(sim, id, ratio);
   G.tryBuyResearchStage(sim, id, 2, ratio);
   G.tryBuyResearchStage(sim, id, 3, ratio);
