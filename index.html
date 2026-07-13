@@ -9294,7 +9294,9 @@ function grantMonsterDrops(typeId, level, overkill) {
     // 制限時間なし・内容固定・周回を跨いで累積。進捗は注文ボードに常設表示。
     questProgressOnKill(stageNo, (MONSTER_TYPES[typeId] && MONSTER_TYPES[typeId].count) || 1);
     // 色素材(2026-07-13 新装備): ノルマ層の帯の色素材を討伐ごとにドロップ(工房スキル不要=最初から)
-    gainMaterial("ore_t" + layerOreTier(), (EQUIP2_CFG.oreDropPerKill + equip2Fx().oreAdd) * ((MONSTER_TYPES[typeId] && MONSTER_TYPES[typeId].count) || 1)); // 新装備: 色素材系
+    const oreId = "ore_t" + layerOreTier();
+    const oreGot = gainMaterial(oreId, (EQUIP2_CFG.oreDropPerKill + equip2Fx().oreAdd) * ((MONSTER_TYPES[typeId] && MONSTER_TYPES[typeId].count) || 1)); // 新装備: 色素材系
+    if (oreGot > 0) dropMat(`+${oreGot} ${getMaterial(oreId).name}`);
 
     if (dropsEnabled) {
       // v4 §18 条件ドロップ制。倍率: ステージ補正×虚空タルト×次元コンパス(1+0.05×Lv)×討伐連鎖(1+0.02×N)
