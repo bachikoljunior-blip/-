@@ -653,11 +653,13 @@ function equip2Items() {
         // ステージ素材+色素材を、種類数1〜5・個数1〜6のパターンで組む。レア(ボス核/虚空糖)は高ティアの隠し味。
         const PAL = EQUIP2_MAT_PALETTE[cat];
         const oreTier = Math.max(1, Math.min(E.tiers, t + ((v % 3) - 1))); // 色素材の色も品で変える
-        const cost = { ['ore_t' + oreTier]: 2 + ((t + v) % 4) }; // 個数2〜5
+        // 個数は上限なし(2026-07-14 ユーザー指示「一つの必要素材は個数の上限なくて良い」): ティアで伸びる
+        const bulk = Math.max(1, Math.round(Math.pow(1.8, t - 1))); // t1=1 … t6=19(大口要求の基準)
+        const cost = { ['ore_t' + oreTier]: (2 + ((t + v) % 4)) * (v % 4 === 2 ? bulk : 1) }; // 個数2〜5
         if (v >= 2) {
           const span = Math.max(1, Math.min(PAL.length, t - 1)); // ティアで素材解禁(t1-2=序盤素材のみ)
           const m1 = PAL[(v + t) % span];
-          cost[m1] = (cost[m1] || 0) + 1 + ((v * t) % 5); // 個数1〜5
+          cost[m1] = (cost[m1] || 0) + (1 + ((v * t) % 5)) * (v % 4 === 3 ? bulk : 1); // 大口素材は品による(上限なし) // 個数1〜5
           if (v >= 4 && t >= 3) { const m2 = PAL[(v + t + 2) % span]; if (m2 !== m1) cost[m2] = (cost[m2] || 0) + 1 + ((v + t) % 3); }
           if (v >= 7 && t >= 3) { const m3 = v % 2 === 0 ? smatA : smatB; cost[m3] = (cost[m3] || 0) + 2; }
           if (v === 9 && t >= 5) cost[t === 6 ? 'voidSugar' : 'bossCore'] = 1 + (t === 6 ? 1 : 0); // 最高級の隠し味
