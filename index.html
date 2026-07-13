@@ -8517,21 +8517,21 @@ function renderOrder() {
   const box = $("orderPanel");
   if (!box) return;
 
-  // 固定クエスト(2026-07-13): 注文ボードに常設表示。達成で次のステージ解放+次のクエスト表示。
-  // 制限時間なし・内容固定・進捗は周回を跨いで累積。
+  // クエスト(2026-07-13): 注文ボードにのみ常設表示。達成で次のステージ解放+次のクエスト表示。
+  // 制限時間なし・内容固定・進捗は周回を跨いで累積。制限時間注文の「下」に置く(2026-07-13 ユーザー指示)。
   const questBoxHtml = `
     <div class="infoBox orderBoardBox">
-      <h3>固定クエスト</h3>
+      <h3>クエスト</h3>
       <div class="desc">${currentQuestText()}</div>
     </div>`;
 
   if (!orderBoardUnlocked()) {
-    box.innerHTML = questBoxHtml + `
+    box.innerHTML = `
       <div class="infoBox orderBoardBox">
         <h3>？？？</h3>
         <div class="desc">まだ解放されていない機能です。ゲームを進めると解放されます。</div>
       </div>
-    `;
+    ` + questBoxHtml;
     box.dataset.sig = orderStructSig();
     return;
   }
@@ -8550,7 +8550,7 @@ function renderOrder() {
         </div>
         <div class="desc">達成済み注文：${fmt(state.completedOrders || 0)}${(state.expiredOrders ? ` ／ 期限切れ：${fmt(state.expiredOrders)}` : "")}</div>
       </div>
-    `;
+    ` + questBoxHtml;
     box.dataset.sig = orderStructSig();
     return;
   }
@@ -8566,7 +8566,7 @@ function renderOrder() {
   const remainSec = Math.ceil(remainMs / 1000);
   const timeClass = remainMs <= 30000 ? " orderTimeFill--low" : "";
 
-  box.innerHTML = questBoxHtml + `
+  box.innerHTML = `
     <div class="infoBox orderBoardBox">
       <h3>注文ボード</h3>
       <div class="desc">短期の依頼が1件ずつ届く。要求・報酬は今の生産に合わせて決まる。制限時間内に達成で報酬、時間切れは次の注文へ。選び直しは不可。</div>
@@ -8583,7 +8583,7 @@ function renderOrder() {
       </div>
       <div class="desc">達成済み注文：${fmt(state.completedOrders || 0)}${(state.expiredOrders ? ` ／ 期限切れ：${fmt(state.expiredOrders)}` : "")}</div>
     </div>
-  `;
+  ` + questBoxHtml;
   box.dataset.sig = orderStructSig();
 }
 
@@ -9394,9 +9394,9 @@ function renderEquip2Tab() {
       || `<div class="desc">まだ素材がない</div>`;
   }
   box.innerHTML = tabBar + body;
-  box.querySelectorAll("[data-eq2sub]").forEach(b => b.onclick = () => { equip2SubTab = b.dataset.eq2sub; equip2ChoosingSlot = null; renderEquip2Tab(); });
-  box.querySelectorAll("[data-eq2choose]").forEach(b => b.onclick = () => { equip2ChoosingSlot = equip2ChoosingSlot === b.dataset.eq2choose ? null : b.dataset.eq2choose; renderEquip2Tab(); });
-  box.querySelectorAll("[data-eq2equip]").forEach(b => b.onclick = () => { equip2ChoosingSlot = null; equipItemToSlot(b.dataset.eq2equip, b.dataset.eq2slot); });
+  box.querySelectorAll("[data-eq2sub]").forEach(b => addTap(b, () => { equip2SubTab = b.dataset.eq2sub; equip2ChoosingSlot = null; renderEquip2Tab(); }));
+  box.querySelectorAll("[data-eq2choose]").forEach(b => addTap(b, () => { equip2ChoosingSlot = equip2ChoosingSlot === b.dataset.eq2choose ? null : b.dataset.eq2choose; renderEquip2Tab(); }));
+  box.querySelectorAll("[data-eq2equip]").forEach(b => addTap(b, () => { equip2ChoosingSlot = null; equipItemToSlot(b.dataset.eq2equip, b.dataset.eq2slot); }));
 }
 
 function renderWorkshop() {
@@ -9463,29 +9463,31 @@ function renderWorkshop() {
         <button class="item eq2CraftBtn ${can ? "canBuy" : ""}" data-eq2craft="${it.id}">作成</button>
       </div>`;
   }).join("");
-  const questBox = `<div class="infoBox"><h3>固定クエスト</h3><div class="desc">${currentQuestText()}</div></div>`;
+  // クエストは注文ボードのみに表示する(工房タブには出さない・2026-07-13 ユーザー指示)
   const craftSection = `
     <div class="infoBox eq2CraftBox">
       <h3>装備の作成(最初から使える)</h3>
       ${craftRows || `<div class="desc">素材が揃うとレシピが並ぶ(モンスターの色素材+ステージ素材)</div>`}
     </div>`;
   // 料理は既存の工房スキル解放のまま。装備と料理は工房タブ内で別タブ(2026-07-13)
-  const wsSub = state.wsSubTab === "dish" ? "dish" : "equip";
+  // 料理タブは解放(スキル「素材の嗅覚」取得)するまで出さない(2026-07-13 ユーザー指示)
+  const dishUnlocked = workshopTabUnlocked();
+  const wsSub = (dishUnlocked && state.wsSubTab === "dish") ? "dish" : "equip";
   const subBar = `
     <div class="buyModeBar" style="margin-bottom:8px">
       <button class="item ${wsSub === "equip" ? "canBuy" : ""}" data-wssub="equip" style="width:auto;padding:6px 14px">装備</button>
-      <button class="item ${wsSub === "dish" ? "canBuy" : ""}" data-wssub="dish" style="width:auto;padding:6px 14px">料理</button>
+      ${dishUnlocked ? `<button class="item ${wsSub === "dish" ? "canBuy" : ""}" data-wssub="dish" style="width:auto;padding:6px 14px">料理</button>` : ""}
     </div>`;
   const dishSection = workshopTabUnlocked()
     ? `<div class="infoBox"><h3>料理(時限バフ・最大${MAX_ACTIVE_DISHES}品)</h3>${dishCards || `<div class="desc">素材を集めるとレシピが並ぶ</div>`}</div>`
     : `<div class="infoBox"><h3>料理</h3><div class="desc">スキル「素材の嗅覚」を取得すると解放される</div></div>`;
-  box.innerHTML = subBar + questBox + (wsSub === "equip"
+  box.innerHTML = subBar + (wsSub === "equip"
     ? `${craftSection}
       <div class="infoBox"><h3>素材庫</h3><div class="desc">${materialDropGuideHtml()}${materialSeen("omniFlour") ? "<br>標準方針の万能粉は不足素材の代用(核は不可)。" : ""}</div>${matRows}</div>`
     : `${dishSection}
       <div class="infoBox"><h3>記録(討伐マイルストーン)</h3>${recordRows}</div>`);
 
-  box.querySelectorAll("[data-wssub]").forEach(b => b.onclick = () => { state.wsSubTab = b.dataset.wssub; renderWorkshop(); });
+  box.querySelectorAll("[data-wssub]").forEach(b => addTap(b, () => { state.wsSubTab = b.dataset.wssub; renderWorkshop(); }));
   box.querySelectorAll("[data-dish]").forEach(btn => addTap(btn, () => cookDish(btn.dataset.dish)));
   box.querySelectorAll("[data-eq2craft]").forEach(btn => addTap(btn, () => craftEquip2(btn.dataset.eq2craft)));
   box.dataset.sig = workshopStructSig();
@@ -10356,7 +10358,7 @@ function currentQuestText() {
   if (st >= MAX_STAGE_NO) return "全ステージ解放済み";
   const got = (state.questKills || {})[st] || 0;
   const need = QUEST_KILLS_NEED[st - 1] || 0;
-  return `固定クエスト: 「${stageInfo(st).name}」でモンスターを ${need} 体討伐(${Math.min(got, need)}/${need}) → 「${stageInfo(st + 1).name}」解放`;
+  return `クエスト: 「${stageInfo(st).name}」でモンスターを ${need} 体討伐(${Math.min(got, need)}/${need}) → 「${stageInfo(st + 1).name}」解放`;
 }
 const DIRECT_CFG = {
   equip:  { coef: 0.06, stagePow: 0.5, countPow: 2,   ref: 70,  startStage: 5, satMax: 50, otherMul: { click: 0.08, default: 0.2 }, anchorGolden: 0.15 },
@@ -14511,6 +14513,10 @@ function completeReset() {
   oldSaveKeys.forEach(key => localStorage.removeItem(key));
 
   state = freshState();
+  // freshStateに無いフィールド(eq2Seen/eq2Owned/eq2Equipped/msResearch/questKills等)も
+  // ensureStateで空に初期化する。これが無いと素材・発見レシピ・実績研究などが未定義のまま残り、
+  // renderWorkshop等がundefined参照で落ちてタブが反応しなくなる(2026-07-13 完全リセットのバグ修正)。
+  ensureState();
   applyStageTheme();
   updateWorkshopTabVisibility();
   clearGoldenBoosts();
