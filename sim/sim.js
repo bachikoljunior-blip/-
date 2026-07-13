@@ -790,6 +790,20 @@ function equip2Tick(sim) {
   const E = P.equip2; if (!E) return;
   if (sim.opt.noNewEquip) return; // 装備lift判定の枝分かれ: 新規作成・付け替えを封止
   const ws = sim.ws, r = sim.run;
+  // 周回開始の一式付け替え(2026-07-14): 前周回までに作った上位装備をまとめて装備
+  if (!r._eq2Dressed) {
+    r._eq2Dressed = true;
+    const pend = ws.eq2Pending || {};
+    for (const slot of Object.keys(pend)) {
+      const it = equip2ById(pend[slot]);
+      const cur = ws.eq2Equipped[slot] ? equip2ById(ws.eq2Equipped[slot]) : null;
+      if (it && (!cur || cur.tier < it.tier)) {
+        ws.eq2Equipped[slot] = it.id;
+        (r.eq2NewEquipped || (r.eq2NewEquipped = [])).push(it.id);
+      }
+      delete pend[slot];
+    }
+  }
   const curStage = Math.max(1, Math.min(E.tiers, r.wsStage || 1));
   // 作れるのは「現ステージのラインナップ」(ばらけ配置・2026-07-14)。高ティア優先で1カテゴリ1個/周回。
   // カテゴリ優先を周回ごとにローテーション(2026-07-13: 固定順だと末尾カテゴリ(hat/shoes/acc)が
@@ -823,19 +837,18 @@ function equip2Tick(sim) {
     }
     ws.eq2Owned[it.id] = (ws.eq2Owned[it.id] || 0) + 1;
     (r.eq2Made || (r.eq2Made = {}))[it.cat] = ((r.eq2Made || {})[it.cat] || 0) + 1;
-    // 装備: 素になった枠があればそこへ、なければ低ティア枠を置換
-    if (upgradedSlot) {
-      ws.eq2Equipped[upgradedSlot] = it.id;
-      (r.eq2NewEquipped || (r.eq2NewEquipped = [])).push(it.id);
-    } else {
-      // スロット=カテゴリ名。装備はティアアップのみ(横滑り廃止=常に純上位・lift(a)保護)。
-      // レーン担当の色銘を優先するが、担当が作れないティアでは作れた物で上げる
-      const slot = it.cat;
-      const cur = ws.eq2Equipped[slot] ? equip2ById(ws.eq2Equipped[slot]) : null;
-      const ct = cur ? cur.tier : 0;
-      if (ct < it.tier) {
-        ws.eq2Equipped[slot] = it.id;
+    // 装備は保留箱へ(2026-07-14 一式付け替え方式): 作成即装備をやめ、周回開始時にまとめて付け替える
+    // =付け替え束が周回頭に揃い、装備lift(a)の測定窓(その周回まるごと)を最大に使う
+    {
+      const slot = upgradedSlot || it.cat;
+      const pend = ws.eq2Pending || (ws.eq2Pending = {});
+      const curId = pend[slot] || ws.eq2Equipped[slot];
+      const cur = curId ? equip2ById(curId) : null;
+      if (!cur || cur.tier < it.tier) pend[slot] = it.id;
+      if (upgradedSlot) { // 合成で装備中の物が消えた枠は即時充当(空白を作らない)
+        ws.eq2Equipped[upgradedSlot] = it.id;
         (r.eq2NewEquipped || (r.eq2NewEquipped = [])).push(it.id);
+        delete pend[upgradedSlot];
       }
     }
   }
