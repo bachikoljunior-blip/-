@@ -1904,13 +1904,18 @@ function huntDirectIncome(sim, base) {
   const pk = (id) => rwOff(sim, id) ? 0 : (r.perks[id] || 0);
   const inv = pk('monsterDamage') + pk('crackedFang') + pk('beastHeatFerment') + pk('huntingCore')
     + pk('monsterRate') + pk('monsterStay') + pk('biteRecovery') + pk('brandHunt');
+  // 回転ボーナス(2026-07-14 ③monsterRate後半飽和対策): 出現率perkは行商の在庫回転を上げる=
+  // 投資量の飽和(satMax)と独立の上限付き乗数。高投資周回(inv≫satMax)ではmonsterRateを外しても
+  // 直送が動かずliftが1.0に張り付く(S9 run14-16実測1.01-1.04)ため、この乗数がliftの床になる。
+  const mrLv = pk('monsterRate');
+  const rateM = 1 + (P.huntDirect.rateBonus || 0) * mrLv / (mrLv + (P.huntDirect.rateHalf || 25));
   // 方針係数: 非hunt方針の後半周回(報酬解禁スキル後=hunt perk投資が勝手に貯まる)で討伐直送が主役を
   // 押し退ける(bake S1 run25-29 討39-46%・balanced S6 run24-28 討33-53%=実測2026-07-10)のを抑える。
   const polM = otherMulOf(sim, P.huntDirect, 'hunt');
   // モンスター図鑑: 弱点を知る=討伐の実入り増(2026-07-11 再係留: 研究インフレでダメージ飽和=図鑑の限界価値ゼロのため直送へ効かせる)
   // 上限cap(同日): 無上限だと高Lvで全方針の後半討伐が×3-5に膨れ㉘bake 40→16/48に崩壊(almanac=0で37/48復帰と実測)
   const almanacM = 1 + Math.min((P.ws.eqFx.almanacHuntPerLv || 0) * wsEqLv(sim, 'monsterAlmanac'), P.ws.eqFx.almanacHuntMax || 0.5);
-  return genreDirect(sim, base, inv, P.huntDirect) * polM * gateM * almanacM;
+  return genreDirect(sim, base, inv, P.huntDirect) * polM * gateM * almanacM * rateM;
 }
 // タップ直送: 投資量=クリック系(神の指+強い指/10)。ゲート=指先の型 段階2(スキル click_2→段階2購入→効果)。
 function tapDirectIncome(sim, base, prod) {

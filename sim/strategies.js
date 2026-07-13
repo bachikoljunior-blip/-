@@ -105,6 +105,18 @@ function pickRewardOncePerRunFirst(onceList, basePicker) {
     return basePicker(sim, offer);
   };
 }
+// 序盤スキップ(2026-07-14 ③goldenRate対策): 指定札を最初のminRuns周回では取らない(オファーから除外)。
+// S3のrun1はgolden基盤(量/威力)が薄くgoldenRateのliftが1.04に希釈される=「金率は基盤が乗る3周目から」
+// というプレイヤー挙動で、低lift周回の取得自体を無くす(③は「取得した全周回で≥1.1」判定のため)。
+function pickRewardSkipEarly(skipList, minRuns, basePicker) {
+  return function (sim, offer) {
+    if (sim.runs.length < minRuns) {
+      const filtered = offer.filter(o => !(o.kind === 'perk' && skipList.includes(o.id)));
+      if (filtered.length) return basePicker(sim, filtered);
+    }
+    return basePicker(sim, offer);
+  };
+}
 function pickRewardAffinityAware(priority) {
   const base = pickRewardByPriority(priority);
   const catOf = {}; G.REWARD_POOL.forEach(r => catOf[r.id] = r.category);
@@ -274,7 +286,7 @@ const STRATEGIES = [
       buyResearchLine(sim, 'spiceBlend', 0.60);
       buyAllResearch(sim, 0.25);
     },
-    pickReward: pickRewardByPriority(['goldenRate', 'goldenPower', 'goldenAmount', 'beastScent', 'goldenChain', 'goldenTarget', 'goldenFirstHit', 'beastHeatFerment']),
+    pickReward: pickRewardSkipEarly(['goldenRate'], 2, pickRewardByPriority(['goldenRate', 'goldenPower', 'goldenAmount', 'beastScent', 'goldenChain', 'goldenTarget', 'goldenFirstHit', 'beastHeatFerment'])),
     shouldPrestige: prestigeWhen(120, 1.2),
     skillOrder: skillOrderByBranch(['core', 'golden', 'click', 'economy', 'research', 'auto', 'monster', 'upgrade', 'reward', 'start', 'master'])
   },

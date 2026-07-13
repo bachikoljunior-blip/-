@@ -10689,7 +10689,10 @@ function huntPeddlerCps() {
     + (p.monsterRate || 0) + (p.monsterStay || 0) + (p.biteRecovery || 0) + (p.brandHunt || 0);
   if (inv <= 0) return 0;
   const almanacM = 1 + Math.min(0.05 * equipLv("monsterAlmanac"), 0.5); // モンスター図鑑: 弱点を知る=買い取り増
-  return genreDirectCps(expectedGoldenRateCps(), inv, cfg) * directOtherMul(cfg, "hunt") * gateM * almanacM;
+  // 回転ボーナス(2026-07-14 sim同期): 出現率perkは行商の在庫回転を上げる(飽和と独立・上限1.3)
+  const mrLv = p.monsterRate || 0;
+  const rateM = 1 + (cfg.rateBonus || 0) * mrLv / (mrLv + (cfg.rateHalf || 25));
+  return genreDirectCps(expectedGoldenRateCps(), inv, cfg) * directOtherMul(cfg, "hunt") * gateM * almanacM * rateM;
 }
 // タップ直送(屋台): 投資量=神の指+強い指÷10。神の指登場前だけ金相場アンカー(下位投資の換金)
 function tapStallCps() {
