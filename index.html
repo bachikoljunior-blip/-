@@ -4377,7 +4377,8 @@
     }
 
     /* ===== 図鑑 ===== */
-    #codexBtn {
+    #codexBtn,
+    #equipBtn {
       position: absolute;
       top: 10px;
       left: 54px;
@@ -4395,6 +4396,11 @@
       font-size: 18px;
       line-height: 1;
       touch-action: manipulation;
+    }
+
+    /* 装備ボタンは図鑑ボタンの右隣に同じ大きさで置く(2026-07-13) */
+    #equipBtn {
+      left: 98px;
     }
 
     .codexIntro {
@@ -5464,11 +5470,22 @@
   </div>
 </div>
 
+<div id="equipOverlay" class="settingsOverlay codexOverlay">
+  <div class="settingsPanel codexPanel">
+    <div class="settingsHead">
+      <h2>装備</h2>
+      <button id="equipCloseBtn" type="button" class="titleAboutCloseBtn" aria-label="閉じる">✕</button>
+    </div>
+    <div id="equipPanel" class="codexBody"></div>
+  </div>
+</div>
+
 <main class="game">
   <section class="top">
     <button id="settingsBtn" type="button" aria-label="設定">⚙</button>
     <button id="playFullscreenBtn" type="button" aria-label="クッキー画面を全画面">⛶</button>
     <button id="codexBtn" type="button" aria-label="図鑑">📖</button>
+    <button id="equipBtn" type="button" aria-label="装備">🛡</button>
 
     <div class="cookieCount">
       <span id="cookies">0</span>
@@ -5503,7 +5520,6 @@
     <button class="tab" data-tab="researchTab">研究</button>
     <button class="tab" data-tab="prestigeTab">?</button>
     <button class="tab" data-tab="orderTab">?</button>
-    <button class="tab" data-tab="equipTab">装備</button>
     <button class="tab" data-tab="workshopTab">?</button>
     <button class="tab" data-tab="infoTab">一覧</button>
   </nav>
@@ -5553,13 +5569,6 @@
       </div>
       <button id="backToTitleBtn" type="button" class="backToTitleBtn">タイトル画面に戻る</button>
       <div id="infoPanel" class="pageScroll"></div>
-    </section>
-
-    <section id="equipTab" class="tabPage">
-      <div class="tabPageHead" data-full-target="equipTab">
-        <h2>装備</h2>
-      </div>
-      <div id="equipPanel" class="pageScroll"></div>
     </section>
 
     <section id="workshopTab" class="tabPage">
@@ -6939,8 +6948,9 @@ const TAB_META = {
   shopTab: { name: "強化", locked: () => false },
   researchTab: { name: "研究", locked: () => false },
   prestigeTab: { name: "転生", locked: () => (typeof prestigeUnlocked === "function" ? !prestigeUnlocked() : false) },
-  orderTab: { name: "注文", locked: () => (typeof orderBoardUnlocked === "function" ? !orderBoardUnlocked() : false) },
-  workshopTab: { name: "工房", locked: () => (typeof workshopTabUnlocked === "function" ? !workshopTabUnlocked() : false) },
+  // 注文ボード・工房は最初からシルエットなしで表示する(2026-07-13 ユーザー指示)
+  orderTab: { name: "注文", locked: () => false },
+  workshopTab: { name: "工房", locked: () => false },
   infoTab: { name: "一覧", locked: () => false }
 };
 
@@ -9288,8 +9298,9 @@ function grantMonsterDrops(typeId, level, overkill) {
 }
 
 // ==== 工房タブの描画 ====
-function renderWorkshop() {
 // ==== 新装備システム: ヘルパ・タブ描画・作成(2026-07-13) ====
+// これらは renderWorkshop の外＝グローバルに置く。装備は図鑑横のボタン(openEquip)からも
+// renderEquip2Tab を呼ぶため、内側にネストしていると参照できずバグる(2026-07-13 修正)。
 // 画像: 既存装備画像をカテゴリに割当て、ティアでhue回転(「画像のないものは既存のものを色を変えてつかう」)
 const EQUIP2_ART = { weapon: "goldenWhisk", shield: "masterTray", armorTop: "ovenMitt", armorBottom: "pressExtractor",
   hands: "ovenMitt", hat: "stillFlask", shoes: "dimensionCompass", accA: "monsterAlmanac", accB: "stillFlask" };
@@ -9385,6 +9396,7 @@ function renderEquip2Tab() {
   box.querySelectorAll("[data-eq2equip]").forEach(b => b.onclick = () => { equip2ChoosingSlot = null; equipItemToSlot(b.dataset.eq2equip, b.dataset.eq2slot); });
 }
 
+function renderWorkshop() {
   const box = $("workshopPanel");
   if (!box) return;
 
@@ -12782,6 +12794,18 @@ function openCodex() {
 addTap($("codexBtn"), openCodex);
 addTap($("codexCloseBtn"), () => {
   $("codexOverlay").classList.remove("active");
+  playSound("tab");
+});
+
+// 装備は図鑑と同じくオーバーレイで開く(2026-07-13: 下タブから図鑑の横のボタンへ移動)
+function openEquip() {
+  renderEquip2Tab();
+  $("equipOverlay").classList.add("active");
+  playSound("tab");
+}
+if ($("equipBtn")) addTap($("equipBtn"), openEquip);
+if ($("equipCloseBtn")) addTap($("equipCloseBtn"), () => {
+  $("equipOverlay").classList.remove("active");
   playSound("tab");
 });
 
