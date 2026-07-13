@@ -4,3 +4,4 @@
   OK 料理:mintIce               S6 中央値比=1000000000.000 (n=9)
   OK 料理:hunterStew            S9 中央値比=1.068 (n=10)
   OK 料理:frostCake             S1 中央値比=1000000000.000 (n=10)
+  OK 料理:stardustParfait       S1 中央値比=1000000000.000 (n=6)
