@@ -886,13 +886,65 @@ if (mode === 'baseline') {
   };
   console.log('⑮の2 工房の制作項目(枝分かれ比べ・中央値≥1.05)');
   let ok15 = 0;
+  // 旧装備(Lv式7種)は廃止(2026-07-13)=⑮の2は料理7種のみ
   for (const rc of G.P.ws.recipes) ok15 += judge('dish:' + rc.id, '料理:' + rc.id, r => (r.wsDishes || []).includes(rc.id), 1.05);
-  for (const eq of G.P.ws.equipment) ok15 += judge('eq:' + eq.id, '装備:' + eq.id, r => ((r.wsEq || {})[eq.id] || 0) > 0, 1.05);
-  console.log(`⑮の2 合計 ${ok15}/${G.P.ws.recipes.length + G.P.ws.equipment.length}`);
+  console.log(`⑮の2 合計 ${ok15}/${G.P.ws.recipes.length}(料理のみ・旧装備は廃止)`);
   console.log('㉙ 注文ボードの報酬(枝分かれ比べ・稼ぎ比≥1.2)');
   let ok29 = 0;
   for (const rk of ['cookie', 'materials', 'boost']) ok29 += judge('order:' + rk, '注文報酬:' + rk, r => ((r.wsOrders || {})[rk] || 0) > 0, 1.2);
   console.log(`㉙ 合計 ${ok29}/3`);
+  // ==== 新装備システムの3条件(2026-07-13 ユーザー新設) ====
+  // (a) 装備lift: 各装備につき「作って装備した周回」の総クッキーが「付け替えなかった場合」(noNewEquip枝分かれ)の1.5倍以上。
+  //     取った周回の全て(サンプル上限10)で判定=③と同格の全周回基準。
+  // (b) カバレッジ: 全装備がどの方針かで少なくとも1回は装備される。
+  // (c) 作成テンポ: 毎周回、全8カテゴリの装備が1個以上作成される。
+  {
+    const items = G.EQUIP2_ITEMS ? G.EQUIP2_ITEMS() : (G.equip2Items ? G.equip2Items() : []);
+    const equippedEver = new Set();
+    let liftOk = 0, liftAll = 0;
+    const liftRows = [];
+    for (const it of items) {
+      let worst = Infinity, n = 0, usedPol = null;
+      for (const st of STRATEGIES) {
+        const sim = optSnap[st.id];
+        const acq = sim.runs.filter(r => !r.partial && (r.eq2NewEquipped || []).includes(it.id) && r.runCookies > 0 && sim.snapshots[r.idx]);
+        for (const r of acq) equippedEver.add(it.id);
+        for (const optRun of sampleRuns(acq, 4)) {
+          const snap = sim.snapshots[optRun.idx];
+          const off = G.replayRun(st, snap, { hours: H, noNewEquip: true }, optRun.duration);
+          if (off && off.runCookies > 0 && Number.isFinite(off.runCookies) && Number.isFinite(optRun.runCookies)) {
+            const ratio = optRun.runCookies / off.runCookies;
+            if (ratio < worst) worst = ratio;
+            n++; usedPol = st.id;
+          }
+        }
+      }
+      if (n > 0) {
+        liftAll++;
+        const pass = worst >= 1.5;
+        if (pass) liftOk++;
+        liftRows.push(`  ${pass ? 'OK' : 'NG'} 装備lift:${it.id.padEnd(20)} min比=${worst === Infinity ? '-' : worst.toFixed(3)} (n=${n}, ${usedPol})`);
+      }
+    }
+    console.log('新装備(a) 装備lift(枝分かれ・付け替え封止比≥1.5・全周回)');
+    liftRows.forEach(x => console.log(x));
+    console.log(`新装備(a) 合計 ${liftOk}/${liftAll}(装備された装備のみ判定対象)`);
+    // (b) カバレッジ
+    const notEquipped = items.filter(it => !equippedEver.has(it.id)).map(it => it.id);
+    console.log(`新装備(b) カバレッジ: ${items.length - notEquipped.length}/${items.length} 装備済み${notEquipped.length ? ' 未装備: ' + notEquipped.join(',') : ''}`);
+    // (c) 作成テンポ: 毎周回全カテゴリ(方針×周回で集計)
+    const cats = ['weapon', 'shield', 'armorTop', 'armorBottom', 'hands', 'hat', 'shoes', 'accessory'];
+    let mkOk = 0, mkAll = 0;
+    for (const st of STRATEGIES) {
+      const full = optSnap[st.id].runs.filter(r => !r.partial);
+      for (const r of full) {
+        mkAll++;
+        const made = r.eq2Made || {};
+        if (cats.every(c => (made[c] || 0) >= 1)) mkOk++;
+      }
+    }
+    console.log(`新装備(c) 毎周回全カテゴリ作成: ${mkOk}/${mkAll}周回`);
+  }
 } else if (mode === 'affinity') {
   // ㉔㉕㉖(第9次【仮】): モンスター種類×報酬相性
   // ㉔ 有効性: 「その回だけ相性を全部×1.0」との獲得効率比(幾何平均≥1.1)+各回minも表示

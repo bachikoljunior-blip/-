@@ -1,0 +1,4 @@
+⑮の2 工房の制作項目(枝分かれ比べ・中央値≥1.05)
+  OK 料理:butterCookie          S9 中央値比=10.490 (n=9)
+  NG 料理:chocoFondant          どの方針も未使用
+  NG 料理:mintIce               S3 中央値比=0.999 (n=3)

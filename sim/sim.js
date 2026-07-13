@@ -393,7 +393,9 @@ function newSim(strategy, opts) {
     ws: { mats: {}, eq: {}, seen: {}, everWs: {}, stageUnlocked: 1, deepLayer: 0,
       matRot: 0, orderNextT: null, order: null, orderKindRot: 0, orderRewardRot: 0,
       // 新装備システム(2026-07-13): owned=所持数(id→個数)・equipped=部位→装備id・seenEq=一度表示されたレシピ(消えない)
-      eq2Owned: {}, eq2Equipped: {}, eq2Seen: {} },
+      eq2Owned: {}, eq2Equipped: {}, eq2Seen: {},
+      // 固定クエスト(2026-07-13): フロンティアステージの累計討伐(周回を跨いで累積)
+      questKills: {} },
     // 周回内
     run: null,
     rotIdx: 0, upRotIdx: 0, goldenAlt: 0,
@@ -802,17 +804,23 @@ function wsDropMaterials(sim, mon, overkill) {
   if (wsStageNo(sim) >= 6) wsAddMat(sim, 'voidSugar', 0.2 * units);
   // バランス型: 万能粉
   if (r.policy === 'balanced') wsAddMat(sim, 'universal', D.universalRate * units);
-  // ボス: 核(初回3・以後1)+ステージ解放
+  // ボス: 核(初回3・以後1)。深層は層進行のみ(ステージ解放は下の固定クエストへ移管・2026-07-13)
   if (mon.typeId === 'boss') {
     const first = !ws.everWs['boss:' + wsStageNo(sim) + (wsStageNo(sim) >= 6 ? ':' + ws.deepLayer : '')];
     wsAddMat(sim, 'bossCore', first ? 3 : 1);
     if (first) ws.everWs['boss:' + wsStageNo(sim) + (wsStageNo(sim) >= 6 ? ':' + ws.deepLayer : '')] = true;
-    if (wsStageNo(sim) === ws.stageUnlocked && ws.stageUnlocked < 6) {
+    if (wsStageNo(sim) >= 6) ws.deepLayer++;
+  }
+  // 固定クエスト(2026-07-13 ユーザー確定仕様): フロンティアステージでの累計討伐で次ステージ解放。
+  // 制限時間なし・周回を跨いで累積・達成で解放イベント+次クエスト(注文ボードに常設表示=ゲーム側UI)
+  if (P.quest2 && wsStageNo(sim) === ws.stageUnlocked && ws.stageUnlocked < 6) {
+    const stNo = ws.stageUnlocked;
+    ws.questKills[stNo] = (ws.questKills[stNo] || 0) + units;
+    const need = P.quest2.killsNeed[stNo - 1] || Infinity;
+    if (ws.questKills[stNo] >= need) {
       ws.stageUnlocked++;
       sim.unlockEvents.push({ t: sim.t, kind: 'ws', id: 'stage:' + ws.stageUnlocked });
       wsRevealRecipes(sim); // 新ステージの素材で作れるレシピを同秒で開示
-    } else if (wsStageNo(sim) >= 6) {
-      ws.deepLayer++;
     }
   }
 }
@@ -2941,5 +2949,6 @@ module.exports = {
   tryBuyUpgrade, tryBuyResearch, bestEfficiency, visibleUpgrades, quotaAtElapsed,
   isUtilitySkill, buildSkillValues, skillRank, skillRiders, trunc2sig, q5, q5cost,
   tryBuyResearchStage, researchStageCostOf, researchStageUnlocked,
-  replayRun, takeSnapshot, bandY
+  replayRun, takeSnapshot, bandY,
+  equip2Items
 };
