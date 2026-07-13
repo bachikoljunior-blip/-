@@ -1,0 +1,51 @@
+[iter 0] runs=39 band 0/38 (0%) x100 20/37 pt2-100 29/37 pace 0/197 total=3.54e+193 FAIL:4->5(x24) 5->6(x30) 7->8(x1) 9->10(x0) 10->11(x2) 13->14(x1) 15->16(x1) 16->17(x1) 19->20(x1) 20->21(x2) 23->24(x1) 24->25(x1) 26->27(x1) 28->29(x1) 31->32(x1) 33->34(x1) 35->36(x1)
+[iter 1] runs=43 band 7/42 (17%) x100 29/41 pt2-100 37/41 pace 9/221 total=7.88e+270 FAIL:4->5(x2) 7->8(x0) 11->12(x1) 14->15(x36) 17->18(x2) 20->21(x0) 24->25(x1) 27->28(x1) 30->31(x1) 33->34(x1) 36->37(x1) 39->40(x0)
+[iter 2] runs=43 band 10/42 (24%) x100 30/41 pt2-100 40/41 pace 8/223 total=4.52e+271 FAIL:4->5(x1) 7->8(x2) 11->12(x1) 14->15(x4) 17->18(x9) 20->21(x13) 24->25(x1) 27->28(x1) 30->31(x1) 33->34(x1) 36->37(x1)
+[iter 3] runs=43 band 10/42 (24%) x100 30/41 pt2-100 40/41 pace 8/223 total=4.52e+271 FAIL:4->5(x1) 7->8(x2) 11->12(x1) 14->15(x4) 17->18(x9) 20->21(x13) 24->25(x1) 27->28(x1) 30->31(x1) 33->34(x1) 36->37(x1)
+[iter 4] runs=43 band 10/42 (24%) x100 30/41 pt2-100 40/41 pace 8/223 total=4.52e+271 FAIL:4->5(x1) 7->8(x2) 11->12(x1) 14->15(x4) 17->18(x9) 20->21(x13) 24->25(x1) 27->28(x1) 30->31(x1) 33->34(x1) 36->37(x1)
+[iter 5] runs=43 band 10/42 (24%) x100 30/41 pt2-100 40/41 pace 8/223 total=4.52e+271 FAIL:4->5(x1) 7->8(x2) 11->12(x1) 14->15(x4) 17->18(x9) 20->21(x13) 24->25(x1) 27->28(x1) 30->31(x1) 33->34(x1) 36->37(x1)
+[iter 6] runs=43 band 10/42 (24%) x100 30/41 pt2-100 40/41 pace 8/223 total=4.52e+271 FAIL:4->5(x1) 7->8(x2) 11->12(x1) 14->15(x4) 17->18(x9) 20->21(x13) 24->25(x1) 27->28(x1) 30->31(x1) 33->34(x1) 36->37(x1)
+[iter 7] runs=43 band 10/42 (24%) x100 30/41 pt2-100 40/41 pace 8/223 total=4.52e+271 FAIL:4->5(x1) 7->8(x2) 11->12(x1) 14->15(x4) 17->18(x9) 20->21(x13) 24->25(x1) 27->28(x1) 30->31(x1) 33->34(x1) 36->37(x1)
+ run 0 x=0.05h D=187s Y=1481s 短 dec=8.8 rung=0
+ run 1 x=0.09h D=120s Y=1493s 短 dec=31.1 rung=3
+ run 2 x=0.12h D=120s Y=1502s 短 dec=48.5 rung=5
+ run 3 x=0.15h D=120s Y=1510s 短 dec=51.1 rung=8
+ run 4 x=0.19h D=142s Y=1519s 短 dec=58.2 rung=9
+ run 5 x=0.23h D=135s Y=1526s 短 dec=58.1 rung=10
+ run 6 x=0.27h D=164s Y=1534s 短 dec=66.8 rung=11
+ run 7 x=0.32h D=180s Y=1543s 短 dec=75.2 rung=12
+ run 8 x=0.37h D=178s Y=1550s 短 dec=75.5 rung=13
+ run 9 x=0.43h D=200s Y=1558s 短 dec=83.4 rung=14
+ run10 x=0.49h D=225s Y=1566s 短 dec=91.1 rung=15
+ run11 x=0.56h D=253s Y=1575s 短 dec=99.2 rung=16
+ run12 x=0.63h D=253s Y=1583s 短 dec=99.3 rung=17
+ run13 x=0.70h D=260s Y=1591s 短 dec=107.7 rung=18
+ run14 x=0.80h D=357s Y=1601s 短 dec=115.8 rung=19
+ run15 x=0.88h D=265s Y=1609s 短 dec=116.5 rung=20
+ run16 x=0.98h D=355s Y=1618s 短 dec=124.2 rung=21
+ run17 x=1.09h D=396s Y=1628s 短 dec=131.5 rung=23
+ run18 x=1.20h D=402s Y=1637s 短 dec=132.5 rung=22
+ run19 x=1.32h D=431s Y=1647s 短 dec=140.6 rung=24
+ run20 x=1.44h D=437s Y=1656s 短 dec=148.5 rung=25
+ run21 x=1.56h D=441s Y=1665s 短 dec=149.6 rung=26
+ run22 x=1.69h D=476s Y=1674s 短 dec=157.0 rung=27
+ run23 x=1.85h D=562s Y=1685s 短 dec=165.1 rung=28
+ run24 x=2.03h D=589s Y=1697s 短 dec=173.4 rung=29
+ run25 x=2.23h D=589s Y=1709s 短 dec=173.4 rung=30
+ run26 x=2.46h D=589s Y=1722s 短 dec=181.4 rung=31
+ run27 x=2.86h D=664s Y=1744s 短 dec=189.5 rung=32
+ run28 x=3.10h D=881s Y=1757s OK dec=189.5 rung=33
+ run29 x=3.35h D=892s Y=1769s OK dec=198.1 rung=34
+ run30 x=3.64h D=896s Y=1783s OK dec=206.1 rung=35
+ run31 x=3.92h D=938s Y=1797s OK dec=206.1 rung=36
+ run32 x=4.31h D=964s Y=1814s OK dec=214.3 rung=37
+ run33 x=5.24h D=1104s Y=1852s OK dec=221.9 rung=38
+ run34 x=5.59h D=1269s Y=1866s OK dec=221.9 rung=39
+ run35 x=6.01h D=1534s Y=1881s OK dec=230.7 rung=40
+ run36 x=6.88h D=1597s Y=1912s OK dec=238.9 rung=41
+ run37 x=7.36h D=1737s Y=1928s OK dec=238.9 rung=42
+ run38 x=8.38h D=1969s Y=1961s 長 dec=247.1 rung=43
+ run39 x=8.98h D=2139s Y=1979s 長 dec=263.6 rung=44
+ run40 x=9.59h D=2200s Y=1997s 長 dec=265.7 rung=45
+ run41 x=10.19h D=2154s Y=2015s 長 dec=271.7 rung=47
+saved rung_costs.json (best: band=10, x100=30/41)
