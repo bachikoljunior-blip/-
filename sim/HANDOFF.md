@@ -1375,6 +1375,15 @@ reachMinSec=600/reachMaxSec=6000。**T3b 379/421(90%)**。弱点は S10(頭8・T
   (bhBoostCoef/Dur・portalHunt系レバー)・㉘balanced 8/28(中盤討3-7%・後半タップ0%)・
   T1後半周回の2h超過(周回26本/100h=tune再焼き領域)・新⑥85-90%・T3b・装備lift(a) 72/90(S8/S9の弱束周回)。
 - ChatGPT引き継ぎ指示文= sim/CHATGPT_HANDOFF.md(zipと本文をユーザーへ送付済み)。
+- **R20c実測(2026-07-14 転生床1200秒+全体項0.00012+新梯子)**: T1全体77%(S6 91%・S3 89%・S5 86%・
+  S1 85%・S9 79%・**S4のみ54%=狩猟の長周回**)・T2/T2r0/T2下限30s/⑭満点・④はS3 21/27に悪化(6NG)・
+  新⑥90-94%・㉑S3/S8の各1(antimatterOven x0.10/timeOven x0.20)。
+  income: **②改2 NG=bake2.66が全体項絞り(0.0002→0.00012)で不動**=真因は別
+  (候補: ovenSelf20 or 新梯子の中盤cps複利)・click1.09下限割れ・㉘89/133(balanced2/22に悪化)。
+  **次の手**: (1)share_probe/inc_diag系プローブを書き直しbakeシェア62%の内訳を分解
+  (equipDirect/ovenSelf/メトロノーム)→bakeだけ効く項を絞る (2)S4のT1=狩猟の周回短縮
+  (ladder頼みでなくS4のgainFactor1.2↑で早転生化も可) (3)S3④6NG=per-run diag
+  (4)expect R20c(実行中)で①spice/③goldenFirstHit/⑬(転生床後の軌道増幅縮み)を判定。
 
 **第13次サイクルB進行中(2026-07-14・再係留の作業キュー=ここから続行)**:
 - 確定済み土台: メトロノーム+④単調化(転生目標=max(次スキル束,前回×1.57)・strategies.js prestigeWhen)
