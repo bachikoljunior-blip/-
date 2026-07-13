@@ -713,7 +713,7 @@ function equip2ById(id) {
 //   dropMul(素材) oreAdd(色素材+n/体) rewardLvAdd(報酬Lv+) critAdd(会心率+・上限0.3)
 const EQUIP2_FX = {
   weapon:      [['dmgMul', 1.0], ['killValMul', 0.8], ['spawnMul', 0.10], ['stayMul', 0.25], ['dmgMul', 0.6, 'killValMul', 0.4], ['dmgMul', 0.5, 'spawnMul', 0.06], ['killValMul', 0.5, 'stayMul', 0.15], ['dmgMul', 0.4, 'killValMul', 0.3, 'spawnMul', 0.05], ['dmgMul', 1.6]],
-  shield:      [['quotaSlow', 0.10], ['stayMul', 0.30], ['quotaSlow', 0.06, 'stayMul', 0.15], ['cpsMul', 0.5], ['quotaSlow', 0.14], ['stayMul', 0.45], ['quotaSlow', 0.08, 'cpsMul', 0.3], ['stayMul', 0.2, 'cpsMul', 0.35], ['quotaSlow', 0.06, 'stayMul', 0.12, 'cpsMul', 0.25]],
+  shield:      [['holdBonus', 0.5], ['stayMul', 0.30], ['holdBonus', 0.3, 'stayMul', 0.15], ['cpsMul', 0.5], ['holdBonus', 0.7], ['stayMul', 0.45], ['holdBonus', 0.4, 'cpsMul', 0.3], ['stayMul', 0.2, 'cpsMul', 0.35], ['holdBonus', 0.3, 'stayMul', 0.12, 'cpsMul', 0.25]], // quotaSlow→holdBonus(2026-07-14: 減速は収入マイナス=lift(a)を束ごと壊すため「ノルマ維持中全生産」へ)
   armorTop:    [['cpsMul', 1.0], ['allMul', 0.5], ['cpsMul', 0.7, 'dropMul', 0.2], ['cpsMul', 1.4], ['allMul', 0.7], ['cpsMul', 0.6, 'allMul', 0.25], ['allMul', 0.4, 'dropMul', 0.3], ['cpsMul', 0.8, 'allMul', 0.3], ['cpsMul', 0.5, 'allMul', 0.3, 'dropMul', 0.25]],
   armorBottom: [['upDisc', 0.08], ['resDisc', 0.08], ['upDisc', 0.05, 'resDisc', 0.05], ['cpsMul', 0.6], ['upDisc', 0.12], ['resDisc', 0.12], ['upDisc', 0.06, 'cpsMul', 0.35], ['resDisc', 0.06, 'cpsMul', 0.35], ['upDisc', 0.05, 'resDisc', 0.05, 'cpsMul', 0.3]],
   hands:       [['clickMul', 1.0], ['critAdd', 0.03], ['clickMul', 0.7, 'critAdd', 0.02], ['clickMul', 1.4], ['critAdd', 0.05], ['clickMul', 0.6, 'dmgMul', 0.3], ['clickMul', 0.5, 'critAdd', 0.03], ['critAdd', 0.04, 'dmgMul', 0.3], ['clickMul', 0.5, 'critAdd', 0.02, 'dmgMul', 0.25]],
@@ -727,7 +727,7 @@ function equip2Fx(sim) {
   const ws = sim.ws;
   if (ws._eq2FxCache && ws._eq2FxKey === JSON.stringify(ws.eq2Equipped)) return ws._eq2FxCache;
   const fx = { clickMul: 1, cpsMul: 1, allMul: 1, dmgMul: 1, killValMul: 1, spawnMul: 1, stayMul: 1,
-    goldenAmtMul: 1, goldenRateMul: 1, goldenBoostMul: 1, quotaSlow: 0, upDisc: 0, resDisc: 0,
+    goldenAmtMul: 1, goldenRateMul: 1, goldenBoostMul: 1, holdBonus: 1, quotaSlow: 0, upDisc: 0, resDisc: 0,
     dropMul: 1, oreAdd: 0, rewardLvAdd: 0, critAdd: 0 };
   for (const slot of EQUIP2_SLOTS) {
     const it = ws.eq2Equipped[slot] ? equip2ById(ws.eq2Equipped[slot]) : null;
@@ -1473,7 +1473,8 @@ function computeProd(sim) {
   // 連鎖数は討伐数に線形でしか増えない(共鳴型の雪だるまにならない)。途切れ・転生で0。
   const chainM = 1 + (P.chain ? P.chain.prodCoef * chainCount(sim) : 0);
   const eqFx = equip2Fx(sim); // 新装備: 効果束(2026-07-14 全面刷新: 角度別・複合あり・486種一意)
-  click *= chainM * eqFx.allMul * eqFx.clickMul; cps *= chainM * eqFx.allMul * eqFx.cpsMul;
+  const holdM = (!r.quotaFailed && eqFx.holdBonus > 1) ? eqFx.holdBonus : 1; // 盾: ノルマ維持中の全生産
+  click *= chainM * eqFx.allMul * eqFx.clickMul * holdM; cps *= chainM * eqFx.allMul * eqFx.cpsMul * holdM;
   // 提案13「編成の心得」(2026-07-11 承認・バランス方針限定): 4稼ぎ口のそろい具合(30秒ごとに更新の遅延値=再帰回避)
   // に応じて全生産ボーナス。u=min(1, 4×最小シェア)・倍率=1+maxBonus×u
   if (sim.skills.ensemble && policyIs(sim, 'balanced') && r._ensembleM > 1) {

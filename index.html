@@ -10384,7 +10384,7 @@ function baseClickPower() {
 function currentClickPower() {
   // 討伐連鎖: 倒し続けている間だけ全生産×(1+0.02×連鎖数)。基礎値(baseClickPower)には掛けない
   // (案Aの生産連動項が baseCps 経由で二重に受けないよう、最終段で一度だけ適用)
-  return baseClickPower() * goldenBoostMultiplier() * goldenAfterheatMultiplier() * challengeMultiplier() * chainProductionMultiplier() * ensembleMul * equip2Fx().allMul * equip2Fx().clickMul; // 新装備: 全生産+タップ系
+  return baseClickPower() * goldenBoostMultiplier() * goldenAfterheatMultiplier() * challengeMultiplier() * chainProductionMultiplier() * ensembleMul * equip2Fx().allMul * equip2Fx().clickMul * equip2HoldMul(); // 新装備: 全生産+タップ系+盾(維持中)
 }
 
 function baseCps() {
@@ -10417,7 +10417,7 @@ function baseCps() {
 
 function currentCps() {
   // 討伐連鎖: 全生産倍率は最終段で一度だけ適用
-  return baseCps() * goldenBoostMultiplier() * goldenAfterheatMultiplier() * challengeMultiplier() * chainProductionMultiplier() * ensembleMul * equip2Fx().allMul * equip2Fx().cpsMul; // 新装備: 全生産+毎秒系
+  return baseCps() * goldenBoostMultiplier() * goldenAfterheatMultiplier() * challengeMultiplier() * chainProductionMultiplier() * ensembleMul * equip2Fx().allMul * equip2Fx().cpsMul * equip2HoldMul(); // 新装備: 全生産+毎秒系+盾(維持中)
 }
 
 // ================= 直送収入システム(sim同期・第12次J〜R5: 2026-07-11 フル移植) =================
@@ -10460,7 +10460,7 @@ const EQUIP2_ITEM_NAMES = {
 // 効果レジストリ(sim EQUIP2_FX 同値・2026-07-14 全面刷新: 同じ効果は二つ作らない・v7-8=2効果・v9=3効果)
 const EQUIP2_FX = {
   weapon:      [["dmgMul", 1.0], ["killValMul", 0.8], ["spawnMul", 0.10], ["stayMul", 0.25], ["dmgMul", 0.6, "killValMul", 0.4], ["dmgMul", 0.5, "spawnMul", 0.06], ["killValMul", 0.5, "stayMul", 0.15], ["dmgMul", 0.4, "killValMul", 0.3, "spawnMul", 0.05], ["dmgMul", 1.6]],
-  shield:      [["quotaSlow", 0.10], ["stayMul", 0.30], ["quotaSlow", 0.06, "stayMul", 0.15], ["cpsMul", 0.5], ["quotaSlow", 0.14], ["stayMul", 0.45], ["quotaSlow", 0.08, "cpsMul", 0.3], ["stayMul", 0.2, "cpsMul", 0.35], ["quotaSlow", 0.06, "stayMul", 0.12, "cpsMul", 0.25]],
+  shield:      [["holdBonus", 0.5], ["stayMul", 0.30], ["holdBonus", 0.3, "stayMul", 0.15], ["cpsMul", 0.5], ["holdBonus", 0.7], ["stayMul", 0.45], ["holdBonus", 0.4, "cpsMul", 0.3], ["stayMul", 0.2, "cpsMul", 0.35], ["holdBonus", 0.3, "stayMul", 0.12, "cpsMul", 0.25]], // quotaSlow→holdBonus(2026-07-14: 減速は収入マイナス=lift(a)を束ごと壊すため「ノルマ維持中全生産」へ)
   armorTop:    [["cpsMul", 1.0], ["allMul", 0.5], ["cpsMul", 0.7, "dropMul", 0.2], ["cpsMul", 1.4], ["allMul", 0.7], ["cpsMul", 0.6, "allMul", 0.25], ["allMul", 0.4, "dropMul", 0.3], ["cpsMul", 0.8, "allMul", 0.3], ["cpsMul", 0.5, "allMul", 0.3, "dropMul", 0.25]],
   armorBottom: [["upDisc", 0.08], ["resDisc", 0.08], ["upDisc", 0.05, "resDisc", 0.05], ["cpsMul", 0.6], ["upDisc", 0.12], ["resDisc", 0.12], ["upDisc", 0.06, "cpsMul", 0.35], ["resDisc", 0.06, "cpsMul", 0.35], ["upDisc", 0.05, "resDisc", 0.05, "cpsMul", 0.3]],
   hands:       [["clickMul", 1.0], ["critAdd", 0.03], ["clickMul", 0.7, "critAdd", 0.02], ["clickMul", 1.4], ["critAdd", 0.05], ["clickMul", 0.6, "dmgMul", 0.3], ["clickMul", 0.5, "critAdd", 0.03], ["critAdd", 0.04, "dmgMul", 0.3], ["clickMul", 0.5, "critAdd", 0.02, "dmgMul", 0.25]],
@@ -10469,7 +10469,7 @@ const EQUIP2_FX = {
   accA:        [["goldenAmtMul", 1.0], ["goldenRateMul", 0.15], ["goldenBoostMul", 0.4], ["goldenAmtMul", 0.6, "goldenRateMul", 0.10], ["goldenAmtMul", 1.5], ["goldenRateMul", 0.22], ["goldenBoostMul", 0.3, "goldenAmtMul", 0.4], ["goldenRateMul", 0.12, "goldenBoostMul", 0.25], ["goldenAmtMul", 0.5, "goldenRateMul", 0.08, "goldenBoostMul", 0.2]],
   accB:        [["rewardLvAdd", 2], ["killValMul", 0.6], ["rewardLvAdd", 1, "killValMul", 0.4], ["stayMul", 0.35], ["rewardLvAdd", 3], ["killValMul", 0.9], ["rewardLvAdd", 1.5, "stayMul", 0.2], ["killValMul", 0.5, "stayMul", 0.2], ["rewardLvAdd", 1, "killValMul", 0.35, "stayMul", 0.15]]
 };
-const EQUIP2_FX_LABEL = { clickMul: "タップ生産", cpsMul: "毎秒生産", allMul: "全生産", dmgMul: "討伐ダメージ", killValMul: "討伐報酬", spawnMul: "モンスター出現短縮", stayMul: "モンスター滞在", goldenAmtMul: "金クッキー獲得", goldenRateMul: "金クッキー出現短縮", goldenBoostMul: "金ブースト", quotaSlow: "ノルマ進行減速", upDisc: "設備費割引", resDisc: "研究費割引", dropMul: "素材ドロップ", oreAdd: "色素材+n/体", rewardLvAdd: "報酬レベル+n", critAdd: "会心率+n" };
+const EQUIP2_FX_LABEL = { clickMul: "タップ生産", cpsMul: "毎秒生産", allMul: "全生産", dmgMul: "討伐ダメージ", killValMul: "討伐報酬", spawnMul: "モンスター出現短縮", stayMul: "モンスター滞在", goldenAmtMul: "金クッキー獲得", goldenRateMul: "金クッキー出現短縮", goldenBoostMul: "金ブースト", holdBonus: "ノルマ維持中 全生産", quotaSlow: "ノルマ進行減速", upDisc: "設備費割引", resDisc: "研究費割引", dropMul: "素材ドロップ", oreAdd: "色素材+n/体", rewardLvAdd: "報酬レベル+n", critAdd: "会心率+n" };
 let EQUIP2_ITEMS_CACHE = null;
 function equip2Items() {
   if (EQUIP2_ITEMS_CACHE) return EQUIP2_ITEMS_CACHE;
@@ -10553,7 +10553,7 @@ function equip2Fx() {
   const key = JSON.stringify(eq);
   if (_eq2FxCache && _eq2FxKey === key) return _eq2FxCache;
   const fx = { clickMul: 1, cpsMul: 1, allMul: 1, dmgMul: 1, killValMul: 1, spawnMul: 1, stayMul: 1,
-    goldenAmtMul: 1, goldenRateMul: 1, goldenBoostMul: 1, quotaSlow: 0, upDisc: 0, resDisc: 0,
+    goldenAmtMul: 1, goldenRateMul: 1, goldenBoostMul: 1, holdBonus: 1, quotaSlow: 0, upDisc: 0, resDisc: 0,
     dropMul: 1, oreAdd: 0, rewardLvAdd: 0, critAdd: 0 };
   for (const slot of EQUIP2_SLOTS) {
     const it = eq[slot] ? equip2ById(eq[slot]) : null;
@@ -10568,6 +10568,7 @@ function equip2Fx() {
   return fx;
 }
 function equip2Mult() { return equip2Fx().allMul; } // 互換(生産チェーンはclick/cps個別も適用)
+function equip2HoldMul() { const fx = equip2Fx(); return (!state.quotaFailed && fx.holdBonus > 1) ? fx.holdBonus : 1; } // 盾: ノルマ維持中全生産
 // 固定クエスト: フロンティアステージでの累計討伐(周回持ち越し)。達成で次ステージ解放+次クエスト表示
 function questProgressOnKill(stageNo, units) {
   if (stageNo !== (state.stageUnlocked || 1) || stageNo >= MAX_STAGE_NO) return;
@@ -16830,8 +16831,6 @@ setInterval(() => {
     state.maxQuotaStageEver = Math.max(state.maxQuotaStageEver || 1, state.maxQuotaStage);
     // 霜降りケーキ: ノルマ時計を55%遅らせる(ゲージ増加速度×0.45・sim同期2026-07-14 ⑮の2: 新経済で1.013に希釈→再強化)
     if (dishActive("frostCake")) state.quotaPausedMs = (state.quotaPausedMs || 0) + 50 * 0.55;
-    // 新装備: ノルマ進行減速系(盾)
-    if (equip2Fx().quotaSlow > 0) state.quotaPausedMs = (state.quotaPausedMs || 0) + 50 * equip2Fx().quotaSlow;
     // 銀行クリック配当 段階2: 複利利息(所持クッキーに毎秒、毎秒生産比から逓減)
     if (state.research.bankClickDividend && resStage2("bankClickDividend")) {
       const bank = state.upgrades.bank || 0;
