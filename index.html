@@ -5529,8 +5529,7 @@
   <section class="top">
     <button id="settingsBtn" type="button" aria-label="設定">⚙</button>
     <button id="playFullscreenBtn" type="button" aria-label="クッキー画面を全画面">⛶</button>
-    <button id="codexBtn" type="button" aria-label="図鑑">📖</button>
-    <button id="equipBtn" type="button" aria-label="装備">🛡</button>
+    <!-- 図鑑・装備は一覧タブ内のボタンへ移動(2026-07-13 ユーザー指示) -->
 
     <div class="cookieCount">
       <span id="cookies">0</span>
@@ -9444,7 +9443,7 @@ function equipItemToSlot(itemId, slot) {
 }
 let equip2SubTab = "equipped"; // equipped | owned | mats
 let equip2ChoosingSlot = null;
-let equip2OwnedCat = "weapon"; // 所持装備タブ内のカテゴリ選択
+let equip2OwnedCat = "all"; // 所持装備タブ内のカテゴリ選択(最初は「全て」)
 // 所持装備を1個捨てる。装備中で在庫が0になったらスロットから外す(2026-07-13 ユーザー指示)
 function discardEquip2(id) {
   const owned = (state.eq2Owned || {})[id] || 0;
@@ -9488,16 +9487,29 @@ function renderEquip2Tab() {
         </button>${chooser}</div>`;
     }).join("");
   } else if (sub === "owned") {
-    // 所持装備はカテゴリごとのタブで切り替える(main側UI採用)+効果表示は新形式fxText(486種一意効果)
-    if (!EQUIP2_CATS.includes(equip2OwnedCat)) equip2OwnedCat = EQUIP2_CATS[0];
+    // 所持装備はカテゴリごとのタブで切り替える。先頭に「全て」を置き、最初はそれを開く(2026-07-13 ユーザー指示)
+    const ownedCats = ["all", ...EQUIP2_CATS];
+    if (!ownedCats.includes(equip2OwnedCat)) equip2OwnedCat = "all";
+    const rowFor = x => `<div class="infoRow"><img class="matIcon" src="${assetUrl(equip2Art(x))}" style="filter:hue-rotate(${equip2Hue(x)}deg)" alt=""><b>${x.name}</b> ×${fmt(state.eq2Owned[x.id])} / ${x.fxText}<button class="item eq2DiscardBtn" data-eq2discard="${x.id}" style="width:auto;padding:3px 10px;margin-left:auto">捨てる</button></div>`;
+    const ownedTotal = equip2Items().reduce((s, x) => s + (state.eq2Owned[x.id] || 0), 0);
     const catBar = `<div class="buyModeBar" style="margin-bottom:8px;flex-wrap:wrap;gap:4px">` +
+      `<button class="item ${equip2OwnedCat === "all" ? "canBuy" : ""}" data-eq2ownedcat="all" style="width:auto;padding:4px 9px">全て${ownedTotal > 0 ? `(${fmt(ownedTotal)})` : ""}</button>` +
       EQUIP2_CATS.map(cat => {
         const n = equip2Items().filter(x => x.cat === cat).reduce((s, x) => s + (state.eq2Owned[x.id] || 0), 0);
         return `<button class="item ${equip2OwnedCat === cat ? "canBuy" : ""}" data-eq2ownedcat="${cat}" style="width:auto;padding:4px 9px">${EQUIP2_CAT_NAMES[cat]}${n > 0 ? `(${fmt(n)})` : ""}</button>`;
       }).join("") + `</div>`;
-    const rows = equip2Items().filter(x => x.cat === equip2OwnedCat && (state.eq2Owned[x.id] || 0) > 0)
-      .map(x => `<div class="infoRow"><img class="matIcon" src="${assetUrl(equip2Art(x))}" style="filter:hue-rotate(${equip2Hue(x)}deg)" alt=""><b>${x.name}</b> ×${fmt(state.eq2Owned[x.id])} / ${x.fxText}<button class="item eq2DiscardBtn" data-eq2discard="${x.id}" style="width:auto;padding:3px 10px;margin-left:auto">捨てる</button></div>`).join("");
-    body = catBar + (rows || `<div class="desc">この種類の所持装備はない</div>`);
+    let ownedBody;
+    if (equip2OwnedCat === "all") {
+      // 全て: カテゴリ見出しごとに所持装備を並べる
+      ownedBody = EQUIP2_CATS.map(cat => {
+        const rows = equip2Items().filter(x => x.cat === cat && (state.eq2Owned[x.id] || 0) > 0).map(rowFor).join("");
+        return rows ? `<h3 style="margin:8px 0 4px">${EQUIP2_CAT_NAMES[cat]}</h3>${rows}` : "";
+      }).join("") || `<div class="desc">所持している装備はない</div>`;
+    } else {
+      const rows = equip2Items().filter(x => x.cat === equip2OwnedCat && (state.eq2Owned[x.id] || 0) > 0).map(rowFor).join("");
+      ownedBody = rows || `<div class="desc">この種類の所持装備はない</div>`;
+    }
+    body = catBar + ownedBody;
   } else {
     body = MATERIALS.filter(m => materialSeen(m.id) || /^ore_t/.test(m.id) && materialCount(m.id) > 0)
       .map(m => `<div class="infoRow">${matIconHtml(m.id, "matIcon")}<b>${m.name}</b> ×${fmt(materialCount(m.id))}</div>`).join("")
@@ -9586,20 +9598,27 @@ function renderWorkshop() {
   // 料理タブは解放(スキル「素材の嗅覚」取得)するまで出さない(2026-07-13 ユーザー指示)
   const dishUnlocked = workshopTabUnlocked();
   const wsSub = (dishUnlocked && state.wsSubTab === "dish") ? "dish" : "equip";
-  const subBar = `
+  // 装備(所持・装備中の管理)は工房の1番上のボタンから開く(一覧タブから移設・2026-07-13)
+  const equipTopBar = `
     <div class="buyModeBar" style="margin-bottom:8px">
-      <button class="item ${wsSub === "equip" ? "canBuy" : ""}" data-wssub="equip" style="width:auto;padding:6px 14px">装備</button>
-      ${dishUnlocked ? `<button class="item ${wsSub === "dish" ? "canBuy" : ""}" data-wssub="dish" style="width:auto;padding:6px 14px">料理</button>` : ""}
+      <button class="item" id="wsOpenEquipBtn" style="width:auto;padding:6px 14px">🛡 装備</button>
     </div>`;
+  // 料理を解放するまではサブタブを出さず作成欄を直接表示。解放後に「装備/料理」の2タブを出す(2026-07-13)
+  const subBar = dishUnlocked ? `
+    <div class="buyModeBar" style="margin-bottom:8px">
+      <button class="item ${wsSub === "equip" ? "canBuy" : ""}" data-wssub="equip" style="width:auto;padding:6px 14px">作成</button>
+      <button class="item ${wsSub === "dish" ? "canBuy" : ""}" data-wssub="dish" style="width:auto;padding:6px 14px">料理</button>
+    </div>` : "";
   const dishSection = workshopTabUnlocked()
     ? `<div class="infoBox"><h3>料理(時限バフ・最大${MAX_ACTIVE_DISHES}品)</h3>${dishCards || `<div class="desc">素材を集めるとレシピが並ぶ</div>`}</div>`
     : `<div class="infoBox"><h3>料理</h3><div class="desc">スキル「素材の嗅覚」を取得すると解放される</div></div>`;
-  box.innerHTML = subBar + (wsSub === "equip"
+  box.innerHTML = equipTopBar + subBar + (wsSub === "equip"
     ? `${craftSection}
-      <div class="infoBox"><h3>素材庫</h3><div class="desc">${materialDropGuideHtml()}${materialSeen("omniFlour") ? "<br>標準方針の万能粉は不足素材の代用(核は不可)。" : ""}</div>${matRows}</div>`
+      <div class="infoBox"><h3>素材の入手</h3><div class="desc">${materialDropGuideHtml()}${materialSeen("omniFlour") ? "<br>標準方針の万能粉は不足素材の代用(核は不可)。" : ""}</div></div>`
     : `${dishSection}
       <div class="infoBox"><h3>記録(討伐マイルストーン)</h3>${recordRows}</div>`);
 
+  const wsEquipBtn = $("wsOpenEquipBtn"); if (wsEquipBtn) addTap(wsEquipBtn, openEquip);
   box.querySelectorAll("[data-wssub]").forEach(b => addTap(b, () => { state.wsSubTab = b.dataset.wssub; renderWorkshop(); }));
   box.querySelectorAll("[data-dish]").forEach(btn => addTap(btn, () => cookDish(btn.dataset.dish)));
   box.querySelectorAll("[data-eq2craft]").forEach(btn => addTap(btn, () => craftEquip2(btn.dataset.eq2craft)));
@@ -13043,7 +13062,7 @@ function openCodex() {
   playSound("tab");
 }
 
-addTap($("codexBtn"), openCodex);
+if ($("codexBtn")) addTap($("codexBtn"), openCodex);
 addTap($("codexCloseBtn"), () => {
   $("codexOverlay").classList.remove("active");
   playSound("tab");
@@ -13276,23 +13295,22 @@ function upgradeShopEffectRows(u, buyCount) {
 
   // 最終値で表示する(2026-07-11 ユーザー指示): 全ての倍率・ブースト込みの実際の生産で計算する。
   const cur = measure();
-  // その設備自身の生産(他設備への増幅ぶんは含まない、自分の倍率だけ乗せた最終値)
-  const ownBefore = upgradeEffectiveContribution(u);
-  let withoutV, ownAfter;
+  let withoutV, plusNV;
   try {
     state.upgrades[u.id] = 0;
     withoutV = measure();
     state.upgrades[u.id] = owned + count;
-    ownAfter = upgradeEffectiveContribution(u);
+    plusNV = measure();
   } finally {
     state.upgrades[u.id] = owned;
   }
   // タップ設備の「合計」は素手ぶん(基礎タップ×倍率)も含む実際の1タップ量にする。
   // 設備ぶんだけの差分だと、実際にタップした数値とずれて見えるため(2026-07-11 ユーザー指摘)。
-  // 毎秒設備は従来どおり「その設備の寄与ぶん」。
+  // 毎秒設備は従来どおり「その設備の寄与ぶん(cur-withoutV)」。
   const total = isCps ? Math.max(0, cur - withoutV) : cur;
-  // 「+追加生産」はその設備自身の生産の増分だけにする。他設備への増幅(相乗)ぶんは含めない(2026-07-13 ユーザー指摘)。
-  const add = Math.max(0, ownAfter - ownBefore);
+  // 生産増加数は「設備の合計生産(全体の毎秒)が増える分」=購入で全体の生産がどれだけ増えるか
+  // (その設備自身の増分＋他設備への相乗ぶんも含む最終値)(2026-07-13 ユーザー指示)。
+  const add = Math.max(0, plusNV - cur);
   const kind = isCps ? "毎秒" : "タップ";
 
   // 追加分は「+X」、合計は「毎秒 X(タップ X)」のみを表示する
@@ -14086,6 +14104,12 @@ function renderInfo() {
 
   box.innerHTML = `
     <div class="infoBox">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="item" id="infoOpenCodexBtn" style="width:auto;padding:8px 16px">📖 図鑑</button>
+      </div>
+    </div>
+
+    <div class="infoBox">
       <h3>生産の実数値</h3>
       <div class="infoRow">クリック（タップ1回の生産）：${fmt(currentClickPower())}</div>
       <div class="infoRow">毎秒（CPS・自動生産）：${pausedForSkillChoice() ? "準備中" : fmt(currentCps())}</div>
@@ -14145,6 +14169,9 @@ function renderInfo() {
       ${upgradeRows}
     </div>
   `;
+
+  // 図鑑・装備は一覧タブ内のボタンから開く(2026-07-13 ユーザー指示で上部アイコンから移設)
+  const cbtn = $("infoOpenCodexBtn"); if (cbtn) addTap(cbtn, openCodex);
 
   box.scrollTop = savedScroll;
 }
