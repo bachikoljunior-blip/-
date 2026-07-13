@@ -1354,6 +1354,21 @@ reachMinSec=600/reachMaxSec=6000。**T3b 379/421(90%)**。弱点は S10(頭8・T
 - **レシピの緩和**: 装備+素材あわせて1〜5種(装備が入らなくても・素材が入らなくてもよい)。
 - T2第0回=上限のみ・③=全周回+毎回取る方針の実在・T3c(討伐可能維持8割)は3-2表に反映済み。
 
+**第13次サイクルB進捗(2026-07-14 R19f世代・このセッションの確定分)**:
+- **解消を実測確認済み**: ①初回希釈トリオ(ovenSelf 10→20+oven/factoryの台数連動全生産項0.0002+
+  grandmaCrowd買い控えゲート台数200=全てNG0)・④S9迂回(S9のshouldPrestigeに単調床×1.57)・
+  ③goldenRate(S3が最初の2周回goldenRateを取らないpickRewardSkipEarly=全周回≥1.1)・
+  ③monsterRate(討伐直送に回転ボーナス rateBonus0.45/rateHalf25=飽和と独立のlift床。S9全周回≥1.1)・
+  ③-c biteRecovery(S4にpickRewardOncePerRunFirst=毎周回1枚確保)。全てsim+ゲーム同期済み。
+- **新ユーザー指示(2026-07-14・実装済み)**: (1)研究コストはゲーム内固定=段1+段2/3を絶対値固定表で焼き込み
+  (RESEARCH_STAGE_COST・再焼き時はゲーム側も同時更新) (2)解放間隔30秒以上=解放ゲート機構
+  (unlockGateOk/pushUnlock・ゲームUNLOCK_GAP_MS・転生も同ゲート・runner「T2下限30s」列)。
+- **実行中**: expect48h R19f+baseline100h R19b(全修正込みの再計測)。
+- **残NG(R19d/R19世代実測)**: ⑬圧縮チャージ(S7=1.000)/延長狩り(S7=0.956)=帯[1.05,2.0]に入る方針の設計
+  (bhBoostCoef/Dur・portalHunt系レバー)・㉘balanced 8/28(中盤討3-7%・後半タップ0%)・
+  T1後半周回の2h超過(周回26本/100h=tune再焼き領域)・新⑥85-90%・T3b・装備lift(a) 72/90(S8/S9の弱束周回)。
+- ChatGPT引き継ぎ指示文= sim/CHATGPT_HANDOFF.md(zipと本文をユーザーへ送付済み)。
+
 **第13次サイクルB進行中(2026-07-14・再係留の作業キュー=ここから続行)**:
 - 確定済み土台: メトロノーム+④単調化(転生目標=max(次スキル束,前回×1.57)・strategies.js prestigeWhen)
   +相乗り段の人数割り(sim.js buildSkillCosts)+直送r2構成(params本適用済み)。
