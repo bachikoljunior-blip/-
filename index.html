@@ -10627,7 +10627,7 @@ function currentQuestText() {
 const DIRECT_CFG = {
   equip:  { coef: 0.06, stagePow: 0.5, countPow: 2,   ref: 70,  startStage: 5, satMax: 50, otherMul: { click: 0.08, default: 0.2 }, anchorGolden: 0.15 },
   golden: { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 10, otherMul: { click: 0.3, balanced: 0.3, hunt: 0.3, default: 1 } },
-  hunt:   { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 12, otherMul: { click: 0.08, balanced: 0.22, golden: 0.9, default: 0.3 }, peddlerFrac: 0.06 },
+  hunt:   { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 12, otherMul: { click: 0.08, balanced: 0.22, golden: 0.9, default: 0.3 }, peddlerFrac: 0.06, rateBonus: 0.45, rateHalf: 25 },
   tap:    { coef: 0.01, stagePow: 0.5, countPow: 2,   ref: 20,  startStage: 5, clickBonus: 5.6, clickBonusLate: 21, satMax: 150, satMaxLate: 1200, anchorGolden: 0.5, stallFrac: 0.05, otherMul: { golden: 0.6, balanced: 8.0, default: 1 } },
   bank:   { coef: 0.42, ownRate: 0.5, savedCoef: 0.05, clickBonus: 2.8, countCoef: 0.9, countPow: 1.8, ref: 150, anchorGolden: 0.12, otherMul: 0.5 }
 };
@@ -10689,7 +10689,7 @@ function huntPeddlerCps() {
     + (p.monsterRate || 0) + (p.monsterStay || 0) + (p.biteRecovery || 0) + (p.brandHunt || 0);
   if (inv <= 0) return 0;
   const almanacM = 1 + Math.min(0.05 * equipLv("monsterAlmanac"), 0.5); // モンスター図鑑: 弱点を知る=買い取り増
-  // 回転ボーナス(2026-07-14 sim同期): 出現率perkは行商の在庫回転を上げる(飽和と独立・上限1.3)
+  // 回転ボーナス(2026-07-14 sim同期): 出現率perkは行商の在庫回転を上げる(飽和と独立・上限1.45)
   const mrLv = p.monsterRate || 0;
   const rateM = 1 + (cfg.rateBonus || 0) * mrLv / (mrLv + (cfg.rateHalf || 25));
   return genreDirectCps(expectedGoldenRateCps(), inv, cfg) * directOtherMul(cfg, "hunt") * gateM * almanacM * rateM;
