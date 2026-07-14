@@ -2471,6 +2471,9 @@
         0 4px 10px rgba(0,0,0,0.16);
     }
 
+    /* 工房タブの「✕ 閉じる」は出さない(2026-07-13 ユーザー指示)。工房タブをもう一度押すと閉じる。 */
+    .tabPageHead[data-full-target="workshopTab"].fullscreenActive::after { content: none; }
+
     .pageHeadRow {
       flex: 0 0 auto;
     }
@@ -6380,7 +6383,7 @@ const REWARD_POOL = [
   { id: "goldenRate", name: "金クッキー出現率アップ", category: "golden", desc: n => `金クッキーの出現間隔を短縮。取るたびにさらに短くなる Lv.${n}` },
   { id: "goldenPower", name: "金ブースト倍率アップ", category: "golden", desc: n => `金ブースト倍率 +${(0.25 * n / (1 + n / 60)).toFixed(2)}、ブースト時間も延長` },
   { id: "goldenAmount", name: "金クッキー獲得量アップ", category: "golden", desc: n => `金クッキー即時獲得量 +${Math.round(45 * n / (1 + n / 45))}%、ブースト時間も延長` },
-  { id: "monsterDamage", name: "対モンスターダメージアップ", category: "hunt", desc: n => `モンスターへの最終ダメージ +${550 * n}%相当` },
+  { id: "monsterDamage", name: "対モンスターダメージアップ", category: "hunt", desc: n => `モンスターへのダメージ ×${Math.pow(1.2, n).toFixed(2)}(1レベルごとに1.2倍)` },
   { id: "monsterRate", name: "モンスター出現率アップ", category: "hunt", desc: n => `モンスターの出現間隔を短縮。取るたびにさらに短くなる Lv.${n}` },
   { id: "monsterStay", name: "濃い餌", category: "hunt", desc: n => `モンスター滞在時間が伸びる Lv.${n}` },
 
@@ -9722,7 +9725,17 @@ function renderWorkshop() {
   // 作成できる装備は最初から全て表示する(素材の発見を待たない・2026-07-14 ユーザー指示)。
   // 作成可否(ボタンの有効化)は別途equip2Affordで判定。背景画像は使わない。
   for (const it of equip2Items()) { if (!state.eq2Seen[it.id] && equip2CraftableNow(it) && equip2MatsAfford(it)) state.eq2Seen[it.id] = true; }
-  const craftRows = equip2Items().filter(it => equip2CraftableNow(it)).map(it => {
+  // 作成はカテゴリごとのタブで切り替える。先頭に「全て」を置き、最初はそれを開く(2026-07-13 ユーザー指示)
+  const craftCats = ["all", ...EQUIP2_CATS];
+  if (!craftCats.includes(state.eq2CraftCat)) state.eq2CraftCat = "all";
+  const craftableAll = equip2Items().filter(it => equip2CraftableNow(it));
+  const craftList = state.eq2CraftCat === "all" ? craftableAll : craftableAll.filter(it => it.cat === state.eq2CraftCat);
+  const craftCatBar = `<div class="buyModeBar" style="margin-bottom:8px;flex-wrap:wrap;gap:4px">`
+    + `<button class="item ${state.eq2CraftCat === "all" ? "canBuy" : ""}" data-eq2craftcat="all" style="width:auto;padding:4px 9px">全て</button>`
+    + EQUIP2_CATS.map(cat =>
+        `<button class="item ${state.eq2CraftCat === cat ? "canBuy" : ""}" data-eq2craftcat="${cat}" style="width:auto;padding:4px 9px">${EQUIP2_CAT_NAMES[cat]}</button>`
+      ).join("") + `</div>`;
+  const craftRows = craftList.map(it => {
     const needs = [];
     if (it.prev) {
       const pv = equip2ById(it.prev);
@@ -9749,7 +9762,8 @@ function renderWorkshop() {
   const craftSection = `
     <div class="infoBox eq2CraftBox">
       <h3>装備の作成</h3>
-      ${craftRows || `<div class="desc">素材が揃うとレシピが並ぶ(モンスターの色素材+ステージ素材)</div>`}
+      ${craftCatBar}
+      ${craftRows || `<div class="desc">${state.eq2CraftCat === "all" ? "素材が揃うとレシピが並ぶ(モンスターの色素材+ステージ素材)" : "この種類の作れる装備はまだない"}</div>`}
     </div>`;
   // 料理は既存の工房スキル解放のまま。装備と料理は工房タブ内で別タブ(2026-07-13)
   // 料理タブは解放(スキル「素材の嗅覚」取得)するまで出さない(2026-07-13 ユーザー指示)
@@ -9779,6 +9793,7 @@ function renderWorkshop() {
   box.querySelectorAll("[data-wssub]").forEach(b => addTap(b, () => { state.wsSubTab = b.dataset.wssub; renderWorkshop(); }));
   box.querySelectorAll("[data-dish]").forEach(btn => addTap(btn, () => cookDish(btn.dataset.dish)));
   box.querySelectorAll("[data-eq2craft]").forEach(btn => addTap(btn, () => craftEquip2(btn.dataset.eq2craft)));
+  box.querySelectorAll("[data-eq2craftcat]").forEach(b => addTap(b, () => { state.eq2CraftCat = b.dataset.eq2craftcat; renderWorkshop(); }));
   // 必要素材アイコンをタップしたら名前を表示(2026-07-13)
   box.querySelectorAll("[data-matinfo]").forEach(b => addTap(b, () => {
     const v = b.dataset.matinfo;
@@ -10330,6 +10345,12 @@ function globalResearchMultiplier() {
   m *= galaxyDivisionBonus(); // 銀河分業 段階2: 編成ボーナス
 
   return m;
+}
+
+// 対モンスターダメージアップ報酬の倍率(2026-07-13 ユーザー指示: 1レベルごとに1.2倍)。
+// 設備の自動攻撃・タップの両方のダメージに反映する。
+function monsterDamageRewardMultiplier() {
+  return Math.pow(1.2, Math.max(0, state.perks.monsterDamage || 0));
 }
 
 function monsterBaseDamage() {
@@ -16382,9 +16403,10 @@ function hitMonster(id, ev) {
   state.totalClicks += 1;
   trackOrderProgress("click", null, 1);
 
-  // タップの攻撃: タップ力(会心倍率込み)ぶんのダメージをそのモンスターに与える。
-  mon.overkill = tapPower >= mon.hp * OVERKILL_MUL;
-  mon.hp -= tapPower;
+  // タップの攻撃: タップ力(会心倍率込み)×報酬ダメージアップ ぶんのダメージをそのモンスターに与える。
+  const tapDamage = tapPower * monsterDamageRewardMultiplier();
+  mon.overkill = tapDamage >= mon.hp * OVERKILL_MUL;
+  mon.hp -= tapDamage;
 
   playSound(critical ? "crit" : "monster");
 
@@ -17235,7 +17257,7 @@ function runFacilityAttacks(dt) {
     if (facilityAttackAccum[u.id] < interval) continue;
     const times = Math.floor(facilityAttackAccum[u.id] / interval);
     facilityAttackAccum[u.id] -= times * interval;
-    const dmg = facilityCombatCps(u) * interval * times;
+    const dmg = facilityCombatCps(u) * interval * times * monsterDamageRewardMultiplier(); // 報酬ダメージアップを反映
     if (!(dmg > 0)) continue;
     applyFacilityDamage(FACILITY_ATTACK_MODE[u.id] || "single", dmg);
   }
