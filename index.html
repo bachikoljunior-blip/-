@@ -6792,7 +6792,7 @@ let monsterIdSeq = 1;
 let forceBossNext = false; // デバッグ「ボス即出現」用(セーブしない)
 let firstMonsterStayPending = true; // 周回で最初に出るモンスターの滞在は30秒(2026-07-13 ユーザー指示)
 let runSpawnCount = 0; // その周回でのモンスター出現回数(出現間隔の逓減に使う)
-const MONSTER_SPAWN_BASE_MS = 10000;  // 初期の出現間隔(10秒)
+const MONSTER_SPAWN_BASE_MS = 5000;   // 初期の出現間隔(5秒)
 const MONSTER_SPAWN_FLOOR_MS = 1000;  // 出現間隔の下限
 const MONSTER_REWARD_CHANCE = 0.20;   // 撃破時に報酬が出る確率(2026-07-13 ユーザー指示)
 
@@ -15716,9 +15716,9 @@ function scheduleMonster() {
     return;
   }
 
-  // 出現頻度(2026-07-13 ユーザー指示): 周回開始時は10秒に1回。出現するたびに前回の5%短くなる
-  // (10秒 → 9.5秒 → 9.025秒 …)。最短は MONSTER_SPAWN_FLOOR_MS。
-  const baseInterval = Math.max(MONSTER_SPAWN_FLOOR_MS, MONSTER_SPAWN_BASE_MS * Math.pow(0.95, runSpawnCount));
+  // 出現頻度(2026-07-13 ユーザー指示): 周回開始時は5秒に1回。モンスターのレベルが上がるごとに、
+  // 前のレベルより3%短くなる(Lv1=5秒 → Lv2=4.85秒 → …)。最短は MONSTER_SPAWN_FLOOR_MS。
+  const baseInterval = Math.max(MONSTER_SPAWN_FLOOR_MS, MONSTER_SPAWN_BASE_MS * Math.pow(0.97, monsterLevel() - 1));
   const spawnCut = 1 + Math.max(0, equip2Fx().spawnMul - 1); // 新装備: 出現短縮系
   const chainWaitMultiplier = state.nextMonsterSpawnMultiplier || 1;
   const raw = baseInterval * monsterSpawnFactor() * chainWaitMultiplier / spawnCut;
@@ -16059,8 +16059,8 @@ function monsterLevel() {
 }
 
 function monsterHpValue(level) {
-  // HPが上がるのはレベルが上がった時だけ(連続的な時間補正は無し)。初期100、1レベルごとに1.5倍(2026-07-13 ユーザー指示)。
-  let hp = 100 * Math.pow(1.5, Math.max(0, level - 1));
+  // HPが上がるのはレベルが上がった時だけ(連続的な時間補正は無し)。初期100、1レベルごとに2倍(2026-07-13 ユーザー指示)。
+  let hp = 100 * Math.pow(2, Math.max(0, level - 1));
   hp *= Math.exp(-Math.max(0, skillEffect("monsterHpDown")));
   hp *= deepPursuitHpPenalty();
   hp *= bakeBurntMonsterHpMultiplier();
