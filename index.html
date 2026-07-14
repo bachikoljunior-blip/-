@@ -349,10 +349,10 @@
     /* クッキー画面のクッキー本体は廃止(2026-07-13 ユーザー指示)。表示・タップ判定とも無効化する。 */
     #cookie { display: none !important; }
 
-    /* 金クッキーブーストはブースト中のテキストのみ表示する(2026-07-13 ユーザー指示)。 */
+    /* 金クッキーブースト中は倍率のみをクッキー画面の一番下に表示する(2026-07-13 ユーザー指示)。 */
     .boostBanner {
       position: absolute;
-      top: 8px;
+      bottom: 8px;
       left: 50%;
       transform: translateX(-50%);
       z-index: 60;
@@ -2759,7 +2759,8 @@
 
     #goldenCookie {
       position: absolute !important;
-      z-index: 4 !important;
+      /* 金クッキーはノルマゲージ(z-index:30)と重なっても上のレイヤーに置く(2026-07-13 ユーザー指示) */
+      z-index: 45 !important;
     }
 
     /* モンスター(とHP表示)はノルマUI(z-index:30)より前面に置き、HPが隠れないようにする */
@@ -3607,7 +3608,8 @@
 
     #goldenCookie {
       position: absolute !important;
-      z-index: 4 !important;
+      /* 金クッキーはノルマゲージ(z-index:30)と重なっても上のレイヤーに置く(2026-07-13 ユーザー指示) */
+      z-index: 45 !important;
     }
 
     /* モンスター(とHP表示)はノルマUI(z-index:30)より前面に置き、HPが隠れないようにする */
@@ -12284,9 +12286,13 @@ function updateTopOnly() {
     }
   }
 
-  // 金クッキーブーストは「ブースト中」テキストのみで表す(2026-07-13 ユーザー指示)
+  // 金クッキーブースト中は倍率のみを画面下に表示する(2026-07-13 ユーザー指示)
   const boostBanner = $("boostBanner");
-  if (boostBanner) boostBanner.classList.toggle("on", goldenBoostActive());
+  if (boostBanner) {
+    const on = goldenBoostActive();
+    boostBanner.classList.toggle("on", on);
+    if (on) boostBanner.textContent = "×" + goldenBoostMultiplier().toFixed(1);
+  }
   updateBhGaugeButton();
 
   updatePrestigeTabLabel();
@@ -16070,7 +16076,7 @@ function monsterStayDurationMs() {
   const categoryRaw = rewardCategoryBonus("hunt");
   const multiplier = Math.exp(rewardLv * 0.04 + skillRaw * 0.12 + policyRaw + categoryRaw) * (state.nextMonsterStayMultiplier || 1) * bakeMonsterStayMultiplier();
   state.nextMonsterStayMultiplier = 1;
-  return Math.max(4000, 16000 * multiplier);
+  return Math.max(4000, 30000 * multiplier); // クッキーモンスターの滞在時間は30秒(2026-07-13 ユーザー指示)
 }
 
 function syncMonsterVisible() {
@@ -16260,7 +16266,7 @@ function monsterStayEstimateMs() {
   const policyRaw = runPolicyIs("hunt") ? 0.10 : 0;
   const categoryRaw = rewardCategoryBonus("hunt");
   const multiplier = Math.exp(rewardLv * 0.04 + skillRaw * 0.12 + policyRaw + categoryRaw) * bakeMonsterStayMultiplier();
-  return Math.max(4000, 16000 * multiplier);
+  return Math.max(4000, 30000 * multiplier); // クッキーモンスターの滞在時間は30秒(2026-07-13 ユーザー指示)
 }
 
 // 待機中に滞在時間ぶん経過したエントリは「画面に居ても消えていたはず」なので破棄する
