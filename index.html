@@ -7239,16 +7239,10 @@ function applyMonsterLayerOrder() {
 }
 
 function relayoutMonsters() {
-  try {
-    const host = document.querySelector(".top");
-    if (!host || !host.clientWidth) return;
-    (monsters || []).forEach(m => {
-      if (m && m.el && m.el.isConnected && !m.el.classList.contains("mtype-swarm")) {
-        placeFixedElement(m.el, m.el.offsetWidth || 236, m.el.offsetHeight || 254, 90);
-      }
-    });
-    applyMonsterLayerOrder();
-  } catch (e) { /* 再配置失敗は無視 */ }
+  // 既にいるモンスターの位置は変えない(2026-07-13 ユーザー指示)。
+  // 新しく出たモンスターは出現時に一度だけ配置(showMonster内 placeFixedElement)し、以後動かさない。
+  // ここではレイヤー順(z-index)だけ更新する。
+  applyMonsterLayerOrder();
 }
 
 function togglePlayFullscreen() {
@@ -15666,24 +15660,11 @@ function placeFixedElement(el, width, height, minY) {
     return best;
   }
 
-  // 出現物は「.topの内側に収まる」ためだけに縮小し、位置はできるだけ重ならない場所を選ぶ。
+  // 出現物は「.topの内側に収まる」ためだけに縮小する。モンスターは体数が増えても小さくしない
+  // (2026-07-13 ユーザー指示: 出現時に小さくなるのをやめる)。位置はできるだけ重ならない場所を選ぶ。
   const availW = Math.max(1, hostW - pad * 2);
   const availH = Math.max(1, hostH - minYFixed - pad);
-  const fitScale = Math.min(1, availW / naturalW, availH / naturalH);
-
-  // モンスターが複数いるときは、縦に並べても重ならないよう体数に応じて縮小する。
-  // (1体なら従来どおり大きく表示。増えるほど小さくして「下に並べて」重なりを避ける)
-  const isMonster = !!(el.classList && el.classList.contains("monsterInstance"));
-  const monCount = isMonster
-    ? Math.max(1, (monsters || []).filter(m => m && m.el && m.el.isConnected && !m.el.classList.contains("mtype-swarm")).length)
-    : 1;
-  const stackCap = monCount <= 1
-    ? 1
-    : Math.min(1, (availH - pad * (monCount + 1)) / (monCount * naturalH));
-  const floor = monCount <= 1 ? 0.7 : 0.4; // 複数時はタップできる範囲で小さくしてよい
-  // fitScale(＝.top内に収まる上限)は絶対に超えない。floorがfitScaleより大きい端末でも
-  // はみ出さないよう最後にfitScaleで頭打ちにする(2026-07-13「全部おさまるように」)
-  const scale = Math.min(fitScale, Math.max(floor, Math.min(fitScale, stackCap)));
+  const scale = Math.min(1, availW / naturalW, availH / naturalH);
   const best = tryPlace(naturalW * scale, naturalH * scale);
 
   el.style.transform = scale < 0.999 ? `translateZ(0) scale(${scale.toFixed(3)})` : "translateZ(0)";
