@@ -400,6 +400,36 @@
       border-radius: 6px;
     }
 
+    /* 撃破後に落ちる素材アイコン(タップで拾う・2026-07-13 ユーザー指示) */
+    .matDrop {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border: none;
+      background: transparent;
+      z-index: 66;
+      cursor: pointer;
+      touch-action: manipulation;
+      filter: drop-shadow(0 3px 4px rgba(0,0,0,0.5));
+      animation: matDropFall 0.6s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+    }
+    .matDrop .matDropIcon {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+      display: block;
+      border-radius: 8px;
+    }
+    @keyframes matDropFall {
+      0%   { transform: translateY(-26px) scale(0.5); opacity: 0; }
+      40%  { opacity: 1; }
+      70%  { transform: translateY(6px) scale(1.08); }
+      100% { transform: translateY(0) scale(1); opacity: 1; }
+    }
+    .matDrop.collected { animation: matDropPop 0.22s ease-out forwards; }
+    @keyframes matDropPop { to { transform: translateY(-16px) scale(1.35); opacity: 0; } }
+
     #cookie.boost-all {
       background:
         radial-gradient(circle at 28% 28%, rgba(255,255,255,0.36) 0 12px, transparent 13px),
@@ -476,6 +506,9 @@
     @keyframes rise {
       to { opacity: 0; transform: translate(-50%, -46px); }
     }
+
+    /* タップ位置に出すフロート: 親ラッパーの基準点(=タップ座標)を起点にする */
+    .float.floatAt { left: 0; top: 0; }
 
     /* 討伐連鎖の一時表示(討伐直後にクッキーの上あたりへ数秒出す) */
     #chainIndicator {
@@ -6743,6 +6776,10 @@ let pendingMonsterSpawns = [];
 let monsterIdSeq = 1;
 let forceBossNext = false; // デバッグ「ボス即出現」用(セーブしない)
 let firstMonsterStayPending = true; // 周回で最初に出るモンスターの滞在は30秒(2026-07-13 ユーザー指示)
+let runSpawnCount = 0; // その周回でのモンスター出現回数(出現間隔の逓減に使う)
+const MONSTER_SPAWN_BASE_MS = 10000;  // 初期の出現間隔(10秒)
+const MONSTER_SPAWN_FLOOR_MS = 1000;  // 出現間隔の下限
+const MONSTER_REWARD_CHANCE = 0.20;   // 撃破時に報酬が出る確率(2026-07-13 ユーザー指示)
 
 let pendingRewardChoices = [];
 let rewardOpenTimer = null;
@@ -9432,16 +9469,8 @@ function grantMonsterDrops(typeId, level, overkill, dropOre) {
     // 制限時間なし・内容固定・周回を跨いで累積。進捗は注文ボードに常設表示。
     questProgressOnKill(stageNo, (MONSTER_TYPES[typeId] && MONSTER_TYPES[typeId].count) || 1);
 
-    // 素材ドロップ(2026-07-13 ユーザー指示): 一定確率で0〜1個。確率は固定(後で強化機能を追加予定)。
-    // 落とす素材は「そのモンスターの色が対応する色粉」(dropOre)。入手時は素材の画像つきトーストで通知する。
-    if (Math.random() < MATERIAL_DROP_CHANCE) {
-      const dropId = dropOre || dropMaterialIdFor(stageNo, typeId);
-      const got = gainMaterial(dropId, 1);
-      if (got > 0) {
-        dropMat(`+${got} ${getMaterial(dropId).name}`);
-        showDropToast(dropId, got);
-      }
-    }
+    // 素材ドロップは撃破後の物理ドロップ(落下アイコンをタップで入手)へ移行したため、ここでは付与しない
+    // (defeatMonster 側で spawnMaterialDrop を呼ぶ・2026-07-13 ユーザー指示)。
   }
 
   // はやて系(3変種とも): 撃破すると次の金クッキー出現間隔×0.5
@@ -12037,6 +12066,43 @@ function showDropToast(matId, count) {
   el._dropTimer = setTimeout(() => el.classList.remove("on"), 1800);
 }
 
+// 撃破後、モンスターがいた場所に素材アイコンを落とす(落下アニメ)。タップで効果音とともに入手。
+// 2個以上ならその数だけ出す。テキストは出さない(2026-07-13 ユーザー指示)。
+function spawnMaterialDrop(matId, count, cx, cy) {
+  const host = document.querySelector(".top");
+  if (!host || !matId || !(count > 0)) return;
+  const hostW = host.clientWidth || 360;
+  const hostH = host.clientHeight || 320;
+  const baseX = (cx == null) ? hostW / 2 : cx;
+  const baseY = (cy == null) ? hostH / 2 : cy;
+  for (let i = 0; i < count; i++) {
+    const btn = document.createElement("button");
+    btn.className = "matDrop";
+    btn.type = "button";
+    btn.setAttribute("aria-label", "落ちた素材を拾う");
+    btn.innerHTML = matIconHtml(matId, "matDropIcon");
+    // 複数個は横に少し散らす
+    const spread = count > 1 ? (i - (count - 1) / 2) * 36 : 0;
+    const x = Math.max(4, Math.min(hostW - 44, baseX + spread + (Math.random() - 0.5) * 10 - 20));
+    const y = Math.max(4, Math.min(hostH - 44, baseY - 20));
+    btn.style.left = x + "px";
+    btn.style.top = y + "px";
+    host.appendChild(btn);
+    let collected = false;
+    const collect = () => {
+      if (collected) return;
+      collected = true;
+      gainMaterial(matId, 1);
+      playSound("golden");
+      btn.classList.add("collected");
+      setTimeout(() => btn.remove(), 220);
+    };
+    addTap(btn, collect);
+    // タップされないまま一定時間経ったら消える(取り逃し)
+    setTimeout(() => { if (!collected && btn.isConnected) btn.remove(); }, 15000);
+  }
+}
+
 // 討伐連鎖の一時表示: 討伐直後に「連鎖 ×N(全生産+X%)」をクッキーの上あたりへ数秒出す
 let chainIndicatorTimer = null;
 function showChainIndicator() {
@@ -12060,6 +12126,24 @@ function showFloat(text, critical = false) {
   div.textContent = text;
   $("floatArea").appendChild(div);
   setTimeout(() => div.remove(), critical ? 850 : 600);
+}
+
+// タップした位置(画面座標)に数値を出す(2026-07-13 ユーザー指示)。ゲーム全体のscaleを補正して.top内へ配置。
+function showFloatAt(text, clientX, clientY, critical = false) {
+  const host = document.querySelector(".top");
+  if (!host || clientX == null || clientY == null) { showFloat(text, critical); return; }
+  const h = host.getBoundingClientRect();
+  const k = h.width / Math.max(1, host.clientWidth || h.width);
+  const lx = (clientX - h.left) / k;
+  const ly = (clientY - h.top) / k;
+  const wrap = document.createElement("div");
+  wrap.style.cssText = `position:absolute;left:${lx}px;top:${ly}px;z-index:72;pointer-events:none;`;
+  const div = document.createElement("div");
+  div.className = critical ? "float critFloat floatAt" : "float floatAt";
+  div.textContent = text;
+  wrap.appendChild(div);
+  host.appendChild(wrap);
+  setTimeout(() => wrap.remove(), critical ? 850 : 600);
 }
 
 // クッキー本体のタップ演出。会心時は専用の大きな弾み+金色リング+多めのかけら
@@ -13358,6 +13442,7 @@ function beginRunAfterSkills() {
   state.skillChoiceStartCount = boughtSkillCount();
   state.runStart = Date.now();
   firstMonsterStayPending = true; // 新しい周回の最初のモンスターは滞在30秒
+  runSpawnCount = 0; // 新しい周回で出現間隔の逓減をリセット(10秒から)
   // この周回で採用した方針を「発動済み」として記録(図鑑の周回方針タブで発動したものだけ表示)
   if (runPolicyUnlocked()) markFeatureUnlocked("policy", state.runPolicy || "balanced");
   // ステージ選択画面で選んだステージを resetRunLimitedEffects(stage=1に戻す)から保護する
@@ -14808,6 +14893,7 @@ function redoCurrentRun() {
   rewardPending = false;
   monsters.forEach(m => { clearTimeout(m.hideTimer); if (m.el && m.el.parentElement) m.el.remove(); });
   monsters = [];
+  document.querySelectorAll(".matDrop").forEach(e => e.remove()); // 未回収の落下素材も片付ける
   goldenVisible = false;
   monsterVisible = false;
   $("goldenCookie").style.display = "none";
@@ -15530,6 +15616,7 @@ function scheduleGoldenCookie() {
 function fireMonsterSpawn() {
   if (canMonsterAppear() && normalPlayScreenActive()) {
     showMonster();
+    runSpawnCount++; // 出現するたびに次の出現間隔が5%短くなる
   }
   scheduleMonster();
 }
@@ -15555,13 +15642,13 @@ function scheduleMonster() {
     return;
   }
 
-  // 出現頻度: 周回開始時は10秒に1回。経過時間とともに段々早くなり、最短2秒まで縮む(2026-07-13 ユーザー指示)。
-  const elapsed = quotaElapsedSeconds();
-  const baseInterval = 2000 + 8000 * Math.exp(-elapsed / 120); // 10秒 → 2秒へ漸近(時定数120秒)
+  // 出現頻度(2026-07-13 ユーザー指示): 周回開始時は10秒に1回。出現するたびに前回の5%短くなる
+  // (10秒 → 9.5秒 → 9.025秒 …)。最短は MONSTER_SPAWN_FLOOR_MS。
+  const baseInterval = Math.max(MONSTER_SPAWN_FLOOR_MS, MONSTER_SPAWN_BASE_MS * Math.pow(0.95, runSpawnCount));
   const spawnCut = 1 + Math.max(0, equip2Fx().spawnMul - 1); // 新装備: 出現短縮系
   const chainWaitMultiplier = state.nextMonsterSpawnMultiplier || 1;
   const raw = baseInterval * monsterSpawnFactor() * chainWaitMultiplier / spawnCut;
-  const wait = protectedWait(raw, 800);
+  const wait = protectedWait(raw, 500);
   state.nextMonsterSpawnMultiplier = 1;
 
   setMonsterSpawnTimer(fireMonsterSpawn, wait);
@@ -15963,7 +16050,7 @@ function createMonsterElement(mon) {
   top.appendChild(wrap);
 
   // タップ判定をラッパー全体(ラベル・HPバー含む)に広げ、小さめ表示でもタップしやすくする
-  addTap(wrap, () => hitMonster(mon.id));
+  addTap(wrap, (e) => hitMonster(mon.id, e));
 
   return wrap;
 }
@@ -16214,7 +16301,7 @@ function renderMonsterHp(id) {
   syncMonsterVisible();
 }
 
-function hitMonster(id) {
+function hitMonster(id, ev) {
   // クッキーモンスターをタップすると、タップ力(会心込み)ぶんのダメージを与え、同額のクッキーももらえる。
   // 会心はモンスターへのダメージにも反映される(2026-07-13 ユーザー指示)。設備の自動攻撃と併用。
   if (rewardPending || rewardModalOpen()) return;
@@ -16259,7 +16346,9 @@ function hitMonster(id) {
   }
 
   renderMonsterHp(mon.id);
-  showFloat((critical ? "会心 +" : "+") + fmt(gained), critical);
+  // タップした位置に数値を表示(2026-07-13 ユーザー指示)。座標が無ければ従来のフロート
+  if (ev && ev.clientX != null) showFloatAt((critical ? "会心 +" : "+") + fmt(gained), ev.clientX, ev.clientY, critical);
+  else showFloat((critical ? "会心 +" : "+") + fmt(gained), critical);
   updateTopOnly();
 
   if (mon.hp <= 0) defeatMonster(mon.id);
@@ -16273,6 +16362,17 @@ function defeatMonster(id) {
   const defeatedLevel = mon.level;
   const defeatedTypeId = mon.typeId || "normal";
   const defeatedOre = mon.dropOre || null; // この色が落とす色粉
+
+  // 撃破位置(素材の落下位置)。hideMonster で DOM が消える前に取得しておく。
+  let dropX = null, dropY = null;
+  {
+    const host = document.querySelector(".top");
+    if (host && mon.el && mon.el.isConnected) {
+      const r = rectRelativeToHost(mon.el, host);
+      dropX = (r.left + r.right) / 2;
+      dropY = (r.top + r.bottom) / 2;
+    }
+  }
 
   hideMonster(mon.id, false);
   playSound("defeat");
@@ -16332,9 +16432,16 @@ function defeatMonster(id) {
   const recordText = recordKill(defeatedTypeId);
   if (recordText) message += ` / ${recordText}`;
 
-  // 素材ドロップ・ステージ討伐カウント・ボス撃破処理
+  // ステージ討伐カウント・ボス撃破処理(素材の物理ドロップは下で別途)
   const dropText = grantMonsterDrops(defeatedTypeId, defeatedLevel, Boolean(mon.overkill), defeatedOre);
   if (dropText) message += ` / ${dropText}`;
+
+  // 素材ドロップ(2026-07-13 ユーザー指示): 一定確率で0〜1個。撃破後、モンスターがいた場所に素材の
+  // 画像アイコンが落ちる(落下アニメ)。タップで効果音とともに入手。テキストは出さない。2個以上ならその数だけ出す。
+  if (defeatedTypeId !== "boss" && defeatedOre) {
+    const dropCount = Math.random() < MATERIAL_DROP_CHANCE ? 1 : 0;
+    if (dropCount > 0) spawnMaterialDrop(defeatedOre, dropCount, dropX, dropY);
+  }
 
   // 討伐連鎖: 2連鎖以上のときだけトーストに追記。
   // クッキー上のチェイン表示は、報酬モーダルの裏で消えてしまわないよう
@@ -16346,24 +16453,29 @@ function defeatMonster(id) {
   playSound("golden");
   if (defeatedTypeId !== "boss") showMessage(message); // ボスが消えた時のテキストは出さない(2026-07-13 ユーザー指示)
 
-  // 報酬レベル判定: tankは+18層ぶん、香料の砂丘は+8層ぶん扱い、討伐連鎖は+floor(0.05×連鎖数)
-  const rewardLevel = defeatedLevel
-    + ((MONSTER_TYPES[defeatedTypeId] || MONSTER_TYPES.normal).rewardLvAdd || 0)
-    + (currentStageInfo().rewardLvAdd || 0)
-    + Math.floor(CHAIN_REWARD_COEF * chainCount());
+  // 報酬は確率で発生(2026-07-13 ユーザー指示: 約20%)。出ない撃破では報酬モーダルを開かない。
+  if (Math.random() < MONSTER_REWARD_CHANCE) {
+    // 報酬レベル判定: tankは+18層ぶん、香料の砂丘は+8層ぶん扱い、討伐連鎖は+floor(0.05×連鎖数)
+    const rewardLevel = defeatedLevel
+      + ((MONSTER_TYPES[defeatedTypeId] || MONSTER_TYPES.normal).rewardLvAdd || 0)
+      + (currentStageInfo().rewardLvAdd || 0)
+      + Math.floor(CHAIN_REWARD_COEF * chainCount());
 
-  state.lastKillType = defeatedTypeId; // 報酬相性: 何を倒したかで各カテゴリの増分が変わる
-  pendingRewardChoices = buildMonsterRewardChoices(rewardLevel);
-  state.nextRewardCountBonus = 0;
-  preloadRewardChoiceImages(pendingRewardChoices);
+    state.lastKillType = defeatedTypeId; // 報酬相性: 何を倒したかで各カテゴリの増分が変わる
+    pendingRewardChoices = buildMonsterRewardChoices(rewardLevel);
+    state.nextRewardCountBonus = 0;
+    preloadRewardChoiceImages(pendingRewardChoices);
 
-  // 撃破後の間を無くし、報酬画面を即時に開く(この間の別モンスター撃破は
-  // 報酬モーダルが開いている間のロックで防ぐ)
-  rewardPending = true;
-  clearTimeout(rewardOpenTimer);
-  rewardOpenTimer = null;
-  showRewardChoices(rewardLevel, lastDropMaterials.slice());
-  rewardPending = false;
+    // 撃破後の間を無くし、報酬画面を即時に開く(この間の別モンスター撃破は
+    // 報酬モーダルが開いている間のロックで防ぐ)
+    rewardPending = true;
+    clearTimeout(rewardOpenTimer);
+    rewardOpenTimer = null;
+    showRewardChoices(rewardLevel, lastDropMaterials.slice());
+    rewardPending = false;
+  } else {
+    state.nextRewardCountBonus = 0;
+  }
 
   saveGame();
   updateTopOnly();
