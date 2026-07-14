@@ -6742,6 +6742,7 @@ let monsters = [];
 let pendingMonsterSpawns = [];
 let monsterIdSeq = 1;
 let forceBossNext = false; // デバッグ「ボス即出現」用(セーブしない)
+let firstMonsterStayPending = true; // 周回で最初に出るモンスターの滞在は30秒(2026-07-13 ユーザー指示)
 
 let pendingRewardChoices = [];
 let rewardOpenTimer = null;
@@ -13362,6 +13363,7 @@ function beginRunAfterSkills() {
   state.awaitingSkillChoice = false;
   state.skillChoiceStartCount = boughtSkillCount();
   state.runStart = Date.now();
+  firstMonsterStayPending = true; // 新しい周回の最初のモンスターは滞在30秒
   // この周回で採用した方針を「発動済み」として記録(図鑑の周回方針タブで発動したものだけ表示)
   if (runPolicyUnlocked()) markFeatureUnlocked("policy", state.runPolicy || "balanced");
   // ステージ選択画面で選んだステージを resetRunLimitedEffects(stage=1に戻す)から保護する
@@ -16037,9 +16039,14 @@ function showMonster(forcedTypeId) {
   const colorDef = MONSTER_COLOR_TIERS[colorTierIdx] || MONSTER_COLOR_TIERS[0];
   const hpMulShared = (state.nextMonsterHpMultiplier || 1) * type.hpMul * (stage.hpMul || 1) * (colorDef.hpMul || 1);
   // ボスは60秒固定。それ以外は従来式×type滞在倍率×ステージ滞在倍率
-  const stayMs = typeId === "boss"
+  let stayMs = typeId === "boss"
     ? 60000
     : monsterStayDurationMs() * (type.stayMul || 1) * (stage.stayMul || 1) * equip2Fx().stayMul; // 新装備: 滞在系
+  // 周回で最初に出るモンスターの滞在は30秒固定(2026-07-13 ユーザー指示)
+  if (firstMonsterStayPending && typeId !== "boss") {
+    stayMs = 30000;
+    firstMonsterStayPending = false;
+  }
   const chainReady = state.goldenChainReady;
   const firstHitReady = state.goldenFirstHitReady;
 
