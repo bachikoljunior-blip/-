@@ -6268,11 +6268,11 @@ const UPGRADES = [
   // クリックとおばあちゃんは基礎値1。香料棚を銀行〜異世界炉の中間に追加し、工場以降は緩やかに重くなる。
   { id: "finger", name: "強い指", type: "click", value: 1, base: 0.0184, growth: 1.32, desc: "1タップ +1。さらに毎秒生産の一部(0.4%×強い指補正)がタップ力に加算される" },
   { id: "grandma", name: "おばあちゃん", type: "cps", value: 1, base: 500, growth: 1.30, desc: "毎秒 +1(台数が増えるほど1台あたりが強くなる)" },
-  { id: "oven", name: "オーブン", type: "cps", value: 8, base: 520, growth: 1.35, desc: "毎秒 +8" },
-  { id: "factory", name: "工場", type: "cps", value: 45, base: 7200, growth: 1.37, desc: "毎秒 +45" },
-  { id: "bank", name: "クッキー銀行", type: "cps", value: 260, base: 54000, growth: 1.39, desc: "毎秒 +260" },
-  { id: "spiceRack", name: "香料棚", type: "cps", value: 780, base: 215000, growth: 1.40, desc: "毎秒 +780" },
-  { id: "portal", name: "異世界クッキー炉", type: "cps", value: 1600, base: 780000, growth: 1.41, desc: "毎秒 +1600" },
+  { id: "oven", name: "オーブン", type: "cps", value: 8, base: 10000, growth: 1.35, desc: "毎秒 +8" },
+  { id: "factory", name: "工場", type: "cps", value: 45, base: 50000, growth: 1.37, desc: "毎秒 +45" },
+  { id: "bank", name: "クッキー銀行", type: "cps", value: 260, base: 200000, growth: 1.39, desc: "毎秒 +260" },
+  { id: "spiceRack", name: "香料棚", type: "cps", value: 780, base: 500000, growth: 1.40, desc: "毎秒 +780" },
+  { id: "portal", name: "異世界クッキー炉", type: "cps", value: 1600, base: 1000000, growth: 1.41, desc: "毎秒 +1600" },
   { id: "moonBakery", name: "月面ベーカリー", type: "cps", value: 9800, base: 12500000, growth: 1.43, desc: "毎秒 +9800" },
   { id: "timeOven", name: "時空オーブン", type: "cps", value: 65000, base: 180000000, growth: 1.45, desc: "毎秒 +6.5万" },
   { id: "galaxyFactory", name: "銀河工場", type: "cps", value: 450000, base: 2800000000, growth: 1.47, desc: "毎秒 +45万" },
@@ -6627,16 +6627,17 @@ const MONSTER_TYPES = {
 //  ・ノルマ層が進むと、色違いで一段強い個体が1色ずつ低確率で解禁され、層が進むほどその確率が上がる。
 //    さらに層が進むと次の色が低確率で出るようになる…と続く。
 //  ・層が進んでも初期色(tier0)の確率はゼロにならない(常に一定の下限で出続ける)。
-// 各tierは色相(hue)と強さ(hpMul)を持ち、indexが上がるほど一段強い。
+// 色の順番(2026-07-13 ユーザー指示): 「その色が落とす素材(色粉 ore_t*)を使って工房で作れる
+// 最初の装備の強さ」順に並べる。装備の強さは概ね 2^(装備ティア-1)×主効果で決まり、各色粉の
+// 最初の装備は こはく粉(t2)≒しろがね粉(t1) < ひすい粉(t3) < るり粉(t4) < むらさき粉(t5) < べにばな粉(t6)。
+// よって弱い順に t2, t1, t3, t4, t5, t6。各色はその色粉をドロップする。hue/aura はその色粉の色に合わせる。
 const MONSTER_COLOR_TIERS = [
-  { hue: 0,   hpMul: 1 },     // デフォルト色
-  { hue: 45,  hpMul: 1.7 },
-  { hue: 90,  hpMul: 2.9 },
-  { hue: 135, hpMul: 4.8 },
-  { hue: 180, hpMul: 8 },
-  { hue: 225, hpMul: 13 },
-  { hue: 270, hpMul: 22 },
-  { hue: 315, hpMul: 36 }
+  { ore: "ore_t2", hue: 0,   aura: "#e0a35c", hpMul: 1 },    // こはく粉(琥珀)= デフォルト色・最弱装備
+  { ore: "ore_t1", hue: 190, aura: "#b8c4cc", hpMul: 1.8 },  // しろがね粉(白銀)
+  { ore: "ore_t3", hue: 110, aura: "#5cb85c", hpMul: 3.2 },  // ひすい粉(翡翠)
+  { ore: "ore_t4", hue: 235, aura: "#4aa3df", hpMul: 5.5 },  // るり粉(瑠璃)
+  { ore: "ore_t5", hue: 285, aura: "#a76ddf", hpMul: 9 },    // むらさき粉(紫)
+  { ore: "ore_t6", hue: 340, aura: "#e05c8a", hpMul: 15 }    // べにばな粉(紅)
 ];
 const COLOR_TIER_UNLOCK_STEP = 3;  // 何層ごとに新しい色を解禁するか
 const COLOR_TIER_FLOOR = 3;        // 初期色(tier0)の固定出現ウェイト(ゼロにならない下限)
@@ -7231,10 +7232,43 @@ function relayoutMonsters() {
   try {
     const host = document.querySelector(".top");
     if (!host || !host.clientWidth) return;
-    (monsters || []).forEach(m => {
-      if (m && m.el && m.el.isConnected && !m.el.classList.contains("mtype-swarm")) {
-        placeFixedElement(m.el, m.el.offsetWidth || 236, m.el.offsetHeight || 254, 90);
-      }
+    // 通常モンスター(群れ以外)は、出現順に上から下へ縦に積む(2026-07-13 ユーザー指示:
+    // 新しく出現するモンスターは既存のものの下に、可能な限り重ならないように)。
+    const list = (monsters || []).filter(m => m && m.el && m.el.isConnected && !m.el.classList.contains("mtype-swarm"));
+    if (!list.length) return;
+
+    const pad = 8, gap = 6;
+    const quota = $("quotaBox");
+    const hostW = host.clientWidth || 360;
+    const hostH = host.clientHeight || 320;
+    const quotaBottom = quota ? quota.offsetTop + quota.offsetHeight : 0;
+    const minY = Math.max(pad, quotaBottom + 4, 90);
+    const naturalW = 236, naturalH = 254;
+    const availW = Math.max(1, hostW - pad * 2);
+    const availH = Math.max(1, hostH - minY - pad);
+    const n = list.length;
+
+    // 全体が縦に収まるよう、体数に応じて一律スケール(タップできる範囲で縮小)
+    const fitScale = Math.min(1, availW / naturalW, availH / naturalH);
+    const stackScale = (availH - gap * (n - 1)) / (n * naturalH);
+    const scale = Math.max(0.3, Math.min(fitScale, stackScale, 1));
+    const w = naturalW * scale, h = naturalH * scale;
+
+    // 縦の配置ステップ: 自然な間隔(h+gap)で収まればそれを使い、収まらなければ利用可能高さに
+    // 均等分散させて重なりを最小化する(末尾が下に固まらないように)。
+    const span = Math.max(0, availH - h); // 先頭からの最大移動量
+    const step = n > 1 ? Math.min(h + gap, span / (n - 1)) : 0;
+
+    list.forEach((m, i) => {
+      const el = m.el;
+      // x は中央寄せ＋わずかな左右ゆらぎ(縦積みなので基本重ならない)
+      const jitter = Math.min(36, Math.max(0, availW - w)) * (i % 2 === 0 ? 0.16 : -0.16);
+      const x = Math.min(Math.max(pad, (hostW - w) / 2 + jitter), Math.max(pad, hostW - w - pad));
+      const y = minY + i * step;
+      el.style.transform = scale < 0.999 ? `translateZ(0) scale(${scale.toFixed(3)})` : "translateZ(0)";
+      el.style.transformOrigin = "top left";
+      el.style.left = x + "px";
+      el.style.top = y + "px";
     });
   } catch (e) { /* 再配置失敗は無視 */ }
 }
@@ -9381,7 +9415,7 @@ const OVERKILL_RARE = { 2: "ironShard", 3: "silentCore", 4: "cometShard", 5: "co
 const FERMENT_MATERIAL = { 1: "flour", 2: "lavaSugar", 3: "frostSugar", 4: "lavaSugar", 5: "stardust", 6: "stardust" };
 
 // 撃破時の素材ドロップ・討伐カウント・ボス処理。表示用テキストを返す
-function grantMonsterDrops(typeId, level, overkill) {
+function grantMonsterDrops(typeId, level, overkill, dropOre) {
   const stageNo = currentStageNo();
   const stage = stageInfo(stageNo);
   const type = MONSTER_TYPES[typeId] || MONSTER_TYPES.normal;
@@ -9427,9 +9461,9 @@ function grantMonsterDrops(typeId, level, overkill) {
     questProgressOnKill(stageNo, (MONSTER_TYPES[typeId] && MONSTER_TYPES[typeId].count) || 1);
 
     // 素材ドロップ(2026-07-13 ユーザー指示): 一定確率で0〜1個。確率は固定(後で強化機能を追加予定)。
-    // 入手時は素材の画像つきトーストで通知する。
+    // 落とす素材は「そのモンスターの色が対応する色粉」(dropOre)。入手時は素材の画像つきトーストで通知する。
     if (Math.random() < MATERIAL_DROP_CHANCE) {
-      const dropId = dropMaterialIdFor(stageNo, typeId);
+      const dropId = dropOre || dropMaterialIdFor(stageNo, typeId);
       const got = gainMaterial(dropId, 1);
       if (got > 0) {
         dropMat(`+${got} ${getMaterial(dropId).name}`);
@@ -13370,6 +13404,7 @@ function beginRunAfterSkills() {
   renderAllTabs();
   switchTab("shopTab");
   scheduleGoldenCookie();
+  ensureMonsterPresent(); // スタート時から1体出す
   scheduleMonster();
   showMessage("周回開始");
 }
@@ -15526,6 +15561,11 @@ function fireMonsterSpawn() {
   scheduleMonster();
 }
 
+// 周回開始時などに、モンスターが1体も出ていなければ即1体出現させる(2026-07-13 ユーザー指示: スタート時から1体出す)
+function ensureMonsterPresent() {
+  if (!monsters.length && normalPlayScreenActive() && canMonsterAppear()) showMonster();
+}
+
 
 function scheduleMonster() {
   clearMonsterSpawnTimer();
@@ -15634,17 +15674,25 @@ function placeFixedElement(el, width, height, minY) {
   function tryPlace(w, h) {
     const maxX = Math.max(pad, hostW - w - pad);
     const maxY = Math.max(minYFixed, hostH - h - pad);
+    // 新しく出現するモンスターは既存のものの下に置く(2026-07-13 ユーザー指示)。
+    // 探索の開始yを既存モンスターの最下端の直下にバイアスし、下から詰めて重なりを避ける。
+    const isMon = !!(el.classList && el.classList.contains("monsterInstance"));
+    const yStart = (isMon && existingMonsterBottom > minYFixed)
+      ? Math.min(existingMonsterBottom + margin, maxY)
+      : minYFixed;
     let best = null;
 
-    for (let attempt = 0; attempt < 120; attempt++) {
+    for (let attempt = 0; attempt < 160; attempt++) {
       const x = pad + Math.random() * Math.max(1, maxX - pad);
-      const y = minYFixed + Math.random() * Math.max(1, maxY - minYFixed);
+      // 大半の試行は「下」から探し、少数だけ全域を探す(下に空きが無い時の保険)
+      const fromBelow = attempt < 130;
+      const y = (fromBelow ? yStart : minYFixed) + Math.random() * Math.max(1, maxY - (fromBelow ? yStart : minYFixed));
       const candidate = { left: x, top: y, right: x + w, bottom: y + h };
       // 重なりを避ける(モンスター同士・金クッキーは重み1、通常クッキーは重み小)
       const overlap = blockers.reduce((sum, b) => sum + overlapArea(candidate, b.rect, margin) * (b.weight || 1), 0);
-      // 次点で「既にいるモンスターより下に置く」ことを優先(上に置くほどペナルティ)
+      // 「既にいるモンスターより下に置く」ことを優先(上に置くほど強いペナルティ)
       const above = Math.max(0, existingMonsterBottom - y);
-      const score = overlap * 1000 + above;
+      const score = overlap * 1000 + above * 3;
 
       if (!best || score < best.score) best = { x, y, score, overlap };
       if (overlap === 0 && above <= 0) break;
@@ -15952,7 +16000,8 @@ function createMonsterElement(mon) {
   const hue = (mon.colorHue != null) ? mon.colorHue : type.hue;
   if (hue) wrap.style.setProperty("--mtype-hue", hue + "deg");
   // 層の色: 討伐で落ちる色素材のオーラ
-  wrap.style.setProperty("--layer-ore-color", LAYER_ORE_COLORS[layerOreTier() - 1]);
+  // オーラ色は、そのモンスターの色ティアが落とす色粉の色(なければ従来の層帯色)
+  wrap.style.setProperty("--layer-ore-color", mon.colorAura || LAYER_ORE_COLORS[layerOreTier() - 1]);
   let monArt = (ASSETS.monsters && ASSETS.monsters[type.base || type.id]) || ASSETS.objects.cookieMonster;
   // こつぶ群れは3体それぞれ別の絵にする
   if ((type.base || type.id) === "swarm" && Array.isArray(ASSETS.swarmVariants) && ASSETS.swarmVariants.length) {
@@ -16046,6 +16095,8 @@ function showMonster(forcedTypeId) {
       firstHitUsed: false,
       colorTier: colorTierIdx,
       colorHue: colorDef.hue,
+      colorAura: colorDef.aura || null,
+      dropOre: colorDef.ore || null, // この色が落とす色粉(その色の素材)
       maxHp: Math.max((MONSTER_TYPES[typeId] && MONSTER_TYPES[typeId].base) === "swarm" ? 12 : 40, Math.floor(monsterHpValue(level) * hpMulShared)),
       hp: 1,
       el: null,
@@ -16219,8 +16270,8 @@ function renderMonsterHp(id) {
 }
 
 function hitMonster(id) {
-  // クッキーモンスターをタップすると、タップ力に応じたクッキーがもらえる(2026-07-13 ユーザー指示)。
-  // 討伐(ダメージ)は各設備の自動攻撃が担う。タップはダメージを与えず、クッキー獲得のみ。
+  // クッキーモンスターをタップすると、タップ力(会心込み)ぶんのダメージを与え、同額のクッキーももらえる。
+  // 会心はモンスターへのダメージにも反映される(2026-07-13 ユーザー指示)。設備の自動攻撃と併用。
   if (rewardPending || rewardModalOpen()) return;
   if (pausedForSkillChoice()) { openSkillChoiceScreen(); return; }
 
@@ -16250,6 +16301,10 @@ function hitMonster(id) {
   state.totalClicks += 1;
   trackOrderProgress("click", null, 1);
 
+  // タップの攻撃: タップ力(会心倍率込み)ぶんのダメージをそのモンスターに与える。
+  mon.overkill = tapPower >= mon.hp * OVERKILL_MUL;
+  mon.hp -= tapPower;
+
   playSound(critical ? "crit" : "monster");
 
   if (mon.el) {
@@ -16258,8 +16313,11 @@ function hitMonster(id) {
     mon.el.classList.add("hit");
   }
 
+  renderMonsterHp(mon.id);
   showFloat((critical ? "会心 +" : "+") + fmt(gained), critical);
   updateTopOnly();
+
+  if (mon.hp <= 0) defeatMonster(mon.id);
 }
 
 function defeatMonster(id) {
@@ -16269,6 +16327,7 @@ function defeatMonster(id) {
 
   const defeatedLevel = mon.level;
   const defeatedTypeId = mon.typeId || "normal";
+  const defeatedOre = mon.dropOre || null; // この色が落とす色粉
 
   hideMonster(mon.id, false);
   playSound("defeat");
@@ -16329,7 +16388,7 @@ function defeatMonster(id) {
   if (recordText) message += ` / ${recordText}`;
 
   // 素材ドロップ・ステージ討伐カウント・ボス撃破処理
-  const dropText = grantMonsterDrops(defeatedTypeId, defeatedLevel, Boolean(mon.overkill));
+  const dropText = grantMonsterDrops(defeatedTypeId, defeatedLevel, Boolean(mon.overkill), defeatedOre);
   if (dropText) message += ` / ${dropText}`;
 
   // 討伐連鎖: 2連鎖以上のときだけトーストに追記。
@@ -16946,6 +17005,7 @@ if (pausedForSkillChoice()) {
   openSkillChoiceScreen();
 } else {
   scheduleGoldenCookie();
+  ensureMonsterPresent(); // スタート時から1体出す
   scheduleMonster();
 }
 
@@ -16956,6 +17016,7 @@ function startGameFromTitle() {
   $("titleAboutOverlay").classList.remove("active");
   applyScreenBackground();
   scheduleGoldenCookie();
+  ensureMonsterPresent(); // スタート時から1体出す
   scheduleMonster();
   updateTopOnly();
   renderAllTabs();
