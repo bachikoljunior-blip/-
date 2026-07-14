@@ -10490,9 +10490,10 @@ function bumpSurge(id) {
 function costOf(u, ownedOverride, extraHeat) {
   const owned = ownedOverride == null ? state.upgrades[u.id] : ownedOverride;
 
+  // base をそのまま初期コスト(最初の1個の値段)として使う(2026-07-13 ユーザー指示: 指定コストを反映)。
+  // 2個目以降は growth で上がる(購入数が増えるほど緩やかに)。
   return q5cost(
-    1100
-    * Math.pow(u.base, 0.60)
+    u.base
     * Math.pow(u.growth, owned <= 2600 ? owned * 0.27 : 2600 * 0.27 + (owned - 2600) * 0.72)
     * surgeMultiplier(u.id, extraHeat)
     * upgradeDiscount()
