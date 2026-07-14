@@ -15910,21 +15910,15 @@ function collectGoldenCookie() {
 
 addTap($("goldenCookie"), collectGoldenCookie);
 
-// モンスターの強さはノルマ量ではなく経過時間で決まる。強くなる速さは従来の5倍(2026-07-13 ユーザー指示)。
-const MONSTER_STRENGTH_TIME_MUL = 5;
+// モンスターの強さは経過時間で決まる。レベルは20秒おきに1上がる(2026-07-13 ユーザー指示)。
+const MONSTER_LEVEL_INTERVAL_SEC = 20; // 何秒ごとにレベル+1か
 function monsterLevel() {
-  const s = quotaElapsedSeconds() * MONSTER_STRENGTH_TIME_MUL;
-  const early = Math.floor(Math.max(0, s - 45) / 92);
-  const late = Math.floor(Math.pow(Math.max(0, s - 720) / 320, 1.22));
-
-  return Math.max(1, 1 + early + late);
+  return Math.max(1, 1 + Math.floor(quotaElapsedSeconds() / MONSTER_LEVEL_INTERVAL_SEC));
 }
 
 function monsterHpValue(level) {
-  const s = quotaElapsedSeconds() * MONSTER_STRENGTH_TIME_MUL;
-  // 初期HPは100(経過0秒・Lv1で100)。経過時間で強くなる(5倍速)。
-  const timePressure = 1 + Math.pow(Math.max(0, s) / 430, 1.95);
-  let hp = 100 * Math.pow(1.235, Math.max(0, level - 1)) * timePressure;
+  // HPが上がるのはレベルが上がった時だけ(連続的な時間補正は無し)。初期100、1レベルごとに1.5倍(2026-07-13 ユーザー指示)。
+  let hp = 100 * Math.pow(1.5, Math.max(0, level - 1));
   hp *= Math.exp(-Math.max(0, skillEffect("monsterHpDown")));
   hp *= deepPursuitHpPenalty();
   hp *= bakeBurntMonsterHpMultiplier();
