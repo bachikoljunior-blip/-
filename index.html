@@ -2755,6 +2755,8 @@
     .quotaBox {
       position: relative !important;
       z-index: 30 !important;
+      /* ノルマゲージは表示専用。下に重なったモンスターをタップできるよう当たり判定を通す(2026-07-13 ユーザー指示) */
+      pointer-events: none !important;
     }
 
     #goldenCookie {
@@ -2763,10 +2765,11 @@
       z-index: 45 !important;
     }
 
-    /* モンスター(とHP表示)はノルマUI(z-index:30)より前面に置き、HPが隠れないようにする */
+    /* モンスターの画像レイヤーはノルマUI(z-index:30)より下に置く(2026-07-13 ユーザー指示)。
+       ノルマゲージは pointer-events:none なので、重なってもモンスターはタップできる。 */
     .monsterInstance {
       position: absolute !important;
-      z-index: 40 !important;
+      z-index: 20 !important;
     }
 
     #goldenCookie {
@@ -3604,6 +3607,8 @@
     .quotaBox {
       position: relative !important;
       z-index: 30 !important;
+      /* ノルマゲージは表示専用。下に重なったモンスターをタップできるよう当たり判定を通す(2026-07-13 ユーザー指示) */
+      pointer-events: none !important;
     }
 
     #goldenCookie {
@@ -3612,10 +3617,11 @@
       z-index: 45 !important;
     }
 
-    /* モンスター(とHP表示)はノルマUI(z-index:30)より前面に置き、HPが隠れないようにする */
+    /* モンスターの画像レイヤーはノルマUI(z-index:30)より下に置く(2026-07-13 ユーザー指示)。
+       ノルマゲージは pointer-events:none なので、重なってもモンスターはタップできる。 */
     .monsterInstance {
       position: absolute !important;
-      z-index: 40 !important;
+      z-index: 20 !important;
     }
 
     #goldenCookie {
@@ -7285,8 +7291,10 @@ function repositionFloatingActors() {
 // 「下」は画面上の位置ではなくレイヤー=重なり順の下)。monsters[0]=一番古い=一番手前。
 // 配列の後方(新しい)ほど z-index を下げ、重なった時は新しいものが既存の後ろに回る。
 function applyMonsterLayerOrder() {
+  // モンスターの画像レイヤーはノルマゲージ(z-index:30)より下に置く(2026-07-13 ユーザー指示)。
+  // 新しいモンスターほど後ろ(z-index小)。ゲージは pointer-events:none なので重なってもタップは通る。
   (monsters || []).forEach((m, i) => {
-    if (m && m.el) m.el.style.setProperty("z-index", String(Math.max(31, 40 - i)), "important");
+    if (m && m.el) m.el.style.setProperty("z-index", String(Math.max(5, 25 - i)), "important");
   });
 }
 
@@ -15763,24 +15771,9 @@ function overlapArea(a, b, margin) {
   return ox > 0 && oy > 0 ? ox * oy : 0;
 }
 
-// モンスター(HP表示を含むラッパー)がノルマUI(quotaBox)と重ならないよう押し下げる。
-// 出現時はノルマ下に配置されるが、ノルマUIは再描画で高さが変わるため、描画のたびに確認する。
-// 「ノルマ表示より下」は placeFixedElement と同じく絶対条件として扱う。
+// モンスターはノルマゲージに重なってよい(2026-07-13 ユーザー指示)ため、ゲージ下への押し下げは行わない。
 function enforceMonstersBelowQuota() {
-  const quota = $("quotaBox");
-  if (!quota || !monsters || !monsters.length) return;
-  const qr = quota.getBoundingClientRect();
-  if (!(qr.height > 0)) return;
-  monsters.forEach(m => {
-    const el = m && m.el;
-    if (!el || !el.isConnected) return;
-    const r = el.getBoundingClientRect();
-    if (!(r.height > 0)) return;
-    if (r.top < qr.bottom + 4 && r.bottom > qr.top && r.right > qr.left && r.left < qr.right) {
-      const delta = (qr.bottom + 4) - r.top;
-      el.style.top = ((parseFloat(el.style.top) || 0) + delta) + "px";
-    }
-  });
+  /* no-op: モンスターはノルマゲージに重なってよい(画像レイヤーはゲージの下・タップは可能) */
 }
 
 function placeFixedElement(el, width, height, minY) {
@@ -15794,9 +15787,14 @@ function placeFixedElement(el, width, height, minY) {
   const naturalW = Number(width) || 0;
   const naturalH = Number(height) || naturalW;
 
-  // ノルマ表示より下・.top の内側、という条件は絶対に譲らない(隠れたりはみ出たりしない)
+  // モンスターはノルマゲージに重なってよい(2026-07-13 ユーザー指示)。配置可能範囲をゲージ上端まで広げ、
+  // モンスター同士の重なりをできるだけ小さくする。金クッキー等は従来どおりゲージより下に置く。
   const quotaBottom = quota ? quota.offsetTop + quota.offsetHeight : 0;
-  const minYFixed = Math.max(pad, quotaBottom + 4, Number(minY) || 0);
+  const quotaTop = quota ? quota.offsetTop : 0;
+  const isMonsterEl = !!(el.classList && el.classList.contains("monsterInstance"));
+  const minYFixed = isMonsterEl
+    ? Math.max(pad, quotaTop)
+    : Math.max(pad, quotaBottom + 4, Number(minY) || 0);
 
   const blockers = occupiedRects(host, el);
   const margin = 6;
