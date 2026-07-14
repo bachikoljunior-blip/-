@@ -6263,6 +6263,16 @@ const FACILITY_ATTACK_INTERVAL = {
   blackHoleMixer: 3.5, universeOven: 5.0, cookieSingularity: 5.5,
   quantumBakery: 4.5, antimatterOven: 6.0
 };
+// 設備ごとの攻撃対象の振り分け(2026-07-13 ユーザー指示: 設備によって挙動を変える)。
+//   "single" : 一番早く出たモンスターを狙い、倒しきったオーバーキルぶんは次のモンスターへ流れる
+//   "split"  : 出現中の全モンスターにダメージを均等分散する
+//   "all"    : 出現中の全モンスターに同じダメージを与える(全体攻撃)
+const FACILITY_ATTACK_MODE = {
+  grandma: "single", oven: "all", factory: "split", bank: "single", spiceRack: "all",
+  portal: "split", moonBakery: "single", timeOven: "all", galaxyFactory: "split",
+  blackHoleMixer: "single", universeOven: "all", cookieSingularity: "split",
+  quantumBakery: "single", antimatterOven: "all"
+};
 let facilityAttackAccum = {};
 
 const RESEARCH = [
@@ -16963,9 +16973,47 @@ function facilityCombatCps(u) {
   return raw * (currentCps() / base); // 全体倍率(金ブースト等)を反映した1台あたり毎秒
 }
 
+function flashMonsterHit(mon) {
+  if (mon && mon.el) { mon.el.classList.remove("hit"); void mon.el.offsetWidth; mon.el.classList.add("hit"); }
+}
+
+// 1体にダメージを与え、倒しきった場合の余剰(オーバーキル分)を返す。
+function damageMonster(mon, dmg) {
+  if (!mon || mon.hp <= 0 || !(dmg > 0)) return 0;
+  mon.overkill = dmg >= mon.hp * OVERKILL_MUL;
+  mon.hp -= dmg;
+  flashMonsterHit(mon);
+  return mon.hp < 0 ? -mon.hp : 0; // 余剰ダメージ(次のモンスターへ流す分)
+}
+
+function applyFacilityDamage(mode, dmg) {
+  // monsters は出現順(monsters[0]=一番早く出たモンスター)
+  const alive = monsters.filter(m => m && m.hp > 0);
+  if (!alive.length || !(dmg > 0)) return;
+  if (mode === "all") {
+    // 全体に同じダメージ
+    alive.forEach(m => damageMonster(m, dmg));
+  } else if (mode === "split") {
+    // 複数体へ均等に分散
+    const per = dmg / alive.length;
+    alive.forEach(m => damageMonster(m, per));
+  } else {
+    // single: 一番早く出たモンスターを狙い、オーバーキルは次の敵へ順に流す
+    let rem = dmg;
+    for (const m of alive) {
+      if (rem <= 0) break;
+      rem = damageMonster(m, rem);
+    }
+  }
+}
+
 function runFacilityAttacks(dt) {
   if (rewardPending || rewardModalOpen()) return;
   if (!monsters.length) return;
+  // 前tickのオーバーキル流し込み/全体攻撃で倒れて残っているモンスターを先に1体撃破する(報酬は1体ずつ)
+  const dead = monsters.find(m => m && m.hp <= 0);
+  if (dead) { defeatMonster(dead.id); return; }
+
   for (const u of UPGRADES) {
     if (u.type !== "cps") continue;
     if ((state.upgrades[u.id] || 0) <= 0) continue;
@@ -16974,16 +17022,14 @@ function runFacilityAttacks(dt) {
     if (facilityAttackAccum[u.id] < interval) continue;
     const times = Math.floor(facilityAttackAccum[u.id] / interval);
     facilityAttackAccum[u.id] -= times * interval;
-    const front = monsters[0];
-    if (!front) break;
     const dmg = facilityCombatCps(u) * interval * times;
     if (!(dmg > 0)) continue;
-    front.overkill = dmg >= front.hp * OVERKILL_MUL;
-    front.hp -= dmg;
-    if (front.el) { front.el.classList.remove("hit"); void front.el.offsetWidth; front.el.classList.add("hit"); }
-    renderMonsterHp(front.id);
-    if (front.hp <= 0) { defeatMonster(front.id); break; } // 1tickの撃破は1体まで(報酬モーダルが以降を止める)
+    applyFacilityDamage(FACILITY_ATTACK_MODE[u.id] || "single", dmg);
   }
+  renderMonsterHp();
+  // このtickで倒れたモンスターがいれば1体だけ撃破する(残りは次tick以降に順次撃破)
+  const killed = monsters.find(m => m && m.hp <= 0);
+  if (killed) defeatMonster(killed.id);
 }
 
 let earnEmaTick = 0;
