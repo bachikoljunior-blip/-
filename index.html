@@ -699,6 +699,17 @@
       z-index: 2;
     }
 
+    /* 設備の攻撃間隔・対象ポップアップ表示中: 画像を隠して全幅でテキスト表示(2026-07-13 ユーザー指示) */
+    .artCard.infoOpen {
+      padding-right: 12px;
+      background:
+        linear-gradient(135deg, rgba(180,210,255,0.16), rgba(255,255,255,0.03) 45%),
+        linear-gradient(145deg, #2f3f57, #263349);
+    }
+    .artCard.infoOpen::before,
+    .artCard.infoOpen::after { display: none; }
+    .facilityInfoHint { opacity: 0.72; margin-top: 4px; font-style: italic; }
+
     .artCard::before {
       content: attr(data-art);
       position: absolute;
@@ -5784,7 +5795,6 @@
         <button id="takeSelectedSkillBtn" class="takeSkillBtn">この効果を取る</button>
         <button id="skillStartBtn" class="startBtn locked">この構成でスタート</button>
       </div>
-      <button id="cancelRebirthBtn" class="skillCancelBtn" type="button" style="display:none">← 転生前に戻る</button>
     </div>
 
     <div class="skillFloatingControls">
@@ -13428,11 +13438,7 @@ document.addEventListener("fullscreenchange", () => {
 
 addTap($("takeSelectedSkillBtn"), takeSelectedSkill);
 
-// スキル画面から転生を取り消して転生前(周回途中)に戻る
-addTap($("cancelRebirthBtn"), () => {
-  playSound("tab");
-  cancelRebirth();
-});
+// 「転生前に戻る」ボタンは廃止(2026-07-13 ユーザー指示)。
 
 // スキル選択(→方針→ステージ選択)を終えてから実際に周回を開始する処理
 function beginRunAfterSkills() {
@@ -13593,6 +13599,29 @@ function upgradeEfficiencyText(u) {
   return `お得度：約${fmt(baseRatio)}クッキーで+1 — 少ないほどお得`;
 }
 
+// 設備カードの画像部分をタップすると、攻撃間隔・攻撃対象の説明ポップアップが購入欄と入れ替わる。
+// もう一度(ポップアップを)タップすると元に戻る(2026-07-13 ユーザー指示)。開いている設備のid。
+let openFacilityInfo = null;
+
+// 設備の攻撃対象モードの説明文
+function facilityAttackModeText(id) {
+  const mode = FACILITY_ATTACK_MODE[id];
+  if (mode === "all") return "出現中の全モンスターに同じダメージ(全体攻撃)";
+  if (mode === "split") return "出現中の全モンスターにダメージを分散";
+  return "一番早く出たモンスターを狙う(オーバーキルは次の敵へ流れる)";
+}
+
+// 設備カードに「攻撃間隔・対象」ポップアップのHTMLを入れる
+function facilityInfoHtml(u) {
+  const interval = FACILITY_ATTACK_INTERVAL[u.id];
+  const body = interval
+    ? `<div class="desc">攻撃間隔：${interval}秒ごと</div>`
+      + `<div class="desc">対象：${facilityAttackModeText(u.id)}</div>`
+      + `<div class="desc">その秒数ぶんの生産量をダメージとしてクッキーモンスターに与える</div>`
+    : `<div class="desc">タップ力を強化する設備(自動攻撃はしません)</div>`;
+  return `<b>${u.name}</b>${body}<div class="desc facilityInfoHint">タップで購入欄に戻る</div>`;
+}
+
 function renderShop() {
   const box = $("shop");
   const items = visibleUpgrades();
@@ -13611,7 +13640,16 @@ function renderShop() {
       btn.dataset.art = upgradeArt(u);
       setArtImage(btn, ASSETS.upgrades[u.id]);
 
-      addTap(btn, () => buyUpgrade(u.id));
+      addTap(btn, (e) => {
+        // 情報ポップアップ表示中はどこを押しても購入欄に戻す
+        if (openFacilityInfo === u.id) { openFacilityInfo = null; renderShop(); return; }
+        // 画像部分(カード右側)をタップしたら攻撃間隔・対象のポップアップに入れ替える
+        const rect = btn.getBoundingClientRect();
+        if (e && e.clientX != null && e.clientX >= rect.right - rect.width * 0.32) {
+          openFacilityInfo = u.id; renderShop(); return;
+        }
+        buyUpgrade(u.id);
+      });
       box.appendChild(btn);
     });
   }
@@ -13634,22 +13672,31 @@ function renderShop() {
     const efficiency = upgradeEfficiencyText(u);
     const eff = upgradeShopEffectRows(u, plan.count);
 
-    btn.classList.toggle("canBuy", (debugMode || plan.affordable) && !pausedForSkillChoice());
     const surgeNow = surgeMultiplier(u.id, 0);
     // 購入直後のコストを1として、時間経過で下がった現在の割合(現在割増 ÷ 購入直後割増)を表示する
     const surgePeak = (state.upSurge && state.upSurge[u.id] && state.upSurge[u.id].peak) || surgeNow;
     const surgeRatio = surgePeak > 0 ? surgeNow / surgePeak : 1;
     // その回でまだ購入していない設備は絵をシルエットで伏せる
     btn.classList.toggle("artSilhouette", (state.upgrades[u.id] || 0) === 0);
-    btn.innerHTML = `
-      <b>${u.name}</b>
-      <div class="price">${priceText}</div>
-      <div class="desc">${eff.addText}</div>
-      <div class="desc">${eff.totalText}</div>
-      <div class="desc">所持 ${fmt(state.upgrades[u.id])}</div>
-      ${surgeNow > 1.05 ? `<div class="desc">待つと割引 ×${surgeRatio.toFixed(2)}</div>` : ""}
-      ${efficiency ? `<div class="desc">${efficiency}</div>` : ""}
-    `;
+
+    // 情報ポップアップ表示中の設備は、購入欄の代わりに攻撃間隔・対象の説明を出す
+    if (openFacilityInfo === u.id) {
+      btn.classList.add("infoOpen");
+      btn.classList.remove("canBuy");
+      btn.innerHTML = facilityInfoHtml(u);
+    } else {
+      btn.classList.remove("infoOpen");
+      btn.classList.toggle("canBuy", (debugMode || plan.affordable) && !pausedForSkillChoice());
+      btn.innerHTML = `
+        <b>${u.name}</b>
+        <div class="price">${priceText}</div>
+        <div class="desc">${eff.addText}</div>
+        <div class="desc">${eff.totalText}</div>
+        <div class="desc">所持 ${fmt(state.upgrades[u.id])}</div>
+        ${surgeNow > 1.05 ? `<div class="desc">待つと割引 ×${surgeRatio.toFixed(2)}</div>` : ""}
+        ${efficiency ? `<div class="desc">${efficiency}</div>` : ""}
+      `;
+    }
   });
 }
 
@@ -16234,10 +16281,12 @@ function hideMonster(idOrShouldReschedule, shouldRescheduleMaybe) {
       showMessage("狩猟集中失敗：次HP低下・報酬Lv-1");
     }
 
-    // モンスターが逃走(滞在切れ=shouldReschedule)した時、そのモンスターの強さ(最大HP)ぶん
-    // ノルマ量が増える(2026-07-13 ユーザー指示)。撃破時(shouldReschedule=false)は増えない。
+    // モンスターが逃走(滞在切れ=shouldReschedule)した時、ノルマ量が増える(2026-07-13 ユーザー指示)。
+    // 増加量はレベル1で10、レベルが上がるごとに多くなる(×1.5/レベル)。撃破時(false)は増えない。
     if (shouldReschedule) {
-      state.quotaEscapePenalty = (Number(state.quotaEscapePenalty) || 0) + (Number(mon.maxHp) || 0);
+      const lv = Math.max(1, Math.floor(Number(mon.level) || 1));
+      const add = Math.round(10 * Math.pow(1.5, lv - 1));
+      state.quotaEscapePenalty = (Number(state.quotaEscapePenalty) || 0) + add;
     }
 
     // ボスを倒しきれず時間切れ(shouldReschedule=時間切れ、撃破時は false)なら、
