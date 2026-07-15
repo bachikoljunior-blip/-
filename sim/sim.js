@@ -791,9 +791,10 @@ const EQUIP2_FX = {
     { m: 'C', cond: 'buyRes', up: ['allMul', 1.0] }, { m: 'C', cond: 'deep', up: ['allMul', 0.6] }, { m: 'C', cond: 'quotaHold', up: ['holdBonus', 0.5, 'resDisc', 0.08] }
   ],
   shoes: [
-    { m: 'A', up: ['dropMul', 0.5] }, { m: 'A', up: ['oreAdd', 1] }, { m: 'A', up: ['spawnMul', 0.08] },
-    { m: 'B', up: ['dropMul', 1.0], down: ['killValMul', 0.9] }, { m: 'B', up: ['oreAdd', 3], down: ['killValMul', 0.9] }, { m: 'B', up: ['spawnMul', 0.12], down: ['goldenAmtMul', 0.9] },
-    { m: 'C', cond: 'boss', up: ['dropMul', 3] }, { m: 'C', cond: 'monster', up: ['oreAdd', 5] }, { m: 'C', cond: 'goldenBoost', up: ['dropMul', 2, 'spawnMul', 0.06] }
+    // ドロップ系ボーナスのバリエーション(2026-07-15): dropMul=倍率 / dropRateAdd=素の落ちやすさ+ / dropLuck=固定確率で+1個 / oreAdd=色素材+ / spawnMul=出現+
+    { m: 'A', up: ['dropMul', 0.5] }, { m: 'A', up: ['dropRateAdd', 1.0] }, { m: 'A', up: ['dropLuck', 0.6] },
+    { m: 'B', up: ['dropMul', 1.0], down: ['killValMul', 0.9] }, { m: 'B', up: ['dropRateAdd', 2.0], down: ['killValMul', 0.9] }, { m: 'B', up: ['oreAdd', 3], down: ['goldenAmtMul', 0.9] },
+    { m: 'C', cond: 'boss', up: ['dropMul', 3] }, { m: 'C', cond: 'monster', up: ['dropLuck', 2.0] }, { m: 'C', cond: 'goldenBoost', up: ['dropRateAdd', 3.0, 'spawnMul', 0.06] }
   ],
   accA: [
     { m: 'A', up: ['goldenAmtMul', 1.0] }, { m: 'A', up: ['goldenRateMul', 0.15] }, { m: 'A', up: ['goldenBoostMul', 0.4] },
@@ -810,7 +811,7 @@ const EQUIP2_FLATCAP = { critAdd: 0.3, upDisc: 0.5, resDisc: 0.5 };
 // 装備の方針適合スコア(2026-07-15): A/B/C固定モデルでは「方針が価値を置くステータスに合う装備」を選ばないと
 // B(トレードオフ)の下げが効いてlift(a)が壊れる(R22実測min0.31)。方針の得意ステータスへの寄与でスコア化し、
 // 下げは「その方針が使わないステータスなら軽い」=Bの下げが遊びに合わない所へ落ちる。C型は状況頻度で割引。
-const EQ2_UNIT = { cpsMul: 1, allMul: 1.2, clickMul: 0.9, dmgMul: 0.7, killValMul: 0.7, holdBonus: 0.8, goldenAmtMul: 0.9, goldenRateMul: 2.5, goldenBoostMul: 1.5, dropMul: 0.3, oreAdd: 0.1, rewardLvAdd: 0.2, critAdd: 6, upDisc: 3, resDisc: 3, spawnMul: 2, stayMul: 1 };
+const EQ2_UNIT = { cpsMul: 1, allMul: 1.2, clickMul: 0.9, dmgMul: 0.7, killValMul: 0.7, holdBonus: 0.8, goldenAmtMul: 0.9, goldenRateMul: 2.5, goldenBoostMul: 1.5, dropMul: 0.3, oreAdd: 0.1, rewardLvAdd: 0.2, critAdd: 6, upDisc: 3, resDisc: 3, spawnMul: 2, stayMul: 1, dropRateAdd: 0.05, dropLuck: 0.1 };
 const EQ2_FAV = {
   bake: new Set(['cpsMul', 'allMul', 'holdBonus', 'upDisc', 'resDisc']),
   click: new Set(['clickMul', 'critAdd', 'allMul']),
@@ -858,9 +859,9 @@ function equip2Fx(sim) {
   if (ws._eq2FxT === sim.t && ws._eq2FxSig === eqSig && ws._eq2FxCache) return ws._eq2FxCache;
   const fx = { clickMul: 1, cpsMul: 1, allMul: 1, dmgMul: 1, killValMul: 1, spawnMul: 1, stayMul: 1,
     goldenAmtMul: 1, goldenRateMul: 1, goldenBoostMul: 1, holdBonus: 1, quotaSlow: 0, upDisc: 0, resDisc: 0,
-    dropMul: 1, oreAdd: 0, rewardLvAdd: 0, critAdd: 0 };
+    dropMul: 1, oreAdd: 0, rewardLvAdd: 0, critAdd: 0, dropRateAdd: 0, dropLuck: 0 };
   const put = (type, v) => {
-    if (type === 'oreAdd' || type === 'rewardLvAdd') fx[type] += v;
+    if (type === 'oreAdd' || type === 'rewardLvAdd' || type === 'dropRateAdd' || type === 'dropLuck') fx[type] += v; // 加算系(ドロップ率+/固定確率+数)
     else if (EQUIP2_FLATCAP[type] != null) fx[type] = Math.min(EQUIP2_FLATCAP[type], fx[type] + Math.min(0.5, v));
     else fx[type] *= 1 + v;
   };
@@ -1094,7 +1095,11 @@ function wsDropMaterials(sim, mon, overkill) {
   const cPick = cList[ws.matRot % cList.length]; ws.matRot++;
   // 希少化(2026-07-15): 素の5% × 強さ × 素材レア度 + 投資ぶん。× 既存倍率 × dropAllMul。
   const dam = ((P.equip2 && P.equip2.dropAllMul) || 1);
-  const commonN = (D.dropBase * strength * matTierDrop(cPick) + invAdd * matTierDrop(cPick)) * dropMul * dam * units;
+  const eqf = equip2Fx(sim);
+  // ドロップ系ボーナスのバリエーション(2026-07-15): dropRateAdd=素の落ちやすさに+(全素材の確率up)/ dropLuck=固定確率で+1個
+  const baseRate = D.dropBase + (eqf.dropRateAdd || 0);
+  const commonN = (baseRate * strength * matTierDrop(cPick) + invAdd * matTierDrop(cPick)) * dropMul * dam * units
+    + (eqf.dropLuck || 0) * units; // 固定確率で+1個(期待値)
   wsAddMat(sim, cPick, commonN);
   // 条件枠(狙って倒した時の確定寄り): max(5%×強さ, レア基準) × レア度 × 倍率
   const condExp = id => Math.max(D.dropBase * strength, D.rarity.r) * matTierDrop(id) * dropMul * dam * units;
