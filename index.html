@@ -5245,14 +5245,22 @@
     /* ===== クッキー画面(上部)の各表示が潰れない調整 ===== */
     /* クッキー画面はスクロールさせない。収まらない分はクッキー画像(.cookieWrap)を
        縮めて必ず画面内に全部を表示する(数値・ノルマ等は縮めない設定のまま)。 */
+    /* 縦画面でもクッキー画面とタブ内容を同じ高さ(303px)で2等分し、横並びと比率を揃える(2026-07-14 ユーザー指示)。
+       303 + 8(.top下マージン) + 303 + 53(.tabs) = 667(=.gameの固定高さ) */
     .top {
       overflow: hidden !important;
       scrollbar-width: none;
+      flex: 0 0 303px !important;
+      height: 303px !important;
+      min-height: 303px !important;
+      max-height: 303px !important;
     }
     .top::-webkit-scrollbar { display: none; }
     .tabPages {
-      flex: 0 0 46% !important;
-      max-height: 46% !important;
+      flex: 0 0 303px !important;
+      height: 303px !important;
+      min-height: 303px !important;
+      max-height: 303px !important;
     }
     .cookieWrap {
       min-height: 72px !important;
@@ -5348,31 +5356,32 @@
     body.wideLayout:not(.sectionFullscreen):not(.playFullscreenMode) .game {
       display: grid !important;
       grid-template-columns: 375px 375px !important;
-      grid-template-rows: 252px 53px !important;
+      grid-template-rows: 303px 53px !important;
       width: 750px !important;
-      height: 305px !important;
+      height: 356px !important;
       margin: 0 !important;
       transform: scale(var(--gameScale, 1));
       transform-origin: center center;
     }
-    /* 左列: クッキー画面。右のタブ内容と同じ 375×252 に揃える(2枚を同じ高さ幅に) */
+    /* 左列: クッキー画面。縦画面と同じ 375×303 に揃える(縦横で比率を統一) */
     body.wideLayout .top {
       grid-column: 1 !important;
       grid-row: 1 !important;
       flex: none !important;
-      height: 252px !important;
-      min-height: 252px !important;
-      max-height: 252px !important;
+      height: 303px !important;
+      min-height: 303px !important;
+      max-height: 303px !important;
+      margin: 0 !important;
       overflow: hidden !important;
     }
-    /* 右列上: タブ内容。375×252 */
+    /* 右列上: タブ内容。375×303 */
     body.wideLayout .tabPages {
       grid-column: 2 !important;
       grid-row: 1 !important;
       flex: none !important;
-      height: 252px !important;
-      min-height: 252px !important;
-      max-height: 252px !important;
+      height: 303px !important;
+      min-height: 303px !important;
+      max-height: 303px !important;
     }
     /* 下段: タブバーは2列ぶん(750px)を横いっぱいに */
     body.wideLayout .tabs {
@@ -6990,7 +6999,7 @@ function injectImageAssetStyle() {
     .selectedSkillDescRow .selectedSkillDesc{flex:1 1 auto;margin:0}
     #playFullscreenBtn{position:absolute;top:10px;left:10px;z-index:30;width:36px;height:36px;border-radius:10px;border:1px solid rgba(255,213,138,.32);background:rgba(20,12,6,.5);color:#ffcf87;font-size:17px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
     body.playFullscreenMode #playFullscreenBtn{color:#fff;background:rgba(180,90,20,.62)}
-    body.playFullscreenMode .top{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:var(--fsTabH,60px)!important;z-index:8000!important;width:auto!important;height:auto!important;max-width:none!important;margin:0!important;border-radius:0!important}
+    body.playFullscreenMode .top{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:var(--fsTabH,60px)!important;z-index:8000!important;width:auto!important;height:auto!important;min-height:0!important;max-height:none!important;max-width:none!important;margin:0!important;border-radius:0!important}
     /* 全画面中もタブバーを常に表示(最前面・下部固定) */
     body.sectionFullscreen .tabs,body.playFullscreenMode .tabs{display:flex!important;position:fixed!important;left:0!important;right:0!important;bottom:0!important;height:var(--fsTabH,60px)!important;z-index:9600!important;background:rgba(10,6,3,.94)!important;padding:4px 6px calc(4px + env(safe-area-inset-bottom,0px))!important;margin:0!important}
     /* 全画面コンテンツはタブバー分だけ下を空ける */
