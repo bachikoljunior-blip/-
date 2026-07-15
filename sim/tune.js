@@ -172,7 +172,9 @@ for (let it = 0; it < ITERS; it++) {
   console.log(`[iter ${it}] runs=${runs.length} band ${ok}/${all} (${holdOkPct}%) x100 ${x100}/${x100all} pt2-100 ${pt2}/${x100all} pace ${pace.ok}/${pace.all} total=${total.toExponential(2)} ${fails.length?'FAIL:'+fails.join(' '):''}`);
   // 採点(第11次): 割合ベース(×100と帯域を同重み+ペース少々)。全達ジャックポットは廃止(周回数が少ない構成が勝ってしまうため)
   const score = (x100all ? x100 / x100all : 0) * 100 + (all ? ok / all : 0) * 100 + (pace.all ? pace.ok / pace.all : 0) * 30 - fails.length * 3;
-  if (!globalThis.__best || score > globalThis.__best.score) globalThis.__best = { score, costs: rungCosts.slice(), ok, x100, x100all };
+  // 周回数が少ない構成(スキルが安すぎ→ツリーが数周回で完成する退化)を除外: 十分な周回数のみ best 候補に(2026-07-15)
+  const MIN_RUNS_FOR_BEST = 15;
+  if (runs.length >= MIN_RUNS_FOR_BEST && (!globalThis.__best || score > globalThis.__best.score)) globalThis.__best = { score, costs: rungCosts.slice(), ok, x100, x100all, runs: runs.length };
   if (it === ITERS - 1) {
     for (const { r, x, Y, inBand } of rows) {
       const j = inBand ? 'OK' : (r.hold > Y ? '長' : '短');

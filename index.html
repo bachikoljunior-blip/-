@@ -9523,11 +9523,14 @@ function grantMonsterDrops(typeId, level, overkill) {
         * (1 + CHAIN_DROP_COEF * chainCount());
       const cnt = count;
       const strength = monsterDropStrength(typeId);
+      const eqf = equip2Fx();
       // 投資ぶんの追加ドロップ(図鑑・ステージ・記録・実績研究)=「最初は5%・育てると増える」の上乗せ分
       const invAdd = 0.5 * equipLv("monsterAlmanac") + (stage.dropAdd || 0) + killRecordDropBonus(typeId) + msMulOf("dropAdd");
       // 希少化(2026-07-15): 素の5% × 強さ × 素材レア度 × 既存倍率 + 投資ぶん。端数は確率で1個。ドロップは報酬後回収(addDrop)。
+      // バリエーション: dropRateAdd=素の落ちやすさに+ / dropLuck=固定確率で+1個
+      const baseRate = MAT_DROP_BASE + (eqf.dropRateAdd || 0);
       const gain = (id, weight) => {
-        const exp = (MAT_DROP_BASE * strength * matRarityDrop(id) * (weight || 1) + invAdd * matRarityDrop(id)) * mult * cnt;
+        const exp = (baseRate * strength * matRarityDrop(id) * (weight || 1) + invAdd * matRarityDrop(id)) * mult * cnt + (eqf.dropLuck || 0) * cnt;
         addDrop(id, rollDropQty(exp));
       };
       // 条件ドロップ(狙って倒した時の確定枠): レア度だけ反映し、強敵ほど落としやすい素の確率とは別に確定寄り
@@ -10796,11 +10799,11 @@ const EQUIP2_FX = {
   armorBottom: [["upDisc", 0.08], ["resDisc", 0.08], ["upDisc", 0.05, "resDisc", 0.05], ["cpsMul", 0.6], ["upDisc", 0.12], ["resDisc", 0.12], ["upDisc", 0.06, "cpsMul", 0.35], ["resDisc", 0.06, "cpsMul", 0.35], ["upDisc", 0.05, "resDisc", 0.05, "cpsMul", 0.3]],
   hands:       [["clickMul", 1.0], ["critAdd", 0.03], ["clickMul", 0.7, "critAdd", 0.02], ["clickMul", 1.4], ["critAdd", 0.05], ["clickMul", 0.6, "dmgMul", 0.3], ["clickMul", 0.5, "critAdd", 0.03], ["critAdd", 0.04, "dmgMul", 0.3], ["clickMul", 0.5, "critAdd", 0.02, "dmgMul", 0.25]],
   hat:         [["resDisc", 0.10], ["allMul", 0.45], ["resDisc", 0.06, "allMul", 0.25], ["cpsMul", 0.8], ["resDisc", 0.14], ["allMul", 0.6], ["resDisc", 0.07, "cpsMul", 0.4], ["allMul", 0.35, "cpsMul", 0.4], ["resDisc", 0.05, "allMul", 0.25, "cpsMul", 0.3]],
-  shoes:       [["dropMul", 0.5], ["oreAdd", 1], ["dropMul", 0.3, "oreAdd", 0.5], ["spawnMul", 0.08], ["dropMul", 0.7], ["oreAdd", 2], ["dropMul", 0.4, "spawnMul", 0.05], ["oreAdd", 1, "spawnMul", 0.05], ["dropMul", 0.3, "oreAdd", 0.5, "spawnMul", 0.04]],
+  shoes:       [["dropMul", 0.5], ["dropRateAdd", 0.04], ["dropLuck", 0.06], ["spawnMul", 0.08], ["dropMul", 0.7], ["dropRateAdd", 0.08], ["dropLuck", 0.1, "spawnMul", 0.05], ["oreAdd", 2], ["dropMul", 0.3, "dropRateAdd", 0.05, "dropLuck", 0.05]],
   accA:        [["goldenAmtMul", 1.0], ["goldenRateMul", 0.15], ["goldenBoostMul", 0.4], ["goldenAmtMul", 0.6, "goldenRateMul", 0.10], ["goldenAmtMul", 1.5], ["goldenRateMul", 0.22], ["goldenBoostMul", 0.3, "goldenAmtMul", 0.4], ["goldenRateMul", 0.12, "goldenBoostMul", 0.25], ["goldenAmtMul", 0.5, "goldenRateMul", 0.08, "goldenBoostMul", 0.2]],
   accB:        [["rewardLvAdd", 2], ["killValMul", 0.6], ["rewardLvAdd", 1, "killValMul", 0.4], ["stayMul", 0.35], ["rewardLvAdd", 3], ["killValMul", 0.9], ["rewardLvAdd", 1.5, "stayMul", 0.2], ["killValMul", 0.5, "stayMul", 0.2], ["rewardLvAdd", 1, "killValMul", 0.35, "stayMul", 0.15]]
 };
-const EQUIP2_FX_LABEL = { clickMul: "タップ生産", cpsMul: "毎秒生産", allMul: "全生産", dmgMul: "討伐ダメージ", killValMul: "討伐報酬", spawnMul: "モンスター出現短縮", stayMul: "モンスター滞在", goldenAmtMul: "金クッキー獲得", goldenRateMul: "金クッキー出現短縮", goldenBoostMul: "金ブースト", holdBonus: "ノルマ維持中 全生産", quotaSlow: "ノルマ進行減速", upDisc: "設備費割引", resDisc: "研究費割引", dropMul: "素材ドロップ", oreAdd: "色素材+n/体", rewardLvAdd: "報酬レベル+n", critAdd: "会心率+n" };
+const EQUIP2_FX_LABEL = { clickMul: "タップ生産", cpsMul: "毎秒生産", allMul: "全生産", dmgMul: "討伐ダメージ", killValMul: "討伐報酬", spawnMul: "モンスター出現短縮", stayMul: "モンスター滞在", goldenAmtMul: "金クッキー獲得", goldenRateMul: "金クッキー出現短縮", goldenBoostMul: "金ブースト", holdBonus: "ノルマ維持中 全生産", quotaSlow: "ノルマ進行減速", upDisc: "設備費割引", resDisc: "研究費割引", dropMul: "素材ドロップ", oreAdd: "色素材+n/体", rewardLvAdd: "報酬レベル+n", critAdd: "会心率+n", dropRateAdd: "素材ドロップ率+", dropLuck: "確率で素材+1個" };
 let EQUIP2_ITEMS_CACHE = null;
 function equip2Items() {
   if (EQUIP2_ITEMS_CACHE) return EQUIP2_ITEMS_CACHE;
@@ -10885,13 +10888,13 @@ function equip2Fx() {
   if (_eq2FxCache && _eq2FxKey === key) return _eq2FxCache;
   const fx = { clickMul: 1, cpsMul: 1, allMul: 1, dmgMul: 1, killValMul: 1, spawnMul: 1, stayMul: 1,
     goldenAmtMul: 1, goldenRateMul: 1, goldenBoostMul: 1, holdBonus: 1, quotaSlow: 0, upDisc: 0, resDisc: 0,
-    dropMul: 1, oreAdd: 0, rewardLvAdd: 0, critAdd: 0 };
+    dropMul: 1, oreAdd: 0, rewardLvAdd: 0, critAdd: 0, dropRateAdd: 0, dropLuck: 0 };
   for (const slot of EQUIP2_SLOTS) {
     const it = eq[slot] ? equip2ById(eq[slot]) : null;
     if (!it) continue;
     for (const [type, v] of it.fxList) {
       if (type === "quotaSlow" || type === "upDisc" || type === "resDisc" || type === "critAdd") fx[type] = Math.min(type === "critAdd" ? 0.3 : 0.5, fx[type] + Math.min(0.5, v));
-      else if (type === "oreAdd" || type === "rewardLvAdd") fx[type] += v;
+      else if (type === "oreAdd" || type === "rewardLvAdd" || type === "dropRateAdd" || type === "dropLuck") fx[type] += v; // 加算系(ドロップ率+/固定確率+数)
       else fx[type] *= 1 + v;
     }
   }

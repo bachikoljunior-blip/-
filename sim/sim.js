@@ -792,9 +792,9 @@ const EQUIP2_FX = {
   ],
   shoes: [
     // ドロップ系ボーナスのバリエーション(2026-07-15): dropMul=倍率 / dropRateAdd=素の落ちやすさ+ / dropLuck=固定確率で+1個 / oreAdd=色素材+ / spawnMul=出現+
-    { m: 'A', up: ['dropMul', 0.5] }, { m: 'A', up: ['dropRateAdd', 1.0] }, { m: 'A', up: ['dropLuck', 0.6] },
-    { m: 'B', up: ['dropMul', 1.0], down: ['killValMul', 0.9] }, { m: 'B', up: ['dropRateAdd', 2.0], down: ['killValMul', 0.9] }, { m: 'B', up: ['oreAdd', 3], down: ['goldenAmtMul', 0.9] },
-    { m: 'C', cond: 'boss', up: ['dropMul', 3] }, { m: 'C', cond: 'monster', up: ['dropLuck', 2.0] }, { m: 'C', cond: 'goldenBoost', up: ['dropRateAdd', 3.0, 'spawnMul', 0.06] }
+    { m: 'A', up: ['dropMul', 0.5] }, { m: 'A', up: ['dropRateAdd', 0.04] }, { m: 'A', up: ['dropLuck', 0.06] },
+    { m: 'B', up: ['dropMul', 1.0], down: ['killValMul', 0.9] }, { m: 'B', up: ['dropRateAdd', 0.08], down: ['killValMul', 0.9] }, { m: 'B', up: ['oreAdd', 3], down: ['goldenAmtMul', 0.9] },
+    { m: 'C', cond: 'boss', up: ['dropMul', 3] }, { m: 'C', cond: 'monster', up: ['dropLuck', 0.15] }, { m: 'C', cond: 'goldenBoost', up: ['dropRateAdd', 0.12, 'spawnMul', 0.06] }
   ],
   accA: [
     { m: 'A', up: ['goldenAmtMul', 1.0] }, { m: 'A', up: ['goldenRateMul', 0.15] }, { m: 'A', up: ['goldenBoostMul', 0.4] },
