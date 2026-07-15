@@ -215,13 +215,15 @@ function prestigeWhen(minElapsedSec, gainFactor) {
     if (sim.run.cookies < G.prestigeCostOf(sim)) return false; // 転生には所持クッキー(10のべき乗・前回より大)が必要
     const next = cheapestNextSkillCost(sim);
     if (next === null) return false; // ツリー完了後はPTの使い道がないため転生しない
-    const floor157 = (sim._prTarget || 0) * 1.57;
-    const target = Math.max(next, floor157);
     const gain = G.prestigeGainOf(sim.run.runCookies);
-    if (gain >= target * gainFactor && gain >= 1) {
-      sim._prTarget = target; // 達成した目標を記録(次回の単調床)
-      return true;
-    }
+    // 転生しきい値の単調床(2026-07-15 ④修復・生産の勢い前提): 達成PTを直に梯子にする。
+    // need = max(次スキル束×余裕, 前回達成PT×1.55)。_prTargetに「達成PT」を積む=1200s下限の
+    // オーバーシュートも取り込まれ、次周回は必ず前回PT×1.55超が要る=cookies比≥1.55^43.5≈3e8(④の1e8+余裕)。
+    // 勢い(momentum)が時間で必ず伸びるため、どの周回も上限時間内に床へ到達=中盤停滞が起きない。
+    const need = Math.max(next * gainFactor, (sim._prTarget || 0) * G.PRESTIGE_GAIN_FLOOR);
+    if (gain >= need && gain >= 1) { sim._prTarget = gain; return true; }
+    // 上限時間: 床未達でも転生(T1上限7200s維持・無限停滞の保険)。勢いにより通常は発火しない。
+    if (sim.t - sim.run.startT >= G.PRESTIGE_MAX_SEC && gain >= 1) { sim._prTarget = gain; return true; }
     return false;
   };
 }
@@ -408,12 +410,10 @@ const STRATEGIES = [
       if (next === null) return false;
       if ((sim.t - sim.run.startT) < 1200) return false;
       if (sim.run.cookies < G.prestigeCostOf(sim)) return false; // 転生には所持クッキー(10のべき乗・前回より大)が必要
-      const target = Math.max(next, (sim._prTarget || 0) * 1.57);
       const factor = sim.run.quotaFailed ? 1.0 : 1.5;
-      if (gain >= target * factor && gain >= 1) {
-        sim._prTarget = target;
-        return true;
-      }
+      const need = Math.max(next * factor, (sim._prTarget || 0) * G.PRESTIGE_GAIN_FLOOR);
+      if (gain >= need && gain >= 1) { sim._prTarget = gain; return true; }
+      if ((sim.t - sim.run.startT) >= G.PRESTIGE_MAX_SEC && gain >= 1) { sim._prTarget = gain; return true; }
       return false;
     },
     skillOrder: skillOrderByBranch(['core', 'monster', 'auto', 'reward', 'economy', 'research', 'click', 'golden', 'upgrade', 'start', 'master'])

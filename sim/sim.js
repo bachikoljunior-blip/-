@@ -1446,6 +1446,15 @@ function computeProd(sim) {
   if (!rwOff(sim, 'goldenBeastMutation') && (r.perks.goldenBeastMutation || 0) > 0) globalRes *= 1 + (r.perks.goldenBeastMutation || 0) * (P.rw.goldenBeastMutationProd || 0);
   if (!rwOff(sim, 'brandHunt') && (r.perks.brandHunt || 0) > 0) globalRes *= 1 + (r.perks.brandHunt || 0) * (P.rw.brandHuntProd || 0);
 
+  // 生産の勢い(2026-07-15 ユーザー指示「繰り返しで買う量産体制消せ」の代替=新⑥の床の作り直し):
+  // 旧・量産体制(45秒ごとに手動で買い直す×1.25)を、研究で一度解放したら自動でかかる時限の勢いに置換。
+  // 周回経過に対し massProdMul^(経過/massProdSec) で全生産が伸びる=180秒窓で×1.25^4≈2.44(新⑥の3分2倍)。
+  // 一様な全生産倍率=①③⑨⑫のlift比・㉘シェア・④⑤の周回比に中立(全周回同形)。上限=T1上限(7200s)で頭打ち。
+  if (r.ms && r.ms.momentum && P.msResearch) {
+    const el = Math.min(sim.t - r.startT, (P.msResearch.momentumCapSec || 7200));
+    globalRes *= Math.pow(P.msResearch.massProdMul, Math.max(0, el) / P.msResearch.massProdSec);
+  }
+
   // ③死に報酬対策(第12次P・枝分かれmeasure下では安全): 討伐ダメージ系報酬(割れた牙/焼き印狩り)を「討伐数×全生産倍率」へ繋ぐ。
   // ダメージ二値しきい値(killable)に吸収されず、討伐が速い方針でも討伐数に比例して総クッキーに効く経路。
   const cfKill = rwOff(sim, 'crackedFang') ? 0 : (r.perks.crackedFang || 0) * (P.rw.crackedFangKill || 0);
@@ -1844,7 +1853,9 @@ const MILESTONE_RESEARCH = (() => {
   // 工場の早期強化 3段(2026-07-11 ユーザー指示「工場の段1研究が高いので、実績研究でその前にいくつか
   // 工場強化できるものを入れて」): 組立ライン網(段1)が買える前の3/6/8台で工場生産を先行強化。安価(即買い帯)
   // 量産体制(2026-07-13 メトロノーム): 工場1台以降、45秒ごとに繰り返し購入可・全生産×1.25・コスト=生産30秒分
-  // 量産体制(ms_massprod・繰り返し購入)は廃止(2026-07-15 ユーザー指示「繰り返しで買う量産体制消せ」)。
+  // 生産の勢い(2026-07-15): 旧・量産体制(繰り返し購入)を廃止し、研究で一度解放したら自動でかかる
+  // 時限の全生産の勢い(momentum)に置換=新⑥(3分2倍)の床の作り直し。工場1台以降に解放。
+  add('ms_momentum', sim => (sim.run.upgrades.factory || 0) >= 1, { momentum: true }, 40);
   const facEarly = [[3, 40, 1.35], [6, 80, 1.4], [8, 120, 1.45]];
   facEarly.forEach(([n, cs, m], i) => add('ms_factory_e' + (i + 1), sim => (sim.run.upgrades.factory || 0) >= n, { up: { factory: m } }, cs));
   // 討伐実績 8段(周回内): 効果はダメージ/出現/滞在/HP/ドロップのローテ
@@ -1897,7 +1908,7 @@ const MILESTONE_RESEARCH = (() => {
 // 未購入で条件を満たしたものを自動購入(コスト=cps×msCostSec。安さゆえ全プレイヤー即買いのモデル)
 function tryBuyMilestones(sim, prod) {
   const r = sim.run;
-  if (!r.ms) r.ms = { up: {}, click: 1, cps: 1, all: 1, golden: 1, hunt: 1, dropAdd: 0, bought: {}, cpsAdd: 0, own: {}, sup: {}, critAdd: 0 }; // 効果多様化(2026-07-15): cpsAdd=加算/own=自設備数連動/sup=他設備数連動/critAdd=会心確率
+  if (!r.ms) r.ms = { up: {}, click: 1, cps: 1, all: 1, golden: 1, hunt: 1, dropAdd: 0, bought: {}, cpsAdd: 0, own: {}, sup: {}, critAdd: 0, momentum: false }; // 効果多様化(2026-07-15): cpsAdd=加算/own=自設備数連動/sup=他設備数連動/critAdd=会心確率/momentum=生産の勢い
   for (const m of MILESTONE_RESEARCH) {
     // 量産体制(2026-07-13 第13次ペーシング): repeatSec付きカードは時限クールダウンで何度でも買える
     // =レート制御された成長のメトロノーム(45秒ごと×1.25 → 3分窓あたり×2.44が下支え=新⑥の床)
@@ -1932,6 +1943,7 @@ function tryBuyMilestones(sim, prod) {
     if (m.fx.own) for (const k in m.fx.own) r.ms.own[k] = (r.ms.own[k] || 0) + m.fx.own[k]; // 自設備数連動
     if (m.fx.sup) { const [up, src, rate] = m.fx.sup; (r.ms.sup[up] = r.ms.sup[up] || []).push([src, rate]); } // 他設備数連動(支援)
     if (m.fx.critAdd) r.ms.critAdd = (r.ms.critAdd || 0) + m.fx.critAdd;              // 確率: 会心率+N
+    if (m.fx.momentum) r.ms.momentum = true;                                          // 生産の勢い(自動・時限)
     if (!sim.everMs) sim.everMs = {};
     if (!sim.everMs[m.id]) { sim.everMs[m.id] = true; pushUnlock(sim, 'research', m.id); } // 解放イベントは初回のみ(買い直しはT2の「新規解放」に数えない)
   }
@@ -3257,8 +3269,11 @@ function bestEfficiency(sim, prod, typeFilter, budgetRatio) {
   return best;
 }
 
+const PRESTIGE_GAIN_FLOOR = 1.55; // 転生PT単調床の比(cookies比≈1.55^43.5≈3e8=④の1e8+余裕)
+const PRESTIGE_MAX_SEC = 6500;    // 周回上限時間(T1上限7200s手前・停滞の保険)
 module.exports = {
   P, UPGRADES, RESEARCH, REWARD_POOL, SKILL_NODES, SKILL_BY_ID,
+  PRESTIGE_GAIN_FLOOR, PRESTIGE_MAX_SEC,
   simulate, prestigeGainOf, prestigeCostOf, skillCostOf, upgradeCost, researchCostOf,
   tryBuyUpgrade, tryBuyResearch, bestEfficiency, visibleUpgrades, quotaAtElapsed,
   isUtilitySkill, buildSkillValues, skillRank, skillRiders, trunc2sig, q5, q5cost,
