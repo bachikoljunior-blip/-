@@ -784,7 +784,12 @@ function equip2Score(sim, it) {
   let s = 0;
   const u = def.up || [];
   for (let i = 0; i < u.length; i += 2) s += (EQ2_UNIT[u[i]] || 0.3) * u[i + 1] * scale * equip2Rel(pol, u[i]);
-  if (def.m === 'B' && def.down) for (let i = 0; i < def.down.length; i += 2) s -= (EQ2_UNIT[def.down[i]] || 0.3) * (1 - def.down[i + 1]) * equip2Rel(pol, def.down[i]);
+  // B型の下げ: 方針が価値を置くステータスへの下げは重く罰する(=得意分野を削るB装備を選ばない=lift(a)を守る)。
+  // 得意ステータスへの下げ×6・使わないステータスへの下げ×0.3(ほぼ無害)。
+  if (def.m === 'B' && def.down) for (let i = 0; i < def.down.length; i += 2) {
+    const st = def.down[i], fav = EQ2_FAV[pol] && EQ2_FAV[pol].has(st);
+    s -= (EQ2_UNIT[st] || 0.3) * (1 - def.down[i + 1]) * (fav ? 6 : (EQ2_FAV[pol] ? 0.3 : 1));
+  }
   if (def.m === 'C') s *= (EQ2_CONDFREQ[def.cond] || 0.2);
   return s;
 }
