@@ -6756,11 +6756,6 @@ function freshState() {
 function ensureState() {
   const base = freshState();
 
-  // 解放ゲートのアンカー(2026-07-14 ユーザー指示「初研究、設備の解放もそれ下限にして」):
-  // 開始/ロード時点をアンカーにして、最初の設備・研究の解放もゲーム開始から30秒待つ。
-  // -1000は「同時扱い(1秒以内)のバイパス」を初回に効かせないためのずらし。
-  if (!state.lastUnlockAt) state.lastUnlockAt = Date.now() - 1000;
-
   state.upgrades = { ...base.upgrades, ...(state.upgrades || {}) };
   state.research = { ...base.research, ...(state.research || {}) };
   state.perks = { ...base.perks, ...(state.perks || {}) };
@@ -7763,8 +7758,6 @@ function buyMilestone(id) {
   const ms = MILESTONE_RESEARCH.find(m => m.id === id);
   // デバッグON中はトリガ未達成でも購入できる(通常研究のデバッグ購入と同じ扱い)
   if (!ms || msBought(id) || (!debugMode && !ms.trig())) return;
-  const msNovel = !((state.msResearch || {})[id]);
-  if (!debugMode && msNovel && !unlockGateOk()) { showMessage("新しい実績研究はもうすぐ公開(解放は30秒間隔)"); return; }
   const cost = msResearchCost(ms);
   if (!debugMode) {
     if (state.cookies.lt(cost)) { showMessage("クッキーが足りない"); return; }
@@ -7776,7 +7769,6 @@ function buyMilestone(id) {
     state.msRepeatAt = state.msRepeatAt || {};
     state.msRepeatAt[id] = Date.now();
   } else state.msResearch[id] = true;
-  if (msNovel) markUnlock();
   playSound("research");
   showMessage(`実績研究「${ms.name}」: ${ms.fxText}`);
   saveGame(); updateTopOnly(); renderActiveTab();
@@ -10638,8 +10630,7 @@ function questProgressOnKill(stageNo, units) {
   state.questKills = state.questKills || {};
   state.questKills[stageNo] = (state.questKills[stageNo] || 0) + (units || 1);
   const need = QUEST_KILLS_NEED[stageNo - 1] || Infinity;
-  if (state.questKills[stageNo] >= need && unlockGateOk()) {
-    markUnlock();
+  if (state.questKills[stageNo] >= need) {
     state.stageUnlocked = stageNo + 1;
     playScreenTransition();
     // dropMatは別関数内のローカル変数でここでは未定義だったため、グローバルのshowMessageに修正
@@ -12164,21 +12155,6 @@ function updateStageArrows() {
 addTap($("stageArrowL"), () => moveStageBy(-1));
 addTap($("stageArrowR"), () => moveStageBy(1));
 
-// 解放ゲート(2026-07-14 ユーザー指示・当初「1分以上」→同日「いや30秒以上でいい」・sim同期):
-// 直前の新規解放(新種の設備初購入・研究/段階/実績研究の初購入・ステージ解放)から30秒経つまで、
-// 次の新規解放を待たせる=新しいものの小出し。買い増し・周回を跨ぐ買い直しは対象外。
-// 1秒以内の連続解放は同時扱い(まとめて1イベント)としてゲートを通す。
-const UNLOCK_GAP_MS = 30000;
-function unlockGateOk() {
-  // 初回も下限を適用(2026-07-14 ユーザー指示): アンカーはensureStateで開始/ロード時に設定される
-  if (!state.lastUnlockAt) { state.lastUnlockAt = Date.now() - 1000; return false; }
-  const d = Date.now() - state.lastUnlockAt;
-  return d < 1000 || d >= UNLOCK_GAP_MS;
-}
-function markUnlock() {
-  const now = Date.now();
-  if (!state.lastUnlockAt || now - state.lastUnlockAt >= 1000) state.lastUnlockAt = now;
-}
 function buyUpgrade(id) {
   if (pausedForSkillChoice()) {
     openSkillChoiceScreen();
@@ -12190,7 +12166,6 @@ function buyUpgrade(id) {
   if (!u) return;
   if (!debugMode && !upgradeUnlocked(u)) return;
   state.everUpgrades = state.everUpgrades && typeof state.everUpgrades === "object" ? state.everUpgrades : {};
-  if (!debugMode && !state.everUpgrades[id] && !unlockGateOk()) { showMessage("新しい設備はもうすぐ入荷(解放は30秒間隔)"); return; }
 
   const target = multiBuyPlan(u).count;
   let bought = 0;
@@ -12219,7 +12194,7 @@ function buyUpgrade(id) {
   }
 
   if (bought > 0) {
-    if (!state.everUpgrades[id]) { state.everUpgrades[id] = true; markUnlock(); }
+    if (!state.everUpgrades[id]) state.everUpgrades[id] = true;
     trackOrderProgress("buyUpgrade", id, bought);
     playSound("upgrade");
     showMessage(`${u.name} ×${bought}`);
@@ -12248,10 +12223,9 @@ function buyResearch(id) {
   if (!debugMode && !researchUnlocked(r)) return;
   if (state.research[id]) return;
   state.everResearch = state.everResearch && typeof state.everResearch === "object" ? state.everResearch : {};
-  if (!debugMode && !state.everResearch[id] && !unlockGateOk()) { showMessage("新しい研究はもうすぐ公開(解放は30秒間隔)"); return; }
   if (!debugMode && !spend(researchCost(r))) return;
 
-  if (!state.everResearch[id]) { state.everResearch[id] = true; markUnlock(); }
+  if (!state.everResearch[id]) state.everResearch[id] = true;
   state.research[id] = true;
   trackOrderProgress("buyResearch", id, 1);
 
@@ -12282,10 +12256,9 @@ function buyResearchStage(id, stageNo) {
   const needSkill = stageNo === 2 ? RES_STAGE2[id] : RES_STAGE3[id];
   if (!hasSkill(needSkill)) return;
   state.everStage = state.everStage && typeof state.everStage === "object" ? state.everStage : {};
-  if (!debugMode && !state.everStage[id + ":" + stageNo] && !unlockGateOk()) { showMessage("次の段階はもうすぐ公開(解放は30秒間隔)"); return; }
   if (!debugMode && !spend(researchStageCost(r, stageNo))) return;
 
-  if (!state.everStage[id + ":" + stageNo]) { state.everStage[id + ":" + stageNo] = true; markUnlock(); }
+  if (!state.everStage[id + ":" + stageNo]) state.everStage[id + ":" + stageNo] = true;
   state.researchStages = state.researchStages && typeof state.researchStages === "object" ? state.researchStages : {};
   state.researchStages[id] = stageNo;
 
