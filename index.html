@@ -3960,6 +3960,68 @@
       font-weight: 800;
     }
 
+    /* 撃破後に落ちる素材アイコン(タップで入手 / 一定時間で工房タブへ自動回収)2026-07-15 */
+    .matDrop {
+      position: absolute;
+      width: 34px;
+      height: 34px;
+      z-index: 45;
+      cursor: pointer;
+      transform: translateY(-14px) scale(0.4);
+      opacity: 0;
+      transition: transform 0.32s cubic-bezier(0.18,0.9,0.32,1.2), opacity 0.2s ease-out;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      filter: drop-shadow(0 3px 4px rgba(0,0,0,0.5));
+      will-change: transform, opacity;
+    }
+    .matDrop--land {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+      animation: matDropBob 1.6s ease-in-out 0.34s infinite;
+    }
+    @keyframes matDropBob {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-3px) scale(1.02); }
+    }
+    .matDropImg {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 8px;
+      pointer-events: none;
+    }
+    .matDropQty {
+      position: absolute;
+      right: 1px;
+      bottom: 1px;
+      min-width: 13px;
+      height: 13px;
+      padding: 0 2px;
+      border-radius: 7px;
+      background: rgba(20,12,6,0.9);
+      border: 1px solid rgba(255,205,130,0.7);
+      color: #ffd98a;
+      font-size: 9px;
+      font-weight: 900;
+      line-height: 13px;
+      text-align: center;
+      pointer-events: none;
+    }
+    .matDrop--pop {
+      animation: matDropPop 0.2s ease-out forwards !important;
+    }
+    @keyframes matDropPop {
+      from { transform: scale(1.15); opacity: 1; }
+      to { transform: scale(0.3) translateY(-16px); opacity: 0; }
+    }
+    .matDrop--suck {
+      z-index: 200;
+      transition: transform 0.46s cubic-bezier(0.5,0,0.75,0), opacity 0.46s ease-in;
+      animation: none !important;
+      pointer-events: none;
+    }
+
     /* 報酬モーダルの登場演出 */
     #rewardModal .rewardPanel {
       animation: rewardPop 0.34s cubic-bezier(0.2, 1.4, 0.4, 1);
@@ -6701,6 +6763,10 @@ let rewardOpenTimer = null;
 let rewardPending = false;
 // 直近の撃破で落とした素材(報酬画面に表示するため、イベント文とは分けて保持)
 let lastDropMaterials = [];
+// 撃破時は素材を即時付与せず、種類→個数のマップに貯める。報酬選択後に
+// アイコンを落とし、タップ or 自動回収で「一度だけ」付与する(2026-07-15)
+let lastMonsterDropMap = {};
+let pendingMaterialDrops = null;
 let rewardLockTimer = null;
 let rewardLockUntil = 0;
 
@@ -9353,10 +9419,17 @@ function grantMonsterDrops(typeId, level, overkill) {
   const stageNo = currentStageNo();
   const stage = stageInfo(stageNo);
   const type = MONSTER_TYPES[typeId] || MONSTER_TYPES.normal;
+  const count = (type && type.count) || 1;
   const parts = [];
-  // 素材ドロップだけを別に集める(報酬画面の「落とした素材」表示用)
+  // 素材は即時付与しない。種類→個数のマップに貯めて、報酬選択後に落ちるアイコンを
+  // タップ(または一定時間後の自動回収)して初めて付与する(重複付与を防ぐ・2026-07-15)。
   lastDropMaterials = [];
-  const dropMat = text => { parts.push(text); lastDropMaterials.push(text); };
+  const drops = {};
+  const addDrop = (id, n) => {
+    const k = Math.max(0, Math.floor(Number(n) || 0));
+    if (!id || k <= 0 || !getMaterial(id)) return;
+    drops[id] = (drops[id] || 0) + k;
+  };
   // v2: workshop_1(素材の嗅覚)未取得の間は素材ドロップなし(討伐カウント・ステージ解放は進む)
   const dropsEnabled = workshopTabUnlocked();
 
@@ -9369,14 +9442,10 @@ function grantMonsterDrops(typeId, level, overkill) {
 
     if (dropsEnabled) {
       const coreId = stageNo >= MAX_STAGE_NO ? "deepCore" : "bossCore" + stageNo;
-      const got = gainMaterial(coreId, first ? 3 : 1);
-      if (got > 0) dropMat(`+${got} ${getMaterial(coreId).name}`);
+      addDrop(coreId, first ? 3 : 1);
 
       // 深層ボスは虚空糖も落とす
-      if (stageNo >= MAX_STAGE_NO) {
-        const sugar = gainMaterial("voidSugar", 5);
-        if (sugar > 0) dropMat(`+${sugar} ${getMaterial("voidSugar").name}`);
-      }
+      if (stageNo >= MAX_STAGE_NO) addDrop("voidSugar", 5);
     }
 
     if (stageNo >= MAX_STAGE_NO) {
@@ -9392,9 +9461,9 @@ function grantMonsterDrops(typeId, level, overkill) {
 
     // 固定クエスト(2026-07-13 ユーザー確定仕様): フロンティアステージ(=最新解放)での累計討伐で次ステージ解放。
     // 制限時間なし・内容固定・周回を跨いで累積。進捗は注文ボードに常設表示。
-    questProgressOnKill(stageNo, (MONSTER_TYPES[typeId] && MONSTER_TYPES[typeId].count) || 1);
+    questProgressOnKill(stageNo, count);
     // 色素材(2026-07-13 新装備): ノルマ層の帯の色素材を討伐ごとにドロップ(工房スキル不要=最初から)
-    gainMaterial("ore_t" + layerOreTier(), (EQUIP2_CFG.oreDropPerKill + equip2Fx().oreAdd) * ((MONSTER_TYPES[typeId] && MONSTER_TYPES[typeId].count) || 1)); // 新装備: 色素材系
+    addDrop("ore_t" + layerOreTier(), (EQUIP2_CFG.oreDropPerKill + equip2Fx().oreAdd) * count); // 新装備: 色素材系
 
     if (dropsEnabled) {
       // v4 §18 条件ドロップ制。倍率: ステージ補正×虚空タルト×次元コンパス(1+0.05×Lv)×討伐連鎖(1+0.02×N)
@@ -9404,23 +9473,19 @@ function grantMonsterDrops(typeId, level, overkill) {
         * equip2Fx().dropMul // 新装備: 素材ドロップ系
         * (1 + CHAIN_DROP_COEF * chainCount());
       const qty = base => Math.max(1, Math.round(base * mult));
-      const gain = (id, n) => {
-        const got = gainMaterial(id, n);
-        if (got > 0) dropMat(`+${got} ${getMaterial(id).name}`);
-      };
 
       // 通常撃破: ステージ基本素材1個+クリックとどめ+1(とどめは常にタップ)+図鑑/記録/ステージ加算
       const baseId = dropMaterialIdFor(stageNo, typeId);
-      gain(baseId, qty(2 + 0.5 * equipLv("monsterAlmanac") + (stage.dropAdd || 0) + killRecordDropBonus(typeId) + msMulOf("dropAdd"))); // 図鑑+0.5/Lv(旧floor(Lv/2)はLv1で0=sim同期2026-07-11)+実績研究(素材の目利き)
+      addDrop(baseId, qty(2 + 0.5 * equipLv("monsterAlmanac") + (stage.dropAdd || 0) + killRecordDropBonus(typeId) + msMulOf("dropAdd"))); // 図鑑+0.5/Lv(旧floor(Lv/2)はLv1で0=sim同期2026-07-11)+実績研究(素材の目利き)
 
       // 金ブースト中に撃破: 黄金粉(唯一の入手経路)
-      if (goldenBoostActive()) gain("goldDust", qty(1));
+      if (goldenBoostActive()) addDrop("goldDust", qty(1));
 
       // オーバーキル撃破(残HPの5倍以上のダメージ): レア素材枠(S1は共通+2)
       if (overkill) {
         const rareId = OVERKILL_RARE[stageNo];
-        if (rareId) gain(rareId, qty(1));
-        else gain(baseId, qty(2));
+        if (rareId) addDrop(rareId, qty(1));
+        else addDrop(baseId, qty(2));
       }
 
       // 狩り窓中に3体連続撃破: ボス核+1
@@ -9428,7 +9493,7 @@ function grantMonsterDrops(typeId, level, overkill) {
         state.portalChainKills = Math.max(0, Math.floor(Number(state.portalChainKills) || 0)) + 1;
         if (state.portalChainKills >= CHAIN_KILLS) {
           state.portalChainKills = 0;
-          gain(stageNo >= MAX_STAGE_NO ? "deepCore" : "bossCore" + stageNo, 1);
+          addDrop(stageNo >= MAX_STAGE_NO ? "deepCore" : "bossCore" + stageNo, 1);
         }
       } else {
         state.portalChainKills = 0;
@@ -9436,10 +9501,10 @@ function grantMonsterDrops(typeId, level, overkill) {
 
       // ノルマ余裕率2倍以上で撃破: 発酵系素材
       const q = monsterQuotaRequired();
-      if (q && q > 0 && state.runCookies.gte(q * MARGIN_THRESH)) gain(FERMENT_MATERIAL[stageNo] || baseId, qty(1));
+      if (q && q > 0 && state.runCookies.gte(q * MARGIN_THRESH)) addDrop(FERMENT_MATERIAL[stageNo] || baseId, qty(1));
 
       // バランス型のみ: 万能粉(期待値0.8個/討伐)
-      if (runPolicyIs("balanced") && Math.random() < 0.8) gain("omniFlour", qty(1));
+      if (runPolicyIs("balanced") && Math.random() < 0.8) addDrop("omniFlour", qty(1));
     }
   }
 
@@ -9449,6 +9514,7 @@ function grantMonsterDrops(typeId, level, overkill) {
     parts.push("次の金クッキーが早くなる");
   }
 
+  lastMonsterDropMap = drops;
   return parts.join(" / ");
 }
 
@@ -16306,6 +16372,10 @@ function defeatMonster(id) {
   const defeatedLevel = mon.level;
   const defeatedTypeId = mon.typeId || "normal";
 
+  // 素材アイコンを落とす位置(モンスターがいた場所)を、消える前に取っておく
+  const dropHost = document.querySelector(".top");
+  const dropPos = (mon.el && dropHost) ? rectRelativeToHost(mon.el, dropHost) : null;
+
   hideMonster(mon.id, false);
   playSound("defeat");
 
@@ -16364,9 +16434,11 @@ function defeatMonster(id) {
   const recordText = recordKill(defeatedTypeId);
   if (recordText) message += ` / ${recordText}`;
 
-  // 素材ドロップ・ステージ討伐カウント・ボス撃破処理
+  // 素材ドロップ判定・ステージ討伐カウント・ボス撃破処理。素材はここでは付与せず、
+  // 報酬選択後にアイコンとして落とし、タップ or 自動回収で一度だけ付与する。
   const dropText = grantMonsterDrops(defeatedTypeId, defeatedLevel, Boolean(mon.overkill));
-  if (dropText) message += ` / ${dropText}`;
+  if (dropText) message += ` / ${dropText}`; // 深層到達・金クッキー短縮など、素材以外のイベント文のみ
+  pendingMaterialDrops = { drops: { ...lastMonsterDropMap }, pos: dropPos };
 
   // 討伐連鎖: 2連鎖以上のときだけトーストに追記。
   // クッキー上のチェイン表示は、報酬モーダルの裏で消えてしまわないよう
@@ -16728,6 +16800,124 @@ function chooseReward(choice) {
   saveGame();
   updateTopOnly();
   renderActiveTab();
+
+  // 報酬を選んだあと、モンスターがいた場所に素材アイコンを落とす(タップで入手)
+  if (pendingMaterialDrops) {
+    const pd = pendingMaterialDrops;
+    pendingMaterialDrops = null;
+    spawnMaterialDropIcons(pd);
+  }
+}
+
+// ==== 撃破素材ドロップアイコン(タップ回収 / 一定時間で工房タブへ自動回収)2026-07-15 ====
+// 素材はここで初めて gainMaterial される。grantMonsterDrops では貯めるだけなので二重付与しない。
+function spawnMaterialDropIcons(payload) {
+  if (!payload || !payload.drops) return;
+  const host = document.querySelector(".top");
+
+  // 5個以上の同種は1アイコン+×N、5未満はその数だけ個別アイコンにする
+  const items = [];
+  for (const id in payload.drops) {
+    const c = Math.max(0, Math.floor(Number(payload.drops[id]) || 0));
+    if (c <= 0 || !getMaterial(id)) continue;
+    if (c >= 5) items.push({ id, qty: c });
+    else for (let i = 0; i < c; i++) items.push({ id, qty: 1 });
+  }
+  if (!items.length) return;
+
+  // 位置が取れない(念のため)場合は演出なしで即付与
+  if (!host) {
+    let any = false;
+    items.forEach(it => { gainMaterial(it.id, it.qty); any = true; });
+    if (any) { saveGame(); updateTopOnly(); renderActiveTab(); }
+    return;
+  }
+
+  const pos = payload.pos;
+  const baseX = pos ? (pos.left + pos.right) / 2 : host.clientWidth / 2;
+  const baseY = pos ? (pos.top + pos.bottom) / 2 : host.clientHeight * 0.42;
+
+  // 一つずつ時間差で落とす
+  items.forEach((it, i) => {
+    setTimeout(() => dropOneMaterialIcon(host, it, baseX, baseY, i, items.length), i * 150);
+  });
+}
+
+function dropOneMaterialIcon(host, item, baseX, baseY, idx, total) {
+  const ICON = 34;
+  // 中心付近に軽くばらけさせる(1個のときは中央)
+  const ang = (idx / Math.max(1, total)) * Math.PI * 2 + Math.random() * 0.7;
+  const rad = total > 1 ? 12 + Math.random() * 26 : 0;
+  let x = baseX + Math.cos(ang) * rad - ICON / 2;
+  let y = baseY + Math.sin(ang) * rad - ICON / 2;
+  x = Math.max(4, Math.min(host.clientWidth - ICON - 4, x));
+  y = Math.max(4, Math.min(host.clientHeight - ICON - 4, y));
+
+  const el = document.createElement("div");
+  el.className = "matDrop";
+  el.style.left = x + "px";
+  el.style.top = y + "px";
+  const d = oreDecor(item.id);
+  const src = assetUrl(ASSETS.materials[item.id] || ASSETS.materials.butter);
+  const imgStyle = `${d.filter ? `filter:${d.filter};` : ""}${d.color ? `border:2px solid ${d.color};box-shadow:0 0 5px ${d.color};` : ""}`;
+  el.innerHTML = `<img class="matDropImg" src="${src}" style="${imgStyle}" alt="" aria-hidden="true">`
+    + (item.qty >= 5 ? `<span class="matDropQty">×${item.qty}</span>` : "");
+  host.appendChild(el);
+  requestAnimationFrame(() => el.classList.add("matDrop--land"));
+
+  const rec = { el, collected: false, timer: 0 };
+  const grant = (showText) => {
+    if (rec.collected) return;
+    rec.collected = true;
+    clearTimeout(rec.timer);
+    gainMaterial(item.id, item.qty);
+    if (showText) {
+      const name = getMaterial(item.id) ? getMaterial(item.id).name : "素材";
+      showFloat(`入手 ${name}${item.qty > 1 ? " ×" + item.qty : ""}`);
+      playSound("buy");
+    }
+    saveGame();
+    updateTopOnly();
+    renderActiveTab();
+  };
+
+  el.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (rec.collected) return;
+    grant(true);
+    el.classList.add("matDrop--pop");
+    setTimeout(() => el.remove(), 200);
+  }, { passive: false });
+
+  // A: 一定時間タップされなければ工房タブへ吸い込まれて自動回収
+  rec.timer = setTimeout(() => {
+    if (rec.collected) return;
+    suckMaterialIconToWorkshop(el, () => grant(false));
+  }, 6000);
+}
+
+function suckMaterialIconToWorkshop(el, grant) {
+  const tab = document.querySelector('.tab[data-tab="workshopTab"]');
+  const r = el.getBoundingClientRect();
+  if (!tab) { grant(); el.remove(); return; }
+  const tr = tab.getBoundingClientRect();
+  // .top は overflow:hidden なので、body直下の固定配置へ移してからタブへ飛ばす
+  el.style.position = "fixed";
+  el.style.left = r.left + "px";
+  el.style.top = r.top + "px";
+  el.style.width = r.width + "px";
+  el.style.height = r.height + "px";
+  el.style.margin = "0";
+  el.classList.add("matDrop--suck");
+  document.body.appendChild(el);
+  const dx = (tr.left + tr.width / 2) - (r.left + r.width / 2);
+  const dy = (tr.top + tr.height / 2) - (r.top + r.height / 2);
+  requestAnimationFrame(() => {
+    el.style.transform = `translate(${dx}px, ${dy}px) scale(0.22)`;
+    el.style.opacity = "0.15";
+  });
+  setTimeout(() => { grant(); el.remove(); playSound("tab"); }, 460);
 }
 
 window.addEventListener("resize", () => {
