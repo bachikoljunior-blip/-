@@ -719,12 +719,12 @@ function equip2ById(id) {
 const EQUIP2_FX = {
   weapon: [
     { m: 'A', up: ['dmgMul', 0.9] }, { m: 'A', up: ['critAdd', 0.04] }, { m: 'A', up: ['killValMul', 0.7] },
-    { m: 'B', up: ['dmgMul', 1.6], down: ['cpsMul', 0.88] }, { m: 'B', up: ['critAdd', 0.09], down: ['killValMul', 0.9] }, { m: 'B', up: ['killValMul', 1.4], down: ['dmgMul', 0.9] },
+    { m: 'B', up: ['dmgMul', 1.6], down: ['goldenAmtMul', 0.85] }, { m: 'B', up: ['critAdd', 0.09], down: ['killValMul', 0.9] }, { m: 'B', up: ['killValMul', 1.4], down: ['dmgMul', 0.9] },
     { m: 'C', cond: 'boss', up: ['dmgMul', 3] }, { m: 'C', cond: 'monster', up: ['critAdd', 0.15] }, { m: 'C', cond: 'goldenBoost', up: ['dmgMul', 2, 'killValMul', 1] }
   ],
   shield: [
     { m: 'A', up: ['holdBonus', 0.5] }, { m: 'A', up: ['stayMul', 0.30] }, { m: 'A', up: ['critAdd', 0.03] },
-    { m: 'B', up: ['holdBonus', 0.9], down: ['clickMul', 0.9] }, { m: 'B', up: ['cpsMul', 0.6], down: ['dmgMul', 0.9] }, { m: 'B', up: ['stayMul', 0.5], down: ['cpsMul', 0.9] },
+    { m: 'B', up: ['holdBonus', 0.9], down: ['clickMul', 0.9] }, { m: 'B', up: ['cpsMul', 0.6], down: ['dmgMul', 0.9] }, { m: 'B', up: ['stayMul', 0.5], down: ['goldenAmtMul', 0.9] },
     { m: 'C', cond: 'quotaHold', up: ['holdBonus', 1.0] }, { m: 'C', cond: 'deep', up: ['cpsMul', 0.5] }, { m: 'C', cond: 'quotaHold', up: ['holdBonus', 0.4, 'critAdd', 0.05] }
   ],
   armorTop: [
@@ -734,12 +734,12 @@ const EQUIP2_FX = {
   ],
   armorBottom: [
     { m: 'A', up: ['upDisc', 0.08] }, { m: 'A', up: ['resDisc', 0.08] }, { m: 'A', up: ['cpsMul', 0.6] },
-    { m: 'B', up: ['upDisc', 0.15], down: ['cpsMul', 0.92] }, { m: 'B', up: ['resDisc', 0.15], down: ['clickMul', 0.92] }, { m: 'B', up: ['cpsMul', 0.9, 'upDisc', 0.06], down: ['dmgMul', 0.9] },
+    { m: 'B', up: ['upDisc', 0.15], down: ['dmgMul', 0.9] }, { m: 'B', up: ['resDisc', 0.15], down: ['clickMul', 0.92] }, { m: 'B', up: ['cpsMul', 0.9, 'upDisc', 0.06], down: ['dmgMul', 0.9] },
     { m: 'C', cond: 'quotaHold', up: ['upDisc', 0.20] }, { m: 'C', cond: 'deep', up: ['resDisc', 0.20] }, { m: 'C', cond: 'runStart', up: ['allMul', 0.5] }
   ],
   hands: [
     { m: 'A', up: ['clickMul', 1.0] }, { m: 'A', up: ['critAdd', 0.03] }, { m: 'A', up: ['clickMul', 0.7, 'critAdd', 0.02] },
-    { m: 'B', up: ['clickMul', 1.6], down: ['cpsMul', 0.9] }, { m: 'B', up: ['critAdd', 0.07], down: ['killValMul', 0.9] }, { m: 'B', up: ['clickMul', 1.3], down: ['goldenAmtMul', 0.9] },
+    { m: 'B', up: ['clickMul', 1.6], down: ['goldenAmtMul', 0.9] }, { m: 'B', up: ['critAdd', 0.07], down: ['killValMul', 0.9] }, { m: 'B', up: ['clickMul', 1.3], down: ['goldenAmtMul', 0.9] },
     { m: 'C', cond: 'monster', up: ['clickMul', 2.5] }, { m: 'C', cond: 'goldenBoost', up: ['critAdd', 0.20] }, { m: 'C', cond: 'monster', up: ['clickMul', 2, 'dmgMul', 0.5] }
   ],
   hat: [
@@ -749,17 +749,17 @@ const EQUIP2_FX = {
   ],
   shoes: [
     { m: 'A', up: ['dropMul', 0.5] }, { m: 'A', up: ['oreAdd', 1] }, { m: 'A', up: ['spawnMul', 0.08] },
-    { m: 'B', up: ['dropMul', 1.0], down: ['cpsMul', 0.92] }, { m: 'B', up: ['oreAdd', 3], down: ['killValMul', 0.9] }, { m: 'B', up: ['spawnMul', 0.12], down: ['cpsMul', 0.9] },
+    { m: 'B', up: ['dropMul', 1.0], down: ['killValMul', 0.9] }, { m: 'B', up: ['oreAdd', 3], down: ['killValMul', 0.9] }, { m: 'B', up: ['spawnMul', 0.12], down: ['goldenAmtMul', 0.9] },
     { m: 'C', cond: 'boss', up: ['dropMul', 3] }, { m: 'C', cond: 'monster', up: ['oreAdd', 5] }, { m: 'C', cond: 'goldenBoost', up: ['dropMul', 2, 'spawnMul', 0.06] }
   ],
   accA: [
     { m: 'A', up: ['goldenAmtMul', 1.0] }, { m: 'A', up: ['goldenRateMul', 0.15] }, { m: 'A', up: ['goldenBoostMul', 0.4] },
-    { m: 'B', up: ['goldenAmtMul', 1.6], down: ['cpsMul', 0.9] }, { m: 'B', up: ['goldenRateMul', 0.22], down: ['killValMul', 0.9] }, { m: 'B', up: ['goldenBoostMul', 0.6], down: ['clickMul', 0.9] },
+    { m: 'B', up: ['goldenAmtMul', 1.6], down: ['dmgMul', 0.9] }, { m: 'B', up: ['goldenRateMul', 0.22], down: ['killValMul', 0.9] }, { m: 'B', up: ['goldenBoostMul', 0.6], down: ['clickMul', 0.9] },
     { m: 'C', cond: 'goldenBoost', up: ['allMul', 1.5] }, { m: 'C', cond: 'deep', up: ['goldenAmtMul', 0.6] }, { m: 'C', cond: 'goldenBoost', up: ['goldenAmtMul', 2, 'goldenBoostMul', 0.3] }
   ],
   accB: [
     { m: 'A', up: ['rewardLvAdd', 2] }, { m: 'A', up: ['killValMul', 0.6] }, { m: 'A', up: ['rewardLvAdd', 1, 'killValMul', 0.4] },
-    { m: 'B', up: ['rewardLvAdd', 4], down: ['cpsMul', 0.9] }, { m: 'B', up: ['killValMul', 1.5], down: ['dmgMul', 0.9] }, { m: 'B', up: ['rewardLvAdd', 3], down: ['clickMul', 0.9] },
+    { m: 'B', up: ['rewardLvAdd', 4], down: ['goldenAmtMul', 0.9] }, { m: 'B', up: ['killValMul', 1.5], down: ['dmgMul', 0.9] }, { m: 'B', up: ['rewardLvAdd', 3], down: ['clickMul', 0.9] },
     { m: 'C', cond: 'boss', up: ['rewardLvAdd', 6] }, { m: 'C', cond: 'monster', up: ['killValMul', 2.5] }, { m: 'C', cond: 'goldenBoost', up: ['rewardLvAdd', 3, 'killValMul', 1] }
   ]
 };
@@ -775,7 +775,7 @@ const EQ2_FAV = {
   hunt: new Set(['dmgMul', 'killValMul', 'rewardLvAdd', 'stayMul', 'spawnMul', 'allMul', 'oreAdd'])
 };
 const EQ2_CONDFREQ = { goldenBoost: 0.15, monster: 0.4, boss: 0.06, quotaHold: 0.8, deep: 0.3, buyUp: 0.12, buyRes: 0.10, runStart: 0.12 };
-function equip2Rel(pol, stat) { const f = EQ2_FAV[pol]; if (!f) return 0.7; return f.has(stat) ? 1 : 0.2; }
+function equip2Rel(pol, stat) { if (stat === 'cpsMul' || stat === 'allMul') return 0.8; const f = EQ2_FAV[pol]; if (!f) return 0.7; return f.has(stat) ? 1 : 0.2; } // cps/allは土台=全方針で重視
 function equip2Score(sim, it) {
   const def = EQUIP2_FX[it.cat] && EQUIP2_FX[it.cat][(it.variant || 1) - 1];
   if (!def) return 0;
