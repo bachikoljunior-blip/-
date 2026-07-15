@@ -6199,8 +6199,8 @@ const ASSETS = {
 
 const UPGRADES = [
   // クリックとおばあちゃんは基礎値1。香料棚を銀行〜異世界炉の中間に追加し、工場以降は緩やかに重くなる。
-  { id: "finger", name: "強い指", type: "click", value: 1, base: 0.0184, growth: 1.32, desc: "1タップ +1。さらに毎秒生産の一部がタップ力に加わる(強い指を増やすほど割合UP)" },
-  { id: "grandma", name: "おばあちゃん", type: "cps", value: 1, base: 1000, growth: 1.30, desc: "毎秒 +1(台数が増えるほど1台あたりが強くなる)" },
+  { id: "finger", name: "強い指", type: "click", value: 1, base: 0.0184, growth: 1.32, desc: "1タップ +1。さらに毎秒生産の約0.4%がタップ力に加わる(強い指が多いほど増加)" },
+  { id: "grandma", name: "おばあちゃん", type: "cps", value: 1, base: 1000, growth: 1.30, desc: "毎秒 +1(おばあちゃんが増えるほど1台の生産UP：+2%/台)" },
   { id: "oven", name: "オーブン", type: "cps", value: 8, base: 520, growth: 1.35, desc: "毎秒 +8" },
   { id: "factory", name: "工場", type: "cps", value: 45, base: 7200, growth: 1.37, desc: "毎秒 +45" },
   { id: "bank", name: "クッキー銀行", type: "cps", value: 260, base: 54000, growth: 1.39, desc: "毎秒 +260" },
@@ -6221,7 +6221,7 @@ const RESEARCH = [
   // 序盤は体感しやすい研究。研究改造室以降は、設備ごとの特殊効果を一つずつ広げる。
   // 段階2/3は「対応スキル取得後、研究タブに購入カードが出現し、クッキーで購入して有効化」する。
   { id: "fingerTechnique", name: "指先の型", cost: 2500, detail: "式：会心率=1-e^-score、倍率=2.2+score×10(score=0.01+√強い指×0.045+0.002×最高到達層。開始1%から育つ)。段階2(スキル「連打の呼吸」で購入可):会心コンボ=会心ごとに+1(上限なし、30秒途切れでリセット)、会心倍率×(1+0.03×コンボ)。段階3(スキル「神経直結」で購入可):会心の余熱=会心のたびに毎秒生産×0.025%×最高到達層を追加獲得。", desc: "タップ会心を解放する。段階購入でコンボと会心の余熱が追加" },
-  { id: "grandmaCrowd", name: "おばあちゃん連携", cost: 100000, detail: "式：支援=1.002〜1.003^おばあちゃん(強い指・オーブン・工場)。段階2(スキル「炉の列」で購入可):支援先に銀行・香料棚を追加(×1.008^おばあちゃん)。段階3(スキル「無人ライン」で購入可):全支援×(1+0.001×最高到達層)。", desc: "おばあちゃんが強い指・オーブン・工場の生産を底上げする。段階購入で銀行・香料棚も対象＋層効果が追加" },
+  { id: "grandmaCrowd", name: "おばあちゃん連携", cost: 100000, detail: "式：支援=1.002〜1.003^おばあちゃん(強い指・オーブン・工場)。段階2(スキル「炉の列」で購入可):支援先に銀行・香料棚を追加(×1.008^おばあちゃん)。段階3(スキル「無人ライン」で購入可):全支援×(1+0.001×最高到達層)。", desc: "おばあちゃんが強い指・オーブン・工場の生産を底上げ(おばあちゃん1台ごとに+0.2〜0.3%)。段階購入で銀行・香料棚も対象＋層効果が追加" },
   { id: "ovenBatch", name: "オーブン大量焼成", cost: 300000, detail: "式：9×1.008^オーブン×1.004^(最高到達層-1)。さらに量産波及＝全生産×1.00012^オーブン。段階2(スキル「同期炉」で購入可):オーブン強化倍率×1.35。段階3(スキル「無人ライン」で購入可):オーブン個別強化Lv×(1+0.05×Lv)。", desc: "最高到達層とオーブン数でオーブンを強化する。段階購入で強化倍率と個別強化連動が追加" },
   { id: "factoryNetwork", name: "工場ネットワーク", cost: 1000000, detail: "式：9×1.002^(指+婆+炉)×1.008^工場。さらに物流波及＝全生産×1.00012^工場。段階2(スキル「無人ライン」で購入可):銀行以上の所持設備種類×(1+0.15×種類数)。段階3(スキル「まとめ買い」で購入可):×(1+0.0012×最高到達層)。", desc: "下位設備と工場数で工場を強化する。段階購入で上位設備種類と層効果が追加" },
   { id: "cpsStrike", name: "生産火力転換", cost: 30000000, detail: "式：モンスターへのダメージに現在の毎秒生産がそのまま加算される。", desc: "毎秒生産の値がそのままモンスターへのダメージに加算されるようになる" },
@@ -6297,7 +6297,7 @@ const SKILL_NODES = [
   { id: "click_1", name: "会心の指", branchId: "click", cost: 5, x: 800, y: 980, icon: "◆", prereqs: ["core"], desc: "タップ生産 +200%。", effects: [{ type: "click", value: 2 }] },
   { id: "click_2", name: "連打の呼吸", branchId: "click", cost: 50, x: 620, y: 860, icon: "◆", prereqs: ["click_1"], desc: "タップ生産 x7。", effects: [{ type: "click", value: 6 }] },
   { id: "click_3", name: "焼き印タップ", branchId: "click", cost: 15500, x: 440, y: 740, icon: "◆", prereqs: ["click_2", "golden_2"], desc: "タップ生産 x16、金獲得量 +30%。", effects: [{ type: "click", value: 15 }, { type: "goldenAmount", value: 0.3 }] },
-  { id: "click_4", name: "神経直結", branchId: "click", cost: 13500000, x: 260, y: 620, icon: "◆", prereqs: ["click_3", "auto_4"], desc: "タップ生産 +24%、全生産 x641。研究『銀行クリック配当』の効果がさらに大きくなる。", effects: [{ type: "click", value: 0.24 }, { type: "all", value: 640 }] },
+  { id: "click_4", name: "神経直結", branchId: "click", cost: 13500000, x: 260, y: 620, icon: "◆", prereqs: ["click_3", "auto_4"], desc: "タップ生産 +24%、全生産 x641(全体にかかる固定倍率)。", effects: [{ type: "click", value: 0.24 }, { type: "all", value: 640 }] },
 
   // 左下：金クッキー型
   { id: "golden_1", name: "金色の匂い", branchId: "golden", cost: 5, x: 800, y: 1260, icon: "✦", prereqs: ["core"], desc: "金クッキー出現間隔を短縮。", effects: [{ type: "goldenRate", value: 0.24 }] },
@@ -6320,7 +6320,7 @@ const SKILL_NODES = [
   { id: "auto_1", name: "火種", branchId: "auto", cost: 5, x: 1200, y: 980, icon: "◇", prereqs: ["core"], desc: "毎秒生産 +300%。", effects: [{ type: "cps", value: 3 }] },
   { id: "auto_2", name: "炉の列", branchId: "auto", cost: 3850, x: 1380, y: 860, icon: "◇", prereqs: ["auto_1", "monster_2"], desc: "毎秒生産 x11。", effects: [{ type: "cps", value: 10 }] },
   { id: "auto_3", name: "同期炉", branchId: "auto", cost: 38500, x: 1560, y: 740, icon: "◇", prereqs: ["auto_2", "monster_2"], desc: "毎秒生産 x41、モンスターダメージ +60%。", effects: [{ type: "cps", value: 40 }, { type: "monsterDamageSkill", value: 0.6 }] },
-  { id: "auto_4", name: "無人ライン", branchId: "auto", cost: 3500000, x: 1740, y: 620, icon: "◇", prereqs: ["auto_3"], desc: "毎秒生産 +24%、全生産 x161。研究『工場ネットワーク』の効果がさらに大きくなる。", effects: [{ type: "cps", value: 0.24 }, { type: "all", value: 160 }] },
+  { id: "auto_4", name: "無人ライン", branchId: "auto", cost: 3500000, x: 1740, y: 620, icon: "◇", prereqs: ["auto_3"], desc: "毎秒生産 +24%、全生産 x161(全体にかかる固定倍率)。", effects: [{ type: "cps", value: 0.24 }, { type: "all", value: 160 }] },
 
   // 右下：怪物狩り型
   { id: "monster_1", name: "狩りの合図", branchId: "monster", cost: 5, x: 1200, y: 1260, icon: "◉", prereqs: ["core"], desc: "モンスター出現間隔を短縮。", effects: [{ type: "monsterRate", value: 0.24 }] },
@@ -6352,7 +6352,7 @@ const SKILL_NODES = [
   { id: "reward_1", name: "選択の目", branchId: "reward", cost: 400000000, x: 1000, y: 1360, icon: "✧", prereqs: ["monster_4"], desc: "モンスター報酬の選択肢 +1。", effects: [{ type: "rewardChoices", value: 1 }] },
   { id: "reward_synergy", name: "報酬系統化", branchId: "reward", cost: 140000000, x: 1000, y: 1520, icon: "✧", prereqs: ["reward_1"], desc: "同じ系統(金・討伐・設備など)の報酬カードを多く持つほど、その系統の追加ボーナスが強くなる。", effects: [{ type: "unlockSystem", target: "rewardSynergy" }] },
   { id: "reward_choice_2", name: "選択の眼光", branchId: "reward", cost: 49000000, x: 1000, y: 1680, icon: "✧", prereqs: ["reward_synergy"], desc: "モンスター報酬の選択肢 +1(選択肢が増えるのはここまで)。", effects: [{ type: "rewardChoices", value: 1 }] },
-  { id: "reward_2", name: "強化圧縮", branchId: "reward", cost: 1200000000000, x: 820, y: 1680, icon: "✧", prereqs: ["upgrade_singularity"], desc: "設備の個別強化の効果 +120%。設備系統の報酬の効果がさらに大きくなる。", effects: [{ type: "upgradePerkPower", value: 1.2000000000000002 }] },
+  { id: "reward_2", name: "強化圧縮", branchId: "reward", cost: 1200000000000, x: 820, y: 1680, icon: "✧", prereqs: ["upgrade_singularity"], desc: "モンスター報酬『設備の個別強化』の効果 +120%(1回あたりの上がり幅が増える)。", effects: [{ type: "upgradePerkPower", value: 1.2000000000000002 }] },
 
   { id: "unlock_reward_crackedFang", name: "割れた牙", branchId: "reward", cost: 7800000000, x: 1560, y: 1340, icon: "✧", prereqs: ["monster_4"], desc: "報酬カード『割れた牙』を解禁。モンスターへのダメージが上がる。", effects: [{ type: "unlockReward", target: "crackedFang" }] },
   { id: "unlock_reward_chainPrep", name: "連戦準備", branchId: "reward", cost: 52000000000, x: 1720, y: 1440, icon: "✧", prereqs: ["unlock_reward_crackedFang"], desc: "報酬カード『連戦準備』を解禁。撃破後、次出現が早くなるが次HPも上がる。", effects: [{ type: "unlockReward", target: "chainPrep" }] },
