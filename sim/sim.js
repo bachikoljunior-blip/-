@@ -1821,8 +1821,7 @@ const MILESTONE_RESEARCH = (() => {
   // 工場の早期強化 3段(2026-07-11 ユーザー指示「工場の段1研究が高いので、実績研究でその前にいくつか
   // 工場強化できるものを入れて」): 組立ライン網(段1)が買える前の3/6/8台で工場生産を先行強化。安価(即買い帯)
   // 量産体制(2026-07-13 メトロノーム): 工場1台以降、45秒ごとに繰り返し購入可・全生産×1.25・コスト=生産30秒分
-  add('ms_massprod', sim => (sim.run.upgrades.factory || 0) >= 1, { all: (P.msResearch && P.msResearch.massProdMul) || 1.25 }, null);
-  list[list.length - 1].repeatSec = (P.msResearch && P.msResearch.massProdSec) || 45;
+  // 量産体制(ms_massprod・繰り返し購入)は廃止(2026-07-15 ユーザー指示「繰り返しで買う量産体制消せ」)。
   const facEarly = [[3, 40, 1.35], [6, 80, 1.4], [8, 120, 1.45]];
   facEarly.forEach(([n, cs, m], i) => add('ms_factory_e' + (i + 1), sim => (sim.run.upgrades.factory || 0) >= n, { up: { factory: m } }, cs));
   // 討伐実績 8段(周回内): 効果はダメージ/出現/滞在/HP/ドロップのローテ
