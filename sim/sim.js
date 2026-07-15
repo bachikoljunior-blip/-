@@ -1462,8 +1462,8 @@ function computeProd(sim) {
     const boostRate = Math.max(P.upPerk.floor, P.upPerk.base - i * P.upPerk.slope) * upPerkPower;
     const personal = 1 + (r.upgradePerks[u.id] || 0) * boostRate;
     let resM = 1;
-    // おばあちゃんの所持数スケール(2026-07-13): 1台目=1/秒のまま台数で伸びる(下 upgradeUnitMult と同式)
-    if (u.id === 'grandma') resM *= lg(capOwn(owned), R.grandmaOwn || 0);
+    // おばあちゃん(2026-07-15 ユーザー訂正「設備は生産固定で増やすだけ・研究買わずに最初から倍率かかるのやめて」):
+    // 台数スケール(旧grandmaOwn ×1.02^台数)を撤去=台数×固定1/秒。増幅は grandmaCrowd 研究/報酬/熟練からのみ。
     if (u.id === 'grandma' && resActive(sim, 'grandmaCrowd')) resM *= R.grandmaSelf;
     // 断熱オーブン手袋(焼き加減廃止に伴う再係留・2026-07-10): オーブン生産×(1+mittPerLv×Lv)。
     // ⑮の2のovenMitt判定経路(旧・こんがり倍率/焼き上がり底上げ)をオーブン直結へ置換=研究非依存で確実に効く。
@@ -3172,7 +3172,7 @@ function upgradeUnitMult(sim, u) {
   const stage = currentStage(sim);
   // おばあちゃんの所持数スケール(2026-07-13 ユーザー指示「1台あたりの初期生産は1のまま、もっと強く」):
   // 1台目=1/秒は不変。台数が増えるほど1台あたりが伸びる(研究非依存の地力)
-  if (u.id === 'grandma') resM *= lg(capOwn(owned), R.grandmaOwn || 0);
+  // おばあちゃん台数スケール撤去(2026-07-15 ユーザー訂正)=台数×固定。増幅は研究/報酬/熟練から
   if (u.id === 'grandma' && resActive(sim, 'grandmaCrowd')) resM *= R.grandmaSelf;
   if (u.id === 'oven' && resActive(sim, 'ovenBatch')) resM *= R.ovenSelf * lg(owned, R.ovenOwn) * lg(Math.max(0, stage - 1), R.ovenStage);
   if (u.id === 'factory' && resActive(sim, 'factoryNetwork')) {

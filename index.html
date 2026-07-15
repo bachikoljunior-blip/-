@@ -10088,7 +10088,7 @@ function spiceRackMultiplier() {
 function researchUpgradeMultiplier(u) {
   let m = 1;
 
-  if (u.id === "grandma") m *= Math.pow(1.02, state.upgrades.grandma || 0); // 所持数スケール(sim grandmaOwn 0.02同期・2026-07-13「1台目1のままもっと強く」)
+  // おばあちゃん台数スケール(×1.02^台数)は撤去(2026-07-15 ユーザー訂正「設備は生産固定で増やすだけ・研究前に倍率かけない」)=台数×固定1/秒。増幅は研究/報酬/熟練から
   if (u.id === "grandma" && state.research.grandmaCrowd) m *= 12; // 9→12(sim grandmaSelf 30→40同期・シム比1/3スケール維持。①希釈対策 2026-07-12)
   if (u.id === "oven" && state.research.ovenBatch) m *= 9 * ovenStageMultiplier();
   if (u.id === "oven") m *= 1 + 0.12 * equipLv("ovenMitt"); // 断熱オーブン手袋(焼き加減廃止で再係留・sim同期)
