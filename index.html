@@ -6974,6 +6974,7 @@ function ensureState() {
   state.eq2Seen = state.eq2Seen && typeof state.eq2Seen === "object" ? state.eq2Seen : {};
   state.eq2MadeThisRun = state.eq2MadeThisRun && typeof state.eq2MadeThisRun === "object" ? state.eq2MadeThisRun : {};
   state.eq2CraftTotalThisRun = Number(state.eq2CraftTotalThisRun) || 0; // 周回の作成総数(0〜5上限)
+  state.momBuysThisRun = Number(state.momBuysThisRun) || 0;
   state.questKills = state.questKills && typeof state.questKills === "object" ? state.questKills : {};
   state.quotaPauseStartedAt = Math.max(0, Number(state.quotaPauseStartedAt) || 0);
   state.activeOrder = state.activeOrder && typeof state.activeOrder === "object" ? state.activeOrder : null;
@@ -9976,9 +9977,12 @@ function prestigeMultiplier() {
 // 生産の勢い(2026-07-15 sim同期): 研究「生産の勢い」解放中、周回経過で全生産が自動で伸びる。
 // 3分でおよそ2倍(×1.25^(経過/45秒))。上限=7200秒で頭打ち。旧・量産体制(繰り返し購入)の自動版。
 function productionMomentumMul() {
-  // 2026-07-15 ユーザー指示「研究の効果は固定・その回永続。経過時間で増えるのはナシ」:
-  // 時間スケールを撤廃し、研究解放で全生産×2の固定倍率に(買ったらこの周回ずっと一定)。
-  return msBought("ms_momentum") ? 2 : 1;
+  // 2026-07-15 ユーザー指示「研究の効果は固定・経過時間で増えるのはナシ」:
+  // 時間スケールを撤廃し購入駆動へ=「この周回で買った設備数」で全生産が伸びる(1台あたりの伸び率は固定)。
+  // 増えるのは経過時間ではなく購入という行動=放置ゲーム本来の複利。買えなくなると自然にプラトー。
+  if (!msBought("ms_momentum")) return 1;
+  const exp = Math.min((state.momBuysThisRun || 0) / 32, 200);
+  return Math.pow(1.25, exp);
 }
 
 function clickSkillMultiplier() {
@@ -12464,6 +12468,7 @@ function buyUpgrade(id) {
     }
 
     state.upgrades[id] += 1;
+    state.momBuysThisRun = (state.momBuysThisRun || 0) + 1; // 生産の勢い(2026-07-15): 設備購入数で伸びる=行動駆動
     bumpSurge(id); // まとめ買い割増: 買うほど熱量+1(時間で半減)
     bought += 1;
 
@@ -15105,6 +15110,7 @@ function prestigeReset() {
   state.questKills = keepQuestKills;
   state.eq2MadeThisRun = {};
   state.eq2CraftTotalThisRun = 0; // 周回の作成総数リセット(0〜5上限)
+  state.momBuysThisRun = 0; // 生産の勢い: 購入数リセット
   state.deepLayer = keepDeepLayer;
   state.stageKills = keepStageKills;
   state.bossKills = keepBossKills;

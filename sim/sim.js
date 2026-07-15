@@ -1473,11 +1473,13 @@ function computeProd(sim) {
   if (!rwOff(sim, 'goldenBeastMutation') && (r.perks.goldenBeastMutation || 0) > 0) globalRes *= 1 + (r.perks.goldenBeastMutation || 0) * (P.rw.goldenBeastMutationProd || 0);
   if (!rwOff(sim, 'brandHunt') && (r.perks.brandHunt || 0) > 0) globalRes *= 1 + (r.perks.brandHunt || 0) * (P.rw.brandHuntProd || 0);
 
-  // 生産の勢い(2026-07-15 ユーザー指示「研究の効果は固定・その回永続にして。経過時間で増えるのはナシ」):
-  // 時間スケール(旧 massProdMul^(経過/秒))を撤廃し、研究解放で全生産×momentumFixedMul の固定倍率に。
-  // 買ったら周回中ずっと一定=一様倍率=①③⑨⑫lift比・㉘シェア・④⑤周回比に中立。周回内の伸び(新⑥1.1倍/3分)は設備購入の自然な複利が担う。
+  // 生産の勢い(2026-07-15 ユーザー指示「研究の効果は固定・経過時間で増えるのはナシ」):
+  // 時間スケール(旧 massProdMul^(経過/秒))を撤廃し、購入駆動へ=「その周回で買った設備数」で全生産が伸びる。
+  // 効果の値(1台あたりの伸び率 massProdMul)は固定。増えるのは経過時間ではなく購入という行動=放置ゲーム本来の
+  // 「買うほど伸びる」複利。買えなくなると自然にプラトー→転生。研究解放でオン(ms_momentum)。
   if (r.ms && r.ms.momentum && P.msResearch) {
-    globalRes *= (P.msResearch.momentumFixedMul || 2);
+    const exp = Math.min((r.momBuys || 0) / (P.msResearch.momBuyDiv || 32), P.msResearch.momBuyCapExp || 200);
+    globalRes *= Math.pow(P.msResearch.massProdMul, exp);
   }
 
   // ③死に報酬対策(第12次P・枝分かれmeasure下では安全): 討伐ダメージ系報酬(割れた牙/焼き印狩り)を「討伐数×全生産倍率」へ繋ぐ。
@@ -2680,7 +2682,7 @@ function doPrestige(sim) {
     maxStage: r.maxStage,
     kills: r.kills, golden: r.goldenTaken, chainMax: r.chainMax,
     cpsSamples: r._cpsSamples || [],
-    eq2Made: Object.assign({}, r.eq2Made || {}), eq2CraftTotal: r.eq2CraftTotal || 0, eq2NewEquipped: (r.eq2NewEquipped || []).slice(),
+    eq2Made: Object.assign({}, r.eq2Made || {}), eq2CraftTotal: r.eq2CraftTotal || 0, momBuys: r.momBuys || 0, eq2NewEquipped: (r.eq2NewEquipped || []).slice(),
     firstEscapeAt: r.firstEscapeAt != null ? r.firstEscapeAt : null,
     gain,
     researchBought: Object.keys(r.research).filter(k => r.research[k]),
@@ -3122,7 +3124,7 @@ function simulate(strategy, opts) {
     duration: sim.t - r.startT, runCookies: r.runCookies,
     quotaHold: r.quotaHoldSeconds, maxStage: r.maxStage,
     kills: r.kills, golden: r.goldenTaken, cpsSamples: r._cpsSamples || [],
-    eq2Made: Object.assign({}, r.eq2Made || {}), eq2CraftTotal: r.eq2CraftTotal || 0, eq2NewEquipped: (r.eq2NewEquipped || []).slice(),
+    eq2Made: Object.assign({}, r.eq2Made || {}), eq2CraftTotal: r.eq2CraftTotal || 0, momBuys: r.momBuys || 0, eq2NewEquipped: (r.eq2NewEquipped || []).slice(),
     firstEscapeAt: r.firstEscapeAt != null ? r.firstEscapeAt : null,
     gain: prestigeGainOf(r.runCookies), partial: true,
     researchBought: Object.keys(r.research).filter(k => r.research[k]),
@@ -3157,6 +3159,7 @@ function tryBuyUpgrade(sim, u, budgetRatio) {
   if (cost > sim.run.cookies) return false;
   sim.run.cookies -= cost;
   sim.run.upgrades[u.id]++;
+  sim.run.momBuys = (sim.run.momBuys || 0) + 1; // 生産の勢い(2026-07-15): 設備購入数で伸びる=行動駆動(経過時間ではない)
   sim.run._lastUpBuyT = sim.t; // 装備C型「設備購入直後」用
   // 星屑パフェ: 効果中に購入した設備はその周回中、生産×1.25(成長ゲート型)
   if (sim.run.buffs && (sim.run.buffs.stardustParfait || 0) > sim.t) sim.run.parfaitUps[u.id] = (sim.run.parfaitUps[u.id] || 0) + 1;
