@@ -111,7 +111,7 @@ const SKILL_NODES = [
   { id: 'click_1', cost: 40, prereqs: ['core'], effects: [['click', null, 0.06]] },
   { id: 'click_2', cost: 41, prereqs: ['click_1'], effects: [['click', null, 0.10]] },
   { id: 'click_3', cost: 43, prereqs: ['click_2', 'golden_2'], effects: [['click', null, 0.14], ['goldenAmount', null, 0.06]] },
-  { id: 'click_4', cost: 58, prereqs: ['click_3', 'auto_4'], effects: [['click', null, 0.24], ['all', null, 0.02]] },
+  { id: 'click_4', cost: 58, prereqs: ['click_3'], effects: [['click', null, 0.24], ['all', null, 0.02]] },
   { id: 'golden_1', cost: 41, prereqs: ['core'], effects: [['goldenRate', null, 0.04]] },
   // 方針入口の増幅スキル(第12次R4・ユーザー承認 2026-07-11「効果増幅のスキルは承認不要で追加してよい」):
   // 各周回方針の主役効果を素直に増幅する固定値ノード。fixed=生産系の幾何はしご(nodeM)にもfxスケールにも
@@ -151,7 +151,7 @@ const SKILL_NODES = [
   { id: 'monster_2', cost: 43, prereqs: ['monster_1', 'golden_2'], effects: [['monsterDamageSkill', null, 0.16]] },
   { id: 'monster_3', cost: 47, prereqs: ['monster_2'], effects: [['monsterHpDown', null, 0.07]] },
   { id: 'hunt_analysis', cost: 69, prereqs: ['monster_3'], effects: [['unlockSystem', 'huntAnalysis']] },
-  { id: 'monster_4', cost: 83, prereqs: ['monster_3', 'click_4'], effects: [['monsterStay', null, 0.10]] },
+  { id: 'monster_4', cost: 83, prereqs: ['click_4'], effects: [['monsterStay', null, 0.10]] },
   { id: 'economy_1', cost: 41, prereqs: ['auto_1'], effects: [['upgradeDiscount', null, 0.02], ['researchDiscount', null, 0.02]] },
   { id: 'research_1', cost: 41, prereqs: ['economy_2'], effects: [['researchDiscount', null, 0.04]] },
   { id: 'research_remodel', cost: 44, prereqs: ['research_1'], effects: [['researchDiscount', null, 0.03], ['unlockSystem', 'researchRemodel']] },
