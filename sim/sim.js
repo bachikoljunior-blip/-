@@ -713,39 +713,97 @@ function equip2ById(id) {
 // 効果タイプ: clickMul/cpsMul/allMul(生産倍率) dmgMul/killValMul/spawnMul/stayMul(討伐)
 //   goldenAmtMul/goldenRateMul/goldenBoostMul(金) quotaSlow(ノルマ減速) upDisc/resDisc(割引・上限0.5)
 //   dropMul(素材) oreAdd(色素材+n/体) rewardLvAdd(報酬Lv+) critAdd(会心率+・上限0.3)
+// 装備効果=固定値のA/B/Cモデル(2026-07-15 ユーザー承認): 数(設備数等)には連動しない。
+// m=モデル A(素直な固定上昇)/B(トレードオフ=up固定↑・down固定↓)/C(状況起動=condのon/off時だけup)。
+// up=ティア連動効果[stat,base,...](×1.5^(t-1))。down=B型の固定ペナルティ[stat,factor,...](ティア非連動)。cond=C型の状況。
 const EQUIP2_FX = {
-  weapon:      [['dmgMul', 1.0], ['killValMul', 0.8], ['spawnMul', 0.10], ['stayMul', 0.25], ['dmgMul', 0.6, 'killValMul', 0.4], ['dmgMul', 0.5, 'spawnMul', 0.06], ['killValMul', 0.5, 'stayMul', 0.15], ['dmgMul', 0.4, 'killValMul', 0.3, 'spawnMul', 0.05], ['dmgMul', 1.6]],
-  shield:      [['holdBonus', 0.5], ['stayMul', 0.30], ['holdBonus', 0.3, 'stayMul', 0.15], ['cpsMul', 0.5], ['holdBonus', 0.7], ['stayMul', 0.45], ['holdBonus', 0.4, 'cpsMul', 0.3], ['stayMul', 0.2, 'cpsMul', 0.35], ['holdBonus', 0.3, 'stayMul', 0.12, 'cpsMul', 0.25]], // quotaSlow→holdBonus(2026-07-14: 減速は収入マイナス=lift(a)を束ごと壊すため「ノルマ維持中全生産」へ)
-  armorTop:    [['cpsMul', 1.0], ['allMul', 0.5], ['cpsMul', 0.7, 'dropMul', 0.2], ['cpsMul', 1.4], ['allMul', 0.7], ['cpsMul', 0.6, 'allMul', 0.25], ['allMul', 0.4, 'dropMul', 0.3], ['cpsMul', 0.8, 'allMul', 0.3], ['cpsMul', 0.5, 'allMul', 0.3, 'dropMul', 0.25]],
-  armorBottom: [['upDisc', 0.08], ['resDisc', 0.08], ['upDisc', 0.05, 'resDisc', 0.05], ['cpsMul', 0.6], ['upDisc', 0.12], ['resDisc', 0.12], ['upDisc', 0.06, 'cpsMul', 0.35], ['resDisc', 0.06, 'cpsMul', 0.35], ['upDisc', 0.05, 'resDisc', 0.05, 'cpsMul', 0.3]],
-  hands:       [['clickMul', 1.0], ['critAdd', 0.03], ['clickMul', 0.7, 'critAdd', 0.02], ['clickMul', 1.4], ['critAdd', 0.05], ['clickMul', 0.6, 'dmgMul', 0.3], ['clickMul', 0.5, 'critAdd', 0.03], ['critAdd', 0.04, 'dmgMul', 0.3], ['clickMul', 0.5, 'critAdd', 0.02, 'dmgMul', 0.25]],
-  hat:         [['resDisc', 0.10], ['allMul', 0.45], ['resDisc', 0.06, 'allMul', 0.25], ['cpsMul', 0.8], ['resDisc', 0.14], ['allMul', 0.6], ['resDisc', 0.07, 'cpsMul', 0.4], ['allMul', 0.35, 'cpsMul', 0.4], ['resDisc', 0.05, 'allMul', 0.25, 'cpsMul', 0.3]],
-  shoes:       [['dropMul', 0.5], ['oreAdd', 1], ['dropMul', 0.3, 'oreAdd', 0.5], ['spawnMul', 0.08], ['dropMul', 0.7], ['oreAdd', 2], ['dropMul', 0.4, 'spawnMul', 0.05], ['oreAdd', 1, 'spawnMul', 0.05], ['dropMul', 0.3, 'oreAdd', 0.5, 'spawnMul', 0.04]],
-  accA:        [['goldenAmtMul', 1.0], ['goldenRateMul', 0.15], ['goldenBoostMul', 0.4], ['goldenAmtMul', 0.6, 'goldenRateMul', 0.10], ['goldenAmtMul', 1.5], ['goldenRateMul', 0.22], ['goldenBoostMul', 0.3, 'goldenAmtMul', 0.4], ['goldenRateMul', 0.12, 'goldenBoostMul', 0.25], ['goldenAmtMul', 0.5, 'goldenRateMul', 0.08, 'goldenBoostMul', 0.2]],
-  accB:        [['rewardLvAdd', 2], ['killValMul', 0.6], ['rewardLvAdd', 1, 'killValMul', 0.4], ['stayMul', 0.35], ['rewardLvAdd', 3], ['killValMul', 0.9], ['rewardLvAdd', 1.5, 'stayMul', 0.2], ['killValMul', 0.5, 'stayMul', 0.2], ['rewardLvAdd', 1, 'killValMul', 0.35, 'stayMul', 0.15]]
+  weapon: [
+    { m: 'A', up: ['dmgMul', 0.9] }, { m: 'A', up: ['critAdd', 0.04] }, { m: 'A', up: ['killValMul', 0.7] },
+    { m: 'B', up: ['dmgMul', 1.6], down: ['cpsMul', 0.88] }, { m: 'B', up: ['critAdd', 0.09], down: ['killValMul', 0.9] }, { m: 'B', up: ['killValMul', 1.4], down: ['dmgMul', 0.9] },
+    { m: 'C', cond: 'boss', up: ['dmgMul', 3] }, { m: 'C', cond: 'monster', up: ['critAdd', 0.15] }, { m: 'C', cond: 'goldenBoost', up: ['dmgMul', 2, 'killValMul', 1] }
+  ],
+  shield: [
+    { m: 'A', up: ['holdBonus', 0.5] }, { m: 'A', up: ['stayMul', 0.30] }, { m: 'A', up: ['critAdd', 0.03] },
+    { m: 'B', up: ['holdBonus', 0.9], down: ['clickMul', 0.9] }, { m: 'B', up: ['cpsMul', 0.6], down: ['dmgMul', 0.9] }, { m: 'B', up: ['stayMul', 0.5], down: ['cpsMul', 0.9] },
+    { m: 'C', cond: 'quotaHold', up: ['holdBonus', 1.0] }, { m: 'C', cond: 'deep', up: ['cpsMul', 0.5] }, { m: 'C', cond: 'quotaHold', up: ['holdBonus', 0.4, 'critAdd', 0.05] }
+  ],
+  armorTop: [
+    { m: 'A', up: ['cpsMul', 1.0] }, { m: 'A', up: ['allMul', 0.5] }, { m: 'A', up: ['dropMul', 0.4] },
+    { m: 'B', up: ['cpsMul', 1.6], down: ['dmgMul', 0.9] }, { m: 'B', up: ['allMul', 0.8], down: ['clickMul', 0.9] }, { m: 'B', up: ['cpsMul', 1.3], down: ['goldenAmtMul', 0.9] },
+    { m: 'C', cond: 'quotaHold', up: ['cpsMul', 1.0] }, { m: 'C', cond: 'deep', up: ['allMul', 0.6] }, { m: 'C', cond: 'buyUp', up: ['cpsMul', 1.5] }
+  ],
+  armorBottom: [
+    { m: 'A', up: ['upDisc', 0.08] }, { m: 'A', up: ['resDisc', 0.08] }, { m: 'A', up: ['cpsMul', 0.6] },
+    { m: 'B', up: ['upDisc', 0.15], down: ['cpsMul', 0.92] }, { m: 'B', up: ['resDisc', 0.15], down: ['clickMul', 0.92] }, { m: 'B', up: ['cpsMul', 0.9, 'upDisc', 0.06], down: ['dmgMul', 0.9] },
+    { m: 'C', cond: 'quotaHold', up: ['upDisc', 0.20] }, { m: 'C', cond: 'deep', up: ['resDisc', 0.20] }, { m: 'C', cond: 'runStart', up: ['allMul', 0.5] }
+  ],
+  hands: [
+    { m: 'A', up: ['clickMul', 1.0] }, { m: 'A', up: ['critAdd', 0.03] }, { m: 'A', up: ['clickMul', 0.7, 'critAdd', 0.02] },
+    { m: 'B', up: ['clickMul', 1.6], down: ['cpsMul', 0.9] }, { m: 'B', up: ['critAdd', 0.07], down: ['killValMul', 0.9] }, { m: 'B', up: ['clickMul', 1.3], down: ['goldenAmtMul', 0.9] },
+    { m: 'C', cond: 'monster', up: ['clickMul', 2.5] }, { m: 'C', cond: 'goldenBoost', up: ['critAdd', 0.20] }, { m: 'C', cond: 'monster', up: ['clickMul', 2, 'dmgMul', 0.5] }
+  ],
+  hat: [
+    { m: 'A', up: ['resDisc', 0.10] }, { m: 'A', up: ['allMul', 0.45] }, { m: 'A', up: ['cpsMul', 0.8] },
+    { m: 'B', up: ['allMul', 0.8], down: ['dmgMul', 0.9] }, { m: 'B', up: ['resDisc', 0.16], down: ['goldenAmtMul', 0.9] }, { m: 'B', up: ['allMul', 0.6, 'resDisc', 0.06], down: ['clickMul', 0.9] },
+    { m: 'C', cond: 'buyRes', up: ['allMul', 1.0] }, { m: 'C', cond: 'deep', up: ['allMul', 0.6] }, { m: 'C', cond: 'quotaHold', up: ['holdBonus', 0.5, 'resDisc', 0.08] }
+  ],
+  shoes: [
+    { m: 'A', up: ['dropMul', 0.5] }, { m: 'A', up: ['oreAdd', 1] }, { m: 'A', up: ['spawnMul', 0.08] },
+    { m: 'B', up: ['dropMul', 1.0], down: ['cpsMul', 0.92] }, { m: 'B', up: ['oreAdd', 3], down: ['killValMul', 0.9] }, { m: 'B', up: ['spawnMul', 0.12], down: ['cpsMul', 0.9] },
+    { m: 'C', cond: 'boss', up: ['dropMul', 3] }, { m: 'C', cond: 'monster', up: ['oreAdd', 5] }, { m: 'C', cond: 'goldenBoost', up: ['dropMul', 2, 'spawnMul', 0.06] }
+  ],
+  accA: [
+    { m: 'A', up: ['goldenAmtMul', 1.0] }, { m: 'A', up: ['goldenRateMul', 0.15] }, { m: 'A', up: ['goldenBoostMul', 0.4] },
+    { m: 'B', up: ['goldenAmtMul', 1.6], down: ['cpsMul', 0.9] }, { m: 'B', up: ['goldenRateMul', 0.22], down: ['killValMul', 0.9] }, { m: 'B', up: ['goldenBoostMul', 0.6], down: ['clickMul', 0.9] },
+    { m: 'C', cond: 'goldenBoost', up: ['allMul', 1.5] }, { m: 'C', cond: 'deep', up: ['goldenAmtMul', 0.6] }, { m: 'C', cond: 'goldenBoost', up: ['goldenAmtMul', 2, 'goldenBoostMul', 0.3] }
+  ],
+  accB: [
+    { m: 'A', up: ['rewardLvAdd', 2] }, { m: 'A', up: ['killValMul', 0.6] }, { m: 'A', up: ['rewardLvAdd', 1, 'killValMul', 0.4] },
+    { m: 'B', up: ['rewardLvAdd', 4], down: ['cpsMul', 0.9] }, { m: 'B', up: ['killValMul', 1.5], down: ['dmgMul', 0.9] }, { m: 'B', up: ['rewardLvAdd', 3], down: ['clickMul', 0.9] },
+    { m: 'C', cond: 'boss', up: ['rewardLvAdd', 6] }, { m: 'C', cond: 'monster', up: ['killValMul', 2.5] }, { m: 'C', cond: 'goldenBoost', up: ['rewardLvAdd', 3, 'killValMul', 1] }
+  ]
 };
-// 集約: 装備中9部位の効果を1つの束に(倍率系は積・加算系は和・割引/会心は上限つき)
+const EQUIP2_FLATCAP = { critAdd: 0.3, upDisc: 0.5, resDisc: 0.5 };
+// C型の状況(on/off・数連動ではない)。sim/ゲーム共通で読める信号のみ。
+function equip2CondOn(sim, cond) {
+  const r = sim.run;
+  switch (cond) {
+    case 'goldenBoost': return goldenBoostActive(sim);
+    case 'monster': return !!r.monster;
+    case 'boss': return !!(r.monster && r.monster.typeId === 'boss');
+    case 'quotaHold': return !r.quotaFailed;
+    case 'deep': return (r.maxStage || 0) >= 5;
+    case 'buyUp': return sim.t - (r._lastUpBuyT || -1e9) < 10;
+    case 'buyRes': return sim.t - (r._lastResBuyT || -1e9) < 10;
+    case 'runStart': return (sim.t - r.startT) < 60;
+    default: return true;
+  }
+}
+// 集約: 装備中9部位の効果を1つの束に。C型は状況依存のためtick+装備署名でキャッシュ。ティア=×1.5^(t-1)。
 function equip2Fx(sim) {
   const ws = sim.ws;
-  if (ws._eq2FxCache && ws._eq2FxKey === JSON.stringify(ws.eq2Equipped)) return ws._eq2FxCache;
+  const eqSig = EQUIP2_SLOTS.map(s => ws.eq2Equipped[s] || '').join(',');
+  if (ws._eq2FxT === sim.t && ws._eq2FxSig === eqSig && ws._eq2FxCache) return ws._eq2FxCache;
   const fx = { clickMul: 1, cpsMul: 1, allMul: 1, dmgMul: 1, killValMul: 1, spawnMul: 1, stayMul: 1,
     goldenAmtMul: 1, goldenRateMul: 1, goldenBoostMul: 1, holdBonus: 1, quotaSlow: 0, upDisc: 0, resDisc: 0,
     dropMul: 1, oreAdd: 0, rewardLvAdd: 0, critAdd: 0 };
+  const put = (type, v) => {
+    if (type === 'oreAdd' || type === 'rewardLvAdd') fx[type] += v;
+    else if (EQUIP2_FLATCAP[type] != null) fx[type] = Math.min(EQUIP2_FLATCAP[type], fx[type] + Math.min(0.5, v));
+    else fx[type] *= 1 + v;
+  };
   for (const slot of EQUIP2_SLOTS) {
     const it = ws.eq2Equipped[slot] ? equip2ById(ws.eq2Equipped[slot]) : null;
     if (!it) continue;
-    const defs = EQUIP2_FX[it.cat][(it.variant || 1) - 1];
-    const scale = Math.pow(2, it.tier - 1); // ティア=数値スケール(固定値表示)
-    for (let i = 0; i < defs.length; i += 2) {
-      const type = defs[i], base = defs[i + 1];
-      const v = base * scale;
-      if (type === 'quotaSlow' || type === 'upDisc' || type === 'resDisc' || type === 'critAdd') fx[type] = Math.min(type === 'critAdd' ? 0.3 : 0.5, fx[type] + Math.min(0.5, v));
-      else if (type === 'oreAdd' || type === 'rewardLvAdd') fx[type] += v;
-      else fx[type] *= 1 + v; // 倍率系: ×(1+base×2^(t-1))
-    }
+    const def = EQUIP2_FX[it.cat][(it.variant || 1) - 1];
+    if (!def) continue;
+    if (def.m === 'C' && !equip2CondOn(sim, def.cond)) continue; // 状況外は無効
+    const scale = Math.pow(1.5, it.tier - 1);
+    const up = def.up || [];
+    for (let i = 0; i < up.length; i += 2) put(up[i], up[i + 1] * scale);
+    if (def.down) for (let i = 0; i < def.down.length; i += 2) fx[def.down[i]] *= def.down[i + 1]; // B: 固定ペナルティ(ティア非連動)
   }
-  ws._eq2FxKey = JSON.stringify(ws.eq2Equipped);
-  ws._eq2FxCache = fx;
+  ws._eq2FxT = sim.t; ws._eq2FxSig = eqSig; ws._eq2FxCache = fx;
   return fx;
 }
 // 旧・一律全生産倍率の互換(生産チェーン用): クリック/毎秒はcomputeProd側で個別適用
@@ -2997,6 +3055,7 @@ function tryBuyUpgrade(sim, u, budgetRatio) {
   if (cost > sim.run.cookies) return false;
   sim.run.cookies -= cost;
   sim.run.upgrades[u.id]++;
+  sim.run._lastUpBuyT = sim.t; // 装備C型「設備購入直後」用
   // 星屑パフェ: 効果中に購入した設備はその周回中、生産×1.25(成長ゲート型)
   if (sim.run.buffs && (sim.run.buffs.stardustParfait || 0) > sim.t) sim.run.parfaitUps[u.id] = (sim.run.parfaitUps[u.id] || 0) + 1;
   // まとめ買い割増: 熱量を減衰させてから+1
@@ -3046,6 +3105,7 @@ function tryBuyResearch(sim, id, budgetRatio) {
   if (cost > r.cookies * budgetRatio) return false;
   r.cookies -= cost;
   r.research[id] = true;
+  r._lastResBuyT = sim.t; // 装備C型「研究購入直後」用
   if (sim.firstResearchBuy[id] === undefined) sim.firstResearchBuy[id] = sim.t;
   if (!sim.everResearch[id]) {
     sim.everResearch[id] = true;
