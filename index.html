@@ -5355,18 +5355,17 @@
       transform: scale(var(--gameScale, 1));
       transform-origin: center center;
     }
-    /* 左列: クッキー画面。縦画面と同じ 375×234 の比率を保ち、縦方向は中央寄せ */
+    /* 左列: クッキー画面。右のタブ内容と同じ 375×252 に揃える(2枚を同じ高さ幅に) */
     body.wideLayout .top {
       grid-column: 1 !important;
-      grid-row: 1 / span 2 !important;
-      align-self: center !important;
+      grid-row: 1 !important;
       flex: none !important;
-      height: 234px !important;
-      min-height: 234px !important;
-      max-height: 234px !important;
+      height: 252px !important;
+      min-height: 252px !important;
+      max-height: 252px !important;
       overflow: hidden !important;
     }
-    /* 右列上: タブ内容。縦画面と同じ 375×252 */
+    /* 右列上: タブ内容。375×252 */
     body.wideLayout .tabPages {
       grid-column: 2 !important;
       grid-row: 1 !important;
@@ -5375,9 +5374,9 @@
       min-height: 252px !important;
       max-height: 252px !important;
     }
-    /* 右列下: タブバー */
+    /* 下段: タブバーは2列ぶん(750px)を横いっぱいに */
     body.wideLayout .tabs {
-      grid-column: 2 !important;
+      grid-column: 1 / span 2 !important;
       grid-row: 2 !important;
     }
     /* 横並び中はクッキー画面の全画面ボタンを隠す */
