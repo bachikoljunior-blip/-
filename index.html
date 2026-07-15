@@ -6199,7 +6199,7 @@ const ASSETS = {
 
 const UPGRADES = [
   // クリックとおばあちゃんは基礎値1。香料棚を銀行〜異世界炉の中間に追加し、工場以降は緩やかに重くなる。
-  { id: "finger", name: "強い指", type: "click", value: 1, base: 0.0184, growth: 1.32, desc: "1タップ +1。さらに毎秒生産の約0.4%がタップ力に加わる(強い指が多いほど増加)" },
+  { id: "finger", name: "強い指", type: "click", value: 1, base: 0.0184, growth: 1.32, desc: "1タップ +1。研究「指先の型」を買うと、毎秒生産の約0.4%がタップ力に加わる(強い指が多いほど増加)" },
   { id: "grandma", name: "おばあちゃん", type: "cps", value: 1, base: 0.9, growth: 1.30, desc: "毎秒 +1(おばあちゃんが増えるほど1台の生産UP：+2%/台)" },
   { id: "oven", name: "オーブン", type: "cps", value: 8, base: 520, growth: 1.35, desc: "毎秒 +8" },
   { id: "factory", name: "工場", type: "cps", value: 45, base: 7200, growth: 1.37, desc: "毎秒 +45" },
@@ -10428,6 +10428,9 @@ function clickProductionLinkCoefficient() {
 // 案A: 生産連動項 = 毎秒生産×係数×(1+0.02×√強い指)×(クリック系スキル・研究のクリック倍率)。
 // 毎秒生産側に全体系倍率が織り込み済みのため、ここではクリック固有の倍率だけを掛ける(会心は除く)。
 function productionLinkClickPower() {
+  // 指先連動(毎秒生産の一部がタップ力に乗る)は研究「指先の型」解放後のみ(2026-07-15 ユーザー訂正
+  // 「タップの毎秒生産加算も最初から入ってる=治せ・研究でどこかに追加」)。研究前は0=タップ設備の加算だけ。
+  if (!state.research.fingerTechnique) return 0;
   const finger = state.upgrades.finger || 0;
   return baseCps()
     * clickProductionLinkCoefficient()
@@ -13145,7 +13148,7 @@ function codexProductionHtml() {
     ovenIcon));
   items.push(codexItem("設備の生産は「単純加算」が基本",
     `<div>設備を1個買う＝<b>所持数 × 単価</b>を生産に足すだけ。設備の購入そのものは倍率を持たない。</div>`
-    + `<div>“設備自体”が倍率を持つ例外は3つだけ：おばあちゃん(自分の生産 +2%/台)・神の指(タップ全体 +1.2%/台)・強い指(毎秒生産の約0.4%をタップへ、本数が多いほど増加)。</div>`,
+    + `<div>“設備自体”が倍率を持つ例外は神の指(タップ全体 +1.2%/台)だけ。強い指の「毎秒生産→タップ」は研究「指先の型」の効果。おばあちゃんの増幅は研究「おばあちゃん連携」から。</div>`,
     ovenIcon));
   items.push(codexItem("設備の生産を増幅するもの",
     `<div>設備の生産を×倍率で伸ばすのは、設備の外側にある次の4つ：</div>`

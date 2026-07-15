@@ -1559,12 +1559,15 @@ function computeProd(sim) {
   let click = clickRaw * bankM * clickSkillMul * prestigeMul * globalRes * killMulAll;
   let cps = cpsRaw * cpsSkillMul * prestigeMul * globalRes * killMulAll * killMulCps;
 
-  // クリック変更 案A(指先連動): クリック力 = 従来項 + 毎秒生産×係数×(1+0.02×√強い指)×(1+クリック系スキル効果)
+  // 指先連動(毎秒生産×係数がタップ力に乗る)は研究「指先の型」解放後のみ(2026-07-15 ユーザー訂正
+  // 「タップの毎秒生産加算も最初から入ってる=治せ。研究でどこかに追加」)。研究前はタップ力=clickRaw項だけ。
   const CL = P.clickLink;
-  // 工房: 濃厚ショコラ=クリック生産連動係数×2 / 黄金の泡立て器=×(1+0.15Lv)
-  const wsClickM = (wsBuffActive(sim, 'chocoFondant') ? P.ws.fx.fondantClickMul : 1)
-    * (1 + P.ws.eqFx.whiskPerLv * wsEqLv(sim, 'goldenWhisk'));
-  click += cps * CL.cpsCoef * wsClickM * (1 + CL.fingerSqrt * Math.sqrt(r.upgrades.finger || 0)) * clickSkillMul;
+  if (resActive(sim, 'fingerTechnique')) {
+    // 工房: 濃厚ショコラ=クリック生産連動係数×2 / 黄金の泡立て器=×(1+0.15Lv)
+    const wsClickM = (wsBuffActive(sim, 'chocoFondant') ? P.ws.fx.fondantClickMul : 1)
+      * (1 + P.ws.eqFx.whiskPerLv * wsEqLv(sim, 'goldenWhisk'));
+    click += cps * CL.cpsCoef * wsClickM * (1 + CL.fingerSqrt * Math.sqrt(r.upgrades.finger || 0)) * clickSkillMul;
+  }
   // クリック変更 案C(神の指=クリックの上位段): 1個ごとにクリック×godFingerExp(指数)
   click *= Math.pow(CL.godFingerExp, r.upgrades.godFinger || 0);
   // 系列ボーナス(神の指): クリック力×(1+coef×台数)
@@ -1840,8 +1843,9 @@ const MILESTONE_RESEARCH = (() => {
   // 転生実績 4段(通算)
   const prTiers = [[2, 300], [5, 600], [10, 1500], [20, 3000]];
   prTiers.forEach(([n, cs], i) => add('ms_prestige_r' + (i + 1), sim => (sim.prestigeRuns || 0) >= n, { all: 1.2 }, cs));
-  // --- スキル解放研究(スキルを取ると出る研究カード) ---
-  // 各スキル1本「応用」+生産系ノードに2本目「奥義」。効果は系統のテーマ・コストは5段のはしごでばらける。
+  // スキル解放研究(2026-07-15 ユーザー訂正「スキルで"解放"で研究に追加される。実績じゃない」):
+  // スキルを取るとそのスキル用の研究が解放され、研究として追加される(段2/3と同じゲート方式)。
+  // simでは「スキル所持=その研究効果が有効」でモデル化(実績=milestoneではないが、効果適用は同一)。
   const branchFx = id => {
     if (id.startsWith('click_') || id === 'upgrade_godfinger') return { click: 1.3 };
     if (id.startsWith('golden_')) return { golden: 1.25 };
@@ -1852,9 +1856,9 @@ const MILESTONE_RESEARCH = (() => {
     if (id.startsWith('reward_')) return { hunt: 1.2 };
     if (id.startsWith('workshop_')) return { dropAdd: 1 };
     if (id.startsWith('start_') || id === 'offline_1' || id === 'endless_oven') return { all: 1.05 };
-    return { all: 1.1 }; // core/master/その他
+    return { all: 1.1 };
   };
-  const csLadder = [100, 300, 900, 2500, 7000]; // ×5拡幅(2026-07-11: T1対策=カードを周回全体に散らす)
+  const csLadder = [100, 300, 900, 2500, 7000];
   SKILL_NODES.forEach((n, i) => {
     add('msk_' + n.id, sim => !!sim.skills[n.id], branchFx(n.id), csLadder[i % 5]);
     const t = Object.keys(branchFx(n.id))[0];
