@@ -713,40 +713,99 @@ function equip2ById(id) {
 // 効果タイプ: clickMul/cpsMul/allMul(生産倍率) dmgMul/killValMul/spawnMul/stayMul(討伐)
 //   goldenAmtMul/goldenRateMul/goldenBoostMul(金) quotaSlow(ノルマ減速) upDisc/resDisc(割引・上限0.5)
 //   dropMul(素材) oreAdd(色素材+n/体) rewardLvAdd(報酬Lv+) critAdd(会心率+・上限0.3)
-const EQUIP2_FX = {
-  weapon:      [['dmgMul', 1.0], ['killValMul', 0.8], ['spawnMul', 0.10], ['stayMul', 0.25], ['dmgMul', 0.6, 'killValMul', 0.4], ['dmgMul', 0.5, 'spawnMul', 0.06], ['killValMul', 0.5, 'stayMul', 0.15], ['dmgMul', 0.4, 'killValMul', 0.3, 'spawnMul', 0.05], ['dmgMul', 1.6]],
-  shield:      [['holdBonus', 0.5], ['stayMul', 0.30], ['holdBonus', 0.3, 'stayMul', 0.15], ['cpsMul', 0.5], ['holdBonus', 0.7], ['stayMul', 0.45], ['holdBonus', 0.4, 'cpsMul', 0.3], ['stayMul', 0.2, 'cpsMul', 0.35], ['holdBonus', 0.3, 'stayMul', 0.12, 'cpsMul', 0.25]], // quotaSlow→holdBonus(2026-07-14: 減速は収入マイナス=lift(a)を束ごと壊すため「ノルマ維持中全生産」へ)
-  armorTop:    [['cpsMul', 1.0], ['allMul', 0.5], ['cpsMul', 0.7, 'dropMul', 0.2], ['cpsMul', 1.4], ['allMul', 0.7], ['cpsMul', 0.6, 'allMul', 0.25], ['allMul', 0.4, 'dropMul', 0.3], ['cpsMul', 0.8, 'allMul', 0.3], ['cpsMul', 0.5, 'allMul', 0.3, 'dropMul', 0.25]],
-  armorBottom: [['upDisc', 0.08], ['resDisc', 0.08], ['upDisc', 0.05, 'resDisc', 0.05], ['cpsMul', 0.6], ['upDisc', 0.12], ['resDisc', 0.12], ['upDisc', 0.06, 'cpsMul', 0.35], ['resDisc', 0.06, 'cpsMul', 0.35], ['upDisc', 0.05, 'resDisc', 0.05, 'cpsMul', 0.3]],
-  hands:       [['clickMul', 1.0], ['critAdd', 0.03], ['clickMul', 0.7, 'critAdd', 0.02], ['clickMul', 1.4], ['critAdd', 0.05], ['clickMul', 0.6, 'dmgMul', 0.3], ['clickMul', 0.5, 'critAdd', 0.03], ['critAdd', 0.04, 'dmgMul', 0.3], ['clickMul', 0.5, 'critAdd', 0.02, 'dmgMul', 0.25]],
-  hat:         [['resDisc', 0.10], ['allMul', 0.45], ['resDisc', 0.06, 'allMul', 0.25], ['cpsMul', 0.8], ['resDisc', 0.14], ['allMul', 0.6], ['resDisc', 0.07, 'cpsMul', 0.4], ['allMul', 0.35, 'cpsMul', 0.4], ['resDisc', 0.05, 'allMul', 0.25, 'cpsMul', 0.3]],
-  shoes:       [['dropMul', 0.5], ['oreAdd', 1], ['dropMul', 0.3, 'oreAdd', 0.5], ['spawnMul', 0.08], ['dropMul', 0.7], ['oreAdd', 2], ['dropMul', 0.4, 'spawnMul', 0.05], ['oreAdd', 1, 'spawnMul', 0.05], ['dropMul', 0.3, 'oreAdd', 0.5, 'spawnMul', 0.04]],
-  accA:        [['goldenAmtMul', 1.0], ['goldenRateMul', 0.15], ['goldenBoostMul', 0.4], ['goldenAmtMul', 0.6, 'goldenRateMul', 0.10], ['goldenAmtMul', 1.5], ['goldenRateMul', 0.22], ['goldenBoostMul', 0.3, 'goldenAmtMul', 0.4], ['goldenRateMul', 0.12, 'goldenBoostMul', 0.25], ['goldenAmtMul', 0.5, 'goldenRateMul', 0.08, 'goldenBoostMul', 0.2]],
-  accB:        [['rewardLvAdd', 2], ['killValMul', 0.6], ['rewardLvAdd', 1, 'killValMul', 0.4], ['stayMul', 0.35], ['rewardLvAdd', 3], ['killValMul', 0.9], ['rewardLvAdd', 1.5, 'stayMul', 0.2], ['killValMul', 0.5, 'stayMul', 0.2], ['rewardLvAdd', 1, 'killValMul', 0.35, 'stayMul', 0.15]]
+// ===== 新装備の効果モデル(2026-07-14 ユーザー指示「特色ある効果・完全上位互換にしない・A/B/C全部取り込む」) =====
+// 各装備 = 主効果(カテゴリ=どの数値を上げるか) × ティア(×1.2^(t-1)=緩い進行) × 特色(変種=得意軸で条件連動)。
+// モデル3種を (カテゴリidx+変種idx-1)%3 で均等配置: 0=A(下振れなし)/1=B(トレードオフ)/2=C(状況起動)。
+// これで「軸をまたぐと横並び=完全上位互換なし」「方針・局面で最適装備が変わる=(b)カバレッジが遊びで埋まる」。
+// 主効果(カテゴリ固定): stat=上げる数値 / b0=t1基礎 / down=B型で下げる別分野 / sec=副効果(識別・軸非連動)
+const EQUIP2_MAIN = {
+  weapon:      { stat: 'dmgMul',       b0: 0.30, down: 'cpsMul',       sec: null },
+  shield:      { stat: 'holdBonus',    b0: 0.35, down: 'dmgMul',       sec: null },
+  armorTop:    { stat: 'cpsMul',       b0: 0.30, down: 'dmgMul',       sec: null },
+  armorBottom: { stat: 'cpsMul',       b0: 0.18, down: 'clickMul',     sec: ['upDisc', 0.05, 'resDisc', 0.05] },
+  hands:       { stat: 'clickMul',     b0: 0.30, down: 'cpsMul',       sec: ['critAdd', 0.02] },
+  hat:         { stat: 'allMul',       b0: 0.20, down: 'dmgMul',       sec: ['resDisc', 0.05] },
+  shoes:       { stat: 'dropMul',      b0: 0.30, down: 'cpsMul',       sec: ['oreAdd', 1] },
+  accA:        { stat: 'goldenAmtMul', b0: 0.30, down: 'killValMul',   sec: ['goldenRateMul', 0.06] },
+  accB:        { stat: 'killValMul',   b0: 0.30, down: 'goldenAmtMul', sec: ['rewardLvAdd', 1] }
 };
-// 集約: 装備中9部位の効果を1つの束に(倍率系は積・加算系は和・割引/会心は上限つき)
+// 得意軸(変種v1..v9): ビルド状態を頭打ち正規化 x/(x+half)∈[0,1)。方針・局面で最大値を取る軸が違う=特色。
+const EQUIP2_AXIS = [
+  { name: '設備', get: s => (s.run.upgrades.grandma || 0) + (s.run.upgrades.oven || 0) + (s.run.upgrades.factory || 0), half: 1500 },
+  { name: '金',   get: s => s.run.goldenTaken || 0, half: 200 },
+  { name: '討伐', get: s => s.run.kills || 0, half: 3000 },
+  { name: '研究', get: s => RESEARCH.reduce((n, x) => n + (s.run.research[x.id] ? 1 : 0), 0), half: 8 },
+  { name: '深層', get: s => s.run.maxStage || 0, half: 30 },
+  { name: '余裕', get: s => equip2Margin(s), half: 3 },
+  { name: '連打', get: s => s.strat.tapRate || 0, half: 4 },
+  { name: '技術', get: s => Object.keys(s.skills).length, half: 30 },
+  { name: '転生', get: s => s.prestigeRuns || 0, half: 8 }
+];
+// C(状況起動)のトリガー: 変種ごとに3種を巡回(sim/ゲーム共通で読める状況)。
+const EQUIP2_TRIG = [
+  { name: '金ブースト中', on: s => goldenBoostActive(s) },
+  { name: 'モンスター対峙中', on: s => !!s.run.monster },
+  { name: 'ノルマ余裕2倍', on: s => equip2Margin(s) >= 2 }
+];
+const EQUIP2_MODEL_NAME = ['連動', '特化', '起動']; // A/B/C の表示名
+// 余裕率は quota→生産→equip2Fx の循環になるため、advanceTick が毎tick更新するスナップショットを読むだけにする
+function equip2Margin(sim) {
+  return sim.run._marginSnap != null ? sim.run._marginSnap : 1;
+}
+function equip2AxisVal(sim, variant) {
+  const a = EQUIP2_AXIS[(variant - 1) % 9];
+  const x = Math.max(0, a.get(sim));
+  return x / (x + a.half);
+}
+function equip2Model(cat, variant) { return (EQUIP2_CATS.indexOf(cat) + (variant - 1)) % 3; } // 0=A,1=B,2=C
+const EQ2_KA = 2.2, EQ2_KB = 3.2, EQ2_KC = 4.5, EQ2_BDOWN = 0.10, EQ2_TIER = 1.2;
+// 集約: 装備中9部位の効果を1つの束に。build状態に依存するためtick+装備署名でキャッシュ。
 function equip2Fx(sim) {
   const ws = sim.ws;
-  if (ws._eq2FxCache && ws._eq2FxKey === JSON.stringify(ws.eq2Equipped)) return ws._eq2FxCache;
+  const eqSig = EQUIP2_SLOTS.map(s => ws.eq2Equipped[s] || '').join(',');
+  if (ws._eq2FxT === sim.t && ws._eq2FxSig === eqSig && ws._eq2FxCache) return ws._eq2FxCache;
   const fx = { clickMul: 1, cpsMul: 1, allMul: 1, dmgMul: 1, killValMul: 1, spawnMul: 1, stayMul: 1,
     goldenAmtMul: 1, goldenRateMul: 1, goldenBoostMul: 1, holdBonus: 1, quotaSlow: 0, upDisc: 0, resDisc: 0,
     dropMul: 1, oreAdd: 0, rewardLvAdd: 0, critAdd: 0 };
+  const FLAT = { upDisc: 0.5, resDisc: 0.5, critAdd: 0.3 };
+  const put = (stat, v) => {
+    if (stat === 'oreAdd' || stat === 'rewardLvAdd') fx[stat] += v;
+    else if (FLAT[stat] != null) fx[stat] = Math.min(FLAT[stat], fx[stat] + Math.min(0.5, v));
+    else fx[stat] *= 1 + v; // 倍率系
+  };
   for (const slot of EQUIP2_SLOTS) {
     const it = ws.eq2Equipped[slot] ? equip2ById(ws.eq2Equipped[slot]) : null;
     if (!it) continue;
-    const defs = EQUIP2_FX[it.cat][(it.variant || 1) - 1];
-    const scale = Math.pow(2, it.tier - 1); // ティア=数値スケール(固定値表示)
-    for (let i = 0; i < defs.length; i += 2) {
-      const type = defs[i], base = defs[i + 1];
-      const v = base * scale;
-      if (type === 'quotaSlow' || type === 'upDisc' || type === 'resDisc' || type === 'critAdd') fx[type] = Math.min(type === 'critAdd' ? 0.3 : 0.5, fx[type] + Math.min(0.5, v));
-      else if (type === 'oreAdd' || type === 'rewardLvAdd') fx[type] += v;
-      else fx[type] *= 1 + v; // 倍率系: ×(1+base×2^(t-1))
+    const M = EQUIP2_MAIN[it.cat]; if (!M) continue;
+    const tierScale = Math.pow(EQ2_TIER, it.tier - 1);
+    const axis = equip2AxisVal(sim, it.variant);
+    const model = equip2Model(it.cat, it.variant);
+    let spec;
+    if (model === 0) spec = 1 + EQ2_KA * axis;                    // A: 下振れなし・軸連動
+    else if (model === 1) {                                       // B: トレードオフ(得意大↑・別分野少↓)
+      spec = 1 + EQ2_KB * axis;
+      fx[M.down] *= Math.max(0.6, 1 - EQ2_BDOWN * tierScale);
+    } else {                                                      // C: 状況起動(トリガー成立時だけ跳ねる)
+      const trig = EQUIP2_TRIG[(it.variant - 1) % 3].on(sim) ? 1 : 0;
+      spec = 1 + EQ2_KC * axis * trig;
     }
+    put(M.stat, M.b0 * tierScale * spec);
+    if (M.sec) for (let i = 0; i < M.sec.length; i += 2) put(M.sec[i], M.sec[i + 1] * tierScale); // 副効果=軸非連動・ティアのみ
   }
-  ws._eq2FxKey = JSON.stringify(ws.eq2Equipped);
-  ws._eq2FxCache = fx;
+  ws._eq2FxT = sim.t; ws._eq2FxSig = eqSig; ws._eq2FxCache = fx;
   return fx;
+}
+// 装備の「今のビルドでの予測稼ぎ寄与」= 主効果値(モデル・軸・トリガー込み)。装備選択(付け替え)の順位に使う。
+function equip2Payoff(sim, it) {
+  const M = EQUIP2_MAIN[it.cat]; if (!M) return 0;
+  const tierScale = Math.pow(EQ2_TIER, it.tier - 1);
+  const axis = equip2AxisVal(sim, it.variant);
+  const model = equip2Model(it.cat, it.variant);
+  let spec;
+  if (model === 0) spec = 1 + EQ2_KA * axis;
+  else if (model === 1) spec = 1 + EQ2_KB * axis;
+  else spec = 1 + EQ2_KC * axis * (EQUIP2_TRIG[(it.variant - 1) % 3].on(sim) ? 1 : 0);
+  return M.b0 * tierScale * spec;
 }
 // 旧・一律全生産倍率の互換(生産チェーン用): クリック/毎秒はcomputeProd側で個別適用
 function equip2Mult(sim) {
@@ -802,7 +861,9 @@ function equip2Tick(sim) {
     for (const slot of Object.keys(pend)) {
       const it = equip2ById(pend[slot]);
       const cur = ws.eq2Equipped[slot] ? equip2ById(ws.eq2Equipped[slot]) : null;
-      if (it && (!cur || cur.tier < it.tier)) {
+      // 予測稼ぎ寄与で付け替え(2026-07-14 特色モデル): ティア比較でなく「今のビルドでの主効果値」で判定。
+      // ビルドが100h通して変わる=着ける得意軸が巡回=(b)カバレッジが遊びの結果で埋まる。
+      if (it && (!cur || equip2Payoff(sim, cur) < equip2Payoff(sim, it))) {
         ws.eq2Equipped[slot] = it.id;
         (r.eq2NewEquipped || (r.eq2NewEquipped = [])).push(it.id);
       }
@@ -819,16 +880,11 @@ function equip2Tick(sim) {
   // 方針レーン制(2026-07-14 v2): 各方針は(カテゴリ,ティア)ごとに担当色銘 v=(方針idx+ティア+カテゴリidx)%9+1 を
   // 優先して作り、装備はティアアップ時のみ(横滑り付け替え廃止=lift(a)を壊さない)。
   // 9方針×54種のレーンで486種のカバレッジがちょうど一巡する。
-  const stratIdx = Math.max(0, parseInt(String(sim.strat && sim.strat.id || 'S1').replace(/\D/g, ''), 10) - 1) % 9;
-  const laneV = it => ((stratIdx + it.tier + EQUIP2_CATS.indexOf(it.cat)) % 9) + 1;
-  // レーン距離(2026-07-14 カバレッジ76/486不動の修正): 旧・二値(レーン一致か否か)だと、レーン銘が
-  // 現ステージのラインナップに無い(ばらけ配置)場合に全方針が同じ銘へフォールバックして重なる。
-  // 円環距離にすると、同ティア同カテゴリの選好順が方針ごとに巡回シフトし、フォールバック先も分散する。
-  const laneDist = it => (((it.variant - laneV(it)) % 9) + 9) % 9;
-  // ※ティア階段方式(装備中+1のみ作る)はR20e実測で不採用: (c)毎周回全カテゴリ作成が170/170→117/171に
-  // 崩れ(ティア進行がステージ解放より速くレーン銘待ちの空振り周回が出る)、カバレッジも87どまり。
-  // 高ティア優先+円環距離レーンに戻す。(b)カバレッジの本設計は次セッションのキュー参照。
-  const items = equip2Items().slice().sort((a, b) => (b.tier - a.tier) || (catOrder[a.cat] - catOrder[b.cat]) || (laneDist(a) - laneDist(b)));
+  // 作成の順位(2026-07-14 特色モデル): カテゴリをローテ順に回し、各カテゴリ内は「今のビルドでの予測稼ぎ寄与」
+  // が高い変種から作る。作成は周回中盤(ビルドが育った状態)に起きるため、予測は発達したビルドを反映する
+  // =方針・周回フェーズで最適な得意軸が違う→作る変種が巡回→(b)カバレッジが広がる。同値はティア優先。
+  const items = equip2Items().slice().sort((a, b) =>
+    (catOrder[a.cat] - catOrder[b.cat]) || (equip2Payoff(sim, b) - equip2Payoff(sim, a)) || (b.tier - a.tier));
   for (const it of items) {
     if (!it.stages.includes(curStage)) continue;
     const cap = 1; // 9カテゴリ各1個/周回(アクセは甲/乙で別カテゴリ)
@@ -856,7 +912,7 @@ function equip2Tick(sim) {
       const pend = ws.eq2Pending || (ws.eq2Pending = {});
       const curId = pend[slot] || ws.eq2Equipped[slot];
       const cur = curId ? equip2ById(curId) : null;
-      if (!cur || cur.tier < it.tier) pend[slot] = it.id;
+      if (!cur || equip2Payoff(sim, cur) < equip2Payoff(sim, it)) pend[slot] = it.id;
       if (upgradedSlot) { // 合成で装備中の物が消えた枠は即時充当(空白を作らない)
         ws.eq2Equipped[upgradedSlot] = it.id;
         (r.eq2NewEquipped || (r.eq2NewEquipped = [])).push(it.id);
@@ -2622,6 +2678,12 @@ function advanceTick(sim, strategy) {
   {
     sim.t += dt;
     if (sim.hourly && sim.t % 60 === 0) sim.hourly.push(sim.totalCookies);
+    // 装備の余裕軸(v6)用スナップショット: quota→生産→equip2Fx の循環を断つため、ここで1回だけ更新して
+    // equip2Margin は読むだけにする(遅延1tick=緩やかな軸信号なので無害)。30tickごとで十分軽い。
+    if (sim.t % 30 === 0 || sim.run._marginSnap == null) {
+      const q = (typeof monsterQuotaRequired === 'function') ? monsterQuotaRequired(sim) : 0;
+      sim.run._marginSnap = (q && q > 0) ? sim.run.runCookies / q : 1;
+    }
     // 直近稼ぎ率EMA(時定数90秒・2026-07-11): 注文報酬cookieの基準。周回内は指数成長のため
     // 平均稼ぎ率(獲得計/経過)では終盤レートの数百分の一になり報酬が誤差化する(㉙比1.021実測)。
     {
