@@ -13113,8 +13113,33 @@ function codexPolicyHtml() {
   return intro + items.join("");
 }
 
+// 生産の仕組み(2026-07-14 ユーザー指示): 毎秒/タップ/全生産の違いと、設備が何で増幅されるかをまとめる
+function codexProductionHtml() {
+  const ovenIcon = ASSETS.upgrades && ASSETS.upgrades.oven;
+  const items = [];
+  items.push(codexItem("生産の3種類",
+    `<div><b>毎秒生産</b>：放置でも毎秒もらえるクッキー(オーブン・工場・銀行などの設備)。「毎秒 +○○」はこの自動収入だけに効く。</div>`
+    + `<div><b>タップ生産</b>：1回タップでもらえるクッキー(強い指・神の指)。「タップ +○○」はタップだけに効く。</div>`
+    + `<div><b>全生産</b>：毎秒とタップの<b>両方</b>にかかる倍率。「全生産 ×2」なら自動もタップも両方2倍。</div>`
+    + `<div class="codexSub">現在：毎秒 ${fmt(currentCps())} / タップ ${fmt(currentClickPower())}</div>`,
+    ovenIcon));
+  items.push(codexItem("設備の生産は「単純加算」が基本",
+    `<div>設備を1個買う＝<b>所持数 × 単価</b>を生産に足すだけ。設備の購入そのものは倍率を持たない。</div>`
+    + `<div>“設備自体”が倍率を持つ例外は3つだけ：おばあちゃん(自分の生産 +2%/台)・神の指(タップ全体 +1.2%/台)・強い指(毎秒生産の約0.4%をタップへ、本数が多いほど増加)。</div>`,
+    ovenIcon));
+  items.push(codexItem("設備の生産を増幅するもの",
+    `<div>設備の生産を×倍率で伸ばすのは、設備の外側にある次の4つ：</div>`
+    + `<div>・<b>専用の研究</b>(設備ごと)。例：オーブン→「オーブン大量焼成」、工場→「工場ネットワーク」、銀行→「複利金庫」、異世界炉→「異世界接続網」。</div>`
+    + `<div>・<b>モンスター報酬「設備の個別強化」</b>：選ぶたび、その設備の生産が上がる。</div>`
+    + `<div>・<b>研究「おばあちゃん連携」</b>：おばあちゃんが強い指・オーブン・工場などを底上げ(1台ごとに +0.2〜0.3%)。</div>`
+    + `<div>・<b>熟練スキル(職人の手／工程の極み)</b>：同じ設備を買うほど、その設備1台あたりの生産が複利で伸びる。</div>`,
+    ovenIcon));
+  return items.join("");
+}
+
 function codexTabDefs() {
   return [
+    { id: "production", name: "生産の仕組み", icon: ASSETS.upgrades && ASSETS.upgrades.oven, show: () => true },
     { id: "golden", name: "金クッキー", icon: ASSETS.objects && ASSETS.objects.goldenCookie, show: () => true },
     { id: "policy", name: "周回方針", icon: ASSETS.screens && ASSETS.screens.prestige, show: () => runPolicyUnlocked() },
     { id: "monster", name: "モンスター報酬", icon: ASSETS.objects && ASSETS.objects.cookieMonster, show: () => true },
@@ -13140,7 +13165,8 @@ function renderCodex() {
   }));
 
   let html = "";
-  if (codexTabId === "golden") html = codexGoldenHtml();
+  if (codexTabId === "production") html = codexProductionHtml();
+  else if (codexTabId === "golden") html = codexGoldenHtml();
   else if (codexTabId === "policy") html = codexPolicyHtml();
   else if (codexTabId === "monster") html = codexMonsterRewardHtml();
   else if (codexTabId === "research") html = codexResearchHtml();
