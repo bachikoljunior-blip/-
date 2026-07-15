@@ -933,8 +933,13 @@ function equip2Tick(sim) {
   // 作成順(2026-07-15 A/B/C固定モデル): カテゴリをローテ順に回し、各カテゴリ内は方針適合スコアが高い変種から作る。
   // =各方針は自分の遊びに合う装備を作って着ける(B下げは使わないステータスへ・C状況は頻度で割引)。
   // 方針×ステージ×ティアで最良変種が違う=作る変種が方針間で散る。(b)カバレッジは1000h窓で巡回。
+  // 作成上限(0〜5個/周回)下では、限られた作成枠を「今いちばん伸びるスロット」に回す=装備lift(a)を守る。
+  // 各カテゴリの現装備スコアを基準に、伸び幅(スコア差)が大きい順に作る。同点はローテ順→高ティア。
+  const curSlotScore = {};
+  for (const cat of EQUIP2_CATS) { const eq = ws.eq2Equipped[cat] ? equip2ById(ws.eq2Equipped[cat]) : null; curSlotScore[cat] = eq ? equip2Score(sim, eq) : 0; }
+  const upGain = it => equip2Score(sim, it) - (curSlotScore[it.cat] || 0);
   const items = equip2Items().slice().sort((a, b) =>
-    (catOrder[a.cat] - catOrder[b.cat]) || (equip2Score(sim, b) - equip2Score(sim, a)) || (b.tier - a.tier));
+    (upGain(b) - upGain(a)) || (catOrder[a.cat] - catOrder[b.cat]) || (equip2Score(sim, b) - equip2Score(sim, a)) || (b.tier - a.tier));
   // 1周回の作成上限(2026-07-15 ユーザー指示「装備は1周回に0〜5個まで作成」)
   const runCraftCap = (P.equip2 && P.equip2.craftPerRunCap) || 5;
   for (const it of items) {
