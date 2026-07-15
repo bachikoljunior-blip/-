@@ -142,7 +142,7 @@ module.exports = {
   // 実績研究の固定コスト表(2026-07-11「コストはゲーム内で固定して」): build_ms_costs.js が
   // 10方針100hの測定から各研究の初回購入額(中央値・丸めq5)を焼き込む。無い間は動的フォールバック。
   // massProd=量産体制(2026-07-13 メトロノーム): 繰り返し購入の間隔と倍率(新⑥の床=×1.25^4/3分=×2.44)
-  msResearch: { massProdMul: 1.25, massProdSec: 32, momentumCapSec: 7200,
+  msResearch: { massProdMul: 1.25, massProdSec: 32, momentumCapSec: 14400,
     costTable: (function () { try { return require('./ms_costs.json'); } catch (e) { return null; } })() },
 
   // huntDirect: satMax 15→14(2026-07-12 ②改2: huntのlift3.09が帯上限3.00超過→飽和を微絞り)

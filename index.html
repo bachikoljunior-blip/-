@@ -9792,8 +9792,8 @@ function prestigeMultiplier() {
 // 3分でおよそ2倍(×1.25^(経過/45秒))。上限=7200秒で頭打ち。旧・量産体制(繰り返し購入)の自動版。
 function productionMomentumMul() {
   if (!msBought("ms_momentum")) return 1;
-  const el = Math.min(Math.max(0, (Date.now() - (state.runStart || Date.now())) / 1000), 7200);
-  return Math.pow(1.25, el / 32); // 32秒ごと×1.25=約110秒で2倍(新⑥の3分2倍を余裕を持って満たす・sim同期)
+  const el = Math.min(Math.max(0, (Date.now() - (state.runStart || Date.now())) / 1000), 14400);
+  return Math.pow(1.25, el / 32); // 32秒ごと×1.25=約110秒で2倍(新⑥の3分2倍を余裕を持って満たす・sim同期)。上限14400s(長周回でも二倍化継続)
 }
 
 function clickSkillMultiplier() {
