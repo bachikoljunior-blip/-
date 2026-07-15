@@ -945,18 +945,8 @@ if (mode === 'baseline') {
     // (b) カバレッジ
     const notEquipped = items.filter(it => !equippedEver.has(it.id)).map(it => it.id);
     console.log(`新装備(b) カバレッジ: ${items.length - notEquipped.length}/${items.length} 装備済み${notEquipped.length ? ' 未装備: ' + notEquipped.join(',') : ''}`);
-    // (c) 作成テンポ: 毎周回全カテゴリ(方針×周回で集計)
-    const cats = ['weapon', 'shield', 'armorTop', 'armorBottom', 'hands', 'hat', 'shoes', 'accA', 'accB']; // 9カテゴリ(2026-07-14)
-    let mkOk = 0, mkAll = 0;
-    for (const st of STRATEGIES) {
-      const full = optSnap[st.id].runs.filter(r => !r.partial);
-      for (const r of full) {
-        mkAll++;
-        const made = r.eq2Made || {};
-        if (cats.every(c => (made[c] || 0) >= 1)) mkOk++;
-      }
-    }
-    console.log(`新装備(c) 毎周回全カテゴリ作成: ${mkOk}/${mkAll}周回`);
+    // (c) 毎周回全カテゴリ作成 = 廃止(2026-07-15 ユーザー指示「装備毎週回全種条件は廃止」)。
+    // カバレッジ(b)は計測窓(1000h)内で達成できていればよい(同ユーザー指示「その時間内で達成できてればいい」)。
   }
 } else if (mode === 'affinity') {
   // ㉔㉕㉖(第9次【仮】): モンスター種類×報酬相性
