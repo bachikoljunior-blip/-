@@ -1448,7 +1448,7 @@ function computeProd(sim) {
 
   // 生産の勢い(2026-07-15 ユーザー指示「繰り返しで買う量産体制消せ」の代替=新⑥の床の作り直し):
   // 旧・量産体制(45秒ごとに手動で買い直す×1.25)を、研究で一度解放したら自動でかかる時限の勢いに置換。
-  // 周回経過に対し massProdMul^(経過/massProdSec) で全生産が伸びる=180秒窓で×1.25^4≈2.44(新⑥の3分2倍)。
+  // 周回経過に対し massProdMul^(経過/massProdSec) で全生産が伸びる=180秒窓で×1.25^(180/32)≈3.5(新⑥の3分2倍を余裕を持って達成)。
   // 一様な全生産倍率=①③⑨⑫のlift比・㉘シェア・④⑤の周回比に中立(全周回同形)。上限=T1上限(7200s)で頭打ち。
   if (r.ms && r.ms.momentum && P.msResearch) {
     const el = Math.min(sim.t - r.startT, (P.msResearch.momentumCapSec || 7200));
@@ -3270,7 +3270,10 @@ function bestEfficiency(sim, prod, typeFilter, budgetRatio) {
 }
 
 const PRESTIGE_GAIN_FLOOR = 1.55; // 転生PT単調床の比(cookies比≈1.55^43.5≈3e8=④の1e8+余裕)
-const PRESTIGE_MAX_SEC = 6500;    // 周回上限時間(T1上限7200s手前・停滞の保険)
+// 周回上限時間の保険(2026-07-15): 生産段が尽きた後は1.57倍目標に到達できず=無理に転生させず地平まで
+// 走らせて1本の部分周回にする(④=生産段が続く周回のみ判定。R24も同挙動で18/19)。生産段が続く間は
+// 勢いで必ず7200s以内に到達=full周回のT1を保つ。極端な保険としてのみ大きな値を置く。
+const PRESTIGE_MAX_SEC = 36000;
 module.exports = {
   P, UPGRADES, RESEARCH, REWARD_POOL, SKILL_NODES, SKILL_BY_ID,
   PRESTIGE_GAIN_FLOOR, PRESTIGE_MAX_SEC,

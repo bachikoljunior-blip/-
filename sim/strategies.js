@@ -215,15 +215,16 @@ function prestigeWhen(minElapsedSec, gainFactor) {
     if (sim.run.cookies < G.prestigeCostOf(sim)) return false; // 転生には所持クッキー(10のべき乗・前回より大)が必要
     const next = cheapestNextSkillCost(sim);
     if (next === null) return false; // ツリー完了後はPTの使い道がないため転生しない
+    // 転生しきい値=次スキル束(相乗り段=約1e8×間隔)or 前回目標×1.57 の高い方(2026-07-14 ④修復の恒久解)。
+    // 段が1e8×間隔=毎周回1段前進で cookies比≈1e8(④)。「生産の勢い」(momentum)が時間で必ず伸びる=
+    // どの段の目標にも上限時間内に到達=中盤停滞が起きない(勢い導入前は到達できず停滞していた)。
+    const target = Math.max(next, (sim._prTarget || 0) * 1.57);
     const gain = G.prestigeGainOf(sim.run.runCookies);
-    // 転生しきい値の単調床(2026-07-15 ④修復・生産の勢い前提): 達成PTを直に梯子にする。
-    // need = max(次スキル束×余裕, 前回達成PT×1.55)。_prTargetに「達成PT」を積む=1200s下限の
-    // オーバーシュートも取り込まれ、次周回は必ず前回PT×1.55超が要る=cookies比≥1.55^43.5≈3e8(④の1e8+余裕)。
-    // 勢い(momentum)が時間で必ず伸びるため、どの周回も上限時間内に床へ到達=中盤停滞が起きない。
-    const need = Math.max(next * gainFactor, (sim._prTarget || 0) * G.PRESTIGE_GAIN_FLOOR);
-    if (gain >= need && gain >= 1) { sim._prTarget = gain; return true; }
-    // 上限時間: 床未達でも転生(T1上限7200s維持・無限停滞の保険)。勢いにより通常は発火しない。
-    if (sim.t - sim.run.startT >= G.PRESTIGE_MAX_SEC && gain >= 1) { sim._prTarget = gain; return true; }
+    // 梯子は「目標と達成PTの高い方」を積む(2026-07-15 ④修復): 1200s下限のオーバーシュートで
+    // 実PTが目標を超えた分も次の床に反映=次周回は必ず前回実PTの1.57倍超が要る=生産段を毎回前進。
+    if (gain >= target * gainFactor && gain >= 1) { sim._prTarget = Math.max(target, gain / gainFactor); return true; }
+    // 上限時間の保険(T1上限7200s維持): 目標未達でも転生。達成PTを梯子に反映(低い段で止まらない)。
+    if (sim.t - sim.run.startT >= G.PRESTIGE_MAX_SEC && gain >= 1) { sim._prTarget = Math.max(target, gain / gainFactor); return true; }
     return false;
   };
 }
@@ -411,9 +412,9 @@ const STRATEGIES = [
       if ((sim.t - sim.run.startT) < 1200) return false;
       if (sim.run.cookies < G.prestigeCostOf(sim)) return false; // 転生には所持クッキー(10のべき乗・前回より大)が必要
       const factor = sim.run.quotaFailed ? 1.0 : 1.5;
-      const need = Math.max(next * factor, (sim._prTarget || 0) * G.PRESTIGE_GAIN_FLOOR);
-      if (gain >= need && gain >= 1) { sim._prTarget = gain; return true; }
-      if ((sim.t - sim.run.startT) >= G.PRESTIGE_MAX_SEC && gain >= 1) { sim._prTarget = gain; return true; }
+      const target = Math.max(next, (sim._prTarget || 0) * 1.57);
+      if (gain >= target * factor && gain >= 1) { sim._prTarget = target; return true; }
+      if ((sim.t - sim.run.startT) >= G.PRESTIGE_MAX_SEC && gain >= 1) { sim._prTarget = Math.max(target, gain / factor); return true; }
       return false;
     },
     skillOrder: skillOrderByBranch(['core', 'monster', 'auto', 'reward', 'economy', 'research', 'click', 'golden', 'upgrade', 'start', 'master'])

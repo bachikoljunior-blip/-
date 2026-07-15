@@ -9793,7 +9793,7 @@ function prestigeMultiplier() {
 function productionMomentumMul() {
   if (!msBought("ms_momentum")) return 1;
   const el = Math.min(Math.max(0, (Date.now() - (state.runStart || Date.now())) / 1000), 7200);
-  return Math.pow(1.25, el / 45);
+  return Math.pow(1.25, el / 32); // 32秒ごと×1.25=約110秒で2倍(新⑥の3分2倍を余裕を持って満たす・sim同期)
 }
 
 function clickSkillMultiplier() {
