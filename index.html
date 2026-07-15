@@ -5442,7 +5442,7 @@
           <p>1. 画面中央の大きなクッキーをタップすると、クッキーが手に入ります。</p>
           <p>2. 「強化」タブで、おばあちゃんやオーブンなどの設備を購入すると、タップの威力や毎秒の自動生産量が増えます。</p>
           <p>3. 「研究」タブでは、特定の設備をさらに強くする研究を解放できます。</p>
-          <p>4. ときどき現れる金のクッキーをタップすると、一定時間すべての生産がブーストされます。</p>
+          <p>4. ときどき現れる金のクッキーをタップすると、まとまったクッキーを獲得できたり、一定時間すべての生産がブーストされたりします。</p>
           <p>5. クッキーモンスターが現れたら、連打して撃退しましょう。撃破すると好きな報酬を1つ選べます。</p>
         </div>
 
@@ -6222,7 +6222,7 @@ const RESEARCH = [
   // 段階2/3は「対応スキル取得後、研究タブに購入カードが出現し、クッキーで購入して有効化」する。
   { id: "fingerTechnique", name: "指先の型", cost: 2500, detail: "式：会心率=1-e^-score、倍率=2.2+score×10(score=0.01+√強い指×0.045+0.002×最高到達層。開始1%から育つ)。段階2(スキル「連打の呼吸」で購入可):会心コンボ=会心ごとに+1(上限なし、30秒途切れでリセット)、会心倍率×(1+0.03×コンボ)。段階3(スキル「神経直結」で購入可):会心の余熱=会心のたびに毎秒生産×0.025%×最高到達層を追加獲得。", desc: "タップ会心を解放する。段階購入でコンボと会心の余熱が追加" },
   { id: "grandmaCrowd", name: "おばあちゃん連携", cost: 100000, detail: "式：支援=1.002〜1.003^おばあちゃん(強い指・オーブン・工場)。段階2(スキル「炉の列」で購入可):支援先に銀行・香料棚を追加(×1.008^おばあちゃん)。段階3(スキル「無人ライン」で購入可):全支援×(1+0.001×最高到達層)。", desc: "おばあちゃんが強い指・オーブン・工場の生産を底上げ(おばあちゃん1台ごとに+0.2〜0.3%)。段階購入で銀行・香料棚も対象＋層効果が追加" },
-  { id: "ovenBatch", name: "オーブン大量焼成", cost: 300000, detail: "式：9×1.008^オーブン×1.004^(最高到達層-1)。さらに量産波及＝全生産×1.00012^オーブン。段階2(スキル「同期炉」で購入可):オーブン強化倍率×1.35。段階3(スキル「無人ライン」で購入可):オーブン個別強化Lv×(1+0.05×Lv)。", desc: "最高到達層とオーブン数でオーブンを強化する。段階購入で強化倍率と個別強化連動が追加" },
+  { id: "ovenBatch", name: "オーブン大量焼成", cost: 300000, detail: "式：9×1.008^オーブン×1.015^(最高到達層-1)。さらに量産波及＝全生産×1.00012^オーブン。段階2(スキル「火種」で購入可):オーブン強化倍率×1.35。段階3(スキル「無人ライン」で購入可):オーブン個別強化Lv×(1+0.05×Lv)。", desc: "最高到達層とオーブン数でオーブンを強化する。段階購入で強化倍率と個別強化連動が追加" },
   { id: "factoryNetwork", name: "工場ネットワーク", cost: 1000000, detail: "式：9×1.002^(指+婆+炉)×1.008^工場。さらに物流波及＝全生産×1.00012^工場。段階2(スキル「無人ライン」で購入可):銀行以上の所持設備種類×(1+0.15×種類数)。段階3(スキル「まとめ買い」で購入可):×(1+0.0012×最高到達層)。", desc: "下位設備と工場数で工場を強化する。段階購入で上位設備種類と層効果が追加" },
   { id: "cpsStrike", name: "生産火力転換", cost: 30000000, detail: "式：モンスターへのダメージに現在の毎秒生産がそのまま加算される。", desc: "毎秒生産の値がそのままモンスターへのダメージに加算されるようになる" },
   { id: "spiceBlend", name: "香料調合", cost: 20000000, detail: "式：金取得後30秒 香料棚×8×1.006^棚。段階2(スキル「金色の匂い」で購入可):風味の熟成=金取得から12秒間、全生産×(1+0.6%×前回の金からの経過秒)。段階3(スキル「輝き増幅」で購入可):熟成×(1+0.0015×最高到達層)。", desc: "金クッキー取得後に香料棚を強化する。段階購入で熟成バーストが追加" },
@@ -6457,7 +6457,7 @@ const MAX_ACTIVE_DISHES = 3;
 // 作成: 永続装備(Lv制、転生持ち越し)。コスト=基本×2.2^Lv(切り上げ)、Lv上限10。
 const EQUIPMENT = [
   { id: "goldenWhisk", name: "黄金の泡立て器", cost: { butter: 10, flour: 8 }, effect: lv => `タップに乗る毎秒生産の割合 ×${(1 + 0.15 * lv).toFixed(2)}` },
-  { id: "ovenMitt", name: "断熱オーブン手袋", cost: { cacao: 12, ironShard: 2 }, effect: lv => `オーブン生産 ×${(1 + 0.12 * lv).toFixed(2)}` },
+  { id: "ovenMitt", name: "断熱オーブン手袋", cost: { cacao: 12, ironShard: 2 }, effect: lv => `オーブン生産 ×${(1 + 0.12 * lv).toFixed(2)}、モンスターダメージ +${(5 * lv)}%` },
   { id: "pressExtractor", name: "香料圧搾機", cost: { spice: 14, goldDust: 2 }, effect: lv => `金ブースト倍率 ×${(1 + 0.04 * lv).toFixed(2)}` },
   { id: "monsterAlmanac", name: "モンスター図鑑", cost: { ironShard: 4, silentCore: 2 }, effect: lv => `素材ドロップ +${(0.5 * lv).toFixed(1)}個、モンスターダメージ ×${(1 + 0.15 * lv).toFixed(2)}、行商の買い取り ×${(1 + Math.min(0.05 * lv, 0.5)).toFixed(2)}` },
   { id: "stillFlask", name: "蒸留フラスコ", cost: { mint: 10, lavaSugar: 6 }, effect: lv => `料理の効果時間 ×${(1 + 0.10 * lv).toFixed(2)}` },
@@ -10307,7 +10307,8 @@ function monsterSpawnFactor() {
     -(runPolicyIs("hunt") ? 0.10 : 0)
   ) * deepPursuitSpawnMultiplier() * portalHuntSpawnMultiplier() * runTempoRamp()
     * (dishActive("hunterStew") ? 0.75 : 1)  // 狩人のシチュー
-    * (dishActive("voidTart") ? 0.7 : 1);    // 虚空タルト
+    * (dishActive("voidTart") ? 0.7 : 1)     // 虚空タルト
+    * msMulOf("spawn");                       // 実績研究(狩りの実績: モンスター出現間隔)
 }
 
 
@@ -12851,9 +12852,9 @@ function codexGoldenHtml() {
     ? codexItem("即時クッキー獲得",
         `<div>金クッキーを取ると約50%の確率で、まとまったクッキーを即座に獲得する。</div>`
         + (analyzed
-          ? `<div>獲得量は「毎秒生産 ×2.5」と「タップ生産 ×2.5」の大きい方（最低100）× 獲得量倍率。</div>`
-            + `<div>獲得量倍率は報酬「金クッキー獲得量アップ」・スキル・金色型の方針・ステージで上がる。</div>`
-            + `<div class="codexSub">現在：獲得量倍率 x${goldenAmountMultiplier().toFixed(2)}</div>`
+          ? `<div>獲得量は「毎秒生産 ×2.5」と「タップ生産 ×(タップ係数)」の大きい方（最低100）× 獲得量倍率。タップ係数は序盤 約25 で、転生を重ねるほど 2.5 に近づく。</div>`
+            + `<div>さらに周回序盤は追加の序盤ボーナス（最大約×10、転生で薄れる）がかかる。獲得量倍率は報酬「金クッキー獲得量アップ」・スキル・金色型の方針・ステージ・装備で上がる。</div>`
+            + `<div class="codexSub">現在：タップ係数 x${clickAnchorCoef().toFixed(1)} / 序盤ボーナス x${goldenEarlyMultiplier().toFixed(1)} / 獲得量倍率 x${goldenAmountMultiplier().toFixed(2)}</div>`
           : lock),
         goldenIcon)
     : codexHiddenItem());
@@ -12935,7 +12936,7 @@ const DISH_FORMULA = {
 
 const EQUIP_FORMULA = {
   goldenWhisk: "クリックの生産連動係数が ×(1 + 0.15×Lv)。",
-  ovenMitt: "オーブンの生産が ×(1 + 0.12×Lv)。",
+  ovenMitt: "オーブンの生産が ×(1 + 0.12×Lv)。さらにモンスターダメージ +5%×Lv(加算)。",
   pressExtractor: "金ブースト倍率が ×(1 + 0.04×Lv)。",
   monsterAlmanac: "素材ドロップ +0.5×Lv個、モンスターダメージ ×(1 + 0.15×Lv)、行商の買い取り ×(1 + 0.05×Lv、上限+50%)。",
   stillFlask: "料理の効果時間が ×(1 + 0.10×Lv)。",
@@ -12962,14 +12963,14 @@ function codexOrderHtml() {
 
   // 報酬ごとの項目(その報酬を受け取るまで伏せる)
   items.push(codex.orderCookie
-    ? codexItem("報酬：クッキー",
-        `<div>毎秒生産に応じたまとまったクッキーを一度に獲得する。</div>`
+    ? codexItem("報酬：追い焼き(獲得+50%)",
+        `<div>300秒間、クッキーの獲得量が +50% になる。</div>`
         + `<div class="codexSub">対象の注文：追加焼成・手ごね依頼 など</div>`,
         orderIcon)
     : codexHiddenItem());
   items.push(codex.orderMaterial
-    ? codexItem("報酬：素材セット",
-        `<div>選択中ステージの基本素材を +5 獲得する。</div>`
+    ? codexItem("報酬：素材の補充",
+        `<div>作りたい装備の不足素材を補充する(不足分×1.25・最大4種)。不足がなければ選択中ステージの基本素材を +5。</div>`
         + `<div class="codexSub">対象の注文：討伐依頼・香料仕入れ（工房の解放時）</div>`,
         orderIcon)
     : codexHiddenItem());
@@ -13148,11 +13149,12 @@ function codexProductionHtml() {
     + `<div>“設備自体”が倍率を持つ例外は3つだけ：おばあちゃん(自分の生産 +2%/台)・神の指(タップ全体 +1.2%/台)・強い指(毎秒生産の約0.4%をタップへ、本数が多いほど増加)。</div>`,
     ovenIcon));
   items.push(codexItem("設備の生産を増幅するもの",
-    `<div>設備の生産を×倍率で伸ばすのは、設備の外側にある次の4つ：</div>`
+    `<div>設備の生産を×倍率で伸ばすのは、設備の外側にある次の5つ：</div>`
     + `<div>・<b>専用の研究</b>(設備ごと)。例：オーブン→「オーブン大量焼成」、工場→「工場ネットワーク」、銀行→「複利金庫」、異世界炉→「異世界接続網」。</div>`
     + `<div>・<b>モンスター報酬「設備の個別強化」</b>：選ぶたび、その設備の生産が上がる。</div>`
     + `<div>・<b>研究「おばあちゃん連携」</b>：おばあちゃんが強い指・オーブン・工場などを底上げ(1台ごとに +0.2〜0.3%)。</div>`
-    + `<div>・<b>熟練スキル(職人の手／工程の極み)</b>：同じ設備を買うほど、その設備1台あたりの生産が複利で伸びる。</div>`,
+    + `<div>・<b>熟練スキル(職人の手／工程の極み)</b>：同じ設備を買うほど、その設備1台あたりの生産が複利で伸びる。</div>`
+    + `<div>・<b>系列ボーナス</b>：スキルで解放する上位設備は、自分より下位の設備の毎秒生産の <b>25%×台数</b> を追加で生産(神の指はタップ力 ×(1 + 25%×台数))。</div>`,
     ovenIcon));
   return items.join("");
 }
@@ -13594,7 +13596,7 @@ function researchFormulaText(r) {
 
   if (r.id === "fingerTechnique") {
     const f = state.upgrades.finger || 0;
-    return `式：会心率 = 1 - e^-score、score = 0.01 + √強い指 × 0.045 + 0.002 × 最高到達層 + 方針補正(開始1%) / 会心倍率 = 2 + score × 10(会心率と同じscoreで上昇) / 現在：強い指 ${fmt(f)}個、最高到達層 ${fmt(maxQuotaStage())}、会心率 ${(fingerCritChance() * 100).toFixed(2)}%、会心倍率 x${fingerCritMultiplier().toFixed(2)}`;
+    return `式：会心率 = 1 - e^-score、score = 0.01 + √強い指 × 0.045 + 0.002 × 最高到達層 + 方針補正(開始1%) / 会心倍率 = 2.2 + score × 10(会心率と同じscoreで上昇) / 現在：強い指 ${fmt(f)}個、最高到達層 ${fmt(maxQuotaStage())}、会心率 ${(fingerCritChance() * 100).toFixed(2)}%、会心倍率 x${fingerCritMultiplier().toFixed(2)}`;
   }
 
   if (r.id === "grandmaCrowd") {
@@ -14289,8 +14291,6 @@ function renderInfo() {
       <div class="infoRow">ノルマ：${state.quotaFailed ? "終了" : fmt(state.runCookies) + " / " + fmt(monsterQuotaRequired())}</div>
       <div class="infoRow">今回のノルマ維持記録：${fmtTime(state.quotaHoldSeconds || 0)} / ノルマ中討伐 ${fmt(state.quotaMonsterKills || 0)}体</div>
       <div class="infoRow">モンスター出現：${canMonsterAppear() ? "可能" : "ノルマ未達"}</div>
-      <div class="infoRow">討伐連鎖：×${fmt(chainCount())}(全生産 x${chainProductionMultiplier().toFixed(2)})<div class="desc">90秒以内に次を倒すと連鎖が続き、全生産・素材ドロップ・報酬Lvが上がる。途切れる/転生で0に戻る。</div></div>
-      <div class="infoRow">層の試練：ノルマ必要量 x${quotaTrialMultiplier() >= 100 ? fmt(Math.round(quotaTrialMultiplier())) : quotaTrialMultiplier().toFixed(2)}<div class="desc">第${QUOTA_TRIAL_START_LAYER}層から、深いほどノルマが重くなる。</div></div>
       <div class="infoRow">モンスター基本ダメージ：${fmt(monsterBaseDamage())}</div>
       <div class="infoRow">モンスター最終ダメージ：${fmt(monsterBaseDamage() * monsterDamageMultiplier())}</div>
     </div>
@@ -15874,7 +15874,7 @@ function monsterStayDurationMs() {
   const skillRaw = Math.max(0, skillEffect("monsterStay"));
   const policyRaw = runPolicyIs("hunt") ? 0.10 : 0;
   const categoryRaw = rewardCategoryBonus("hunt");
-  const multiplier = Math.exp(rewardLv * 0.04 + skillRaw * 0.12 + policyRaw + categoryRaw) * (state.nextMonsterStayMultiplier || 1) * bakeMonsterStayMultiplier();
+  const multiplier = Math.exp(rewardLv * 0.04 + skillRaw * 0.12 + policyRaw + categoryRaw) * (state.nextMonsterStayMultiplier || 1) * bakeMonsterStayMultiplier() * msMulOf("stay"); // 実績研究(狩りの実績: 滞在時間)
   state.nextMonsterStayMultiplier = 1;
   return Math.max(4000, 16000 * multiplier);
 }
@@ -15974,7 +15974,7 @@ function showMonster(forcedTypeId) {
   if (typeId === "boss") forceBossNext = false;
 
   const level = monsterLevel();
-  const hpMulShared = (state.nextMonsterHpMultiplier || 1) * type.hpMul * (stage.hpMul || 1);
+  const hpMulShared = (state.nextMonsterHpMultiplier || 1) * type.hpMul * (stage.hpMul || 1) * msMulOf("hp"); // 実績研究(狩りの実績: モンスターHP)
   // ボスは60秒固定。それ以外は従来式×type滞在倍率×ステージ滞在倍率
   const stayMs = typeId === "boss"
     ? 60000
@@ -16406,7 +16406,11 @@ function rewardPreviewText(choice) {
 
   if (choice.id === "goldenPower") {
     const before = goldenMultiplier();
-    const after = 2.1 + (lvNext / (1 + lvNext / 60)) * 0.25 + skillEffect("goldenPower");
+    // after は同じ計算式(全倍率込み)でLvだけ進めて出す(旧・簡易式は各種倍率が抜けて減って見えることがあった)
+    const _lv = state.perks[choice.id] || 0;
+    state.perks[choice.id] = lvNext;
+    const after = goldenMultiplier();
+    state.perks[choice.id] = _lv;
 
     return `
       <div class="desc">系統：短時間爆発</div>
@@ -16419,7 +16423,10 @@ function rewardPreviewText(choice) {
 
   if (choice.id === "goldenAmount") {
     const before = goldenAmountMultiplier();
-    const after = 1 + (lvNext / (1 + lvNext / 45)) * 0.45 + skillEffect("goldenAmount");
+    const _lv = state.perks[choice.id] || 0;
+    state.perks[choice.id] = lvNext;
+    const after = goldenAmountMultiplier();
+    state.perks[choice.id] = _lv;
 
     return `
       <div class="desc">系統：即時収入</div>
@@ -16432,7 +16439,10 @@ function rewardPreviewText(choice) {
 
   if (choice.id === "monsterDamage") {
     const before = monsterDamageMultiplier();
-    const after = before + rewardChoiceGain(choice) * 5.5;
+    const _lv = state.perks[choice.id] || 0;
+    state.perks[choice.id] = lvNext;
+    const after = monsterDamageMultiplier();
+    state.perks[choice.id] = _lv;
 
     return `
       <div class="desc">系統：討伐火力</div>
