@@ -7670,10 +7670,15 @@ const MILESTONE_RESEARCH = (() => {
   UPGRADES.forEach(u => {
     eqTiers.forEach(([n, cs], ti) => {
       const isClick = u.type === "click";
+      // 効果多様化(2026-07-15 sim同期): 倍率だけでなく自設備数連動/他設備数連動/会心も
+      let fx, ft;
+      if (isClick) { if (ti % 2 === 0) { fx = { click: 1.35 }; ft = "タップ生産 ×1.35"; } else { fx = { critAdd: 0.02 }; ft = "会心率 +2%"; } }
+      else if (ti === 0) { fx = { own: { [u.id]: 0.004 } }; ft = eqName(u.id) + "の生産が台数ごとに +0.4%"; }
+      else if (ti === 1) { fx = { up: { [u.id]: 1.4 } }; ft = eqName(u.id) + "の生産 ×1.4"; }
+      else if (ti === 2) { fx = { sup: [u.id, "grandma", 0.0015] }; ft = eqName(u.id) + "の生産がおばあちゃん1台ごとに +0.15%"; }
+      else { fx = { up: { [u.id]: 1.5 } }; ft = eqName(u.id) + "の生産 ×1.5"; }
       add("ms_" + u.id + "_t" + (ti + 1), eqName(u.id) + "の熟練 " + ROMA[ti], eqName(u.id) + " " + n + "台",
-        () => (state.upgrades[u.id] || 0) >= n,
-        isClick ? "タップ生産 ×1.35" : eqName(u.id) + "の生産 ×1.5",
-        isClick ? { click: 1.35 } : { up: { [u.id]: 1.5 } }, cs);
+        () => (state.upgrades[u.id] || 0) >= n, ft, fx, cs);
     });
   });
   // 工場の早期強化 3段(2026-07-11 ユーザー指示・sim同期): 組立ライン網(段1研究)が高く買える前の
@@ -7695,26 +7700,30 @@ const MILESTONE_RESEARCH = (() => {
   // タップ実績 6段(周回内)
   [[300, 75], [1000, 200], [3000, 600], [8000, 1500], [20000, 3500], [50000, 7500]].forEach(([n, cs], i) =>
     add("ms_taps_p" + (i + 1), "タップの鍛錬 " + ROMA[i], "この周回でタップ " + n.toLocaleString() + "回",
-      () => (state.msTaps || 0) >= n, "タップ生産 ×1.4", { click: 1.4 }, cs));
+      () => (state.msTaps || 0) >= n, i % 2 === 0 ? "タップ生産 ×1.4" : "会心率 +3%", i % 2 === 0 ? { click: 1.4 } : { critAdd: 0.03 }, cs)); // 倍率と会心確率を交互
   // ノルマ層実績 6段(周回内)
+  const stageAdd = [80, 4000, 260000, 2.2e7, 3e9, 6e11]; // 加算は層が深いほど大きい(効果多様化)
   [[5, 150], [15, 450], [30, 1000], [60, 2000], [100, 4000], [150, 7500]].forEach(([n, cs], i) =>
     add("ms_stage_s" + (i + 1), "深層踏破 " + ROMA[i], "この周回でノルマ第" + n + "層に到達",
-      () => maxQuotaStage() >= n, "全生産 ×1.15", { all: 1.15 }, cs));
+      () => maxQuotaStage() >= n, i % 2 === 0 ? "全生産 ×1.15" : "毎秒生産 +" + fmt(stageAdd[i]), i % 2 === 0 ? { all: 1.15 } : { cpsAdd: stageAdd[i] }, cs)); // 倍率と加算を交互
   // 転生実績 4段(通算)
   [[2, 300], [5, 600], [10, 1500], [20, 3000]].forEach(([n, cs], i) =>
     add("ms_prestige_r" + (i + 1), "輪廻 " + ROMA[i], "転生 " + n + "回",
       () => (Number(state.prestigeRuns) || 0) >= n, "全生産 ×1.2", { all: 1.2 }, cs));
   // --- スキル解放研究(各スキルで「応用」+生産系は「奥義」も) ---
+  // 効果多様化(2026-07-15 sim同期): 系統ごとに倍率/加算/自設備数/他設備数/会心を散らす
   const branchFx = id => {
-    if (id.startsWith("click_") || id === "upgrade_godfinger") return [{ click: 1.3 }, "タップ生産 ×1.3"];
+    if (id === "upgrade_godfinger") return [{ critAdd: 0.04 }, "会心率 +4%"];
+    if (id.startsWith("click_")) return [{ click: 1.3 }, "タップ生産 ×1.3"];
     if (id.startsWith("golden_")) return [{ golden: 1.25 }, "金クッキー即時獲得 ×1.25"];
     if (id.startsWith("monster_") || id === "hunt_analysis" || id.startsWith("unlock_reward_")) return [{ hunt: 1.3 }, "モンスターダメージ ×1.3"];
-    if (id.startsWith("auto_") || id.startsWith("upgrade_")) return [{ cps: 1.3 }, "毎秒生産 ×1.3"];
-    if (id.startsWith("economy_") || id === "order_board") return [{ cps: 1.2 }, "毎秒生産 ×1.2"];
+    if (id.startsWith("auto_")) return [{ own: { oven: 0.003 } }, "オーブンの生産が台数ごとに +0.3%"];
+    if (id.startsWith("upgrade_")) return [{ cps: 1.3 }, "毎秒生産 ×1.3"];
+    if (id.startsWith("economy_") || id === "order_board") return [{ sup: ["bank", "grandma", 0.002] }, "銀行の生産がおばあちゃん1台ごとに +0.2%"];
     if (id.startsWith("research_")) return [{ all: 1.08 }, "全生産 ×1.08"];
     if (id.startsWith("reward_")) return [{ hunt: 1.2 }, "モンスターダメージ ×1.2"];
     if (id.startsWith("workshop_")) return [{ dropAdd: 1 }, "素材ドロップ +1個"];
-    if (id.startsWith("start_") || id === "offline_1" || id === "endless_oven") return [{ all: 1.05 }, "全生産 ×1.05"];
+    if (id.startsWith("start_") || id === "offline_1" || id === "endless_oven") return [{ cpsAdd: 50 }, "毎秒生産 +50"];
     return [{ all: 1.1 }, "全生産 ×1.1"];
   };
   const csLadder = [100, 300, 900, 2500, 7000];
@@ -7750,6 +7759,18 @@ function msMulOf(kind, upId) {
   }
   return m;
 }
+// 効果多様化(2026-07-15 sim同期): own=自設備数連動 / sup=他設備数連動 / cpsAdd=加算 / critAdd=会心確率
+function msDiverseUpgradeMul(u) {
+  let m = 1; const b = state.msResearch || {};
+  for (const ms of MILESTONE_RESEARCH) {
+    if (!b[ms.id]) continue;
+    if (ms.fx.own && ms.fx.own[u.id]) m *= Math.pow(1 + ms.fx.own[u.id], state.upgrades[u.id] || 0);
+    if (ms.fx.sup && ms.fx.sup[0] === u.id) m *= Math.pow(1 + ms.fx.sup[2], state.upgrades[ms.fx.sup[1]] || 0);
+  }
+  return m;
+}
+function msCpsAdd() { let a = 0; const b = state.msResearch || {}; for (const ms of MILESTONE_RESEARCH) if (b[ms.id] && ms.fx.cpsAdd) a += ms.fx.cpsAdd; return a; }
+function msCritAdd() { let a = 0; const b = state.msResearch || {}; for (const ms of MILESTONE_RESEARCH) if (b[ms.id] && ms.fx.critAdd) a += ms.fx.critAdd; return a; }
 // コストはゲーム内で固定(2026-07-11 ユーザー指示): sim/ms_costs.json(10方針100h測定の初回購入額の中央値・丸め済み)と同期。
 // 表に無い研究のみ動的(解放時点の毎秒×costSec)。
 const MS_COST_TABLE = {"ms_taps_p1": 100, "ms_stage_s1": 100, "ms_taps_p2": 100, "ms_golden_g1": 100, "ms_kills_k1": 100, "ms_finger_t1": 100, "ms_taps_p3": 62000, "ms_golden_g2": 41000, "ms_oven_t1": 1550000, "ms_grandma_t1": 5400000, "ms_spiceRack_t1": 130000000, "msk_core": 100, "ms_kills_k2": 38000, "ms_kills_k3": 81500000, "ms_factory_t1": 145000000, "ms_bank_t1": 155000000, "ms_portal_t1": 195000000, "ms_oven_t2": 1300000000, "ms_finger_t2": 2750000000, "ms_prestige_r1": 100, "msk_click_1": 100, "msk2_click_1": 100, "msk_click_amp": 100, "msk2_click_amp": 100, "msk_click_stall": 100, "msk2_click_stall": 100, "ms_grandma_t2": 13500000000, "ms_factory_t2": 45000000000, "ms_golden_g3": 28000000000, "ms_spiceRack_t2": 1050000000000, "msk_golden_1": 100, "msk2_golden_1": 100, "msk_golden_amp": 100, "msk2_golden_amp": 100, "ms_stage_s2": 170000000000, "ms_taps_p4": 16000000000000, "ms_bank_t2": 4050000000000, "ms_portal_t2": 2750000000000, "ms_oven_t3": 33500000000000, "ms_kills_k4": 650000000000, "ms_factory_t3": 87000000000000, "msk_monster_1": 100, "msk2_monster_1": 100, "ms_golden_g4": 1550000000000000, "ms_finger_t3": 135000000000000000, "ms_prestige_r2": 100, "msk_monster_amp": 100, "msk2_monster_amp": 100, "msk_monster_peddler": 100, "msk2_monster_peddler": 100, "msk_auto_1": 100, "msk2_auto_1": 100, "ms_spiceRack_t3": 605000000000000000, "ms_grandma_t3": 4400000000000000000, "ms_kills_k5": 15500000000000000000, "msk_auto_amp": 100, "msk2_auto_amp": 100, "msk_economy_1": 100, "msk2_economy_1": 100, "ms_portal_t3": 1.6e+21, "ms_oven_t4": 6.45e+22, "ms_stage_s3": 8.15e+21, "ms_factory_t4": 3.1e+22, "ms_bank_t3": 5.1e+22, "msk_click_2": 100, "msk2_click_2": 100, "msk_workshop_1": 100, "msk_workshop_2": 100, "ms_spiceRack_t4": 4.05e+27, "msk_golden_2": 100, "msk2_golden_2": 100, "ms_kills_k6": 4.2999999999999994e+30, "ms_finger_t4": 5.3e+32, "msk_monster_2": 100, "msk2_monster_2": 100, "ms_grandma_t4": 5.050000000000001e+34, "ms_prestige_r3": 100, "msk_auto_2": 100, "msk2_auto_2": 100, "msk_economy_2": 100, "msk2_economy_2": 100, "msk_economy_analysis": 100, "msk2_economy_analysis": 100, "ms_portal_t4": 1.5999999999999997e+38, "msk_mastery_low": 100, "msk_order_board": 100, "msk2_order_board": 100, "ms_bank_t4": 2.6500000000000002e+41, "ms_stage_s4": 1.5e+43, "msk_click_3": 100, "msk2_click_3": 100, "ms_kills_k7": 4.35e+44, "msk_upgrade_moon": 100, "msk2_upgrade_moon": 100, "ms_moonBakery_t1": 1000000000000, "ms_moonBakery_t2": 2050000000000000, "ms_moonBakery_t3": 5.7e+22, "ms_moonBakery_t4": 3.95e+42, "msk_auto_3": 100, "msk2_auto_3": 100, "msk_research_1": 100, "msk_research_remodel": 100, "msk_research_analysis": 100, "msk_golden_3": 100, "msk2_golden_3": 100, "msk_golden_analysis": 100, "msk2_golden_analysis": 100, "msk_upgrade_time": 100, "msk2_upgrade_time": 100, "ms_timeOven_t1": 51500000000000, "ms_timeOven_t2": 80000000000000000, "ms_timeOven_t3": 6.55e+24, "ms_timeOven_t4": 2.35e+43, "ms_prestige_r4": 100, "msk_monster_3": 100, "msk2_monster_3": 100, "msk_auto_4": 100, "msk2_auto_4": 100, "msk_hunt_analysis": 100, "msk2_hunt_analysis": 100, "ms_stage_s5": 2.0500000000000002e+73, "msk_click_4": 100, "msk2_click_4": 100, "msk_offline_1": 100, "msk_upgrade_galaxy": 100, "msk2_upgrade_galaxy": 100, "ms_galaxyFactory_t1": 6850000000000000000, "ms_galaxyFactory_t2": 945000000000000000000, "ms_galaxyFactory_t3": 2.8e+29, "ms_galaxyFactory_t4": 6.949999999999999e+44, "msk_mastery_high": 100, "ms_kills_k8": 9.8e+90, "msk_golden_4": 100, "msk2_golden_4": 100, "ms_golden_g5": 1.4500000000000001e+96, "msk_monster_4": 100, "msk2_monster_4": 100, "msk_start_1": 100, "msk_start_2": 100, "msk_upgrade_blackhole": 100, "msk2_upgrade_blackhole": 100, "msk_reward_1": 100, "msk2_reward_1": 100, "msk_reward_synergy": 100, "msk2_reward_synergy": 100, "msk_reward_choice_2": 100, "msk2_reward_choice_2": 100, "ms_blackHoleMixer_t1": 53500000000000000000, "ms_blackHoleMixer_t2": 4.3e+21, "ms_blackHoleMixer_t3": 7.15e+29, "ms_blackHoleMixer_t4": 2.3e+45, "ms_golden_g6": 1.5500000000000001e+94, "ms_stage_s6": 2.85e+112, "msk_unlock_reward_crackedFang": 100, "msk2_unlock_reward_crackedFang": 100, "msk_unlock_reward_goldenChain": 100, "msk2_unlock_reward_goldenChain": 100, "msk_upgrade_universe": 100, "msk2_upgrade_universe": 100, "ms_universeOven_t1": 635000000000000000000, "ms_universeOven_t2": 3.5e+22, "ms_universeOven_t3": 1.1499999999999998e+30, "ms_universeOven_t4": 3.6999999999999996e+47, "msk_unlock_reward_chainPrep": 100, "msk2_unlock_reward_chainPrep": 100, "msk_unlock_reward_huntFocus": 100, "msk2_unlock_reward_huntFocus": 100, "msk_upgrade_godfinger": 100, "msk2_upgrade_godfinger": 100, "ms_godFinger_t1": 1.7e+21, "ms_godFinger_t2": 9.9e+22, "ms_godFinger_t3": 4.7499999999999996e+30, "ms_godFinger_t4": 1.8e+49, "msk_unlock_reward_goldenTarget": 100, "msk2_unlock_reward_goldenTarget": 100, "msk_upgrade_singularity": 100, "msk2_upgrade_singularity": 100, "ms_cookieSingularity_t1": 1.65e+23, "ms_cookieSingularity_t2": 4.3999999999999995e+26, "ms_cookieSingularity_t3": 1.3e+31, "ms_cookieSingularity_t4": 2.5e+49, "msk_unlock_reward_goldenFirstHit": 100, "msk2_unlock_reward_goldenFirstHit": 100, "msk_unlock_reward_beastScent": 100, "msk2_unlock_reward_beastScent": 100, "msk_reward_2": 100, "msk2_reward_2": 100, "msk_upgrade_quantum": 100, "msk2_upgrade_quantum": 100, "ms_quantumBakery_t1": 3.0499999999999995e+24, "ms_quantumBakery_t2": 4.95e+27, "ms_quantumBakery_t3": 1.2e+32, "ms_quantumBakery_t4": 6.75e+49, "msk_unlock_reward_biteRecovery": 100, "msk2_unlock_reward_biteRecovery": 100, "msk_unlock_reward_beastHeatFerment": 100, "msk2_unlock_reward_beastHeatFerment": 100, "msk_unlock_reward_huntingCore": 100, "msk2_unlock_reward_huntingCore": 100, "msk_upgrade_antimatter": 100, "msk2_upgrade_antimatter": 100, "ms_antimatterOven_t1": 5.0999999999999995e+25, "ms_antimatterOven_t2": 2.2000000000000001e+27, "ms_antimatterOven_t3": 4.3e+32, "ms_antimatterOven_t4": 2.4500000000000002e+51, "msk_unlock_reward_brandHunt": 100, "msk2_unlock_reward_brandHunt": 100, "msk_unlock_reward_crushedMill": 100, "msk2_unlock_reward_crushedMill": 100, "msk_unlock_reward_deepPursuit": 100, "msk2_unlock_reward_deepPursuit": 100, "msk_unlock_reward_goldenBeastMutation": 100, "msk2_unlock_reward_goldenBeastMutation": 100, "msk_master_final": 100, "ms_taps_p5": null, "ms_taps_p6": null};
@@ -9939,7 +9960,7 @@ function fingerCritChance() {
   const score = 0.01 + Math.sqrt(f) * 0.045 + 0.002 * maxQuotaStage() + policy;
 
   // scoreの飽和上限6.2=会心率99.8%止まり(sim同期2026-07-11 ㉓-3「100%には到達しない」)
-  return Math.min(0.995, (1 - Math.exp(-Math.min(score, 6.2))) + equip2Fx().critAdd); // 新装備: 会心率系
+  return Math.min(0.995, (1 - Math.exp(-Math.min(score, 6.2))) + equip2Fx().critAdd + msCritAdd()); // 新装備+研究(効果多様化)の会心率
 }
 
 function fingerCritMultiplier() {
@@ -10154,7 +10175,8 @@ function rawUpgradeContribution(u) {
     * upgradePersonalMultiplier(u)
     * researchUpgradeMultiplier(u)
     * supportUpgradeMultiplier(u)
-    * masteryMultiplier(u);
+    * masteryMultiplier(u)
+    * msDiverseUpgradeMul(u); // 効果多様化: 自/他設備数連動
 }
 
 function rawUpgradeCps(u) {
@@ -10485,6 +10507,8 @@ function baseCps() {
 
   // 系列ボーナス(上位設備の固有能力): 下位の直接生産×25%×台数
   v += lineageBonusCps();
+
+  v += msCpsAdd(); // 効果多様化: 加算(+N/秒・研究解放で)
 
   v *= cpsSkillMultiplier();
   v *= prestigeMultiplier();
