@@ -848,12 +848,27 @@ function equip2Mult(sim) {
   const fx = equip2Fx(sim);
   return fx.allMul;
 }
+// 素材ドロップの希少化(2026-07-15): 素の落ちやすさ=5% × 強さ(√HP倍率) × レア度。図鑑/研究の投資ぶんは上乗せ。
+function monsterDropStrength(typeId) {
+  const hp = (P.mtype && P.mtype.hpMul && P.mtype.hpMul[typeId]) || 1;
+  return Math.min(4, Math.max(0.4, Math.sqrt(hp)));
+}
+function matTierDrop(id) {
+  const R = P.ws.drops.rarity || { c: 1, r: 1, b: 1 };
+  if (id === 'bossCore' || id === 'deepCore' || (typeof id === 'string' && id.startsWith('bossCore'))) return R.b;
+  if (typeof id === 'string' && id.startsWith('ore_t')) return (+id.slice(5) >= 5) ? R.r : R.c;
+  const rareIds = { ironShard: 1, silentCore: 1, goldDust: 1, cometShard: 1, voidSugar: 1 };
+  return rareIds[id] ? R.r : R.c;
+}
 // 色素材ドロップ: モンスターの色=ノルマ層の帯(band層ごとに変わる)。工房スキル不要
-function equip2DropOre(sim, units) {
+function equip2DropOre(sim, units, strength) {
   const E = P.equip2; if (!E) return;
   const t = Math.max(1, Math.min(E.tiers, 1 + Math.floor((sim.run.maxStage || 0) / E.layerBand)));
   const ws = sim.ws;
-  ws.mats['ore_t' + t] = (ws.mats['ore_t' + t] || 0) + (E.oreDropPerKill + equip2Fx(sim).oreAdd) * (units || 1); // 新装備: 色素材追加系
+  const oreId = 'ore_t' + t;
+  // 希少化: 素の5% × 強さ × レア度 + 装備の色素材ボーナス(oreAdd=投資ぶん)
+  const exp = (P.ws.drops.dropBase * (strength || 1) * matTierDrop(oreId) + equip2Fx(sim).oreAdd) * (units || 1);
+  ws.mats[oreId] = (ws.mats[oreId] || 0) + exp; // 新装備: 色素材追加系
 }
 // 装備専用の素材判定/消費: 料理用costMul(×4)や万能粉代替は適用しない生コスト
 // 色素材は上位が下位を代替できる(層が深いと低位色が落ちないため。ore_tNの必要にはore_tN..t6を低い方から充当)
@@ -920,7 +935,10 @@ function equip2Tick(sim) {
   // 方針×ステージ×ティアで最良変種が違う=作る変種が方針間で散る。(b)カバレッジは1000h窓で巡回。
   const items = equip2Items().slice().sort((a, b) =>
     (catOrder[a.cat] - catOrder[b.cat]) || (equip2Score(sim, b) - equip2Score(sim, a)) || (b.tier - a.tier));
+  // 1周回の作成上限(2026-07-15 ユーザー指示「装備は1周回に0〜5個まで作成」)
+  const runCraftCap = (P.equip2 && P.equip2.craftPerRunCap) || 5;
   for (const it of items) {
+    if ((r.eq2CraftTotal || 0) >= runCraftCap) break; // 周回の作成数が上限に達したら以降は作らない
     if (!it.stages.includes(curStage)) continue;
     // 作成ティア解放(2026-07-15): ティア2以降はそれぞれ解放スキルが要る(作成欄が出る)
     if (it.tier >= 2 && !hasSkillEffect(sim, 'unlockSystem', 'eqcraftT' + it.tier)) continue;
@@ -942,6 +960,7 @@ function equip2Tick(sim) {
     }
     ws.eq2Owned[it.id] = (ws.eq2Owned[it.id] || 0) + 1;
     (r.eq2Made || (r.eq2Made = {}))[it.cat] = ((r.eq2Made || {})[it.cat] || 0) + 1;
+    r.eq2CraftTotal = (r.eq2CraftTotal || 0) + 1; // 周回の作成総数(0〜5上限)
     // 装備は保留箱へ(2026-07-14 一式付け替え方式): 作成即装備をやめ、周回開始時にまとめて付け替える
     // =付け替え束が周回頭に揃い、装備lift(a)の測定窓(その周回まるごと)を最大に使う
     {
@@ -1026,28 +1045,31 @@ function wsDropMaterials(sim, mon, overkill) {
   dropMul *= (1 + P.ws.eqFx.compassDropPerLv * wsEqLv(sim, 'dimensionCompass')) * equip2Fx(sim).dropMul; // 新装備: 素材ドロップ系
   if (wsBuffActive(sim, 'voidTart')) dropMul *= P.ws.fx.voidDrop;
   // 図鑑の素材ボーナス: 旧floor(Lv/2)はLv1で0=効果ゼロ。連続値へ(2026-07-11 ⑮の2比1.000の修復)
-  const per = (D.base + Math.floor(Math.sqrt(lv) / D.lvDiv) + (P.ws.eqFx.almanacDropPerLv || 0) * wsEqLv(sim, 'monsterAlmanac')) * dropMul * ((P.equip2 && P.equip2.dropAllMul) || 1); // ×dropAllMul(2026-07-13「素材を増やし」)
+  const strength = monsterDropStrength(mon.typeId);
+  // 投資ぶんの追加ドロップ(レベル・図鑑・実績研究)=「最初は5%・育てると増える」の上乗せ
+  const invAdd = Math.floor(Math.sqrt(lv) / D.lvDiv) + (P.ws.eqFx.almanacDropPerLv || 0) * wsEqLv(sim, 'monsterAlmanac') + ((r.ms && r.ms.dropAdd) || 0);
   // 共通素材(ステージ基本): 決定的ローテーション
   const cList = st.c;
   const cPick = cList[ws.matRot % cList.length]; ws.matRot++;
-  let commonN = per * units;
-  // クリックとどめ: 共通+1(タップ率が高いほど確度が高い=期待値)
-  commonN += Math.min(1, sim.strat.tapRate / D.clickFinishDiv) * units;
-  // ノルマ余裕率2倍以上で撃破: 共通+1
-  const quota = Math.max(1, quotaAtElapsed(sim, sim.t - r.startT));
-  if (r.runCookies >= D.marginThresh * quota) commonN += units;
-  commonN += ((r.ms && r.ms.dropAdd) || 0) * units; // マイルストーン研究(第12次R5): 素材ドロップ+n
+  // 希少化(2026-07-15): 素の5% × 強さ × 素材レア度 + 投資ぶん。× 既存倍率 × dropAllMul。
+  const dam = ((P.equip2 && P.equip2.dropAllMul) || 1);
+  const commonN = (D.dropBase * strength * matTierDrop(cPick) + invAdd * matTierDrop(cPick)) * dropMul * dam * units;
   wsAddMat(sim, cPick, commonN);
+  // 条件枠(狙って倒した時の確定寄り): max(5%×強さ, レア基準) × レア度 × 倍率
+  const condExp = id => Math.max(D.dropBase * strength, D.rarity.r) * matTierDrop(id) * dropMul * dam * units;
+  // ノルマ余裕率2倍以上で撃破: 共通+条件枠
+  const quota = Math.max(1, quotaAtElapsed(sim, sim.t - r.startT));
+  if (r.runCookies >= D.marginThresh * quota) wsAddMat(sim, cPick, condExp(cPick));
   // 金ブースト中に撃破=黄金粉(唯一の経路)
-  if (goldenBoostActive(sim)) wsAddMat(sim, 'goldDust', units);
+  if (goldenBoostActive(sim)) wsAddMat(sim, 'goldDust', condExp('goldDust'));
   // オーバーキル=レア枠
-  if (overkill && st.r.length) wsAddMat(sim, st.r[0], per);
+  if (overkill && st.r.length) wsAddMat(sim, st.r[0], condExp(st.r[0]));
   // 狩り窓中の3体連続=ボス核+1
   if (sim.t < r.portalHuntUntil && P.chain && r.chainN > 0 && r.chainN % D.chainKills === 0) wsAddMat(sim, 'bossCore', 1);
   // 深層: 虚空糖(レア枠と別口の少量)
-  if (wsStageNo(sim) >= 6) wsAddMat(sim, 'voidSugar', 0.2 * units);
-  // バランス型: 万能粉
-  if (r.policy === 'balanced') wsAddMat(sim, 'universal', D.universalRate * units);
+  if (wsStageNo(sim) >= 6) wsAddMat(sim, 'voidSugar', condExp('voidSugar'));
+  // バランス型: 万能粉(0.8の確率で条件枠ドロップ=期待値)
+  if (r.policy === 'balanced') wsAddMat(sim, 'universal', D.universalRate * condExp('universal'));
   // ボス: 核(初回3・以後1)。深層は層進行のみ(ステージ解放は下の固定クエストへ移管・2026-07-13)
   if (mon.typeId === 'boss') {
     const first = !ws.everWs['boss:' + wsStageNo(sim) + (wsStageNo(sim) >= 6 ? ':' + ws.deepLayer : '')];
@@ -2547,7 +2569,7 @@ function defeatMonster(sim, mon) {
   r.killsByType[typeId] = (r.killsByType[typeId] || 0) + units;
   if (typeId === 'boss') r.killsSinceBoss = 0; else r.killsSinceBoss += units;
   wsDropMaterials(sim, mon, !!mon.overkill); // 素材ドロップ(条件ドロップ制・workshop_1ゲート)
-  equip2DropOre(sim, (P.mtype && P.mtype.rewardEvents && P.mtype.rewardEvents[mon.typeId]) || 1); // 新装備: 色素材(層帯・ゲートなし)
+  equip2DropOre(sim, (P.mtype && P.mtype.rewardEvents && P.mtype.rewardEvents[mon.typeId]) || 1, monsterDropStrength(mon.typeId)); // 新装備: 色素材(層帯・ゲートなし)
   // はやての運び屋: 撃破すると次の金クッキーが早く来る
   if (typeId && typeId.startsWith('speedy') && M) r.nextGoldenSpawnMultiplier *= M.speedyGoldenCut; // speedy系3変種すべて
   // 異世界接続網 段階2: 延長狩り(⑬・2026-07-09 作り替え)= 討伐のリズムを保つと狩り窓が続く。
@@ -2655,7 +2677,7 @@ function doPrestige(sim) {
     maxStage: r.maxStage,
     kills: r.kills, golden: r.goldenTaken, chainMax: r.chainMax,
     cpsSamples: r._cpsSamples || [],
-    eq2Made: Object.assign({}, r.eq2Made || {}), eq2NewEquipped: (r.eq2NewEquipped || []).slice(),
+    eq2Made: Object.assign({}, r.eq2Made || {}), eq2CraftTotal: r.eq2CraftTotal || 0, eq2NewEquipped: (r.eq2NewEquipped || []).slice(),
     firstEscapeAt: r.firstEscapeAt != null ? r.firstEscapeAt : null,
     gain,
     researchBought: Object.keys(r.research).filter(k => r.research[k]),
@@ -3097,7 +3119,7 @@ function simulate(strategy, opts) {
     duration: sim.t - r.startT, runCookies: r.runCookies,
     quotaHold: r.quotaHoldSeconds, maxStage: r.maxStage,
     kills: r.kills, golden: r.goldenTaken, cpsSamples: r._cpsSamples || [],
-    eq2Made: Object.assign({}, r.eq2Made || {}), eq2NewEquipped: (r.eq2NewEquipped || []).slice(),
+    eq2Made: Object.assign({}, r.eq2Made || {}), eq2CraftTotal: r.eq2CraftTotal || 0, eq2NewEquipped: (r.eq2NewEquipped || []).slice(),
     firstEscapeAt: r.firstEscapeAt != null ? r.firstEscapeAt : null,
     gain: prestigeGainOf(r.runCookies), partial: true,
     researchBought: Object.keys(r.research).filter(k => r.research[k]),

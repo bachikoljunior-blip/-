@@ -454,8 +454,9 @@ module.exports = {
     oreDropPerKill: 5,    // 討伐1体あたりの色素材期待ドロップ
     oreNeed: 3,           // レシピの色素材必要数
     stageMatNeed: 3,      // レシピのステージ素材必要数
-    dropAllMul: 2,        // 既存素材ドロップの全体増し(ユーザー指示「モンスターからの素材を増やし」)
-    dishReserve: 40       // 料理リザーブ(2026-07-14): 装備作成が料理素材を食い潰してバフを失わないための残量確保
+    dropAllMul: 1,        // 素材ドロップ全体倍率(2026-07-15「もっと少なく」で×2撤回=1)
+    dishReserve: 40,      // 料理リザーブ(2026-07-14): 装備作成が料理素材を食い潰してバフを失わないための残量確保
+    craftPerRunCap: 5     // 装備作成は1周回に0〜5個まで(2026-07-15 ユーザー指示)
   },
   ws: {
     // ステージ(v3 §13: 周回選択制・S6深層は層が無限)。ボス化=そのステージ累計討伐 bossBase+bossPer×(no-1)−コンパスLv
@@ -470,7 +471,8 @@ module.exports = {
     bossBase: 25, bossPer: 10,
     // 条件ドロップ(v4 §18): 通常撃破=基本素材/クリックとどめ=共通+1/金ブースト中=黄金粉/
     // オーバーキル(残HPの5倍)=レア枠/連続3体(狩り窓)=ボス核+1/余裕率2倍=共通+1/深層=虚空糖
-    drops: { base: 1, lvDiv: 6, overkillMul: 5, chainKills: 3, marginThresh: 2, clickFinishDiv: 7, universalRate: 0.8 },
+    // 希少化(2026-07-15): 素の落ちやすさ=dropBase(5%) × 強さ(√HP) × レア度。base/lvDivは投資上乗せ用に残す。
+    drops: { base: 1, lvDiv: 6, overkillMul: 5, chainKills: 3, marginThresh: 2, clickFinishDiv: 7, universalRate: 0.8, dropBase: 0.05, rarity: { c: 1.0, r: 0.35, b: 1.0 } },
     // 料理(600秒バフ・同時3品・転生で解除。レシピ=対応素材の初入手で開示)
     cookDur: 600, cookMax: 3, costMul: 4, // costMul: 素材が豊富すぎると料理が常時100%稼働になり、蒸留フラスコ(持続延長)と注文の素材セット報酬が無価値化(⑮の2/㉙で1.00=実測)。コスト増で稼働率<100%の周回を作る
     recipes: [
