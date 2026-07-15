@@ -1,0 +1,15 @@
+=== 期待値方式(48h・各回の稼ぎ力の持ち上げ) ===
+① 研究instant(各回≥1.2・13本) 10/13
+  OK res:fingerTechnique          S2 min=1.63
+  OK res:grandmaCrowd             S7 min=4.28
+  OK res:ovenBatch                S4 min=1.52
+  NG res:factoryNetwork           取得あり・全周回≥1.2に未達(最大幾何平均1.35)
+  NG res:spiceBlend               取得あり・全周回≥1.2に未達(最大幾何平均151.20)
+  OK res:portalNetwork            S6 min=1.25
+  NG res:bankClickDividend        取得あり・全周回≥1.2に未達(最大幾何平均2.00)
+  OK res:moonGlobalYeast          S7 min=22.32
+  OK res:portalGlobalFold         S4 min=22.53
+  OK res:galaxyAssembly           S9 min=1.25
+  OK res:blackHoleCompression     S7 min=5.00
+  OK res:quantumProofing          S5 min=1.25
+  OK res:antimatterRecipe         S7 min=17940361.12
