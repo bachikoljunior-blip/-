@@ -26,3 +26,42 @@
   OK rw:huntingCore               S9 min=116086.81
 ③-c 毎回取る方針の実在 19/20 NG: goldenPower
 ③ 報酬utility軸(短い枝分かれ比べ・同一状態から1周回ぶん・総クッキー比の中央値 ≥1.1)
+  OK rw:monsterDamage        S2 中央値比=1000000000.000 (n=12)
+  OK rw:monsterStay          S3 中央値比=1000000000.000 (n=12)
+  OK rw:crackedFang          S2 中央値比=1000000000.000 (n=12)
+  OK rw:brandHunt            S2 中央値比=1000000000.000 (n=3)
+  OK rw:deepPursuit          S3 中央値比=1000000000.000 (n=1)
+  OK rw:chainPrep            S9 中央値比=1000000000.000 (n=11)
+  OK rw:huntFocus            S6 中央値比=1000000000.000 (n=9)
+  OK rw:biteRecovery         S6 中央値比=1000000000.000 (n=2)
+  OK rw:crushedMill          S6 中央値比=1000000000.000 (n=1)
+  OK rw:goldenBeastMutation  S6 中央値比=1000000000.000 (n=1)
+  OK rw:goldenChain          S6 中央値比=1000000000.000 (n=9)
+  OK rw:beastScent           S6 中央値比=1000000000.000 (n=7)
+③ utility軸 12/12
+③ 報酬 合計 18/20 (instant 6/8 + utility 12/12)
+⑨-a 段階instant(各回≥1.05・⑬タイミング段は除外) 15/17
+  OK stage:ovenBatch:2            S7 min=2.91
+  OK stage:spiceBlend:2           S7 min=1.06
+  OK stage:fingerTechnique:2      S2 min=7.48
+  NG stage:grandmaCrowd:2         取得あり・全周回≥1.05に未達(最大幾何平均6.35)
+  OK stage:spiceBlend:3           S3 min=1.06
+  OK stage:moonGlobalYeast:2      S6 min=1.09
+  OK stage:moonGlobalYeast:3      S3 min=1.50
+  OK stage:grandmaCrowd:3         S3 min=1.21
+  OK stage:ovenBatch:3            S7 min=3.03
+  NG stage:factoryNetwork:2       取得あり・全周回≥1.05に未達(最大幾何平均1.00)
+  OK stage:factoryNetwork:3       S4 min=1.06
+  OK stage:portalNetwork:2        S9 min=5.10
+  OK stage:portalNetwork:3        S1 min=1.06
+  OK stage:galaxyAssembly:2       S7 min=1.85
+  OK stage:portalGlobalFold:2     S9 min=7.05
+  OK stage:galaxyAssembly:3       S6 min=1.19
+  OK stage:antimatterRecipe:2     S3 min=1.28
+⑨ 段階whole軸(短い枝分かれ比べ・同一状態から1周回ぶん・総クッキー比の中央値 ≥1.05・利息/余熱)
+  OK stage:bankClickDividend:2    S2 中央値比=1000000000.000 (n=12)
+  OK stage:bankClickDividend:3    S2 中央値比=1000000000.000 (n=12)
+  OK stage:fingerTechnique:3      S1 中央値比=500347455.877 (n=6)
+⑨ whole軸 3/3
+⑨ 段階 合計 18/20 (instant 15/17 + whole 3/3・⑬タイミング段3件は⑬で判定のため除外)
+⑬ タイミング機能(短い枝分かれ比べ・最適操作/その機能だけ完全放置の1周回総クッキー比の中央値, 要求[1.05,2.00])
