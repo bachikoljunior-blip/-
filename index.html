@@ -7764,7 +7764,6 @@ function buyMilestone(id) {
   // デバッグON中はトリガ未達成でも購入できる(通常研究のデバッグ購入と同じ扱い)
   if (!ms || msBought(id) || (!debugMode && !ms.trig())) return;
   const msNovel = !((state.msResearch || {})[id]);
-  if (!debugMode && msNovel && !unlockGateOk()) { showMessage("新しい実績研究はもうすぐ解放(30秒ごと)"); return; }
   const cost = msResearchCost(ms);
   if (!debugMode) {
     if (state.cookies.lt(cost)) { showMessage("クッキーが足りない"); return; }
@@ -12169,11 +12168,10 @@ addTap($("stageArrowR"), () => moveStageBy(1));
 // 次の新規解放を待たせる=新しいものの小出し。買い増し・周回を跨ぐ買い直しは対象外。
 // 1秒以内の連続解放は同時扱い(まとめて1イベント)としてゲートを通す。
 const UNLOCK_GAP_MS = 30000;
+// 新規解放アイテムの「30秒ごとに入荷」ドリップ制限は撤廃(2026-07-14 ユーザー指示)。
+// 解放されたものは即購入・即解放できる。常にtrueを返す。
 function unlockGateOk() {
-  // 初回も下限を適用(2026-07-14 ユーザー指示): アンカーはensureStateで開始/ロード時に設定される
-  if (!state.lastUnlockAt) { state.lastUnlockAt = Date.now() - 1000; return false; }
-  const d = Date.now() - state.lastUnlockAt;
-  return d < 1000 || d >= UNLOCK_GAP_MS;
+  return true;
 }
 function markUnlock() {
   const now = Date.now();
@@ -12190,7 +12188,6 @@ function buyUpgrade(id) {
   if (!u) return;
   if (!debugMode && !upgradeUnlocked(u)) return;
   state.everUpgrades = state.everUpgrades && typeof state.everUpgrades === "object" ? state.everUpgrades : {};
-  if (!debugMode && !state.everUpgrades[id] && !unlockGateOk()) { showMessage("新しい設備はもうすぐ入荷(30秒ごと)"); return; }
 
   const target = multiBuyPlan(u).count;
   let bought = 0;
@@ -12248,7 +12245,6 @@ function buyResearch(id) {
   if (!debugMode && !researchUnlocked(r)) return;
   if (state.research[id]) return;
   state.everResearch = state.everResearch && typeof state.everResearch === "object" ? state.everResearch : {};
-  if (!debugMode && !state.everResearch[id] && !unlockGateOk()) { showMessage("新しい研究はもうすぐ公開(30秒ごと)"); return; }
   if (!debugMode && !spend(researchCost(r))) return;
 
   if (!state.everResearch[id]) { state.everResearch[id] = true; markUnlock(); }
@@ -12282,7 +12278,6 @@ function buyResearchStage(id, stageNo) {
   const needSkill = stageNo === 2 ? RES_STAGE2[id] : RES_STAGE3[id];
   if (!hasSkill(needSkill)) return;
   state.everStage = state.everStage && typeof state.everStage === "object" ? state.everStage : {};
-  if (!debugMode && !state.everStage[id + ":" + stageNo] && !unlockGateOk()) { showMessage("次の段階はもうすぐ公開(30秒ごと)"); return; }
   if (!debugMode && !spend(researchStageCost(r, stageNo))) return;
 
   if (!state.everStage[id + ":" + stageNo]) { state.everStage[id + ":" + stageNo] = true; markUnlock(); }
