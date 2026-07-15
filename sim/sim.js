@@ -1523,7 +1523,10 @@ function computeProd(sim) {
     } else if (hasSkillEffect(sim, 'unlockSystem', 'masteryHigh')) {
       mastMul = Math.pow(1 + P.mastery.high, owned);
     }
-    const msMul = (r.ms && r.ms.up && r.ms.up[u.id]) || 1; // マイルストーン研究(第12次R5)
+    let msMul = (r.ms && r.ms.up && r.ms.up[u.id]) || 1; // マイルストーン研究(第12次R5)
+    // 効果多様化: 自設備数連動(own)=その設備の台数で伸びる / 他設備数連動(sup)=別設備の台数で伸びる
+    if (r.ms && r.ms.own && r.ms.own[u.id]) msMul *= Math.pow(1 + r.ms.own[u.id], owned);
+    if (r.ms && r.ms.sup && r.ms.sup[u.id]) for (const [src, rate] of r.ms.sup[u.id]) msMul *= Math.pow(1 + rate, r.upgrades[src] || 0);
     let contrib = owned * u.value * personal * resM * supM * mastMul * msMul;
     // 星屑パフェ: バフ中購入分は×1.25(所持数比で期待値化)
     const pfN = (r.parfaitUps && !wsOff(sim, 'dish:stardustParfait')) ? (r.parfaitUps[u.id] || 0) : 0;
@@ -1557,6 +1560,7 @@ function computeProd(sim) {
   }
 
   let click = clickRaw * bankM * clickSkillMul * prestigeMul * globalRes * killMulAll;
+  cpsRaw += (r.ms && r.ms.cpsAdd) || 0; // 効果多様化: 加算(+N/秒の固定生産)
   let cps = cpsRaw * cpsSkillMul * prestigeMul * globalRes * killMulAll * killMulCps;
 
   // 指先連動(毎秒生産×係数がタップ力に乗る)は研究「指先の型」解放後のみ(2026-07-15 ユーザー訂正
@@ -1610,7 +1614,7 @@ function computeProd(sim) {
     // 会心1%開始(第9次): 開始値0.01(=会心率1.0%)+設備√+最高到達層(周回内で育つ動的項)
     const score = R.fingerBase + Math.sqrt(f) * R.fingerSqrt + (R.fingerStage || 0) * r.maxStage + policyC;
     // scoreの飽和上限6.2=会心率99.8%止まり(2026-07-11 ㉓-3「100%には到達しない」: S2の指2.8万台で100.0%到達の対策)
-    const chance = Math.min(0.995, (1 - Math.exp(-Math.min(score, 6.2))) + equip2Fx(sim).critAdd); // 新装備: 会心率系(㉓-3の100%到達封鎖は維持)
+    const chance = Math.min(0.995, (1 - Math.exp(-Math.min(score, 6.2))) + equip2Fx(sim).critAdd + ((r.ms && r.ms.critAdd) || 0)); // 新装備+研究(効果多様化)の会心率系(㉓-3の100%到達封鎖は維持)
     critChanceOut = chance;
     let critMul = R.fingerCritBase + score * R.fingerCritGrow;
     // 段階2: 会心コンボ(期待値: 直近30秒の会心回数。キャップ撤廃済み)
@@ -1817,7 +1821,13 @@ const MILESTONE_RESEARCH = (() => {
   const eqTiers = [[10, 150], [40, 450], [120, 1200], [300, 3000]];
   for (const u of UPGRADES) {
     eqTiers.forEach(([n, cs], ti) => {
-      const fx = u.type === 'click' ? { click: 1.35 } : { up: { [u.id]: 1.5 } };
+      // 効果多様化(2026-07-15): 倍率だけでなく自設備数連動/他設備数連動を混ぜる
+      let fx;
+      if (u.type === 'click') fx = ti % 2 === 0 ? { click: 1.35 } : { critAdd: 0.02 };       // 会心確率も
+      else if (ti === 0) fx = { own: { [u.id]: 0.004 } };                                     // I: 自設備数連動(台数で伸びる)
+      else if (ti === 1) fx = { up: { [u.id]: 1.4 } };                                        // II: 倍率
+      else if (ti === 2) fx = { sup: [u.id, 'grandma', 0.0015] };                             // III: 他設備数連動(おばあちゃん台数で支援)
+      else fx = { up: { [u.id]: 1.5 } };                                                      // IV: 倍率
       add('ms_' + u.id + '_t' + (ti + 1), sim => (sim.run.upgrades[u.id] || 0) >= n, fx, cs);
     });
   }
@@ -1836,26 +1846,32 @@ const MILESTONE_RESEARCH = (() => {
   goldTiers.forEach(([n, cs], i) => add('ms_golden_g' + (i + 1), sim => (sim.run.msGoldens || 0) >= n, { golden: 1.3 }, cs));
   // タップ実績 6段(周回内)
   const tapTiers = [[300, 75], [1000, 200], [3000, 600], [8000, 1500], [20000, 3500], [50000, 7500]];
-  tapTiers.forEach(([n, cs], i) => add('ms_taps_p' + (i + 1), sim => (sim.run.msTaps || 0) >= n, { click: 1.4 }, cs));
+  tapTiers.forEach(([n, cs], i) => add('ms_taps_p' + (i + 1), sim => (sim.run.msTaps || 0) >= n, i % 2 === 0 ? { click: 1.4 } : { critAdd: 0.03 }, cs)); // 倍率と会心確率を交互
+  
   // ノルマ層実績 6段(周回内)
   const stageTiers = [[5, 150], [15, 450], [30, 1000], [60, 2000], [100, 4000], [150, 7500]];
-  stageTiers.forEach(([n, cs], i) => add('ms_stage_s' + (i + 1), sim => (sim.run.maxStage || 0) >= n, { all: 1.15 }, cs));
+  const stageAdd = [80, 4000, 260000, 2.2e7, 3e9, 6e11]; // 加算は層が深いほど大きい固定生産(効果多様化)
+  stageTiers.forEach(([n, cs], i) => add('ms_stage_s' + (i + 1), sim => (sim.run.maxStage || 0) >= n, i % 2 === 0 ? { all: 1.15 } : { cpsAdd: stageAdd[i] }, cs)); // 倍率と加算を交互
+  
   // 転生実績 4段(通算)
   const prTiers = [[2, 300], [5, 600], [10, 1500], [20, 3000]];
   prTiers.forEach(([n, cs], i) => add('ms_prestige_r' + (i + 1), sim => (sim.prestigeRuns || 0) >= n, { all: 1.2 }, cs));
   // スキル解放研究(2026-07-15 ユーザー訂正「スキルで"解放"で研究に追加される。実績じゃない」):
   // スキルを取るとそのスキル用の研究が解放され、研究として追加される(段2/3と同じゲート方式)。
   // simでは「スキル所持=その研究効果が有効」でモデル化(実績=milestoneではないが、効果適用は同一)。
+  // 効果多様化(2026-07-15): 系統ごとに効果型を散らす(倍率/加算/自設備数連動/他設備数連動/会心確率)
   const branchFx = id => {
-    if (id.startsWith('click_') || id === 'upgrade_godfinger') return { click: 1.3 };
+    if (id === 'upgrade_godfinger') return { critAdd: 0.04 };                 // 会心確率
+    if (id.startsWith('click_')) return { click: 1.3 };                       // 倍率
     if (id.startsWith('golden_')) return { golden: 1.25 };
     if (id.startsWith('monster_') || id === 'hunt_analysis' || id.startsWith('unlock_reward_')) return { hunt: 1.3 };
-    if (id.startsWith('auto_') || id.startsWith('upgrade_')) return { cps: 1.3 };
-    if (id.startsWith('economy_') || id === 'order_board') return { cps: 1.2 };
+    if (id.startsWith('auto_')) return { own: { oven: 0.003 } };              // 自設備数連動(オーブン台数で伸びる)
+    if (id.startsWith('upgrade_')) return { cps: 1.3 };
+    if (id.startsWith('economy_') || id === 'order_board') return { sup: ['bank', 'grandma', 0.002] }; // 他設備数連動(銀行がおばあちゃんで伸びる)
     if (id.startsWith('research_')) return { all: 1.08 };
     if (id.startsWith('reward_')) return { hunt: 1.2 };
-    if (id.startsWith('workshop_')) return { dropAdd: 1 };
-    if (id.startsWith('start_') || id === 'offline_1' || id === 'endless_oven') return { all: 1.05 };
+    if (id.startsWith('workshop_')) return { dropAdd: 1 };                    // 加算(素材)
+    if (id.startsWith('start_') || id === 'offline_1' || id === 'endless_oven') return { cpsAdd: 50 }; // 加算(+固定生産)
     return { all: 1.1 };
   };
   const csLadder = [100, 300, 900, 2500, 7000];
@@ -1871,7 +1887,7 @@ const MILESTONE_RESEARCH = (() => {
 // 未購入で条件を満たしたものを自動購入(コスト=cps×msCostSec。安さゆえ全プレイヤー即買いのモデル)
 function tryBuyMilestones(sim, prod) {
   const r = sim.run;
-  if (!r.ms) r.ms = { up: {}, click: 1, cps: 1, all: 1, golden: 1, hunt: 1, dropAdd: 0, bought: {} };
+  if (!r.ms) r.ms = { up: {}, click: 1, cps: 1, all: 1, golden: 1, hunt: 1, dropAdd: 0, bought: {}, cpsAdd: 0, own: {}, sup: {}, critAdd: 0 }; // 効果多様化(2026-07-15): cpsAdd=加算/own=自設備数連動/sup=他設備数連動/critAdd=会心確率
   for (const m of MILESTONE_RESEARCH) {
     // 量産体制(2026-07-13 第13次ペーシング): repeatSec付きカードは時限クールダウンで何度でも買える
     // =レート制御された成長のメトロノーム(45秒ごと×1.25 → 3分窓あたり×2.44が下支え=新⑥の床)
@@ -1901,6 +1917,11 @@ function tryBuyMilestones(sim, prod) {
     if (m.fx.spawn) r.ms.spawn = (r.ms.spawn || 1) * m.fx.spawn;
     if (m.fx.stay) r.ms.stay = (r.ms.stay || 1) * m.fx.stay;
     if (m.fx.hp) r.ms.hp = (r.ms.hp || 1) * m.fx.hp;
+    // 効果多様化(2026-07-15 ユーザー「倍率ばっかじゃなくプラス・自/他設備数の反映も」)
+    if (m.fx.cpsAdd) r.ms.cpsAdd = (r.ms.cpsAdd || 0) + m.fx.cpsAdd;                  // 加算: +N/秒の固定生産
+    if (m.fx.own) for (const k in m.fx.own) r.ms.own[k] = (r.ms.own[k] || 0) + m.fx.own[k]; // 自設備数連動
+    if (m.fx.sup) { const [up, src, rate] = m.fx.sup; (r.ms.sup[up] = r.ms.sup[up] || []).push([src, rate]); } // 他設備数連動(支援)
+    if (m.fx.critAdd) r.ms.critAdd = (r.ms.critAdd || 0) + m.fx.critAdd;              // 確率: 会心率+N
     if (!sim.everMs) sim.everMs = {};
     if (!sim.everMs[m.id]) { sim.everMs[m.id] = true; pushUnlock(sim, 'research', m.id); } // 解放イベントは初回のみ(買い直しはT2の「新規解放」に数えない)
   }
