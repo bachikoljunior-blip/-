@@ -9981,7 +9981,7 @@ function productionMomentumMul() {
   // 時間スケールを撤廃し購入駆動へ=「この周回で買った設備数」で全生産が伸びる(1台あたりの伸び率は固定)。
   // 増えるのは経過時間ではなく購入という行動=放置ゲーム本来の複利。買えなくなると自然にプラトー。
   if (!msBought("ms_momentum")) return 1;
-  const exp = Math.min((state.momBuysThisRun || 0) / 32, 200);
+  const exp = Math.min((state.momBuysThisRun || 0) / 16, 200); // sim同期(momBuyDiv=16・上限exp200)
   return Math.pow(1.25, exp);
 }
 
