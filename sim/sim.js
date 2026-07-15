@@ -491,6 +491,41 @@ function pickMonsterType(sim) {
   r.mtAcc[best] -= 1;
   return best;
 }
+// モンスターの色(強さ段)= ノルマ層で決まる確率分布(2026-07-15 ユーザー指示):
+// 層が進むと「次の色(一段強い)」が低確率で出始め、層が進むほどその確率が上がり、さらに次の色が低確率で…と連鎖。
+// 初期色の確率はゼロにはならない(floorW で薄く残り続ける)。色tier=1..maxC(=equip2.tiers)。
+function monsterColorWeights(sim) {
+  const MC = P.mcolor || {};
+  const maxC = MC.maxTier || (P.equip2 && P.equip2.tiers) || 6;
+  const band = MC.layerStep || (P.equip2 && P.equip2.layerBand) || 5; // 何層で色が1段進むか
+  const floorW = MC.floorW != null ? MC.floorW : 0.15; // 既出の色が薄く残る下限
+  const emergeW = MC.emergeW != null ? MC.emergeW : 0.30; // 次の色が出始める最大確率(1段ぶん手前で0→emergeW)
+  const decay = MC.decay != null ? MC.decay : 0.6; // 深い既出色ほど薄くなる減衰
+  const prog = (sim.run.maxStage || 0) / band; // 連続の色進行(層/band)
+  const w = [];
+  for (let c = 1; c <= maxC; c++) {
+    const d = prog - (c - 1); // この色の出始め(c-1)からどれだけ進んだか
+    if (d < -1) w.push(0);                                   // 2段以上先の色: まだ出ない
+    else if (d < 0) w.push(emergeW * (1 + d));               // 次の色: 低確率で出始め、進むほど上がる
+    else w.push(floorW + (1 - floorW) * Math.pow(decay, d)); // 既出の色: floor以上で残る(ゼロにならない)
+  }
+  return w;
+}
+// 決定的な色抽選(simは乱数を使わない=蓄積器方式)
+function pickColorTier(sim) {
+  const w = monsterColorWeights(sim);
+  const r = sim.run;
+  if (!r.colorAcc) r.colorAcc = [];
+  let tot = 0; for (const x of w) tot += x;
+  if (tot <= 0) return 1;
+  let best = 1, bestV = -Infinity;
+  for (let c = 1; c <= w.length; c++) {
+    r.colorAcc[c] = (r.colorAcc[c] || 0) + w[c - 1] / tot;
+    if (r.colorAcc[c] > bestV) { bestV = r.colorAcc[c]; best = c; }
+  }
+  r.colorAcc[best] -= 1;
+  return best;
+}
 // 種類×報酬カテゴリの相性倍率(条件㉔の「その回だけ無効」= すべて×1.0)
 function affinityOf(sim, typeId, category) {
   if (sim.opt.disableAffinity) return 1;
@@ -860,10 +895,11 @@ function matTierDrop(id) {
   const rareIds = { ironShard: 1, silentCore: 1, goldDust: 1, cometShard: 1, voidSugar: 1 };
   return rareIds[id] ? R.r : R.c;
 }
-// 色素材ドロップ: モンスターの色=ノルマ層の帯(band層ごとに変わる)。工房スキル不要
-function equip2DropOre(sim, units, strength) {
+// 色素材ドロップ: モンスターの色(colorTier)=そのモンスターの色の素材を落とす(2026-07-15 色スポーン連動)
+function equip2DropOre(sim, units, strength, colorTier) {
   const E = P.equip2; if (!E) return;
-  const t = Math.max(1, Math.min(E.tiers, 1 + Math.floor((sim.run.maxStage || 0) / E.layerBand)));
+  const t = colorTier ? Math.max(1, Math.min(E.tiers, colorTier))
+    : Math.max(1, Math.min(E.tiers, 1 + Math.floor((sim.run.maxStage || 0) / E.layerBand)));
   const ws = sim.ws;
   const oreId = 'ore_t' + t;
   // 希少化: 素の5% × 強さ × レア度 + 装備の色素材ボーナス(oreAdd=投資ぶん)
@@ -2574,7 +2610,7 @@ function defeatMonster(sim, mon) {
   r.killsByType[typeId] = (r.killsByType[typeId] || 0) + units;
   if (typeId === 'boss') r.killsSinceBoss = 0; else r.killsSinceBoss += units;
   wsDropMaterials(sim, mon, !!mon.overkill); // 素材ドロップ(条件ドロップ制・workshop_1ゲート)
-  equip2DropOre(sim, (P.mtype && P.mtype.rewardEvents && P.mtype.rewardEvents[mon.typeId]) || 1, monsterDropStrength(mon.typeId)); // 新装備: 色素材(層帯・ゲートなし)
+  equip2DropOre(sim, (P.mtype && P.mtype.rewardEvents && P.mtype.rewardEvents[mon.typeId]) || 1, monsterDropStrength(mon.typeId), mon.colorTier); // 新装備: 色素材=そのモンスターの色
   // はやての運び屋: 撃破すると次の金クッキーが早く来る
   if (typeId && typeId.startsWith('speedy') && M) r.nextGoldenSpawnMultiplier *= M.speedyGoldenCut; // speedy系3変種すべて
   // 異世界接続網 段階2: 延長狩り(⑬・2026-07-09 作り替え)= 討伐のリズムを保つと狩り窓が続く。
@@ -2972,12 +3008,14 @@ function advanceTick(sim, strategy) {
         if (met && !r.quotaFailed) {
           const level = monsterLevel(sim);
           const typeId = pickMonsterType(sim);
+          const colorTier = pickColorTier(sim); // 色(強さ段)=ノルマ層の確率分布(2026-07-15)
+          const colorHp = Math.pow((P.mcolor && P.mcolor.hpMul) || 1.2, colorTier - 1); // 上位色ほど一段強い
           const tHp = (P.mtype && P.mtype.hpMul && P.mtype.hpMul[typeId]) || 1;
           const tStay = (P.mtype && P.mtype.stayMul && P.mtype.stayMul[typeId]) || 1;
-          const maxHp = Math.max(40, Math.floor(monsterHpValue(sim, level) * tHp * (r.nextMonsterHpMultiplier || 1)));
+          const maxHp = Math.max(40, Math.floor(monsterHpValue(sim, level) * tHp * colorHp * (r.nextMonsterHpMultiplier || 1)));
           r.nextMonsterHpMultiplier = 1;
           r.monster = {
-            typeId, level, hp: maxHp, maxHp,
+            typeId, colorTier, level, hp: maxHp, maxHp,
             stayLeft: monsterStayMs(sim) * tStay / 1000,
             goldenChainMultiplier: r.goldenChainReady ? 1 + (r.perks.goldenChain || 0) * effRw(sim, 'goldenChain') : 1,
             goldenFirstHitReady: r.goldenFirstHitReady,
