@@ -764,6 +764,30 @@ const EQUIP2_FX = {
   ]
 };
 const EQUIP2_FLATCAP = { critAdd: 0.3, upDisc: 0.5, resDisc: 0.5 };
+// 装備の方針適合スコア(2026-07-15): A/B/C固定モデルでは「方針が価値を置くステータスに合う装備」を選ばないと
+// B(トレードオフ)の下げが効いてlift(a)が壊れる(R22実測min0.31)。方針の得意ステータスへの寄与でスコア化し、
+// 下げは「その方針が使わないステータスなら軽い」=Bの下げが遊びに合わない所へ落ちる。C型は状況頻度で割引。
+const EQ2_UNIT = { cpsMul: 1, allMul: 1.2, clickMul: 0.9, dmgMul: 0.7, killValMul: 0.7, holdBonus: 0.8, goldenAmtMul: 0.9, goldenRateMul: 2.5, goldenBoostMul: 1.5, dropMul: 0.3, oreAdd: 0.1, rewardLvAdd: 0.2, critAdd: 6, upDisc: 3, resDisc: 3, spawnMul: 2, stayMul: 1 };
+const EQ2_FAV = {
+  bake: new Set(['cpsMul', 'allMul', 'holdBonus', 'upDisc', 'resDisc']),
+  click: new Set(['clickMul', 'critAdd', 'allMul']),
+  golden: new Set(['goldenAmtMul', 'goldenRateMul', 'goldenBoostMul', 'allMul']),
+  hunt: new Set(['dmgMul', 'killValMul', 'rewardLvAdd', 'stayMul', 'spawnMul', 'allMul', 'oreAdd'])
+};
+const EQ2_CONDFREQ = { goldenBoost: 0.15, monster: 0.4, boss: 0.06, quotaHold: 0.8, deep: 0.3, buyUp: 0.12, buyRes: 0.10, runStart: 0.12 };
+function equip2Rel(pol, stat) { const f = EQ2_FAV[pol]; if (!f) return 0.7; return f.has(stat) ? 1 : 0.2; }
+function equip2Score(sim, it) {
+  const def = EQUIP2_FX[it.cat] && EQUIP2_FX[it.cat][(it.variant || 1) - 1];
+  if (!def) return 0;
+  const pol = sim.run.policy || 'balanced';
+  const scale = Math.pow(1.5, it.tier - 1);
+  let s = 0;
+  const u = def.up || [];
+  for (let i = 0; i < u.length; i += 2) s += (EQ2_UNIT[u[i]] || 0.3) * u[i + 1] * scale * equip2Rel(pol, u[i]);
+  if (def.m === 'B' && def.down) for (let i = 0; i < def.down.length; i += 2) s -= (EQ2_UNIT[def.down[i]] || 0.3) * (1 - def.down[i + 1]) * equip2Rel(pol, def.down[i]);
+  if (def.m === 'C') s *= (EQ2_CONDFREQ[def.cond] || 0.2);
+  return s;
+}
 // C型の状況(on/off・数連動ではない)。sim/ゲーム共通で読める信号のみ。
 function equip2CondOn(sim, cond) {
   const r = sim.run;
@@ -860,7 +884,8 @@ function equip2Tick(sim) {
     for (const slot of Object.keys(pend)) {
       const it = equip2ById(pend[slot]);
       const cur = ws.eq2Equipped[slot] ? equip2ById(ws.eq2Equipped[slot]) : null;
-      if (it && (!cur || cur.tier < it.tier)) {
+      // 方針適合スコアで付け替え(ティア比較でなく=B下げが遊びに合わない装備を弾く)
+      if (it && (!cur || equip2Score(sim, cur) < equip2Score(sim, it))) {
         ws.eq2Equipped[slot] = it.id;
         (r.eq2NewEquipped || (r.eq2NewEquipped = [])).push(it.id);
       }
@@ -877,16 +902,11 @@ function equip2Tick(sim) {
   // 方針レーン制(2026-07-14 v2): 各方針は(カテゴリ,ティア)ごとに担当色銘 v=(方針idx+ティア+カテゴリidx)%9+1 を
   // 優先して作り、装備はティアアップ時のみ(横滑り付け替え廃止=lift(a)を壊さない)。
   // 9方針×54種のレーンで486種のカバレッジがちょうど一巡する。
-  const stratIdx = Math.max(0, parseInt(String(sim.strat && sim.strat.id || 'S1').replace(/\D/g, ''), 10) - 1) % 9;
-  const laneV = it => ((stratIdx + it.tier + EQUIP2_CATS.indexOf(it.cat)) % 9) + 1;
-  // レーン距離(2026-07-14 カバレッジ76/486不動の修正): 旧・二値(レーン一致か否か)だと、レーン銘が
-  // 現ステージのラインナップに無い(ばらけ配置)場合に全方針が同じ銘へフォールバックして重なる。
-  // 円環距離にすると、同ティア同カテゴリの選好順が方針ごとに巡回シフトし、フォールバック先も分散する。
-  const laneDist = it => (((it.variant - laneV(it)) % 9) + 9) % 9;
-  // ※ティア階段方式(装備中+1のみ作る)はR20e実測で不採用: (c)毎周回全カテゴリ作成が170/170→117/171に
-  // 崩れ(ティア進行がステージ解放より速くレーン銘待ちの空振り周回が出る)、カバレッジも87どまり。
-  // 高ティア優先+円環距離レーンに戻す。(b)カバレッジの本設計は次セッションのキュー参照。
-  const items = equip2Items().slice().sort((a, b) => (b.tier - a.tier) || (catOrder[a.cat] - catOrder[b.cat]) || (laneDist(a) - laneDist(b)));
+  // 作成順(2026-07-15 A/B/C固定モデル): カテゴリをローテ順に回し、各カテゴリ内は方針適合スコアが高い変種から作る。
+  // =各方針は自分の遊びに合う装備を作って着ける(B下げは使わないステータスへ・C状況は頻度で割引)。
+  // 方針×ステージ×ティアで最良変種が違う=作る変種が方針間で散る。(b)カバレッジは1000h窓で巡回。
+  const items = equip2Items().slice().sort((a, b) =>
+    (catOrder[a.cat] - catOrder[b.cat]) || (equip2Score(sim, b) - equip2Score(sim, a)) || (b.tier - a.tier));
   for (const it of items) {
     if (!it.stages.includes(curStage)) continue;
     const cap = 1; // 9カテゴリ各1個/周回(アクセは甲/乙で別カテゴリ)
@@ -914,7 +934,7 @@ function equip2Tick(sim) {
       const pend = ws.eq2Pending || (ws.eq2Pending = {});
       const curId = pend[slot] || ws.eq2Equipped[slot];
       const cur = curId ? equip2ById(curId) : null;
-      if (!cur || cur.tier < it.tier) pend[slot] = it.id;
+      if (!cur || equip2Score(sim, cur) < equip2Score(sim, it)) pend[slot] = it.id;
       if (upgradedSlot) { // 合成で装備中の物が消えた枠は即時充当(空白を作らない)
         ws.eq2Equipped[upgradedSlot] = it.id;
         (r.eq2NewEquipped || (r.eq2NewEquipped = [])).push(it.id);
