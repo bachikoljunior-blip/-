@@ -2981,17 +2981,9 @@ function simulate(strategy, opts) {
 }
 
 // 購入ヘルパー(unlockイベント記録込み)
-// 解放ゲート(2026-07-14 ユーザー指示・当初1分→同日「いや30秒以上でいい」): 直前の解放イベントから
-// unlockGap秒(既定30)経つまで、新種の初取得・新規開示を待たせる=入荷の小出し。
-// 同一秒に複数の解放が出るのは1イベント扱い(T2の同一秒統合)なので通す。
-// 既所持種の買い増し・研究の買い直しは対象外。ゲーム側も同じゲートで同期する。
-function unlockGateOk(sim) {
-  const gap = (P.t2 && P.t2.unlockGap != null) ? P.t2.unlockGap : 30;
-  // 初回も下限を適用(2026-07-14 ユーザー指示「初研究、設備の解放もそれ下限にして」):
-  // ゲーム開始(解放イベントがまだ無い)から30秒経つまで、最初の設備・研究も解放しない
-  if (sim.lastUnlockT === -Infinity) return sim.t >= gap;
-  return sim.t === sim.lastUnlockT || sim.t - sim.lastUnlockT >= gap;
-}
+// 解放ゲート(30秒下限)は廃止(2026-07-15 ユーザー指示「開放まで30待たないといけないクソ機能消した」)。
+// 常に通す=待ち時間なし。解放イベントの記録(pushUnlock/unlockEvents)はT2「解放≥1件」「第0回上限」で使うため維持。
+function unlockGateOk(sim) { return true; }
 function pushUnlock(sim, kind, id, n) {
   sim.lastUnlockT = sim.t;
   const ev = { t: sim.t, kind, id };

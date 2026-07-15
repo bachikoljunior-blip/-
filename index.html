@@ -6759,7 +6759,6 @@ function ensureState() {
   // 解放ゲートのアンカー(2026-07-14 ユーザー指示「初研究、設備の解放もそれ下限にして」):
   // 開始/ロード時点をアンカーにして、最初の設備・研究の解放もゲーム開始から30秒待つ。
   // -1000は「同時扱い(1秒以内)のバイパス」を初回に効かせないためのずらし。
-  if (!state.lastUnlockAt) state.lastUnlockAt = Date.now() - 1000;
 
   state.upgrades = { ...base.upgrades, ...(state.upgrades || {}) };
   state.research = { ...base.research, ...(state.research || {}) };
@@ -12164,21 +12163,10 @@ function updateStageArrows() {
 addTap($("stageArrowL"), () => moveStageBy(-1));
 addTap($("stageArrowR"), () => moveStageBy(1));
 
-// 解放ゲート(2026-07-14 ユーザー指示・当初「1分以上」→同日「いや30秒以上でいい」・sim同期):
-// 直前の新規解放(新種の設備初購入・研究/段階/実績研究の初購入・ステージ解放)から30秒経つまで、
-// 次の新規解放を待たせる=新しいものの小出し。買い増し・周回を跨ぐ買い直しは対象外。
-// 1秒以内の連続解放は同時扱い(まとめて1イベント)としてゲートを通す。
-const UNLOCK_GAP_MS = 30000;
-function unlockGateOk() {
-  // 初回も下限を適用(2026-07-14 ユーザー指示): アンカーはensureStateで開始/ロード時に設定される
-  if (!state.lastUnlockAt) { state.lastUnlockAt = Date.now() - 1000; return false; }
-  const d = Date.now() - state.lastUnlockAt;
-  return d < 1000 || d >= UNLOCK_GAP_MS;
-}
-function markUnlock() {
-  const now = Date.now();
-  if (!state.lastUnlockAt || now - state.lastUnlockAt >= 1000) state.lastUnlockAt = now;
-}
+// 解放ゲート(30秒下限)は廃止(2026-07-15 ユーザー指示「開放まで30待たないといけないクソ機能消した」)。
+// 常に解放可・待ち時間なし。呼び出し側の互換のため関数は残す(no-op)。
+function unlockGateOk() { return true; }
+function markUnlock() { }
 function buyUpgrade(id) {
   if (pausedForSkillChoice()) {
     openSkillChoiceScreen();
