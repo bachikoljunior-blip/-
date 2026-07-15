@@ -83,15 +83,16 @@ function summarize(sim) {
     t3cAll++;
     if (r.firstEscapeAt == null || r.firstEscapeAt >= 0.8 * r.duration) t3cOk++;
   }
-  // 新条件「毎秒生産が3分おきに2倍以上」(2026-07-13 ユーザー追加): 周回内の180秒サンプル列で
-  // 連続ペア(前サンプル>0)ごとに 次サンプル≥2×前サンプル を判定。ペア単位で集計。
+  // 新条件「毎秒生産が3分おきに1.1倍以上」(2026-07-15 ユーザー緩和: 2倍→1.1倍): 周回内の180秒サンプル列で
+  // 連続ペア(前サンプル>0)ごとに 次サンプル≥1.1×前サンプル を判定。ペア単位で集計。
+  const DBL_RATIO = 1.1;
   let dblOk = 0, dblAll = 0;
   for (const r of full) {
     const cs = r.cpsSamples || [];
     for (let i = 1; i < cs.length; i++) {
       if (!(cs[i - 1] > 0)) continue;
       dblAll++;
-      if (cs[i] >= 2 * cs[i - 1]) dblOk++;
+      if (cs[i] >= DBL_RATIO * cs[i - 1]) dblOk++;
     }
   }
   // T2(解放テンポ・2026-07-11 ユーザー決定「解放条件は上限だけにして、下限はなくていい」=待たされる時間だけ判定):
@@ -182,7 +183,7 @@ function printBaseline(results) {
   // 「早い」の線引き【仮】: 方針ごとの周回時間の中央値が、全方針の中央値以下のもの。遅い方針は(対象外)。
   const meds = results.map(r => r.sum.medianDur).filter(x => Number.isFinite(x)).sort((a, b) => a - b);
   const cutoff = meds.length ? meds[meds.length >> 1] : Infinity;
-  console.log('ID  名称              周回数 総クッキー   ④x1e8  (参考:旧⑤) 新⑥3分2倍 T3c討伐維持 T1周回時間 T2解放≥1 T2第0回 (参考)T3a廃止 T3b維持±20%(早い方針) ⑭PT≥1 ㉑存在感 全解放 | 参考: 旧⑥ペース 旧㉒単調増');
+  console.log('ID  名称              周回数 総クッキー   ④x1e8  (参考:旧⑤) (参考)旧新⑥撤廃 T3c討伐維持 T1周回時間 T2解放≥1 T2第0回 (参考)T3a廃止 T3b維持±20%(早い方針) ⑭PT≥1 ㉑存在感 全解放 | 参考: 旧⑥ペース 旧㉒単調増');
   for (const r of results) {
     const fullT = r.sum.fullT === Infinity ? '未' : fmtT(r.sum.fullT);
     const t2r0 = r.sum.t2Run0 ? `${r.sum.t2Run0.ok ? 'OK' : 'NG'}(中央値${r.sum.t2Run0.med.toFixed(2)})` : '-';

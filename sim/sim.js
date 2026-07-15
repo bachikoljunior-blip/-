@@ -1473,13 +1473,11 @@ function computeProd(sim) {
   if (!rwOff(sim, 'goldenBeastMutation') && (r.perks.goldenBeastMutation || 0) > 0) globalRes *= 1 + (r.perks.goldenBeastMutation || 0) * (P.rw.goldenBeastMutationProd || 0);
   if (!rwOff(sim, 'brandHunt') && (r.perks.brandHunt || 0) > 0) globalRes *= 1 + (r.perks.brandHunt || 0) * (P.rw.brandHuntProd || 0);
 
-  // 生産の勢い(2026-07-15 ユーザー指示「繰り返しで買う量産体制消せ」の代替=新⑥の床の作り直し):
-  // 旧・量産体制(45秒ごとに手動で買い直す×1.25)を、研究で一度解放したら自動でかかる時限の勢いに置換。
-  // 周回経過に対し massProdMul^(経過/massProdSec) で全生産が伸びる=180秒窓で×1.25^(180/32)≈3.5(新⑥の3分2倍を余裕を持って達成)。
-  // 一様な全生産倍率=①③⑨⑫のlift比・㉘シェア・④⑤の周回比に中立(全周回同形)。上限=T1上限(7200s)で頭打ち。
+  // 生産の勢い(2026-07-15 ユーザー指示「研究の効果は固定・その回永続にして。経過時間で増えるのはナシ」):
+  // 時間スケール(旧 massProdMul^(経過/秒))を撤廃し、研究解放で全生産×momentumFixedMul の固定倍率に。
+  // 買ったら周回中ずっと一定=一様倍率=①③⑨⑫lift比・㉘シェア・④⑤周回比に中立。周回内の伸び(新⑥1.1倍/3分)は設備購入の自然な複利が担う。
   if (r.ms && r.ms.momentum && P.msResearch) {
-    const el = Math.min(sim.t - r.startT, (P.msResearch.momentumCapSec || 7200));
-    globalRes *= Math.pow(P.msResearch.massProdMul, Math.max(0, el) / P.msResearch.massProdSec);
+    globalRes *= (P.msResearch.momentumFixedMul || 2);
   }
 
   // ③死に報酬対策(第12次P・枝分かれmeasure下では安全): 討伐ダメージ系報酬(割れた牙/焼き印狩り)を「討伐数×全生産倍率」へ繋ぐ。

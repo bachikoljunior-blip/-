@@ -9443,7 +9443,7 @@ const MARGIN_THRESH = 2;
 // 素材ドロップの希少化(2026-07-15 ユーザー指示「もっと少なく・最初は5%に一個・強さ/レア度でドロップ率を変える」):
 // 素の落ちやすさ=基準5% × モンスターの強さ(√HP倍率:強敵ほど落とす) × 素材レア度(希少なほど落ちにくい)。
 // 図鑑/研究/料理などの投資ぶんはこれに上乗せ=「最初は5%、育てると増える」。核(b)は強敵限定なので係数1のまま。
-const MAT_DROP_BASE = 0.05;
+const MAT_DROP_BASE = 0.20;
 const MAT_RARITY_DROP = { c: 1.0, r: 0.35, b: 1.0 };
 function monsterDropStrength(typeId) {
   const hp = (MONSTER_TYPES[typeId] && MONSTER_TYPES[typeId].hpMul) || 1;
@@ -9976,9 +9976,9 @@ function prestigeMultiplier() {
 // 生産の勢い(2026-07-15 sim同期): 研究「生産の勢い」解放中、周回経過で全生産が自動で伸びる。
 // 3分でおよそ2倍(×1.25^(経過/45秒))。上限=7200秒で頭打ち。旧・量産体制(繰り返し購入)の自動版。
 function productionMomentumMul() {
-  if (!msBought("ms_momentum")) return 1;
-  const el = Math.min(Math.max(0, (Date.now() - (state.runStart || Date.now())) / 1000), 14400);
-  return Math.pow(1.25, el / 32); // 32秒ごと×1.25=約110秒で2倍(新⑥の3分2倍を余裕を持って満たす・sim同期)。上限14400s(長周回でも二倍化継続)
+  // 2026-07-15 ユーザー指示「研究の効果は固定・その回永続。経過時間で増えるのはナシ」:
+  // 時間スケールを撤廃し、研究解放で全生産×2の固定倍率に(買ったらこの周回ずっと一定)。
+  return msBought("ms_momentum") ? 2 : 1;
 }
 
 function clickSkillMultiplier() {

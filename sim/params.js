@@ -142,7 +142,7 @@ module.exports = {
   // 実績研究の固定コスト表(2026-07-11「コストはゲーム内で固定して」): build_ms_costs.js が
   // 10方針100hの測定から各研究の初回購入額(中央値・丸めq5)を焼き込む。無い間は動的フォールバック。
   // massProd=量産体制(2026-07-13 メトロノーム): 繰り返し購入の間隔と倍率(新⑥の床=×1.25^4/3分=×2.44)
-  msResearch: { massProdMul: 1.25, massProdSec: 32, momentumCapSec: 14400,
+  msResearch: { massProdMul: 1.25, massProdSec: 32, momentumCapSec: 14400, momentumFixedMul: 2,
     costTable: (function () { try { return require('./ms_costs.json'); } catch (e) { return null; } })() },
 
   // huntDirect: satMax 15→14(2026-07-12 ②改2: huntのlift3.09が帯上限3.00超過→飽和を微絞り)
@@ -472,7 +472,7 @@ module.exports = {
     // 条件ドロップ(v4 §18): 通常撃破=基本素材/クリックとどめ=共通+1/金ブースト中=黄金粉/
     // オーバーキル(残HPの5倍)=レア枠/連続3体(狩り窓)=ボス核+1/余裕率2倍=共通+1/深層=虚空糖
     // 希少化(2026-07-15): 素の落ちやすさ=dropBase(5%) × 強さ(√HP) × レア度。base/lvDivは投資上乗せ用に残す。
-    drops: { base: 1, lvDiv: 6, overkillMul: 5, chainKills: 3, marginThresh: 2, clickFinishDiv: 7, universalRate: 0.8, dropBase: Number(process.env.DROP_BASE) || 0.05, rarity: { c: 1.0, r: Number(process.env.DROP_RARE) || 0.35, b: 1.0 } },
+    drops: { base: 1, lvDiv: 6, overkillMul: 5, chainKills: 3, marginThresh: 2, clickFinishDiv: 7, universalRate: 0.8, dropBase: Number(process.env.DROP_BASE) || 0.20, rarity: { c: 1.0, r: Number(process.env.DROP_RARE) || 0.35, b: 1.0 } },
     // 料理(600秒バフ・同時3品・転生で解除。レシピ=対応素材の初入手で開示)
     cookDur: 600, cookMax: 3, costMul: 4, // costMul: 素材が豊富すぎると料理が常時100%稼働になり、蒸留フラスコ(持続延長)と注文の素材セット報酬が無価値化(⑮の2/㉙で1.00=実測)。コスト増で稼働率<100%の周回を作る
     recipes: [
