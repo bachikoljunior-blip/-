@@ -6,7 +6,7 @@ const P = require('./params.js');
 // ================= 静的データ =================
 const UPGRADES = [
   { id: 'finger', type: 'click', value: 1, base: 0.0506, growth: 1.32 },
-  { id: 'grandma', type: 'cps', value: 1, base: 1000, growth: 1.30 }, // base 40→1000(2026-07-13 ユーザー指定「初期コストは1000」。1台目の生産は1のまま=強化は所持数スケール側)
+  { id: 'grandma', type: 'cps', value: 1, base: 0.9, growth: 1.30 }, // base=0.9(2026-07-15 ユーザー「ゲーム内で買える初回価格を1000に」=1100×0.9^0.6→q5cost=1000。旧base1000は初回69000だった。1台目生産1のまま・強化は所持数スケール)
   { id: 'oven', type: 'cps', value: 8, base: 390, growth: 1.35 },
   { id: 'factory', type: 'cps', value: 45, base: 2600, growth: 1.37 },
   // 第12次R3: 初台ボーナス(presence)が第0回の中位チェーン(工場→銀行→香料棚→異世界炉)を加速し
