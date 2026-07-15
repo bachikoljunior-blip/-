@@ -10307,8 +10307,7 @@ function monsterSpawnFactor() {
     -(runPolicyIs("hunt") ? 0.10 : 0)
   ) * deepPursuitSpawnMultiplier() * portalHuntSpawnMultiplier() * runTempoRamp()
     * (dishActive("hunterStew") ? 0.75 : 1)  // 狩人のシチュー
-    * (dishActive("voidTart") ? 0.7 : 1)     // 虚空タルト
-    * msMulOf("spawn");                       // 実績研究(狩りの実績: モンスター出現間隔)
+    * (dishActive("voidTart") ? 0.7 : 1);    // 虚空タルト
 }
 
 
@@ -15874,7 +15873,7 @@ function monsterStayDurationMs() {
   const skillRaw = Math.max(0, skillEffect("monsterStay"));
   const policyRaw = runPolicyIs("hunt") ? 0.10 : 0;
   const categoryRaw = rewardCategoryBonus("hunt");
-  const multiplier = Math.exp(rewardLv * 0.04 + skillRaw * 0.12 + policyRaw + categoryRaw) * (state.nextMonsterStayMultiplier || 1) * bakeMonsterStayMultiplier() * msMulOf("stay"); // 実績研究(狩りの実績: 滞在時間)
+  const multiplier = Math.exp(rewardLv * 0.04 + skillRaw * 0.12 + policyRaw + categoryRaw) * (state.nextMonsterStayMultiplier || 1) * bakeMonsterStayMultiplier();
   state.nextMonsterStayMultiplier = 1;
   return Math.max(4000, 16000 * multiplier);
 }
@@ -15974,7 +15973,7 @@ function showMonster(forcedTypeId) {
   if (typeId === "boss") forceBossNext = false;
 
   const level = monsterLevel();
-  const hpMulShared = (state.nextMonsterHpMultiplier || 1) * type.hpMul * (stage.hpMul || 1) * msMulOf("hp"); // 実績研究(狩りの実績: モンスターHP)
+  const hpMulShared = (state.nextMonsterHpMultiplier || 1) * type.hpMul * (stage.hpMul || 1);
   // ボスは60秒固定。それ以外は従来式×type滞在倍率×ステージ滞在倍率
   const stayMs = typeId === "boss"
     ? 60000
@@ -16406,11 +16405,7 @@ function rewardPreviewText(choice) {
 
   if (choice.id === "goldenPower") {
     const before = goldenMultiplier();
-    // after は同じ計算式(全倍率込み)でLvだけ進めて出す(旧・簡易式は各種倍率が抜けて減って見えることがあった)
-    const _lv = state.perks[choice.id] || 0;
-    state.perks[choice.id] = lvNext;
-    const after = goldenMultiplier();
-    state.perks[choice.id] = _lv;
+    const after = 2.1 + (lvNext / (1 + lvNext / 60)) * 0.25 + skillEffect("goldenPower");
 
     return `
       <div class="desc">系統：短時間爆発</div>
@@ -16423,10 +16418,7 @@ function rewardPreviewText(choice) {
 
   if (choice.id === "goldenAmount") {
     const before = goldenAmountMultiplier();
-    const _lv = state.perks[choice.id] || 0;
-    state.perks[choice.id] = lvNext;
-    const after = goldenAmountMultiplier();
-    state.perks[choice.id] = _lv;
+    const after = 1 + (lvNext / (1 + lvNext / 45)) * 0.45 + skillEffect("goldenAmount");
 
     return `
       <div class="desc">系統：即時収入</div>
@@ -16439,10 +16431,7 @@ function rewardPreviewText(choice) {
 
   if (choice.id === "monsterDamage") {
     const before = monsterDamageMultiplier();
-    const _lv = state.perks[choice.id] || 0;
-    state.perks[choice.id] = lvNext;
-    const after = monsterDamageMultiplier();
-    state.perks[choice.id] = _lv;
+    const after = before + rewardChoiceGain(choice) * 5.5;
 
     return `
       <div class="desc">系統：討伐火力</div>
