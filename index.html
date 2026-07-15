@@ -4021,6 +4021,26 @@
       animation: none !important;
       pointer-events: none;
     }
+    /* 素材入手テキスト(アイコンの位置にしっかり読める時間だけ表示)*/
+    .matGetText {
+      position: absolute;
+      transform: translate(-50%, 0);
+      font-size: 15px;
+      font-weight: 900;
+      color: #fff2d6;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 60;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.9), 0 0 6px rgba(0,0,0,0.7), 0 0 2px rgba(0,0,0,0.95);
+      animation: matGetRise 1.4s ease-out forwards;
+    }
+    @keyframes matGetRise {
+      0%   { opacity: 0; transform: translate(-50%, 8px) scale(0.8); }
+      12%  { opacity: 1; transform: translate(-50%, -4px) scale(1.1); }
+      22%  { opacity: 1; transform: translate(-50%, -12px) scale(1); }
+      72%  { opacity: 1; transform: translate(-50%, -24px) scale(1); }
+      100% { opacity: 0; transform: translate(-50%, -48px) scale(0.95); }
+    }
 
     /* 報酬モーダルの登場演出 */
     #rewardModal .rewardPanel {
@@ -16837,22 +16857,42 @@ function spawnMaterialDropIcons(payload) {
   const baseX = pos ? (pos.left + pos.right) / 2 : host.clientWidth / 2;
   const baseY = pos ? (pos.top + pos.bottom) / 2 : host.clientHeight * 0.42;
 
-  // 一つずつ時間差で落とす
+  // 重ならないよう格子状に配置し、全て同時に落とす(中心＝モンスターがいた場所)
+  const ICON = 34, GAP = 6, CELL = ICON + GAP;
+  const n = items.length;
+  const cols = Math.max(1, Math.ceil(Math.sqrt(n)));
+  const rows = Math.ceil(n / cols);
+  const gridW = cols * CELL, gridH = rows * CELL;
+  let startX = baseX - gridW / 2;
+  let startY = baseY - gridH / 2;
+  startX = Math.max(4, Math.min(Math.max(4, host.clientWidth - gridW - 4), startX));
+  startY = Math.max(4, Math.min(Math.max(4, host.clientHeight - gridH - 4), startY));
+
   items.forEach((it, i) => {
-    setTimeout(() => dropOneMaterialIcon(host, it, baseX, baseY, i, items.length), i * 150);
+    const row = Math.floor(i / cols);
+    const col = i % cols;
+    const inRow = Math.min(cols, n - row * cols); // 最終行が埋まらない時は中央寄せ
+    const rowOffset = (cols - inRow) * CELL / 2;
+    const x = startX + rowOffset + col * CELL + (CELL - ICON) / 2;
+    const y = startY + row * CELL + (CELL - ICON) / 2;
+    dropOneMaterialIcon(host, it, x, y);
   });
 }
 
-function dropOneMaterialIcon(host, item, baseX, baseY, idx, total) {
-  const ICON = 34;
-  // 中心付近に軽くばらけさせる(1個のときは中央)
-  const ang = (idx / Math.max(1, total)) * Math.PI * 2 + Math.random() * 0.7;
-  const rad = total > 1 ? 12 + Math.random() * 26 : 0;
-  let x = baseX + Math.cos(ang) * rad - ICON / 2;
-  let y = baseY + Math.sin(ang) * rad - ICON / 2;
-  x = Math.max(4, Math.min(host.clientWidth - ICON - 4, x));
-  y = Math.max(4, Math.min(host.clientHeight - ICON - 4, y));
+// 素材入手テキストを、アイコンの位置にしっかり読める時間(約1.4秒)だけ出す
+function showMaterialGetText(text, x, y) {
+  const area = $("floatArea");
+  if (!area) return;
+  const div = document.createElement("div");
+  div.className = "matGetText";
+  div.textContent = text;
+  div.style.left = x + "px";
+  div.style.top = y + "px";
+  area.appendChild(div);
+  setTimeout(() => div.remove(), 1450);
+}
 
+function dropOneMaterialIcon(host, item, x, y) {
   const el = document.createElement("div");
   el.className = "matDrop";
   el.style.left = x + "px";
@@ -16873,7 +16913,7 @@ function dropOneMaterialIcon(host, item, baseX, baseY, idx, total) {
     gainMaterial(item.id, item.qty);
     if (showText) {
       const name = getMaterial(item.id) ? getMaterial(item.id).name : "素材";
-      showFloat(`入手 ${name}${item.qty > 1 ? " ×" + item.qty : ""}`);
+      showMaterialGetText(`入手 ${name}${item.qty > 1 ? " ×" + item.qty : ""}`, x + 17, y - 6);
       playSound("buy");
     }
     saveGame();
