@@ -3087,7 +3087,7 @@ function simulate(strategy, opts) {
     // 検証高速化(2026-07-15): 全スキル取得後(=これ以上の転生目的が無い放置の尾部)に限り、
     // 単一周回が閾値(既定2万秒)を超えたら打ち切る。ツリー未完の間は一切打ち切らない=料理/装備の
     // 作成・カバレッジ・全条件の測定に影響しない(尾部の部分周回はfull判定から除外)。ゲームには無関係(simだけ)。
-    if (!sim.opt.noIdleCut && sim.t - sim.run.startT > (sim.opt.idleCutSec || 300) && sim._allSkills) break;
+    if (!sim.opt.noIdleCut && !process.env.NO_IDLE_CUT && sim.t - sim.run.startT > (sim.opt.idleCutSec || 300) && sim._allSkills) break;
   }
 
   // 終了時の進行中周回も記録
