@@ -9367,10 +9367,36 @@ function grantMonsterDrops(typeId, level, overkill) {
 // これらは renderWorkshop の外＝グローバルに置く。装備は図鑑横のボタン(openEquip)からも
 // renderEquip2Tab を呼ぶため、内側にネストしていると参照できずバグる(2026-07-13 修正)。
 // 画像: 既存装備画像をカテゴリに割当て、ティアでhue回転(「画像のないものは既存のものを色を変えてつかう」)
+// 各カテゴリに複数の既存画像を割り当て、バリエーションで形を変える(同じ見た目を避ける・2026-07-14 ユーザー指示)。
+// 手持ち画像が7種しかないため、カテゴリごとに3種を巡回させて形の違いを出し、色は下のequip2Filterで分ける。
+const EQUIP2_ART_SET = {
+  weapon:      ["goldenWhisk", "pressExtractor", "monsterAlmanac"],
+  shield:      ["masterTray", "ovenMitt", "stillFlask"],
+  armorTop:    ["ovenMitt", "masterTray", "dimensionCompass"],
+  armorBottom: ["pressExtractor", "dimensionCompass", "goldenWhisk"],
+  hands:       ["monsterAlmanac", "goldenWhisk", "ovenMitt"],
+  hat:         ["stillFlask", "monsterAlmanac", "masterTray"],
+  shoes:       ["dimensionCompass", "pressExtractor", "stillFlask"],
+  accA:        ["monsterAlmanac", "stillFlask", "goldenWhisk"],
+  accB:        ["stillFlask", "dimensionCompass", "pressExtractor"]
+};
+// 旧マップ(後方互換の参照が残っても壊れないよう保持)
 const EQUIP2_ART = { weapon: "goldenWhisk", shield: "masterTray", armorTop: "ovenMitt", armorBottom: "pressExtractor",
   hands: "ovenMitt", hat: "stillFlask", shoes: "dimensionCompass", accA: "monsterAlmanac", accB: "stillFlask" };
-function equip2Art(it) { return (ASSETS.equipment && ASSETS.equipment[EQUIP2_ART[it.cat]]) || ASSETS.objects.cookieMonster; }
-function equip2Hue(it) { return ((it.tier - 1) * 55 + ((it.variant || 1) - 1) * 38) % 360; } // ティア+バリエーションで色相を回す
+function equip2Art(it) {
+  const set = EQUIP2_ART_SET[it.cat] || [EQUIP2_ART[it.cat] || "goldenWhisk"];
+  const key = set[(((it.variant || 1) - 1) % set.length + set.length) % set.length];
+  return (ASSETS.equipment && ASSETS.equipment[key]) || ASSETS.objects.cookieMonster;
+}
+function equip2Hue(it) { return ((((it.variant || 1) - 1) * 40 + ((it.tier || 1) - 1) * 12) % 360 + 360) % 360; } // バリエーションで色相、ティアで微調整
+// 見た目を強く分ける全体フィルタ: 色相=バリエーション(40°刻み=9色)、彩度・明度=ティア(格。上位ほど鮮やか・明るい)。
+// これで「同カテゴリ54種」が 形(3)×色相(9)×明るさ(6) で被らず見分けられる。
+function equip2Filter(it) {
+  const t = ((it.tier || 1) - 1); // 0..5
+  const sat = (1.15 + t * 0.16).toFixed(2);   // 1.15 → 1.95(上位ほど鮮やか)
+  const bri = (0.88 + t * 0.07).toFixed(2);   // 0.88 → 1.23(上位ほど明るい)
+  return `hue-rotate(${equip2Hue(it)}deg) saturate(${sat}) brightness(${bri})`;
+}
 // 同じ画像を色替えで使う素材(色粉 ore_t*)を、色でハッキリ見分けられるようにする(2026-07-13)。
 // 彩度・明度を強めた上で、素材テーマ色の枠(ボーダー)を付ける。
 const ORE_COLORS = ["#dfe3ea", "#e8b23a", "#38c76e", "#3f79ea", "#a44fe0", "#e35168"]; // 白銀/琥珀/翡翠/瑠璃/紫/紅
@@ -9501,19 +9527,19 @@ function renderEquip2Tab() {
         const cands = equip2Items().filter(x => x.cat === cat && (state.eq2Owned[x.id] || 0) > 0);
         chooser = cands.length
           ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">` + cands.map(c =>
-              `<button class="item canBuy" data-eq2equip="${c.id}" data-eq2slot="${slot}" style="width:auto;padding:4px 10px"><img class="matIcon" src="${assetUrl(equip2Art(c))}" style="filter:hue-rotate(${equip2Hue(c)}deg)" alt="">${c.name}(${c.fxText})</button>`).join("") + `</div>`
+              `<button class="item canBuy" data-eq2equip="${c.id}" data-eq2slot="${slot}" style="width:auto;padding:4px 10px"><img class="matIcon" src="${assetUrl(equip2Art(c))}" style="filter:${equip2Filter(c)}" alt="">${c.name}(${c.fxText})</button>`).join("") + `</div>`
           : `<div class="desc">所持している${EQUIP2_CAT_NAMES[cat]}がない</div>`;
       }
       return `<div class="infoRow"><b>${equip2SlotLabel(slot)}</b>:
         <button class="item ${it ? "canBuy" : ""}" data-eq2choose="${slot}" style="width:auto;padding:4px 10px">
-          ${it ? `<img class="matIcon" src="${assetUrl(equip2Art(it))}" style="filter:hue-rotate(${equip2Hue(it)}deg)" alt="">${it.name}(${it.fxText})` : "なし(押して装備)"}
+          ${it ? `<img class="matIcon" src="${assetUrl(equip2Art(it))}" style="filter:${equip2Filter(it)}" alt="">${it.name}(${it.fxText})` : "なし(押して装備)"}
         </button>${chooser}</div>`;
     }).join("");
   } else if (sub === "owned") {
     // 所持装備はカテゴリごとのタブで切り替える。先頭に「全て」を置き、最初はそれを開く(2026-07-13 ユーザー指示)
     const ownedCats = ["all", ...EQUIP2_CATS];
     if (!ownedCats.includes(equip2OwnedCat)) equip2OwnedCat = "all";
-    const rowFor = x => `<div class="infoRow"><img class="matIcon" src="${assetUrl(equip2Art(x))}" style="filter:hue-rotate(${equip2Hue(x)}deg)" alt=""><b>${x.name}</b> ×${fmt(state.eq2Owned[x.id])} / ${x.fxText}<button class="item eq2DiscardBtn" data-eq2discard="${x.id}" style="width:auto;padding:3px 10px;margin-left:auto">捨てる</button></div>`;
+    const rowFor = x => `<div class="infoRow"><img class="matIcon" src="${assetUrl(equip2Art(x))}" style="filter:${equip2Filter(x)}" alt=""><b>${x.name}</b> ×${fmt(state.eq2Owned[x.id])} / ${x.fxText}<button class="item eq2DiscardBtn" data-eq2discard="${x.id}" style="width:auto;padding:3px 10px;margin-left:auto">捨てる</button></div>`;
     const ownedTotal = equip2Items().reduce((s, x) => s + (state.eq2Owned[x.id] || 0), 0);
     const catBar = `<div class="buyModeBar" style="margin-bottom:8px;flex-wrap:wrap;gap:4px">` +
       `<button class="item ${equip2OwnedCat === "all" ? "canBuy" : ""}" data-eq2ownedcat="all" style="width:auto;padding:4px 9px">全て${ownedTotal > 0 ? `(${fmt(ownedTotal)})` : ""}</button>` +
@@ -9606,7 +9632,7 @@ function renderWorkshop() {
     if (it.prev) {
       const pv = equip2ById(it.prev);
       // 分子は「所持数」をそのまま表示する(必要数で頭打ちにしない)。分数はアイコン右下に重ねる(2026-07-14)
-      needs.push(`<div class="eq2Need" data-matinfo="prev:${it.prev}"><img src="${assetUrl(equip2Art(pv))}" style="filter:hue-rotate(${equip2Hue(pv)}deg)" alt=""><span class="eq2Badge">${fmt(state.eq2Owned[it.prev] || 0)}/1</span></div>`);
+      needs.push(`<div class="eq2Need" data-matinfo="prev:${it.prev}"><img src="${assetUrl(equip2Art(pv))}" style="filter:${equip2Filter(pv)}" alt=""><span class="eq2Badge">${fmt(state.eq2Owned[it.prev] || 0)}/1</span></div>`);
     }
     for (const k in it.cost) {
       // 分子は所持数(equip2HaveOf)をそのまま表示。色粉は色を強調+枠色。分数はアイコン右下に重ねる。アイコンタップで名前(2026-07-14)
@@ -9617,7 +9643,7 @@ function renderWorkshop() {
     return `
       <div class="eq2CraftRow">
         <div class="eq2CraftItemWrap" data-eq2info="${it.id}">
-          <img class="eq2CraftItemIcon" src="${assetUrl(equip2Art(it))}" style="filter:hue-rotate(${equip2Hue(it)}deg)" alt="">
+          <img class="eq2CraftItemIcon" src="${assetUrl(equip2Art(it))}" style="filter:${equip2Filter(it)}" alt="">
           <span class="eq2Badge">×${fmt(state.eq2Owned[it.id] || 0)}</span>
         </div>
         <div class="eq2Needs">${needs.join("")}</div>
