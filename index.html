@@ -13524,23 +13524,23 @@ function upgradeShopEffectRows(u, buyCount) {
 
   // 最終値で表示する(2026-07-11 ユーザー指示): 全ての倍率・ブースト込みの実際の生産で計算する。
   const cur = measure();
-  // その設備自身の合計生産(自分の倍率だけ乗せた最終値。他設備への相乗ぶんは含まない)
-  const ownBefore = upgradeEffectiveContribution(u);
-  let withoutV, ownAfter;
+  let withoutV, curAfter;
   try {
     state.upgrades[u.id] = 0;
-    withoutV = measure();
+    withoutV = measure();          // この設備を0にしたときの値(＝合計から差し引く基準)
     state.upgrades[u.id] = owned + count;
-    ownAfter = upgradeEffectiveContribution(u);
+    curAfter = measure();          // 実際に count 台買った後の値
   } finally {
     state.upgrades[u.id] = owned;
   }
-  // タップ設備の「合計」は素手ぶん(基礎タップ×倍率)も含む実際の1タップ量にする。
-  // 設備ぶんだけの差分だと、実際にタップした数値とずれて見えるため(2026-07-11 ユーザー指摘)。
-  // 毎秒設備は従来どおり「その設備の寄与ぶん(cur-withoutV)」。
+  // タップ設備の「合計」は素手ぶん(基礎タップ×倍率)も含む実際の1タップ量。
+  // 毎秒設備は「その設備の寄与ぶん(cur-withoutV)」。
   const total = isCps ? Math.max(0, cur - withoutV) : cur;
-  // 生産増加数=「その設備の合計生産(=その設備自身の総生産)が増える分」。他設備への相乗ぶんは含めない(2026-07-13 ユーザー指示)。
-  const add = Math.max(0, ownAfter - ownBefore);
+  // 生産増加数=「表示している合計が購入後に実際に増える分」= 測定値の増分(curAfter - cur)。
+  // これで「+X」が購入後の合計(毎秒/タップ)の変化と必ず一致する(2026-07-14 ユーザー指示)。
+  // ・毎秒: 合計=cur-withoutV、購入後=curAfter-withoutV → 増分=curAfter-cur
+  // ・タップ: 合計=cur、購入後=curAfter → 増分=curAfter-cur
+  const add = Math.max(0, curAfter - cur);
   const kind = isCps ? "毎秒" : "タップ";
 
   // 追加分は「+X」、合計は「毎秒 X(タップ X)」のみを表示する
