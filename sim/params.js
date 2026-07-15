@@ -15,7 +15,7 @@ module.exports = {
   // pG 0.075→0.05→0.023(2026-07-13 第13次: ④が100倍→1億倍(8桁)にユーザー変更されたため
   // 段間隔=log10(1.57)/pG ≈ 8.5桁 ≥8桁に再設定。新⑥(3分2倍)下で8.5桁≈28分/周回=T1帯内の見込み。
   // pB 14で初回PT=floor(14×(2e6/1e4)^0.023)=15 → core10+入口5=15が初回で買える(入口5PT規則ちょうど)
-  prestige: { pA: 0, pD1: 200000, pB: 14, pD2: 10000, pG: 0.023, pMin: 10000, firstCost: 100000000, costCpsMul: 500,
+  prestige: { pA: 0, pD1: 200000, pB: 14, pD2: 10000, pG: 0.03, pMin: 10000, firstCost: 100000000, costCpsMul: 500,
     // 転生コストの固定テーブル(2026-07-11 確定形): build_prestige_table.js が基準方針(S1)の100h測定から
     // 「第n回の転生時の毎秒×500の10べき切捨て」を焼き込む。無い間は動的フォールバック。
     costTable: (function () { try { return require('./prestige_costs.json'); } catch (e) { return []; } })() },
