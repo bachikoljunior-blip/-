@@ -7681,13 +7681,19 @@ const MILESTONE_RESEARCH = (() => {
   const facEarly = [[3, 40, 1.35], [6, 80, 1.4], [8, 120, 1.45]];
   facEarly.forEach(([n, cs, m], i) => add("ms_factory_e" + (i + 1), "工場の助走 " + ROMA[i], "クッキー工場 " + n + "台",
     () => (state.upgrades.factory || 0) >= n, "クッキー工場の生産 ×" + m, { up: { factory: m } }, cs));
-  // 討伐実績 8段(周回内・効果ローテ)
-  const killTiers = [[10, 100, { hunt: 1.3 }, "モンスターダメージ ×1.3"], [25, 200, { spawn: 0.85 }, "モンスター出現間隔 ×0.85"],
-    [50, 400, { stay: 1.2 }, "モンスター滞在時間 ×1.2"], [100, 800, { hunt: 1.3 }, "モンスターダメージ ×1.3"],
-    [200, 1600, { hp: 0.75 }, "モンスターHP ×0.75"], [400, 3000, { dropAdd: 1 }, "素材ドロップ +1個"],
-    [800, 4500, { hunt: 1.3 }, "モンスターダメージ ×1.3"], [1600, 6000, { stay: 1.2 }, "モンスター滞在時間 ×1.2"]];
-  killTiers.forEach(([n, cs, fx, ft], i) => add("ms_kills_k" + (i + 1), "狩りの実績 " + ROMA[i], "この周回で討伐 " + n + "体",
-    () => (state.msKills || 0) >= n, ft, fx, cs));
+  // 討伐実績(周回内)。※spawn/stay/hp は未配線=効果が出ないため削除(2026-07-14 ユーザー指示)。
+  // 実装済みの hunt(討伐ダメージ)/dropAdd(素材ドロップ)のみ残す。IDは既存互換のため元の添字(k1/k4/k6/k7)を維持。
+  const killTiers = [[10, 100, { hunt: 1.3 }, "モンスターダメージ ×1.3"], null,
+    null, [100, 800, { hunt: 1.3 }, "モンスターダメージ ×1.3"],
+    null, [400, 3000, { dropAdd: 1 }, "素材ドロップ +1個"],
+    [800, 4500, { hunt: 1.3 }, "モンスターダメージ ×1.3"], null];
+  let killDisp = 0;
+  killTiers.forEach((t, i) => {
+    if (!t) return; // 未実装効果の段は生成しない(削除)
+    const [n, cs, fx, ft] = t;
+    add("ms_kills_k" + (i + 1), "狩りの実績 " + ROMA[killDisp++], "この周回で討伐 " + n + "体",
+      () => (state.msKills || 0) >= n, ft, fx, cs);
+  });
   // 金クッキー実績 6段(周回内)
   [[5, 100], [15, 300], [40, 750], [100, 2000], [250, 4000], [600, 7500]].forEach(([n, cs], i) =>
     add("ms_golden_g" + (i + 1), "金運 " + ROMA[i], "この周回で金クッキー " + n + "枚",
@@ -16405,7 +16411,11 @@ function rewardPreviewText(choice) {
 
   if (choice.id === "goldenPower") {
     const before = goldenMultiplier();
-    const after = 2.1 + (lvNext / (1 + lvNext / 60)) * 0.25 + skillEffect("goldenPower");
+    // after は本物の計算式(全倍率込み)でLvだけ進めて出す(表示のみ。ゲーム挙動は不変)
+    const _lv = state.perks[choice.id] || 0;
+    state.perks[choice.id] = lvNext;
+    const after = goldenMultiplier();
+    state.perks[choice.id] = _lv;
 
     return `
       <div class="desc">系統：短時間爆発</div>
@@ -16418,7 +16428,10 @@ function rewardPreviewText(choice) {
 
   if (choice.id === "goldenAmount") {
     const before = goldenAmountMultiplier();
-    const after = 1 + (lvNext / (1 + lvNext / 45)) * 0.45 + skillEffect("goldenAmount");
+    const _lv = state.perks[choice.id] || 0;
+    state.perks[choice.id] = lvNext;
+    const after = goldenAmountMultiplier();
+    state.perks[choice.id] = _lv;
 
     return `
       <div class="desc">系統：即時収入</div>
@@ -16431,7 +16444,10 @@ function rewardPreviewText(choice) {
 
   if (choice.id === "monsterDamage") {
     const before = monsterDamageMultiplier();
-    const after = before + rewardChoiceGain(choice) * 5.5;
+    const _lv = state.perks[choice.id] || 0;
+    state.perks[choice.id] = lvNext;
+    const after = monsterDamageMultiplier();
+    state.perks[choice.id] = _lv;
 
     return `
       <div class="desc">系統：討伐火力</div>
