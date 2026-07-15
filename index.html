@@ -5280,6 +5280,14 @@
     .skillMapFrame.interacting .skillNode::after {
       display: none !important;
     }
+    /* 操作中はノードの影・フレームの内影も消して、スクロール中の再描画コストを下げる */
+    .skillMapFrame.interacting .skillNode {
+      box-shadow: none !important;
+    }
+    .skillMapFrame.interacting {
+      box-shadow: none !important;
+      will-change: scroll-position;
+    }
 
     /* その回でまだ取得していない設備・研究は、絵をシルエット(黒い影)で伏せる。
        取得(購入)すると本来の絵が現れる。 */
@@ -5391,6 +5399,41 @@
     /* 横並び中はクッキー画面の全画面ボタンを隠す */
     body.wideLayout #playFullscreenBtn {
       display: none !important;
+    }
+
+    /* 横画面ではスキルツリー画面の上部(見出し・スキル説明)が横いっぱいに伸びて邪魔なので、
+       縦画面と同じ幅(375px)のパネルにして右上に浮かせ、マップは背面いっぱいに広げる(2026-07-14 ユーザー指示) */
+    body.wideLayout #skillChoiceScreen:not(.treeOnly) .skillScreenInner {
+      width: 100% !important;
+      max-width: none !important;
+      position: relative !important;
+      padding: 0 !important;
+    }
+    body.wideLayout #skillChoiceScreen:not(.treeOnly) .skillMapFrame {
+      margin-top: 0 !important;
+      height: 100% !important;
+    }
+    body.wideLayout #skillChoiceScreen:not(.treeOnly) .skillScreenTop {
+      position: absolute !important;
+      top: 8px !important;
+      right: 8px !important;
+      width: 375px !important;
+      max-width: 40% !important;
+      max-height: calc(100% - 16px) !important;
+      overflow-y: auto !important;
+      z-index: 40 !important;
+    }
+    /* ズーム操作列は左上に浮かせて、右上のパネルと重ならないようにする */
+    body.wideLayout #skillChoiceScreen:not(.treeOnly) .skillFloatingControls {
+      position: absolute !important;
+      top: 8px !important;
+      left: 8px !important;
+      z-index: 41 !important;
+      margin: 0 !important;
+      padding: 8px !important;
+      background: rgba(0,0,0,0.30);
+      border-radius: 14px;
+      backdrop-filter: blur(6px);
     }
 
   </style>
@@ -8342,15 +8385,17 @@ function clearOrderTabNotify() {
   if (tab) tab.classList.remove("orderNotify");
 }
 
-// ==== 研究の新規解放の通知(研究タブを光らせて点滅、開くと解除) ====
+// ==== 研究の通知(研究タブを光らせて点滅、開くと解除) ====
+// クッキーが必要量に初めて達したとき(=買えるようになったとき)だけ光らせる(2026-07-14 ユーザー指示)。
 let lastResearchAvailKey = null;
 
 function researchAvailIdsNow() {
   const ids = [];
-  RESEARCH.forEach(r => { if (!state.research[r.id] && researchUnlocked(r)) ids.push(r.id); });
-  visibleResearchStageCards().forEach(sc => ids.push(sc.key));
-  // 実績研究も対象(達成して購入可能になったら光らせる)
-  msResearchLists().avail.forEach(m => ids.push("ms:" + m.id));
+  const canPay = cost => state.cookies.gte(cost);
+  RESEARCH.forEach(r => { if (!state.research[r.id] && researchUnlocked(r) && canPay(researchCost(r))) ids.push(r.id); });
+  visibleResearchStageCards().forEach(sc => { if (canPay(researchStageCost(sc.r, sc.stageNo))) ids.push(sc.key); });
+  // 実績研究も対象(達成して購入可能＝クッキーが足りたら光らせる)
+  msResearchLists().avail.forEach(m => { if (canPay(msResearchCost(m))) ids.push("ms:" + m.id); });
   return ids;
 }
 
@@ -12123,13 +12168,13 @@ function checkQuotaStageTransition() {
 const statDeltaCps = { last: null, acc: 0, until: 0 };
 const statDeltaDmg = { last: null, acc: 0, until: 0 };
 
-function statDeltaText(tracker, value) {
+function statDeltaText(tracker, value, holdMs) {
   const now = Date.now();
   if (tracker.last != null && Number.isFinite(value) && Number.isFinite(tracker.last)) {
     if (value > tracker.last * (1 + 1e-9) + 1e-9) {
       if (now > tracker.until) tracker.acc = 0; // 表示が切れた後の増加は積算をやり直す
       tracker.acc += value - tracker.last;
-      tracker.until = now + 5000;
+      tracker.until = now + (holdMs || 5000);
     }
   }
   tracker.last = value;
@@ -12147,8 +12192,8 @@ function updateTopOnly() {
       // ノルマゲージ上の行に、毎秒とモンスターダメージを左右の固定枠で並べて表示する
       const cps = currentCps() + directIncomeTotalCps();
       const dmg = monsterBaseDamage() * monsterDamageMultiplier();
-      cpsEl.innerHTML = `<span class="statHalf">毎秒 ${fmt(cps)}${statDeltaText(statDeltaCps, cps)}</span>`
-        + `<span class="statHalf">ダメージ ${fmt(dmg)}${statDeltaText(statDeltaDmg, dmg)}</span>`;
+      cpsEl.innerHTML = `<span class="statHalf">毎秒 ${fmt(cps)}${statDeltaText(statDeltaCps, cps, 2000)}</span>`
+        + `<span class="statHalf">ダメージ ${fmt(dmg)}${statDeltaText(statDeltaDmg, dmg, 2000)}</span>`;
     }
   }
 
@@ -14506,6 +14551,7 @@ function installSkillTreePinchZoom() {
   const pointers = new Map();
   let mode = null;
   let lastPan = null;
+  let panRAF = null, panAccX = 0, panAccY = 0; // パンのrAF間引き用
   let pinchStartDistance = 1;
   let pinchStartZoom = skillMapZoom;
   let pinchContentX = 0;
@@ -14584,11 +14630,15 @@ function installSkillTreePinchZoom() {
     }
 
     if (mode === "pan" && lastPan) {
-      const dx = e.clientX - lastPan.x;
-      const dy = e.clientY - lastPan.y;
-      frame.scrollLeft -= dx;
-      frame.scrollTop -= dy;
+      // rAFで1フレーム1回に間引いてスクロール更新(pointermoveが1フレーム複数回来てもカクつかない)
+      panAccX += e.clientX - lastPan.x;
+      panAccY += e.clientY - lastPan.y;
       lastPan = { x: e.clientX, y: e.clientY };
+      if (!panRAF) panRAF = requestAnimationFrame(() => {
+        frame.scrollLeft -= panAccX;
+        frame.scrollTop -= panAccY;
+        panAccX = 0; panAccY = 0; panRAF = null;
+      });
       e.preventDefault();
     }
   }, { passive: false });
