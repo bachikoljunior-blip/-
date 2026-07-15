@@ -6328,7 +6328,13 @@ const SKILL_NODES = [
   { id: "monster_3", name: "砕ける皮", branchId: "monster", cost: 1350000, x: 1560, y: 1500, icon: "◉", prereqs: ["monster_2"], desc: "モンスターHP -50%。", effects: [{ type: "monsterHpDown", value: 0.7000000000000001 }] },
   // v2: 工房解放スキル(monster枝の序盤から分岐。x=1200列のy=1440/1600は空き)
   { id: "workshop_1", name: "素材の嗅覚", branchId: "monster", cost: 105, x: 1200, y: 1440, icon: "❖", prereqs: ["monster_1"], desc: "モンスターが素材を落とすようになり、工房タブ(料理・素材庫)が解放される。", effects: [{ type: "unlockSystem", target: "workshop" }] },
-  { id: "workshop_2", name: "工房の拡張", branchId: "monster", cost: 170, x: 1200, y: 1600, icon: "❖", prereqs: ["workshop_1"], desc: "工房に「作成」(永続装備)セクションが解放される。", effects: [{ type: "unlockSystem", target: "workshopCraft" }] },
+  { id: "workshop_2", name: "工房の拡張", branchId: "monster", cost: 170, x: 1200, y: 1600, icon: "❖", prereqs: ["workshop_1"], desc: "工房に「作成」(永続装備)セクションが解放される(ティア1の作成欄)。", effects: [{ type: "unlockSystem", target: "workshopCraft" }] },
+  // 装備作成ティア解放(2026-07-15 ユーザー指示「作成のティア2以降をそれぞれスキル解放で作成欄が出る」)
+  { id: "eqcraft_t2", name: "上位工房I", branchId: "monster", cost: 5000, x: 1360, y: 1520, icon: "❖", prereqs: ["workshop_2"], desc: "工房の作成にティア2の作成欄が解放される。", effects: [{ type: "unlockSystem", target: "eqcraftT2" }] },
+  { id: "eqcraft_t3", name: "上位工房II", branchId: "monster", cost: 800000, x: 1520, y: 1440, icon: "❖", prereqs: ["eqcraft_t2"], desc: "工房の作成にティア3の作成欄が解放される。", effects: [{ type: "unlockSystem", target: "eqcraftT3" }] },
+  { id: "eqcraft_t4", name: "上位工房III", branchId: "monster", cost: 150000000, x: 1680, y: 1360, icon: "❖", prereqs: ["eqcraft_t3"], desc: "工房の作成にティア4の作成欄が解放される。", effects: [{ type: "unlockSystem", target: "eqcraftT4" }] },
+  { id: "eqcraft_t5", name: "上位工房IV", branchId: "monster", cost: 20000000000, x: 1840, y: 1280, icon: "❖", prereqs: ["eqcraft_t4"], desc: "工房の作成にティア5の作成欄が解放される。", effects: [{ type: "unlockSystem", target: "eqcraftT5" }] },
+  { id: "eqcraft_t6", name: "上位工房V", branchId: "monster", cost: 800000000000, x: 2000, y: 1200, icon: "❖", prereqs: ["eqcraft_t5"], desc: "工房の作成にティア6の作成欄が解放される。", effects: [{ type: "unlockSystem", target: "eqcraftT6" }] },
   { id: "hunt_analysis", name: "狩猟分析", branchId: "monster", cost: 470000, x: 1740, y: 1620, icon: "◉", prereqs: ["monster_3"], desc: "モンスターHP表示に、現在火力での必要攻撃数を追加する。", effects: [{ type: "unlockSystem", target: "huntAnalysis" }] },
   { id: "monster_4", name: "群れ読み", branchId: "monster", cost: 1150000000, x: 1920, y: 1740, icon: "◉", prereqs: ["monster_3", "click_4"], desc: "モンスター滞在時間を伸ばし、報酬解放の前提になる。", effects: [{ type: "monsterStay", value: 0.5 }] },
 
@@ -9474,7 +9480,10 @@ function equip2Afford(it) {
   for (const k in it.cost) if (equip2HaveOf(k) < it.cost[k]) return false;
   return true;
 }
-function equip2CraftableNow(it) { return (it.stages || [it.tier]).includes(Math.min(EQUIP2_CFG.tiers, currentStageNo())); } // ステージ配置ばらけ(2026-07-14)
+// 作成ティア解放(2026-07-15 ユーザー指示「作成のティア2以降をそれぞれスキル解放で作成欄が出る」):
+// ティア1=工房の拡張(workshop_2)。ティア2-6は各解放スキル(eqcraft_tN)で作成欄が出る。
+function eqCraftTierUnlocked(tier) { return tier <= 1 || hasSkill('eqcraft_t' + tier); }
+function equip2CraftableNow(it) { return eqCraftTierUnlocked(it.tier) && (it.stages || [it.tier]).includes(Math.min(EQUIP2_CFG.tiers, currentStageNo())); } // ステージ配置ばらけ(2026-07-14)+ティア解放スキル(2026-07-15)
 // 表示解禁の判定(前ティア装備の所持は問わない)。素材が必要数に達したら表示する(2026-07-14 ユーザー指示)。
 // 作成の可否(equip2Afford)は従来どおり前ティア所持が必須。
 function equip2MatsAfford(it) {

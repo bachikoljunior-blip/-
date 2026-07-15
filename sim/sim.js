@@ -141,6 +141,13 @@ const SKILL_NODES = [
   // QoLノード(utilRatio価格)=メインのはしご(rungCosts)を消費しない→既存スキルコストは1つも動かない。
   { id: 'workshop_1', cost: 15, prereqs: ['monster_1'], effects: [['unlockSystem', 'workshop1']] },
   { id: 'workshop_2', cost: 15, prereqs: ['workshop_1'], effects: [['unlockSystem', 'workshop2']] },
+  // 装備作成ティア解放(2026-07-15 ユーザー指示「作成のティア2以降をそれぞれスキル解放で作成欄が出る」):
+  // workshop_2=ティア1作成欄。ティア2-6の作成欄は各解放スキルで順に出る(QoL枠=はしご非消費)。
+  { id: 'eqcraft_t2', cost: 15, prereqs: ['workshop_2'], effects: [['unlockSystem', 'eqcraftT2']] },
+  { id: 'eqcraft_t3', cost: 15, prereqs: ['eqcraft_t2'], effects: [['unlockSystem', 'eqcraftT3']] },
+  { id: 'eqcraft_t4', cost: 15, prereqs: ['eqcraft_t3'], effects: [['unlockSystem', 'eqcraftT4']] },
+  { id: 'eqcraft_t5', cost: 15, prereqs: ['eqcraft_t4'], effects: [['unlockSystem', 'eqcraftT5']] },
+  { id: 'eqcraft_t6', cost: 15, prereqs: ['eqcraft_t5'], effects: [['unlockSystem', 'eqcraftT6']] },
   { id: 'monster_2', cost: 43, prereqs: ['monster_1', 'golden_2'], effects: [['monsterDamageSkill', null, 0.16]] },
   { id: 'monster_3', cost: 47, prereqs: ['monster_2'], effects: [['monsterHpDown', null, 0.07]] },
   { id: 'hunt_analysis', cost: 69, prereqs: ['monster_3'], effects: [['unlockSystem', 'huntAnalysis']] },
@@ -194,6 +201,7 @@ const UTILITY_SKILLS = new Set([
   'golden_analysis', 'hunt_analysis', 'economy_analysis', 'research_analysis',
   'order_board', 'reward_synergy', 'reward_1', 'reward_choice_2',
   'start_1', 'offline_1', 'start_2', 'workshop_1', 'workshop_2',
+  'eqcraft_t2', 'eqcraft_t3', 'eqcraft_t4', 'eqcraft_t5', 'eqcraft_t6',
   // 方針入口の増幅ノード(第12次R4): 価格ははしご非消費のおまけ価格。効果は固定値(fixed)
   'click_amp', 'golden_amp', 'monster_amp', 'auto_amp',
   // 提案10/11(2026-07-11): 直送の早期入口ノード(価格はおまけ枠・効果はゲート解放)
@@ -207,7 +215,7 @@ function isUtilitySkill(id) { return UTILITY_SKILLS.has(id); }
 const SKILL_HAND_ORDER = [
   // 2026-07-06 第8次 ⑲対応v3: 取得順(=コストはしご順)。全ツリー辺のメインラング差≤5。
   // 設備解放: 月面=r12(7種設備の壁dec40を跨ぐ前)、時空=r17、以降約3ラングごとに第16種(r40)まで。
-  'core', 'ensemble', 'click_1', 'click_amp', 'click_stall', 'golden_1', 'golden_amp', 'golden_echo', 'monster_1', 'monster_amp', 'monster_peddler', 'workshop_1', 'workshop_2', 'auto_1', 'auto_amp', 'economy_1',
+  'core', 'ensemble', 'click_1', 'click_amp', 'click_stall', 'golden_1', 'golden_amp', 'golden_echo', 'monster_1', 'monster_amp', 'monster_peddler', 'workshop_1', 'workshop_2', 'eqcraft_t2', 'eqcraft_t3', 'eqcraft_t4', 'eqcraft_t5', 'eqcraft_t6', 'auto_1', 'auto_amp', 'economy_1',
   'click_2', 'golden_2', 'monster_2', 'auto_2', 'economy_2',
   'mastery_low',
   'click_3', 'upgrade_moon', 'auto_3', 'research_1', 'research_remodel', 'economy_analysis', 'order_board',
@@ -914,6 +922,8 @@ function equip2Tick(sim) {
     (catOrder[a.cat] - catOrder[b.cat]) || (equip2Score(sim, b) - equip2Score(sim, a)) || (b.tier - a.tier));
   for (const it of items) {
     if (!it.stages.includes(curStage)) continue;
+    // 作成ティア解放(2026-07-15): ティア2以降はそれぞれ解放スキルが要る(作成欄が出る)
+    if (it.tier >= 2 && !hasSkillEffect(sim, 'unlockSystem', 'eqcraftT' + it.tier)) continue;
     const cap = 1; // 9カテゴリ各1個/周回(アクセは甲/乙で別カテゴリ)
     if (((r.eq2Made && r.eq2Made[it.cat]) || 0) >= cap) continue;
     // レシピ固定(2026-07-14): 装備入りレシピは前ティア所持が必須・素材のみレシピは素材だけ(実行時の代替なし)
