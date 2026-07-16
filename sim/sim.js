@@ -846,9 +846,14 @@ const EQ2_FAV = {
 const EQ2_CONDFREQ = { goldenBoost: 0.15, monster: 0.4, boss: 0.06, quotaHold: 0.8, deep: 0.3, buyUp: 0.12, buyRes: 0.10, runStart: 0.12 };
 function equip2Rel(pol, stat) { if (stat === 'cpsMul' || stat === 'allMul') return 0.8; const f = EQ2_FAV[pol]; if (!f) return 0.7; return f.has(stat) ? 1 : 0.2; } // cps/allは土台=全方針で重視
 function equip2Score(sim, it) {
+  // equip2Scoreは(方針, 装備種)だけで決まりtick非依存(EQ2_CONDFREQは定数の頻度)=周回内不変。
+  // 毎tickの装備作成ソートで大量に呼ばれるため装備オブジェクト上にメモ化(方針が変わった時だけ再計算)。
+  // (perf 2026-07-16: 旧・毎tick再計算がホットパス最上位だった。文字列キー回避で二重に高速化)
+  const pol0 = sim.run.policy || 'balanced';
+  if (it._scPol === pol0) return it._sc;
   const def = EQUIP2_FX[it.cat] && EQUIP2_FX[it.cat][(it.variant || 1) - 1];
-  if (!def) return 0;
-  const pol = sim.run.policy || 'balanced';
+  if (!def) { it._scPol = pol0; it._sc = 0; return 0; }
+  const pol = pol0;
   const scale = Math.pow(1.5, it.tier - 1);
   let s = 0;
   const u = def.up || [];
@@ -860,6 +865,7 @@ function equip2Score(sim, it) {
     s -= (EQ2_UNIT[st] || 0.3) * (1 - def.down[i + 1]) * (fav ? 6 : (EQ2_FAV[pol] ? 0.3 : 1));
   }
   if (def.m === 'C') s *= (EQ2_CONDFREQ[def.cond] || 0.2);
+  it._scPol = pol0; it._sc = s;
   return s;
 }
 // C型の状況(on/off・数連動ではない)。sim/ゲーム共通で読める信号のみ。
@@ -982,6 +988,10 @@ function equip2Tick(sim) {
       delete pend[slot];
     }
   }
+  // 早期打ち切り(perf 2026-07-16): 周回の作成上限に達したら以降このtickでは何も作れない=
+  // 高コストな全装備ソート/スコア計算をまるごと省く(1周回のtickの大半は上限到達後)。
+  const runCraftCapEarly = (E.craftPerRunCap != null) ? E.craftPerRunCap : 5;
+  if ((r.eq2CraftTotal || 0) >= runCraftCapEarly) return;
   const curStage = Math.max(1, Math.min(E.tiers, r.wsStage || 1));
   // 作れるのは「現ステージのラインナップ」(ばらけ配置・2026-07-14)。高ティア優先で1カテゴリ1個/周回。
   // カテゴリ優先を周回ごとにローテーション(2026-07-13: 固定順だと末尾カテゴリ(hat/shoes/acc)が
