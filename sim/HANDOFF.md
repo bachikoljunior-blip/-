@@ -136,6 +136,11 @@
 - **一致を確認**: mature(60sキャップ/0.006/12s)・momentum(1.25/12/8000)・presence(0.25/全設備)・msk費用ladder・到達連動ノルマ(1.2/10/600/6000+EMA0.35)・チェイン/サージ休眠・beastScent 0.5・goldenFirstHit 2.5・mutation 0.9/0.18。
 - **意図的に別物(同期してはならない)**: 生産系の校正定数(ゲーム×9系 vs sim portalSelf6/ovenSelf20/factorySelf14等)=simは方針補正・段2効果等を持たない簡約モデルで係数は校正値。
   観測ゆらぎの振幅(ゲーム=設計どおり0.5+0.05×研究数 / sim=定数0.45の簡約)=ゲーム実振幅でも⑬帯内(k≈1.27)。
+- **ブラウザ実機QA(Playwright/Chromium・移植3件のend-to-end)**: 起動ページエラー0。①金クッキー取得(forceGoldenCookie→collectGoldenCookie)で
+  portalHuntUntil=0のまま(金では開かない)②スポーン常時項0.993^200=0.245・窓中×0.997^200=0.135(式どおり)③defeatMonsterソースに40000あり/旧+=2000なし
+  ④fireBhBoost: BH100台でmult=2.8(=1+1.8×√100/10)・持続120000ms ⑤C型装備(weapon_t2_v7)がboss出現でdmgMul 1→5.5に切替
+  ⑥buyUpgradeでlastUpBuyAtスタンプ→C型buyUp条件true ⑦486種生成・A/B/C表示文字列(「×4.38 (代償: 討伐報酬 ×0.9)」等)。
+  手順: playwright-coreをscratchpadにnpm install→chromium実行パス/opt/pw-browsers/chromium-*/chrome-linux/chrome→file://でindex.htmlを開き#audioGateへpointerdown→evaluateでゲームAPIを直接駆動。
 
 ---
 ### 第13次R2(2026-07-15)の確定分(歴史記録)
