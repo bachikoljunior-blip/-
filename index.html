@@ -6369,7 +6369,7 @@ const RESEARCH = [
   { id: "factoryNetwork", name: "工場ネットワーク", cost: 1000000, detail: "式：9×1.002^(指+婆+炉)×1.008^工場。さらに物流波及＝全生産×1.00012^工場。段階2(スキル「無人ライン」で購入可):銀行以上の所持設備種類×(1+0.15×種類数)。段階3(スキル「まとめ買い」で購入可):×(1+0.0012×最高到達層)。", desc: "下位設備と工場数で工場を強化する。段階購入で上位設備種類と層効果が追加" },
   { id: "cpsStrike", name: "生産火力転換", cost: 30000000, detail: "式：モンスターへのダメージに現在の毎秒生産がそのまま加算される。", desc: "毎秒生産の値がそのままモンスターへのダメージに加算されるようになる" },
   { id: "spiceBlend", name: "香料調合", cost: 20000000, detail: "式：金取得後30秒 香料棚×8×1.006^棚。段階2(スキル「金色の匂い」で購入可):風味の熟成=金取得から12秒間、全生産×(1+0.6%×前回の金からの経過秒)。段階3(スキル「輝き増幅」で購入可):熟成×(1+0.0015×最高到達層)。", desc: "金クッキー取得後に香料棚を強化する。段階購入で熟成バーストが追加" },
-  { id: "portalNetwork", name: "異世界接続網", cost: 1200000, detail: "式：金取得後の狩り窓=20秒×1.0042^異世界炉、窓中の出現間隔×0.990^異世界炉。段階2(スキル「砕ける皮」で購入可):窓中の討伐1体ごとに窓+2秒。段階3(スキル「群れ読み」で購入可):窓中の出現×e^(-0.0008×最高到達層)。", desc: "金クッキー取得後、一定時間モンスターが出やすくなる。段階購入で持続延長と層効果が追加" },
+  { id: "portalNetwork", name: "異世界接続網", cost: 1200000, detail: "式：出現間隔×0.993^異世界炉(常時)。段階2(スキル「砕ける皮」で購入可):延長狩り=討伐のたびに狩り窓を40秒張り直す(討伐間隔<40秒なら窓が続く)、窓中は出現×0.997^異世界炉。段階3(スキル「群れ読み」で購入可):窓中の出現×e^(-0.0008×最高到達層)。", desc: "異世界炉の数だけモンスターが常に出やすくなる。段階購入で討伐のリズムを保つと続く狩り窓が追加" },
   { id: "bankClickDividend", name: "銀行クリック配当", cost: 4000000, detail: "式：クリック×1.008^銀行×(1+log(貯蓄)×8)。段階2(スキル「まとめ買い」で購入可):複利利息=所持×0.5%×log10(1+銀行)を毎秒獲得(毎秒生産×8付近から逓減、打ち止めなし)。段階3(スキル「経済分析」で購入可):逓減基準×(1+0.08×最高到達層)。", desc: "銀行と貯蓄でクリックを強化する。段階購入で複利利息が追加" },
   { id: "moonGlobalYeast", name: "月面発酵", cost: 7.4e116, detail: "式：9×1.003^(最高到達層-2)×1.001^月面 ※第3層以降。段階2(スキル「時空免許」で購入可):log10(1+ノルマ余裕率)/10で発酵が進む。段階3(スキル「研究解析」で購入可):×(1+5%×取得研究数)。", desc: "最高到達層で全体生産を強化する。段階購入で余裕率連動と研究数連動が追加" },
   { id: "portalGlobalFold", name: "異世界増幅", cost: 8.7e38, detail: "式：1.002^異世界炉×3.5^出現中モンスター×金ブースト中×5。段階2(スキル「特異点管理」で購入可):折込連鎖=全生産×1.058^ノルマ中討伐数。討伐するほど成長率が上がる。段階3(スキル「超越体」で購入可):×(1+0.001×最高到達層)。", desc: "異世界炉の数・金ブースト中・モンスター出現で全生産UP。段階購入で「討伐するほど伸びる」連鎖が追加" },
@@ -8893,19 +8893,17 @@ function ownedUpgradeTypeCount() {
   return UPGRADES.filter(u => (state.upgrades[u.id] || 0) > 0).length;
 }
 
-function portalHuntDurationMs() {
-  const portal = state.upgrades.portal || 0;
-  return 20000 * levelGrowth(portal, 0.0042);
-}
-
 function portalHuntSpawnMultiplier() {
   if (!state.research.portalNetwork) return 1;
-  if (Date.now() >= (state.portalHuntUntil || 0)) return 1;
-
   const portal = state.upgrades.portal || 0;
-  let m = intervalReduction(portal, 0.010);
-  // 段階3: 最高到達ノルマ層で窓中の出現がさらに早く
-  if (resStage3("portalNetwork")) m *= Math.exp(-0.0008 * maxQuotaStage());
+  // 常時項(窓非依存・2026-07-09 式変更のsim同期): 研究解放中は異世界炉の数だけ出現が常時速い。
+  // 窓(段階2・討伐で維持)は追加加速。旧・窓中のみ0.010 → 常時0.007+窓中0.003(窓中の合計はほぼ従来)。
+  let m = intervalReduction(portal, 0.007);
+  if (Date.now() < (state.portalHuntUntil || 0)) {
+    m *= intervalReduction(portal, 0.003);
+    // 段階3: 最高到達ノルマ層で窓中の出現がさらに早く
+    if (resStage3("portalNetwork")) m *= Math.exp(-0.0008 * maxQuotaStage());
+  }
   return m;
 }
 
@@ -13908,7 +13906,7 @@ function researchCurrentEffectText(r) {
   }
 
   if (r.id === "portalNetwork") {
-    return `現在効果：金クッキー後 ${fmtShort(portalHuntDurationMs() / 1000)}秒、モンスター出現 x${portalHuntSpawnMultiplier().toFixed(3)} / 相性：金色型・狩猟型 / 弱点：異世界炉が少ないと体感が薄い`;
+    return `現在効果：モンスター出現 x${portalHuntSpawnMultiplier().toFixed(3)}${Date.now() < (state.portalHuntUntil || 0) ? "(狩り窓中)" : ""} / 相性：金色型・狩猟型 / 弱点：異世界炉が少ないと体感が薄い`;
   }
 
   if (r.id === "bankClickDividend") {
@@ -13975,7 +13973,7 @@ function researchFormulaText(r) {
 
   if (r.id === "portalNetwork") {
     const portal = state.upgrades.portal || 0;
-    return `式：異世界炉生産 = 基礎x9 / 金クッキー後の効果時間 = 20秒 × 1.0042^異世界炉数 / 出現倍率 = 0.990^異世界炉数 / 現在：異世界炉 ${fmt(portal)}個、効果時間 ${fmtShort(portalHuntDurationMs() / 1000)}秒、出現 x${portalHuntSpawnMultiplier().toFixed(3)}`;
+    return `式：異世界炉生産 = 基礎x9 / 出現倍率 = 常時0.993^異世界炉数、狩り窓中はさらに×0.997^異世界炉数 / 狩り窓(段階2) = 討伐のたびに40秒張り直し / 現在：異世界炉 ${fmt(portal)}個、${Date.now() < (state.portalHuntUntil || 0) ? "狩り窓中" : "窓なし"}、出現 x${portalHuntSpawnMultiplier().toFixed(3)}`;
   }
 
   if (r.id === "bankClickDividend") {
@@ -16168,10 +16166,8 @@ function collectGoldenCookie() {
   }
   state.lastGoldenAt = Date.now();
 
-  if (state.research.portalNetwork) {
-    state.portalHuntUntil = Date.now() + portalHuntDurationMs();
-    goldEffects.push("異世界狩猟");
-  }
+  // 異世界接続網: 狩り窓は金クッキーでは開かない(2026-07-09 承認の式変更・sim同期2026-07-16)。
+  // 窓は討伐そのものが開き・維持する(defeatMonster側・段階2)。ここでは何もしない。
 
   const effectSuffix = goldEffects.length ? ` / ${goldEffects.join("・")}` : "";
   const r = Math.random();
@@ -16596,9 +16592,11 @@ function defeatMonster(id) {
   state.chainN = chainCount() + 1;
   state.chainLastKillEl = quotaElapsedSeconds();
 
-  // 異世界接続網 段階2: 狩り窓中の討伐1体ごとに窓+2秒
-  if (state.research.portalNetwork && resStage2("portalNetwork") && Date.now() < (state.portalHuntUntil || 0)) {
-    state.portalHuntUntil += 2000;
+  // 異世界接続網 段階2: 延長狩り(2026-07-09 承認の式変更・sim同期2026-07-16): 窓は討伐そのものが開き・維持する。
+  // 討伐のたびに窓を「今+40秒」まで張り直す(討伐間隔<40秒なら窓が途切れない)。金クッキーでは開かない(旧式)。
+  // 旧・金で開く+討伐+2秒は「金の高頻度化で常時ON(延長無意味)」か「窓内討伐ゼロ(延長不発)」の両端に倒れ死んでいた。
+  if (state.research.portalNetwork && resStage2("portalNetwork")) {
+    state.portalHuntUntil = Math.max(Number(state.portalHuntUntil) || 0, Date.now() + 40000);
   }
 
   const chainPrepLv = state.perks.chainPrep || 0;
