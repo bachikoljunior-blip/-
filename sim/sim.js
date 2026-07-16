@@ -1488,7 +1488,7 @@ function computeProd(sim) {
   if (resActive(sim, 'ovenBatch')) globalRes *= lg(capOwn(r.upgrades.oven || 0), R.ovenGlobal || 0);
   // 工場ネットワークの物流波及(同上・後半希釈対策): 工場台数で全生産が僅かに伸びる。
   if (resActive(sim, 'factoryNetwork')) globalRes *= lg(capOwn(r.upgrades.factory || 0), R.factoryGlobal || 0);
-  // 香料調合 段階2: 熟成の香り(金取得から12秒間、全生産バースト)
+  // 香料調合 段階2: 熟成の香り(金取得から12秒間、全生産バースト)。mature上限60s(⑬再設計spec)。
   if (resActive(sim, 'spiceBlend') && resStage2(sim, 'spiceBlend') && sim.t < (r.spiceAromaUntil || 0)) {
     globalRes *= r.spiceBurstM || 1;
   }
@@ -2570,10 +2570,9 @@ function collectGolden(sim, prod) {
   sim.run.msGoldens = (sim.run.msGoldens || 0) + 1; // マイルストーン研究(第12次R5): その周回の金取得数
   const r = sim.run;
   r.goldenTaken++;
-  // 香料調合 段階2: 風味の熟成(前回の金からの経過秒で、全生産の短時間バーストが決まる)
+  // 香料調合 段階2: 風味の熟成(前回の金からの経過秒・上限60s で、全生産の短時間バーストが決まる)
   if (resActive(sim, 'spiceBlend') && resStage2(sim, 'spiceBlend')) {
-    const mature = Math.max(0, sim.t - (r.lastGoldenT || r.startT)); // キャップ撤廃(旧min 240s)
-    // タイミング(条件⑬): 完全放置は爆発窓に行動を寄せられないため係数を減衰
+    const mature = Math.min((P.timing.matureCapSec || 60), Math.max(0, sim.t - (r.lastGoldenT || r.startT))); // 上限60s(⑬再設計spec)
     const matureEff = idleOn(sim, 'mature') ? P.timing.matureIdleMul : 1;
     let burst = 1 + P.res2.matureRate * mature * matureEff;
     if (resStage3(sim, 'spiceBlend')) burst *= 1 + P.res2.spiceStageCoef * r.maxStage;

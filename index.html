@@ -16081,7 +16081,7 @@ function collectGoldenCookie() {
     state.spiceBoostUntil = Date.now() + 30000 + Math.log1p(state.upgrades.spiceRack || 0) * 1800;
     // 段階2: 風味の熟成(前回の金からの経過秒で、12秒間の全生産バーストが決まる)
     if (resStage2("spiceBlend")) {
-      const mature = Math.max(0, (Date.now() - (state.lastGoldenAt || Date.now())) / 1000);
+      const mature = Math.min(60, Math.max(0, (Date.now() - (state.lastGoldenAt || Date.now())) / 1000)); // 上限60s(⑬再設計spec: バースト複利の発散を有界化)
       let burst = 1 + 0.006 * mature;
       if (resStage3("spiceBlend")) burst *= 1 + 0.0015 * maxQuotaStage();
       state.spiceBurstM = burst;
