@@ -9425,6 +9425,31 @@ function pickMonsterTypeId() {
   return "normal";
 }
 
+// モンスターの色(強さ段)= ノルマ層で決まる確率分布(2026-07-15 ユーザー指示・sim同期):
+// 層が進むと「次の色(一段強い)」が低確率で出始め、進むほど確率が上がり、さらに次の色が…と連鎖。初期色はゼロにならない。
+function monsterColorWeights() {
+  const maxC = EQUIP2_CFG.tiers || 6;
+  const band = EQUIP2_CFG.layerBand || 5; // 何層で色が1段進むか
+  const floorW = 0.15, emergeW = 0.30, decay = 0.6;
+  const prog = Math.max(0, (state.maxQuotaStage || 0)) / band; // 連続の色進行(ノルマ層/band)
+  const w = [];
+  for (let c = 1; c <= maxC; c++) {
+    const d = prog - (c - 1);
+    if (d < -1) w.push(0);
+    else if (d < 0) w.push(emergeW * (1 + d));
+    else w.push(floorW + (1 - floorW) * Math.pow(decay, d));
+  }
+  return w;
+}
+function pickMonsterColorTier() {
+  const w = monsterColorWeights();
+  let tot = 0; for (const x of w) tot += x;
+  if (tot <= 0) return 1;
+  let r = Math.random() * tot;
+  for (let c = 1; c <= w.length; c++) { r -= w[c - 1]; if (r <= 0) return c; }
+  return 1;
+}
+
 function dropMaterialIdFor(stageNo, typeId) {
   // 深層領域(S6): ボス核は共通の深層核、通常枠は全モンスターが虚空糖を落とす
   if (typeId === "boss") return stageNo >= MAX_STAGE_NO ? "deepCore" : "bossCore" + stageNo;
@@ -9459,7 +9484,7 @@ const OVERKILL_RARE = { 2: "ironShard", 3: "silentCore", 4: "cometShard", 5: "co
 const FERMENT_MATERIAL = { 1: "flour", 2: "lavaSugar", 3: "frostSugar", 4: "lavaSugar", 5: "stardust", 6: "stardust" };
 
 // 撃破時の素材ドロップ・討伐カウント・ボス処理。表示用テキストを返す
-function grantMonsterDrops(typeId, level, overkill) {
+function grantMonsterDrops(typeId, level, overkill, colorTier) {
   const stageNo = currentStageNo();
   const stage = stageInfo(stageNo);
   const type = MONSTER_TYPES[typeId] || MONSTER_TYPES.normal;
@@ -9509,7 +9534,8 @@ function grantMonsterDrops(typeId, level, overkill) {
     // 色素材(2026-07-13 新装備): ノルマ層の帯の色素材を討伐ごとにドロップ(工房スキル不要=最初から)
     // 希少化(2026-07-15): 素の5% × 強さ × レア度。装備の色素材ボーナス(oreAdd)は投資ぶんとして上乗せ。ドロップは報酬後回収(addDrop)。
     {
-      const oreId = "ore_t" + layerOreTier();
+      const ct = Math.max(1, Math.min(EQUIP2_CFG.tiers || 6, colorTier || layerOreTier())); // そのモンスターの色の素材(2026-07-15)
+      const oreId = "ore_t" + ct;
       const oreExp = (MAT_DROP_BASE * monsterDropStrength(typeId) * matRarityDrop(oreId) + equip2Fx().oreAdd) * count;
       addDrop(oreId, rollDropQty(oreExp)); // 新装備: 色素材系
     }
@@ -16140,8 +16166,8 @@ function createMonsterElement(mon) {
   wrap.dataset.monsterId = String(mon.id);
   // 種類の色: 変種は既存画像の色変え(hue回転・2026-07-13「画像のないものは既存のものを色を変えてつかう」)
   if (type.hue) wrap.style.setProperty("--mtype-hue", type.hue + "deg");
-  // 層の色: 討伐で落ちる色素材のオーラ
-  wrap.style.setProperty("--layer-ore-color", LAYER_ORE_COLORS[layerOreTier() - 1]);
+  // 色(強さ段)のオーラ: そのモンスターの色=落とす色素材の色(2026-07-15 色スポーン)
+  wrap.style.setProperty("--layer-ore-color", LAYER_ORE_COLORS[Math.max(0, Math.min(LAYER_ORE_COLORS.length - 1, (mon.colorTier || layerOreTier()) - 1))]);
   let monArt = (ASSETS.monsters && ASSETS.monsters[type.base || type.id]) || ASSETS.objects.cookieMonster;
   // こつぶ群れは3体それぞれ別の絵にする
   if ((type.base || type.id) === "swarm" && Array.isArray(ASSETS.swarmVariants) && ASSETS.swarmVariants.length) {
@@ -16215,7 +16241,9 @@ function showMonster(forcedTypeId) {
   if (typeId === "boss") forceBossNext = false;
 
   const level = monsterLevel();
-  const hpMulShared = (state.nextMonsterHpMultiplier || 1) * type.hpMul * (stage.hpMul || 1);
+  const colorTier = typeId === "boss" ? layerOreTier() : pickMonsterColorTier(); // 色(強さ段)=ノルマ層の確率分布(2026-07-15)
+  const colorHp = Math.pow(1.2, colorTier - 1); // 上位色ほど一段強い(sim同期)
+  const hpMulShared = (state.nextMonsterHpMultiplier || 1) * type.hpMul * (stage.hpMul || 1) * colorHp;
   // ボスは60秒固定。それ以外は従来式×type滞在倍率×ステージ滞在倍率
   const stayMs = typeId === "boss"
     ? 60000
@@ -16230,6 +16258,7 @@ function showMonster(forcedTypeId) {
       id,
       level,
       typeId,
+      colorTier, // 色(強さ段・2026-07-15)
       variant: i,
       goldenChainMultiplier: chainReady
         ? 1 + (state.perks.goldenChain || 0) * 2.0
@@ -16525,7 +16554,7 @@ function defeatMonster(id) {
 
   // 素材ドロップ判定・ステージ討伐カウント・ボス撃破処理。素材はここでは付与せず、
   // 報酬選択後にアイコンとして落とし、タップ or 自動回収で一度だけ付与する。
-  const dropText = grantMonsterDrops(defeatedTypeId, defeatedLevel, Boolean(mon.overkill));
+  const dropText = grantMonsterDrops(defeatedTypeId, defeatedLevel, Boolean(mon.overkill), mon.colorTier);
   if (dropText) message += ` / ${dropText}`; // 深層到達・金クッキー短縮など、素材以外のイベント文のみ
   pendingMaterialDrops = { drops: { ...lastMonsterDropMap }, pos: dropPos };
 
