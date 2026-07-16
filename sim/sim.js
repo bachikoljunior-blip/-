@@ -1532,9 +1532,8 @@ function computeProd(sim) {
     if (resStage3(sim, 'portalNetwork')) globalRes *= 1 + (RG.portal.s3Floor || 0);
     if (resStage3(sim, 'galaxyAssembly')) globalRes *= 1 + (RG.galaxy.s3Floor || 0);
     if (resStage3(sim, 'factoryNetwork')) globalRes *= 1 + (RG.factoryS3Floor || 0);
-    // 工場網 段2(⑨・2026-07-16): 効果は factory 単体倍率のため総生産に占める工場比が薄い周回で instant lift≈1.00
-    // (⑨-a factoryNetwork:2 が最大1.00でNG)。月面段2/オーブン段3と同処方で、取得中だけの全生産floorで下支え。均一倍率=②方針間シェアに中立。
-    if (resStage2(sim, 'factoryNetwork')) globalRes *= 1 + (RG.factoryS2Floor || 0);
+    // 工場網 段2の全生産floorは撤回(2026-07-16): ⑨-a factoryNetwork:2 は帯入りしたが、均一な基礎生産の底上げが
+    // 金系報酬の相対lift(③-a goldenFirstHit)を薄めて7/8→6/8に劣化=差引ゼロのため不採用。⑨は18/19据置。
     // オーブン大量焼成 段3(⑨): オーブン寄与が薄い外れ周回で min<1.05 に落ちるため全生産floorで下支え(月面段2と同処方)
     if (resStage3(sim, 'ovenBatch')) globalRes *= 1 + (RG.ovenS3Floor || 0);
     if (resStage3(sim, 'spiceBlend')) globalRes *= 1 + (RG.spiceS3Floor || 0);
@@ -3342,6 +3341,11 @@ function tryBuyResearchStage(sim, id, stage, budgetRatio) {
   if (cost > r.cookies * budgetRatio) return false;
   r.cookies -= cost;
   if (stage === 2) r.research2[id] = true; else r.research3[id] = true;
+  // ⑬測定用(2026-07-16・opt-in): タイミング機能段2の取得直後のスナップを保存=機能が「活性」な地点から
+  // 短窓で最適/放置を枝分かれできる(周回頭からだと段2未取得で1.000・周回全体だと複利発散)。measurement専用=経済不変。
+  if (stage === 2 && sim.opt.timingSnaps && (id === 'quantumProofing' || id === 'blackHoleCompression' || id === 'spiceBlend' || id === 'portalNetwork')) {
+    (sim.timingSnaps || (sim.timingSnaps = {}))[id] = takeSnapshot(sim);
+  }
   const key = id + ':' + stage;
   if (sim.firstStageBuy[key] === undefined) sim.firstStageBuy[key] = sim.t;
   if (!sim.everStage[key]) {

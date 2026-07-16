@@ -715,6 +715,38 @@ function judgeWindowTiming(hours, W) {
   return ok;
 }
 
+// ⑬v4(2026-07-16): 取得直後スナップから短窓の枝分かれ。段2は周回中盤で取得=周回頭snapだと未活性で1.000、
+// 周回全体だと離散×再投資が複利発散。「機能取得の瞬間のsnap」から最適/放置を同じ窓W秒だけ枝分かれ→機能が活性で
+// かつ有界=安定測定を狙う(sim側 opt.timingSnaps で取得直後snapを保存)。
+function judgeAcqWindowTiming(hours, W) {
+  const win = W || 900;
+  let ok = 0;
+  console.log(`⑬ タイミング機能v4(取得直後snap→同窓${win}s枝分かれの窓内クッキー比の中央値, 要求[1.05,2.00])`);
+  for (const f of TIMING_FEATURES) {
+    const rid = f.stage.split(':')[0];
+    const rows = [];
+    let feature = false;
+    for (const s of STRATEGIES) {
+      const sim = G.simulate(s, { hours, timingSnaps: true });
+      const snap = sim.timingSnaps && sim.timingSnaps[rid];
+      if (!snap) continue;
+      const cap = (snap.run.startT != null ? (snap.t - snap.run.startT) : 0) + win; // 取得地点から win 秒
+      const on = G.replayRun(s, snap, { hours }, cap);
+      const off = G.replayRun(s, snap, { hours, idleTiming: f.key }, cap);
+      if (on && off && on.runCookies > 0 && off.runCookies > 0 && Number.isFinite(on.runCookies) && Number.isFinite(off.runCookies)) {
+        const ratio = Math.min(BRANCH_CAP, on.runCookies / off.runCookies);
+        const inBand = ratio >= 1.05 && ratio <= 2.0;
+        if (inBand) feature = true;
+        rows.push(`${s.id}=${ratio.toFixed(3)}${inBand ? '✓' : ''}`);
+      }
+    }
+    if (feature) ok++;
+    console.log(`  ${feature ? 'OK' : 'NG'} ${f.label.padEnd(26)} ${rows.join(' ') || '(未取得)'}`);
+  }
+  console.log(`⑬v4 タイミング ${ok}/${TIMING_FEATURES.length}`);
+  return ok;
+}
+
 // ⑬v2(2026-07-16 ユーザー指示「周回を跨いで効く要素は取得後全周回で比べればいい」):
 // 段2機能は取得後、以降の全周回で永続的に効く=1周回だけの枝分かれ(judgeWholeTiming)だと晩期取得機能が
 // n=1で過少評価・巨大化する。ここでは「取得後の全周回の獲得効率(runCookies/duration)の幾何平均」を、
@@ -821,6 +853,9 @@ if (mode === 'baseline') {
 } else if (mode === 'timingwin') {
   // ⑬ 単体(窓限定枝分かれv3): node runner.js timingwin "" [hours] [windowSec]
   judgeWindowTiming(hours, Number(process.argv[5]) || 600);
+} else if (mode === 'timingacq') {
+  // ⑬ 単体(取得直後snap→短窓v4): node runner.js timingacq "" [hours] [windowSec]
+  judgeAcqWindowTiming(hours, Number(process.argv[5]) || 900);
 } else if (mode === 'checks') {
   // まとめ実行: node runner.js checks S1 [hours] → ⑧(全方針) / ⑫ / ⑬(指定方針)
   const sims = {};
@@ -1195,9 +1230,11 @@ if (mode === 'baseline') {
     const okWhole = judgeStageWhole(H, sims, wholeKeys);
     console.log(`⑨ 段階 合計 ${okInstant + okWhole}/${instantIds.length + wholeKeys.length} (instant ${okInstant}/${instantIds.length} + whole ${okWhole}/${wholeKeys.length}・⑬タイミング段${[...STAGE_TIMING_EXCLUDE].filter(k => stageMap[k]).length}件は⑬で判定のため除外)`);
   }
-  // ⑬ タイミング(提案5・2026-07-07承認=全体比較): 瞬間比較(collect('timing:'))は構造的に1.000
-  // に張り付くため廃止。最適操作/完全放置の通しを走らせ、全周回効率の幾何平均比[1.05,2.0]で判定。
-  judgeWholeTiming(H, sims);
+  // ⑬ タイミング(2026-07-16 正式測定を取得直後snap→短窓v4へ): 旧・単一周回の全体枝分かれ(judgeWholeTiming)は
+  // 離散×再投資の機能(mature/portal)が方針依存で二極発散(1.0↔1e9)し測れなかった。機能取得の瞬間のsnapから
+  // 最適/放置を同じ短窓だけ枝分かれ=機能が活性かつ有界=安定測定。sim側 opt.timingSnaps で取得直後snapを保存。
+  judgeAcqWindowTiming(H, 900);
+  // (参考)旧・全体枝分かれ: judgeWholeTiming(H, sims);
   // 参考: 討伐連鎖(第12次D採用)の期待値lift(合否条件ではない。③②⑫㉘の押し上げ係数の目安)
   {
     const byPol = (collect('chain'))['chain'] || {};
