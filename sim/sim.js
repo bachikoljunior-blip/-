@@ -1532,6 +1532,9 @@ function computeProd(sim) {
     if (resStage3(sim, 'portalNetwork')) globalRes *= 1 + (RG.portal.s3Floor || 0);
     if (resStage3(sim, 'galaxyAssembly')) globalRes *= 1 + (RG.galaxy.s3Floor || 0);
     if (resStage3(sim, 'factoryNetwork')) globalRes *= 1 + (RG.factoryS3Floor || 0);
+    // 工場網 段2(⑨・2026-07-16): 効果は factory 単体倍率のため総生産に占める工場比が薄い周回で instant lift≈1.00
+    // (⑨-a factoryNetwork:2 が最大1.00でNG)。月面段2/オーブン段3と同処方で、取得中だけの全生産floorで下支え。均一倍率=②方針間シェアに中立。
+    if (resStage2(sim, 'factoryNetwork')) globalRes *= 1 + (RG.factoryS2Floor || 0);
     // オーブン大量焼成 段3(⑨): オーブン寄与が薄い外れ周回で min<1.05 に落ちるため全生産floorで下支え(月面段2と同処方)
     if (resStage3(sim, 'ovenBatch')) globalRes *= 1 + (RG.ovenS3Floor || 0);
     if (resStage3(sim, 'spiceBlend')) globalRes *= 1 + (RG.spiceS3Floor || 0);
