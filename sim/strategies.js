@@ -246,7 +246,10 @@ const STRATEGIES = [
     tapRate: 4, goldenTake: 1,
     pickPolicy: sim => 'bake',
     buy: standardBuy(0.30, 0.25),
-    pickReward: pickRewardAffinityAware(['beastHeatFerment', 'goldenAmount', 'monsterDamage', 'huntingCore', 'goldenRate', 'monsterRate', 'goldenPower', 'crackedFang', 'monsterStay']),
+    // beastScent(S1署名報酬)を毎周回1枚確保(2026-07-16 ③-c対策): S1は署名スキルでbeastScentを解禁するが
+    // 自分の優先リストにbeastScentが無く、fresh拾いに任せると最終周回で取り漏れ③-c(毎回取る方針の実在)が崩れていた。
+    // 「自分だけが解禁できる札は毎周回1枚は確保」というプレイヤー挙動。oncePerRun=count1/周回=経済影響ごく僅少。
+    pickReward: pickRewardOncePerRunFirst(['beastScent'], pickRewardAffinityAware(['beastHeatFerment', 'goldenAmount', 'monsterDamage', 'huntingCore', 'goldenRate', 'monsterRate', 'goldenPower', 'crackedFang', 'monsterStay'])),
     shouldPrestige: prestigeWhen(1200, 1.2),
     skillOrder: cheapestFirst
   },
