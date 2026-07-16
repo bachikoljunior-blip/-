@@ -10933,12 +10933,13 @@ function equip2Items() {
         }
         const def = EQUIP2_FX[cat][v - 1];
         const scale = Math.pow(1.5, t - 1); // sim同値(×1.5^(t-1))。旧×2^(t-1)はA/B/Cモデル同期(2026-07-16)で修正
+        const fmtF = x => x >= 100 ? fmt(x) : String(Math.round(x * 100) / 100); // 倍率表示は小数を保つ(fmtは0.9を0に丸める)
         const upText = k => {
           const val = (k[1]) * scale;
-          if (k[0] === "oreAdd" || k[0] === "rewardLvAdd") return EQUIP2_FX_LABEL[k[0]].replace("+n", "+" + fmt(Math.floor(val) || val));
+          if (k[0] === "oreAdd" || k[0] === "rewardLvAdd") return EQUIP2_FX_LABEL[k[0]].replace("+n", "+" + fmtF(Math.floor(val) || val));
           if (k[0] === "critAdd") return "会心率+" + Math.round(Math.min(EQUIP2_FLATCAP.critAdd, val) * 100) + "%";
           if (k[0] === "upDisc" || k[0] === "resDisc") return EQUIP2_FX_LABEL[k[0]] + " " + Math.round(Math.min(0.5, val) * 100) + "%";
-          return EQUIP2_FX_LABEL[k[0]] + " ×" + fmt(1 + val);
+          return EQUIP2_FX_LABEL[k[0]] + " ×" + fmtF(1 + val);
         };
         const ups = [];
         for (let i = 0; i < def.up.length; i += 2) ups.push(upText([def.up[i], def.up[i + 1]]));
@@ -10946,7 +10947,7 @@ function equip2Items() {
         if (def.m === "C") fxText = "【" + (EQUIP2_COND_LABEL[def.cond] || def.cond) + "】" + fxText; // C=状況起動
         if (def.m === "B" && def.down) { // B=トレードオフ(下げはティア非連動の固定係数)
           const downs = [];
-          for (let i = 0; i < def.down.length; i += 2) downs.push(EQUIP2_FX_LABEL[def.down[i]] + " ×" + fmt(def.down[i + 1]));
+          for (let i = 0; i < def.down.length; i += 2) downs.push(EQUIP2_FX_LABEL[def.down[i]] + " ×" + fmtF(def.down[i + 1]));
           fxText += " (代償: " + downs.join(" / ") + ")";
         }
         // レシピは固定(2026-07-14): 色銘2,3,5,8=前ティア装備入り / 1,4,6,7,9=素材のみ(実行時の代替なし)
