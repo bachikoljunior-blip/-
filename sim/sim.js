@@ -513,8 +513,10 @@ function monsterColorWeights(sim) {
 }
 // 決定的な色抽選(simは乱数を使わない=蓄積器方式)
 function pickColorTier(sim) {
-  const w = monsterColorWeights(sim);
   const r = sim.run;
+  // 重みは maxStage(ノルマ層)が変わった時だけ再計算(毎spawnの再計算を避ける=perf)
+  if (r._colorWStage !== r.maxStage || !r._colorW) { r._colorW = monsterColorWeights(sim); r._colorWStage = r.maxStage; }
+  const w = r._colorW;
   if (!r.colorAcc) r.colorAcc = [];
   let tot = 0; for (const x of w) tot += x;
   if (tot <= 0) return 1;
@@ -1519,8 +1521,8 @@ function computeProd(sim) {
   // 効果の値(1台あたりの伸び率 massProdMul)は固定。増えるのは経過時間ではなく購入という行動=放置ゲーム本来の
   // 「買うほど伸びる」複利。買えなくなると自然にプラトー→転生。研究解放でオン(ms_momentum)。
   if (r.ms && r.ms.momentum && P.msResearch) {
-    const exp = Math.min((r.momBuys || 0) / (P.msResearch.momBuyDiv || 32), P.msResearch.momBuyCapExp || 200);
-    globalRes *= Math.pow(P.msResearch.massProdMul, exp);
+    const el = Math.min(sim.t - r.startT, (P.msResearch.momentumCapSec || 14400));
+    globalRes *= Math.pow(P.msResearch.massProdMul, Math.max(0, el) / P.msResearch.massProdSec);
   }
 
   // ③死に報酬対策(第12次P・枝分かれmeasure下では安全): 討伐ダメージ系報酬(割れた牙/焼き印狩り)を「討伐数×全生産倍率」へ繋ぐ。
@@ -3014,7 +3016,7 @@ function advanceTick(sim, strategy) {
           const level = monsterLevel(sim);
           const typeId = pickMonsterType(sim);
           const colorTier = pickColorTier(sim); // 色(強さ段)=ノルマ層の確率分布(2026-07-15)
-          const colorHp = Math.pow((P.mcolor && P.mcolor.hpMul) || 1.2, colorTier - 1); // 上位色ほど一段強い
+          const colorHp = Math.pow((P.mcolor && P.mcolor.hpMul) || 1.08, colorTier - 1); // 上位色ほど一段強い
           const tHp = (P.mtype && P.mtype.hpMul && P.mtype.hpMul[typeId]) || 1;
           const tStay = (P.mtype && P.mtype.stayMul && P.mtype.stayMul[typeId]) || 1;
           const maxHp = Math.max(40, Math.floor(monsterHpValue(sim, level) * tHp * colorHp * (r.nextMonsterHpMultiplier || 1)));

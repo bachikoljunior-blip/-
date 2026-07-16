@@ -10010,8 +10010,9 @@ function productionMomentumMul() {
   // 時間スケールを撤廃し購入駆動へ=「この周回で買った設備数」で全生産が伸びる(1台あたりの伸び率は固定)。
   // 増えるのは経過時間ではなく購入という行動=放置ゲーム本来の複利。買えなくなると自然にプラトー。
   if (!msBought("ms_momentum")) return 1;
-  const exp = Math.min((state.momBuysThisRun || 0) / 16, 200); // sim同期(momBuyDiv=16・上限exp200)
-  return Math.pow(1.25, exp);
+  const el = Math.min(Math.max(0, (Date.now() - (state.runStart || Date.now())) / 1000), 14400);
+  return Math.pow(1.25, el / 32); // 時間駆動(sim同期)。momentumCapSec=14400
+
 }
 
 function clickSkillMultiplier() {
@@ -16242,7 +16243,7 @@ function showMonster(forcedTypeId) {
 
   const level = monsterLevel();
   const colorTier = typeId === "boss" ? layerOreTier() : pickMonsterColorTier(); // 色(強さ段)=ノルマ層の確率分布(2026-07-15)
-  const colorHp = Math.pow(1.2, colorTier - 1); // 上位色ほど一段強い(sim同期)
+  const colorHp = Math.pow(1.08, colorTier - 1); // 上位色ほど一段強い(控えめ・sim同期)
   const hpMulShared = (state.nextMonsterHpMultiplier || 1) * type.hpMul * (stage.hpMul || 1) * colorHp;
   // ボスは60秒固定。それ以外は従来式×type滞在倍率×ステージ滞在倍率
   const stayMs = typeId === "boss"
