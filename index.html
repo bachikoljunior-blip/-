@@ -6730,7 +6730,7 @@ const STAGE_MATERIALS = {
 // 生産を持たせる(静的加算・転生持ち越し)。購入時CPS基準の固定値なので、経済成長とともに自然に無意味化する。
 // 上位4種を追加(sim同期2026-07-11 ㉑: 最新設備ラッシュ買いだと系列ボーナスだけでは初台Δが実CPS×1/5に届かない実測)
 const PRESENCE_FIRST_UNIT_COEF = 0.25;
-const PRESENCE_UPGRADE_IDS = ["oven", "factory", "bank", "spiceRack", "portal", "galaxyFactory", "blackHoleMixer", "universeOven", "cookieSingularity", "quantumBakery"];
+const PRESENCE_UPGRADE_IDS = ["oven", "factory", "bank", "spiceRack", "portal", "moonBakery", "timeOven", "galaxyFactory", "blackHoleMixer", "universeOven", "godFinger", "cookieSingularity", "quantumBakery", "antimatterOven"]; // 全設備に拡張(2026-07-16 ㉑・sim同期: momentum B下でantimatterOven/timeOvenの初台Δが不足)
 
 let state = freshState();
 let buyMode = "1";

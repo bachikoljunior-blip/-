@@ -360,7 +360,7 @@ module.exports = {
   lineage: { coef: 0.25 },
   // 初台ボーナス(第12次R2続き・㉑対策): 中位設備の初めての1台に購入直前CPS×coefの生産を持たせる
   // (系列ボーナスの中位拡張。㉑のNG5種=oven x0.16/factory x0.02-0.05/bank x0.12/spiceRack x0.17/portal x0.15対策)
-  presence: { firstUnitCoef: 0.25, ids: ['oven', 'factory', 'bank', 'spiceRack', 'portal', 'galaxyFactory', 'blackHoleMixer', 'universeOven', 'cookieSingularity', 'quantumBakery'] }, // 上位4種を追加(2026-07-11 ㉑S8: 最新設備ラッシュ型のrun23-34初購入でΔ比0.22-0.94=系列ボーナスだけでは不足。静的加算=成長で自然無意味化は同じ)
+  presence: { firstUnitCoef: 0.25, ids: ['oven', 'factory', 'bank', 'spiceRack', 'portal', 'moonBakery', 'timeOven', 'galaxyFactory', 'blackHoleMixer', 'universeOven', 'godFinger', 'cookieSingularity', 'quantumBakery', 'antimatterOven'] }, // 全設備に初台ボーナス(2026-07-16 ㉑: momentum B下でantimatterOven/timeOvenの初購入Δ比が0.01-0.28=系列ボーナスだけでは不足。moon/time/godfinger/antimatterを追加。静的加算=成長で自然無意味化=経済中立)
 
   // ---- 段階コストの研究別倍率(第11次・値段割り用) ----
   // 研究ごとに {s2, s3} を指定(なければ resStageCost の共通倍率)。研究コスト=調整項目(ユーザー確認済み)
