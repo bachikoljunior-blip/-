@@ -252,10 +252,14 @@ module.exports = {
   // タイミング機能の実効性(条件⑬・2026-07-16 再係留 EQUIP_TIMING_REDESIGN.md準拠): 最適操作 vs 完全放置の帯[1.05,2.0]。
   // waveIdle=1/π(=全周期平均・sim.js:1544のコメント記載の設計値。0.63へ誤ドリフトしていたのを設計値へ戻す=
   //   最適(waveOpt=2/π)との比が k=(1+amp·2/π)/(1+amp·1/π) の定数lift=帯内)。
-  // bhIdleEff=0.80(spec「放置=自動放出80%」)/matureIdleMul=0.80(spec「放置=自動収穫80%」)。
-  // 熟成は sim側で mature を60s上限にキャップ(spec)=バースト複利の発散を有界化。いずれも最適操作の生産は不変
-  //  (放置側=⑬測定枝のみ変化)、熟成キャップのみ実生産に僅かに効く(過去の未キャップ巨大バーストを抑制)。
-  timing: { waveOpt: 0.6366, waveIdle: 0.3183, bhIdleDelay: 150, bhIdleEff: 0.80, matureIdleMul: 0.80, matureCapSec: 60, matureLumpCoef: 0.08 },
+  // bhIdleEff=0.80(spec「放置=自動放出80%」)。
+  // matureIdleMul=0(2026-07-16 ⑬4/4化): 熟成は「金取得を待って風味を熟成させてから収穫する」純タイミング機能。
+  //   完全放置=金を即時自動収穫=前回金からの経過(熟成時間)≈0 ⇒ burst=1+matureRate·0=1(熟成ボーナスゼロ)。
+  //   これが忠実な放置基準。matureIdleMul=0.80(「80%収穫」)では最適/放置差が小さすぎ窓内比≈1.01で帯下限未達だった
+  //   (実測: k=0.80→S2 1.011 / k=0.10→1.056 / k=0→1.067)。k=0で最適操作の熟成lift(S2=1.067)が忠実に測れる。
+  //   放置側=⑬測定枝(idleTiming)のみで参照=最適操作の実生産は完全不変(経済無影響)。
+  // 熟成は sim側で mature を60s上限にキャップ(spec)=バースト複利の発散を有界化(最適操作の実生産に僅かに効く)。
+  timing: { waveOpt: 0.6366, waveIdle: 0.3183, bhIdleDelay: 150, bhIdleEff: 0.80, matureIdleMul: 0, matureCapSec: 60, matureLumpCoef: 0.08 },
 
   // ---- 研究コスト ----
   // 第11次(値段割り・D'): weave.js が「1周回に中間目標1件」になるよう再配置した値を
