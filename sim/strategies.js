@@ -22,6 +22,13 @@ function branchOf(id) {
 // 方針入口の増幅ノード(_amp)は価格こそQoL枠だが効果は生産増幅=プレイヤーは通常のスキルとして
 // 安い順・系統順で普通に買う(「+75%が8PT」を余りPT扱いで後回しにするのは不自然)。
 function isDeferredUtility(id) { return G.isUtilitySkill(id) && !/_amp$|_stall$|_peddler$|_echo$|^ensemble$/.test(id); }
+// 署名スキルの相互排除(2026-07-16 ユーザー指示「各方針は他方針が取らないスキルを1つ以上取る」):
+// この方針の取得順から「他方針の署名スキル」を除外する。自分の署名は残す=自分だけが取り、他は取らない。
+// 署名は全て葉ノードなので除外しても前提連鎖に影響なし。
+function excludeForeignSignatures(sim, ids) {
+  const foreign = G.foreignSignatures(sim.strat.id);
+  return ids.filter(id => !foreign.has(id));
+}
 function skillOrderByBranch(priority) {
   return function (sim) {
     const nodes = G.SKILL_NODES.slice();
@@ -33,15 +40,15 @@ function skillOrderByBranch(priority) {
       if (qa !== qb) return qa - qb;
       return G.skillCostOf(a) - G.skillCostOf(b);
     });
-    return nodes.map(n => n.id);
+    return excludeForeignSignatures(sim, nodes.map(n => n.id));
   };
 }
 const cheapestFirst = function (sim) {
-  return G.SKILL_NODES.slice().sort((a, b) => {
+  return excludeForeignSignatures(sim, G.SKILL_NODES.slice().sort((a, b) => {
     const ua = isDeferredUtility(a.id) ? 1 : 0; const ub = isDeferredUtility(b.id) ? 1 : 0;
     if (ua !== ub) return ua - ub;
     return G.skillCostOf(a) - G.skillCostOf(b);
-  }).map(n => n.id);
+  }).map(n => n.id));
 };
 
 function cheapestNextSkillCost(sim) {
@@ -49,9 +56,11 @@ function cheapestNextSkillCost(sim) {
   // 相乗り段バンドル(2026-07-14 ④修復): 同じ段(コスト同帯)の未取得スキルは1回の転生でまとめて
   // 買い切る前提で「合計」を目標にする。pG平坦下では最安1本狙いだと2本目のために同じ8.5桁を
   // 再耕作する周回(④比×1.0)が生まれる=R18実測。合計狙いなら同一しきい値で両方買えて毎転生フル段前進。
+  // 他方針の署名スキルは買わない(=転生目標にもしない。さもないと永久に届かない目標で停滞する)
+  const foreign = G.foreignSignatures(sim.strat.id);
   let best = Infinity, bestAny = Infinity, bundle = 0;
   for (const n of G.SKILL_NODES) {
-    if (sim.skills[n.id]) continue;
+    if (sim.skills[n.id] || foreign.has(n.id)) continue;
     if (!n.prereqs.every(q => sim.skills[q])) continue;
     const c = G.skillCostOf(n);
     bestAny = Math.min(bestAny, c);
@@ -59,7 +68,7 @@ function cheapestNextSkillCost(sim) {
   }
   if (best !== Infinity) {
     for (const n of G.SKILL_NODES) {
-      if (sim.skills[n.id]) continue;
+      if (sim.skills[n.id] || foreign.has(n.id)) continue;
       if (G.isUtilitySkill(n.id)) continue;
       if (!n.prereqs.every(q => sim.skills[q])) continue;
       const c = G.skillCostOf(n);

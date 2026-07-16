@@ -196,6 +196,29 @@ const SKILL_NODES = [
 ];
 const SKILL_BY_ID = {}; SKILL_NODES.forEach(s => SKILL_BY_ID[s.id] = s);
 
+// 方針別「署名スキル」(2026-07-16 ユーザー指示): 各プレイ方針は、他方針が取らない専用スキルを1つ以上取る。
+// = 各方針の署名スキルは「その方針だけが取り、他方針は取らない」よう取得順から相互排除する。
+// 選定は全て「葉ノード」(他スキルの前提でない)=排除しても前提連鎖を壊さない。方針の主役系統に合わせて割当。
+const POLICY_SIGNATURE = {
+  S1: 'ensemble',                       // バランス効率型: 編成の心得(4稼ぎ口ボーナス=バランス専用)
+  S2: 'click_stall',                    // クリック会心型: タップ直送(クリック主役)
+  S3: 'golden_echo',                    // 金クッキー特化型: 金の追い金(金主役)
+  S4: 'monster_peddler',                // 狩猟特化型: 討伐直送(狩猟主役)
+  S5: 'research_analysis',              // 研究貯蓄型: 研究解析(研究主役)
+  S6: 'start_2',                        // 早回し転生型: 初期資産+オフライン(早回し主役)
+  S7: 'master_final',                   // 長期育成型: 終端の到達(全ツリー完走の証)
+  S8: 'golden_analysis',                // 最新設備ラッシュ型: 金クッキー解析(この方針が実際に到達する葉・生産非依存QoL)
+  S9: 'hunt_analysis'                   // ノルマ死守型: 狩猟解析(狩猟主役・この方針が実際に到達する葉・生産非依存QoL)
+};
+const ALL_SIGNATURES = new Set(Object.values(POLICY_SIGNATURE));
+// ある方針の取得順から除外すべき「他方針の署名」= 自分の署名以外の全署名
+function foreignSignatures(stratId) {
+  const mine = POLICY_SIGNATURE[stratId];
+  const s = new Set(ALL_SIGNATURES);
+  if (mine) s.delete(mine);
+  return s;
+}
+
 // QoL/解析系ノード: 生産に直接効かないノードは「直前ラングのおまけ価格」
 const UTILITY_SKILLS = new Set([
   'golden_analysis', 'hunt_analysis', 'economy_analysis', 'research_analysis',
@@ -1965,12 +1988,29 @@ const MILESTONE_RESEARCH = (() => {
     if (id.startsWith('start_') || id === 'offline_1' || id === 'endless_oven') return { cpsAdd: 50 }; // 加算(+固定生産)
     return { all: 1.1 };
   };
-  const csLadder = [100, 300, 900, 2500, 7000];
+  // スキル解放研究のコストは全て二倍以上違う(2026-07-16 ユーザー指示):
+  // 固定コスト=スキルの深さ(はしごコスト順位)で6ティアに割った比3の階段。隣接ティアは常に≥2倍差。
+  // 応用(msk_)=そのスキルのティア、奥義(msk2_)=1段上(=同一スキルでも応用<奥義を常に満たす)。
+  // 旧仕様(cps×costSec)は転生直後の低毎秒生産で下限100に張り付き全msk同額=「二倍以上違う」に反したため、
+  // 毎秒生産に依存しない固定額に変更(スキル解放研究は元々「安くて即買い」枠=固定でもゲーム性は不変)。
+  // これによりゲームの焼き込み表(MS_COST_TABLE)・sim動的算出・build_ms_costs再生成のいずれも同じ階段を出す。
+  const skResLadder = [100, 300, 900, 2700, 8100, 24300, 72900]; // 比3=隣接≥2倍。0..5=応用、+1段=奥義
+  const skResTier = {};
+  (function () {
+    const sorted = SKILL_NODES.slice().sort((a, b) => skillCostOf(a) - skillCostOf(b));
+    const NN = sorted.length;
+    sorted.forEach((n, rank) => { skResTier[n.id] = Math.min(5, Math.floor(rank * 6 / NN)); });
+  })();
+  const csLadder = skResLadder; // 後方互換(未使用: costSecではなく固定costを渡す)
   SKILL_NODES.forEach((n, i) => {
-    add('msk_' + n.id, sim => !!sim.skills[n.id], branchFx(n.id), csLadder[i % 5]);
+    const c1 = skResLadder[skResTier[n.id]];
+    add('msk_' + n.id, sim => !!sim.skills[n.id], branchFx(n.id), c1);
+    list[list.length - 1].cost = c1; // 固定コスト(毎秒生産非依存・≥2倍間隔の階段)
     const t = Object.keys(branchFx(n.id))[0];
     if (t === 'click' || t === 'cps' || t === 'golden' || t === 'hunt') {
-      add('msk2_' + n.id, sim => !!sim.skills[n.id], branchFx(n.id), csLadder[(i + 2) % 5] * 3);
+      const c2 = skResLadder[skResTier[n.id] + 1]; // 奥義=1段上(≥2倍・応用<奥義)
+      add('msk2_' + n.id, sim => !!sim.skills[n.id], branchFx(n.id), c2);
+      list[list.length - 1].cost = c2;
     }
   });
   return list;
@@ -1991,7 +2031,9 @@ function tryBuyMilestones(sim, prod) {
     // コストはゲーム内で固定(2026-07-11 ユーザー指示): 完成版測定の焼き込み表(ms_costs.json)を優先。
     // 表に無いidだけ動的式(=表の生成にも使う)。丸め規則はビルド時に適用済み。
     const fixed = P.msResearch && P.msResearch.costTable && P.msResearch.costTable[m.id];
-    const cost = fixed != null ? fixed : Math.max(100, (prod ? prod.cps : 0) * costSec);
+    // スキル解放研究(msk_/msk2_)は固定コスト(m.cost)を持つ=毎秒生産非依存の≥2倍階段(2026-07-16)。
+    // 焼き込み表があればそれを優先(表と固定costは同値)、無ければm.cost、それも無ければ従来の動的式。
+    const cost = fixed != null ? fixed : (m.cost != null ? m.cost : Math.max(100, (prod ? prod.cps : 0) * costSec));
     if (r.cookies < cost) continue;
     r.cookies -= cost;
     if (m.repeatSec) { (r._msRepeatT || (r._msRepeatT = {}))[m.id] = sim.t; r.ms.bought[m.id] = (r.ms.bought[m.id] || 0) + 1; }
@@ -3155,7 +3197,12 @@ function simulate(strategy, opts) {
     const prestiged = advanceTick(sim, strategy);
     if (prestiged && sim.opt.snapshots) sim.snapshots.push(takeSnapshot(sim));
     // スキルは転生時のみ増える=転生した時だけ完成判定(毎tickのevalを避ける)
-    if (prestiged && !sim._allSkills && SKILL_NODES.every(n => sim.skills[n.id])) sim._allSkills = true;
+    // 完成=「買える全スキル(他方針の署名を除く)を取得済み」。署名相互排除で全ツリー完走は起きないため
+    // 自分が取り得るノードだけで判定(idle尾部の打ち切り最適化を維持)。
+    if (prestiged && !sim._allSkills) {
+      const foreign = foreignSignatures(sim.strat.id);
+      if (SKILL_NODES.every(n => sim.skills[n.id] || foreign.has(n.id))) sim._allSkills = true;
+    }
     // 検証高速化(2026-07-15): 全スキル取得後(=これ以上の転生目的が無い放置の尾部)に限り、
     // 単一周回が閾値(既定2万秒)を超えたら打ち切る。ツリー未完の間は一切打ち切らない=料理/装備の
     // 作成・カバレッジ・全条件の測定に影響しない(尾部の部分周回はfull判定から除外)。ゲームには無関係(simだけ)。
@@ -3359,6 +3406,7 @@ module.exports = {
   simulate, prestigeGainOf, prestigeCostOf, skillCostOf, upgradeCost, researchCostOf,
   tryBuyUpgrade, tryBuyResearch, bestEfficiency, visibleUpgrades, quotaAtElapsed,
   isUtilitySkill, buildSkillValues, skillRank, skillRiders, trunc2sig, q5, q5cost,
+  POLICY_SIGNATURE, ALL_SIGNATURES, foreignSignatures,
   tryBuyResearchStage, researchStageCostOf, researchStageUnlocked,
   replayRun, takeSnapshot, bandY,
   equip2Items
