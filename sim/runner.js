@@ -677,6 +677,40 @@ function judgeWholeTiming(hours, sims) {
   return ok;
 }
 
+// ⑬v2(2026-07-16 ユーザー指示「周回を跨いで効く要素は取得後全周回で比べればいい」):
+// 段2機能は取得後、以降の全周回で永続的に効く=1周回だけの枝分かれ(judgeWholeTiming)だと晩期取得機能が
+// n=1で過少評価・巨大化する。ここでは「取得後の全周回の獲得効率(runCookies/duration)の幾何平均」を、
+// 最適操作の通し と その機能だけ完全放置(idleTiming)の通し で比べる=取得後全周回の平均的な実効lift。
+function judgeWholeTimingV2(hours) {
+  let ok = 0;
+  console.log(`⑬ タイミング機能v2(通し比較・取得後全周回の獲得効率geomean比, 要求[1.05,2.00])`);
+  const optSim = {};
+  for (const s of STRATEGIES) optSim[s.id] = G.simulate(s, { hours });
+  for (const f of TIMING_FEATURES) {
+    const rid = f.stage.split(':')[0];
+    const rows = [];
+    let feature = false;
+    for (const s of STRATEGIES) {
+      const opt = optSim[s.id];
+      let acqIdx = null;
+      for (const r of opt.runs) { if (!r.partial && timingHeld(r, rid)) { acqIdx = r.idx; break; } }
+      if (acqIdx == null) continue;
+      const idle = G.simulate(s, { hours, idleTiming: f.key });
+      const eOpt = geomeanEffFrom(opt, acqIdx);
+      const eIdle = geomeanEffFrom(idle, acqIdx);
+      if (eOpt == null || eIdle == null || !(eIdle > 0) || !Number.isFinite(eOpt) || !Number.isFinite(eIdle)) continue;
+      const ratio = Math.min(BRANCH_CAP, eOpt / eIdle);
+      const inBand = ratio >= 1.05 && ratio <= 2.0;
+      if (inBand) feature = true;
+      rows.push(`${s.id}=${ratio.toFixed(3)}${inBand ? '✓' : ''}`);
+    }
+    if (feature) ok++;
+    console.log(`  ${feature ? 'OK' : 'NG'} ${f.label.padEnd(26)} ${rows.join(' ') || '(未使用)'}`);
+  }
+  console.log(`⑬v2 タイミング ${ok}/${TIMING_FEATURES.length}`);
+  return ok;
+}
+
 // CLI
 const mode = process.argv[2] || 'baseline';
 const arg = process.argv[3];
@@ -743,6 +777,9 @@ if (mode === 'baseline') {
 } else if (mode === 'timing2') {
   // ⑬ 単体(提案5・全体比較): node runner.js timing2 "" [hours]
   judgeWholeTiming(hours);
+} else if (mode === 'timingw') {
+  // ⑬ 単体(取得後全周回の通し比較v2): node runner.js timingw "" [hours]
+  judgeWholeTimingV2(hours);
 } else if (mode === 'checks') {
   // まとめ実行: node runner.js checks S1 [hours] → ⑧(全方針) / ⑫ / ⑬(指定方針)
   const sims = {};
