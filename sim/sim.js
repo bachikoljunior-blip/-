@@ -199,16 +199,23 @@ const SKILL_BY_ID = {}; SKILL_NODES.forEach(s => SKILL_BY_ID[s.id] = s);
 // 方針別「署名スキル」(2026-07-16 ユーザー指示): 各プレイ方針は、他方針が取らない専用スキルを1つ以上取る。
 // = 各方針の署名スキルは「その方針だけが取り、他方針は取らない」よう取得順から相互排除する。
 // 選定は全て「葉ノード」(他スキルの前提でない)=排除しても前提連鎖を壊さない。方針の主役系統に合わせて割当。
+// 署名は「他方針が取っても損しない/取れない」ものを選ぶ=相互排除で経済を歪めないため:
+//  ①方針限定効果(その方針でしか効かない): ensemble=balanced専用 / click_stall=タップ直送の早期ゲート /
+//    monster_peddler=討伐直送の早期ゲート / golden_echo=金主役
+//  ②生産非依存のQoL葉: research_analysis / golden_analysis / hunt_analysis
+//  ③終端(所有者しか到達しない): master_final
+//  ④影響の小さい報酬解禁葉: unlock_reward_beastScent(金枝の報酬1種=非金方針には無関係)
+// ※ ensembleはbalanced方針(=S6のみ)しか効果が無いためS6へ。start_2(初期資産)は早回しのS6が使うので署名から外し全方針が取得可に。
 const POLICY_SIGNATURE = {
-  S1: 'ensemble',                       // バランス効率型: 編成の心得(4稼ぎ口ボーナス=バランス専用)
-  S2: 'click_stall',                    // クリック会心型: タップ直送(クリック主役)
+  S1: 'unlock_reward_beastScent',       // バランス効率型: 獣の匂い(金枝の報酬解禁=影響小の葉)
+  S2: 'click_stall',                    // クリック会心型: タップ直送の早期ゲート(クリック主役)
   S3: 'golden_echo',                    // 金クッキー特化型: 金の追い金(金主役)
-  S4: 'monster_peddler',                // 狩猟特化型: 討伐直送(狩猟主役)
-  S5: 'research_analysis',              // 研究貯蓄型: 研究解析(研究主役)
-  S6: 'start_2',                        // 早回し転生型: 初期資産+オフライン(早回し主役)
+  S4: 'monster_peddler',                // 狩猟特化型: 討伐直送の早期ゲート(狩猟主役)
+  S5: 'research_analysis',              // 研究貯蓄型: 研究解析(生産非依存QoL)
+  S6: 'ensemble',                       // 早回し転生型(policy=balanced): 編成の心得=balanced方針専用ボーナス
   S7: 'master_final',                   // 長期育成型: 終端の到達(全ツリー完走の証)
-  S8: 'golden_analysis',                // 最新設備ラッシュ型: 金クッキー解析(この方針が実際に到達する葉・生産非依存QoL)
-  S9: 'hunt_analysis'                   // ノルマ死守型: 狩猟解析(狩猟主役・この方針が実際に到達する葉・生産非依存QoL)
+  S8: 'golden_analysis',                // 最新設備ラッシュ型: 金クッキー解析(生産非依存QoL)
+  S9: 'hunt_analysis'                   // ノルマ死守型: 狩猟解析(生産非依存QoL)
 };
 const ALL_SIGNATURES = new Set(Object.values(POLICY_SIGNATURE));
 // ある方針の取得順から除外すべき「他方針の署名」= 自分の署名以外の全署名
