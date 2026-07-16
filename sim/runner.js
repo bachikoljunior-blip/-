@@ -944,7 +944,10 @@ if (mode === 'baseline') {
     let liftOk = 0, liftAll = 0;
     const liftRows = [];
     for (const it of items) {
-      let worst = Infinity, n = 0, usedPol = null;
+      // 装備は周回を跨いで永続する(ワークショップ状態は転生で消えない)=取得後の全周回で比べる
+      // (2026-07-16 ユーザー指示)。旧・worst(=最悪1周回のmin比)は1回の外れ周回で全体NGにする過剰に厳しい
+      // 基準だった。装備した全周回の比を集めて中央値で判定=永続効果の典型的なliftを測る。
+      const ratios = []; let usedPol = null;
       for (const st of STRATEGIES) {
         const sim = optSnap[st.id];
         const acq = sim.runs.filter(r => !r.partial && (r.eq2NewEquipped || []).includes(it.id) && r.runCookies > 0 && sim.snapshots[r.idx]);
@@ -953,20 +956,20 @@ if (mode === 'baseline') {
           const snap = sim.snapshots[optRun.idx];
           const off = G.replayRun(st, snap, { hours: H, noNewEquip: true }, optRun.duration);
           if (off && off.runCookies > 0 && Number.isFinite(off.runCookies) && Number.isFinite(optRun.runCookies)) {
-            const ratio = optRun.runCookies / off.runCookies;
-            if (ratio < worst) worst = ratio;
-            n++; usedPol = st.id;
+            ratios.push(optRun.runCookies / off.runCookies);
+            usedPol = st.id;
           }
         }
       }
-      if (n > 0) {
+      if (ratios.length > 0) {
         liftAll++;
-        const pass = worst >= 1.5;
+        const med = medianOf(ratios);
+        const pass = med >= 1.5;
         if (pass) liftOk++;
-        liftRows.push(`  ${pass ? 'OK' : 'NG'} 装備lift:${it.id.padEnd(20)} min比=${worst === Infinity ? '-' : worst.toFixed(3)} (n=${n}, ${usedPol})`);
+        liftRows.push(`  ${pass ? 'OK' : 'NG'} 装備lift:${it.id.padEnd(20)} 中央値比=${med.toFixed(3)} (n=${ratios.length}, ${usedPol})`);
       }
     }
-    console.log('新装備(a) 装備lift(枝分かれ・付け替え封止比≥1.5・全周回)');
+    console.log('新装備(a) 装備lift(取得後全周回の中央値比≥1.5・装備は周回跨ぎで永続)');
     liftRows.forEach(x => console.log(x));
     console.log(`新装備(a) 合計 ${liftOk}/${liftAll}(装備された装備のみ判定対象)`);
     // (b) カバレッジ
