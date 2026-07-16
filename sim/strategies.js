@@ -324,7 +324,14 @@ const STRATEGIES = [
       }
       buyAllResearch(sim, 0.30);
     },
-    pickReward: pickRewardOncePerRunFirst(['biteRecovery'], pickRewardByPriority(['monsterRate', 'monsterDamage', 'beastHeatFerment', 'huntingCore', 'crackedFang', 'monsterStay', 'chainPrep', 'biteRecovery'])),
+    // ③-a対策(2026-07-16・goldenRate skipEarlyと同型のプレイヤー挙動):
+    // - monsterRateはrun0では取らない(確立周回=狩猟基盤が薄く出現率のliftが1.08に希釈。run1+は全て≥1.11)
+    // - goldenFirstHitはrun5から毎周回1枚確保(初回入手直後の周回は金基盤が薄くlift1.01-1.09。
+    //   run5+は[1.11..1.50]=③-a「取得した全周回≥1.1」を余裕でなく確実に満たす帯)
+    pickReward: pickRewardSkipEarly(['monsterRate'], 1,
+      pickRewardSkipEarly(['goldenFirstHit'], 5,
+        pickRewardOncePerRunFirst(['biteRecovery', 'goldenFirstHit'],
+          pickRewardByPriority(['monsterRate', 'monsterDamage', 'beastHeatFerment', 'huntingCore', 'crackedFang', 'monsterStay', 'chainPrep', 'biteRecovery'])))),
     shouldPrestige: prestigeWhen(1200, 1.2),
     skillOrder: skillOrderByBranch(['core', 'monster', 'auto', 'economy', 'research', 'reward', 'click', 'golden', 'upgrade', 'start', 'master'])
   },
