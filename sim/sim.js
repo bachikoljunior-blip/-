@@ -1556,13 +1556,15 @@ function computeProd(sim) {
   if (!rwOff(sim, 'goldenBeastMutation') && (r.perks.goldenBeastMutation || 0) > 0) globalRes *= 1 + (r.perks.goldenBeastMutation || 0) * (P.rw.goldenBeastMutationProd || 0);
   if (!rwOff(sim, 'brandHunt') && (r.perks.brandHunt || 0) > 0) globalRes *= 1 + (r.perks.brandHunt || 0) * (P.rw.brandHuntProd || 0);
 
-  // 生産の勢い(2026-07-15 ユーザー指示「研究の効果は固定・経過時間で増えるのはナシ」):
-  // 時間スケール(旧 massProdMul^(経過/秒))を撤廃し、購入駆動へ=「その周回で買った設備数」で全生産が伸びる。
-  // 効果の値(1台あたりの伸び率 massProdMul)は固定。増えるのは経過時間ではなく購入という行動=放置ゲーム本来の
-  // 「買うほど伸びる」複利。買えなくなると自然にプラトー→転生。研究解放でオン(ms_momentum)。
+  // 生産の勢い(2026-07-16 ユーザー指示「実績/スキル解放研究の効果値は固定・経過時間でどんどん増えるのはナシ」):
+  // 旧・時間スケール(massProdMul^(経過/秒))を撤廃。伸びるのは「経過時間」ではなく「その周回で買った設備数」=
+  // 行動駆動の複利(買うほど伸びる=放置ゲーム本来の成長)。1台あたりの伸び率(massProdMul)は固定値。
+  // 買えなくなれば自然にプラトー→転生。研究解放でオン(ms_momentum)。
   if (r.ms && r.ms.momentum && P.msResearch) {
-    const el = Math.min(sim.t - r.startT, (P.msResearch.momentumCapSec || 14400));
-    globalRes *= Math.pow(P.msResearch.massProdMul, Math.max(0, el) / P.msResearch.massProdSec);
+    const div = Number(process.env.MOM_DIV) || P.msResearch.momBuyDiv || 16;
+    const cap = Number(process.env.MOM_CAP) || P.msResearch.momBuyCapExp || 200;
+    const n = Math.min(r.momBuys || 0, cap);
+    globalRes *= Math.pow(P.msResearch.massProdMul, n / div);
   }
 
   // ③死に報酬対策(第12次P・枝分かれmeasure下では安全): 討伐ダメージ系報酬(割れた牙/焼き印狩り)を「討伐数×全生産倍率」へ繋ぐ。

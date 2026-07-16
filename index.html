@@ -7844,7 +7844,7 @@ const MILESTONE_RESEARCH = (() => {
   // 生産の勢い(2026-07-15 sim同期): 旧・量産体制(繰り返し購入)を廃止し、研究で一度解放したら
   // 自動でかかる時限の全生産の勢いに置換。周回の経過とともに全生産が伸びる(3分でおよそ2倍)。工場1台以降に解放。
   add("ms_momentum", "生産の勢い", "クッキー工場 1台",
-    () => (state.upgrades.factory || 0) >= 1, "焼くほど勢いがつき、周回の経過とともに全生産が自動で伸びる(3分でおよそ2倍・この周回の間)", { momentum: true }, 40);
+    () => (state.upgrades.factory || 0) >= 1, "設備を買うほど勢いがつき、全生産が伸びる(この周回の間・経過時間では増えず、購入という行動で伸びる)", { momentum: true }, 40);
   // 討伐実績(周回内)。※spawn/stay/hp は未配線=効果が出ないため削除(2026-07-14 ユーザー指示)。
   // 実装済みの hunt(討伐ダメージ)/dropAdd(素材ドロップ)のみ残す。IDは既存互換のため元の添字(k1/k4/k6/k7)を維持。
   const killTiers = [[10, 100, { hunt: 1.3 }, "モンスターダメージ ×1.3"], null,
@@ -10024,9 +10024,8 @@ function productionMomentumMul() {
   // 時間スケールを撤廃し購入駆動へ=「この周回で買った設備数」で全生産が伸びる(1台あたりの伸び率は固定)。
   // 増えるのは経過時間ではなく購入という行動=放置ゲーム本来の複利。買えなくなると自然にプラトー。
   if (!msBought("ms_momentum")) return 1;
-  const el = Math.min(Math.max(0, (Date.now() - (state.runStart || Date.now())) / 1000), 14400);
-  return Math.pow(1.25, el / 32); // 時間駆動(sim同期)。momentumCapSec=14400
-
+  const n = Math.min(Number(state.momBuysThisRun) || 0, 8000); // この周回で買った設備数(経過時間ではない)
+  return Math.pow(1.25, n / 12); // 行動駆動=sim同期(momBuyDiv=12 / cap=8000)
 }
 
 function clickSkillMultiplier() {
