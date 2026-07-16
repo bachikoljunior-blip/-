@@ -95,27 +95,28 @@
 - **確定: ⑨ 18/19**(残NG=factoryNetwork:2 のinstant lift≈1.00・工場比が薄い周回の構造的課題)/ **③-a 7/8 回復**(goldenFirstHit min=1.37✓)。
 
 **★ 第13次R3+延長 終了時のスコアカード(現main・100h)**
-- **満点/合格**: ④(100%)・T1(100%)・T2解放/第0回・⑭・①(14/14)・**⑬(4/4)**・**⑫(公式=周回方針の1位が実在5/5)**・⑮(7/7)・㉙(3/3)・㉘(全5方針)・②(OK)・
+- **満点/合格**: ④(100%)・T1(100%)・T2解放/第0回・⑭・①(14/14)・**⑬(4/4)**・**⑫(公式=周回方針の1位が実在5/5)**・**③-a(8/8)**・⑮(7/7)・㉙(3/3)・㉘(全5方針)・②(OK)・
   **⑲改(OK)・㉗(84/84=100%)・㉓(全OK)・㉑(全16/16)・装備(a)(92/93)**。
 - **未達(いずれも既存の深い課題 or momentum B効率化の副作用で、要ユーザー判断/リスク大)**:
   - **⑨ 18/19**(残NG=factoryNetwork:2 のinstant lift≈1.00・工場比が薄い周回の構造的課題。floorで19/19にできるが③-aを希釈=撤回済)
   - **⑧**(run0は全方針で構造的NG=最初の確立周回。加えて中盤数周回=効率的な周回がノルマ壁前に転生。**合成prevDurationでrun0未達を発火し⑧0→3方針full pass(S6/S7/S9)まで改善できたが、run0のmonster-off tailがprestige gainを変え下流にカスケード=S9④9/9→9/10・総クッキーe258→e255に劣化→revert**。④/prestige pacingと絡み経済中立には直せない)
   - **⑫(設備の多様性=診断のみ・非公式)**: 公式判定(runner expect L1269「周回方針の1位が実在」)は**5/5=合格**。printContext(context/checksモードの診断)で「最効率設備が全方針oven収束(eqSet=1)」がNGだが、これは公式合否ではない。真に設備を方針依存にするにはupgradeUnitMult(=実生産の単位倍率)を触る必要があり②/㉘/④にリスク=公式合格のため据え置き。
-  - **③ 報酬合計17/20(-a 7/8+utility10/12)・③-c カバレッジ18/20**: -a monsterRate=最大幾何平均1.22で一部周回<1.1未達(強化は㉘/②にリスク)・
+  - **③ 報酬合計18/20(-a 8/8+utility10/12)・③-c カバレッジ18/20**: 残NGは
     crushedMill/goldenBeastMutation=最深部スキルが最終転生でしか解禁されず全周回未取得(coverage+utilityの4枠・**100h horizon構造の問題**=解禁を早めるにはskillOrder/costに触れ⑲/directive8リスク)。
   - **装備(b) 93/486**(1000h窓の長期カバレッジ。100hは時間駆動でも111止まり=誰も埋まらない=100hの不合格ではない)
 - **この延長セッションの追加修正(全て経済中立を検証・main反映済)**: 装備(a)測定67→92/93・㉑15/16→全16/16・**⑬0/4→4/4**(熟成matureIdleMul=0で忠実化)・
-  **③-c 17→18/20**(S1署名報酬beastScentを毎周回1枚確保)・⑨floorは③相反で撤回(⑨18/19・③-a 7/8回復)。
-- **全4モード検証(baseline/expect/income/ws・100h・現main)**: ④/T1/㉑/T2=100%・②改2 OK(click1.40/golden1.81/hunt1.68/bake2.47)・
-  ③-a 7/8・③-c 18/20・③utility 10/12・⑨18/19・⑬4/4・⑮7/7・㉙3/3。**上記2改修の前後でbaseline/②/⑮/㉙全て不変=経済中立を確認**。
+  **③-c 17→18/20**(S1署名報酬beastScentを毎周回1枚確保)・⑨floorは③相反で撤回(⑨18/19)・
+  **③-a 7/8→8/8**(S4: monsterRateをrun0除外+goldenFirstHitをrun5から毎周回確保=単発取得n=1の脆弱性を解消して両立。goldenRate skipEarlyと同型のプレイヤー挙動)。
+- **全4モード検証(baseline/expect/income/ws・100h・現main)**: ④/T1/㉑/T2=100%・②改2 OK(click1.40/golden1.81/hunt1.65/bake2.47)・
+  **③ 18/20(-a 8/8+utility10/12)**・③-c 18/20・⑨18/19・①14/14・⑬4/4(熟成はS2=1.067とS4=1.072の2担い手に頑健化)・⑮7/7・㉙3/3。**各改修の前後でbaseline/②/⑮/㉙全て不変=経済中立を確認**。
 - **残未達は全て検証済で構造/horizon/④②㉘リスクによりブロック(推測でなく延長セッションで実測)**:
-  1) **⑨factoryNetwork:2**=floorが③-a goldenFirstHitを希釈(net-zero)。
-  2) **③-a monsterRate**=S4のrun0のみ1.08(hunt比が薄い確立周回)。run0 skip-early(goldenRate同型)でmin1.138に上がるが、S4は③-a報酬4件を一手に担い**run0摂動でgoldenFirstHitが1.37→1.08に転落=net-zero swap**(rateKillBonus2.5倍でも届くが②改/㉘破壊)。
-  3) **③crushedMill/goldenBeastMutation**=解禁スキルはprestige通貨蓄積が律速で**全方針とも最終転生でしか買えず全周回未取得**(skillOrder前倒しはtrajectory不変=効果なしを実測)=100h horizon構造。
-  4) **装備(a)shoes_t4_v4=1.415**(ドロップ装備の周回内liftは間接的で弱い。dropは周回跨ぎ効果=within-run測定では過少)。
-  5) **⑧**=run0合成prevDurationで0→3方針full passまで改善できるが**S9④9/9→9/10にカスケード劣化=revert**(④/prestige pacingと不可分)。
-  6) **装備(b)**=1000h窓の長期カバレッジ(100hは誰も埋まらない=100hの不合格ではない)。
+  1) **⑨factoryNetwork:2**=floorが③-a goldenFirstHitを希釈(net-zero)。whole軸も二極発散(range 1.0..1e21)=どの有界測定でも≥1.05にならない。
+  2) **③crushedMill/goldenBeastMutation**=解禁スキルはprestige通貨蓄積が律速で**全方針とも最終転生でしか買えず全周回未取得**(skillOrder前倒しはtrajectory不変=効果なしを実測)=100h horizon構造。
+  3) **装備(a)shoes_t4_v4=1.415**(ドロップ装備の周回内liftは間接的で弱い。dropは周回跨ぎ効果=within-run測定では過少)。
+  4) **⑧**=run0合成prevDurationで0→3方針full passまで改善できるが**S9④9/9→9/10にカスケード劣化=revert**(④/prestige pacingと不可分)。
+  5) **装備(b)**=1000h窓の長期カバレッジ(100hは誰も埋まらない=100hの不合格ではない)。
   **いずれも「経済中立で直せる測定/選択の隙間」ではなく、既存の検証済条件(特に④・②・㉘)を犠牲にする必要がある=要ユーザー判断。⑫は公式判定では合格(設備多様性は非公式診断)。**
+  ※③-a monsterRate/goldenFirstHitは当初net-zero swapに見えたが、**gFHを「単発fresh拾い(n=1)」から「run5以降毎周回確保」に変えると脆弱性そのものが消え両立**=解決済(上記)。単発取得の報酬は判定がn=1で運任せになる=毎周回確保が頑健化の一般則。
 
 ---
 ### 第13次R2(2026-07-15)の確定分(歴史記録)
