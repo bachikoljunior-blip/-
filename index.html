@@ -10831,18 +10831,75 @@ const EQUIP2_ITEM_NAMES = {
   accA:        ["金片のペンダント", "招きの金鈴", "燃焼の金環", "集金の腕輪", "大金貨の首飾り", "金雨の指輪", "灼熱の金冠章", "金脈の護符", "黄金郷の秘宝"],
   accB:        ["戦利のブローチ", "略奪の耳飾り", "二重取りの環", "足止めの鎖飾り", "重宝の勲章", "収奪の宝珠", "戦果の王章", "鎖縛の魔環", "簒奪者の神器"]
 };
-// 効果レジストリ(sim EQUIP2_FX 同値・2026-07-14 全面刷新: 同じ効果は二つ作らない・v7-8=2効果・v9=3効果)
+// 効果レジストリ(sim EQUIP2_FX 同値・2026-07-16 A/B/Cモデルへ同期): sim側は2026-07-15にユーザー承認の
+// A/B/Cモデル(A=素直な固定上昇 / B=トレードオフ=up固定↑+down固定↓ / C=状況起動=condのon/off時だけup)へ
+// 刷新済みだったが、ゲーム側は旧フラット表(2026-07-14)のまま乖離していた=装備(a)/(b)のsim検証と実物の不一致。
+// up=ティア連動効果[stat,base,...](×1.5^(t-1))。down=B型の固定ペナルティ[stat,factor,...](ティア非連動)。cond=C型の状況。
 const EQUIP2_FX = {
-  weapon:      [["dmgMul", 1.0], ["killValMul", 0.8], ["spawnMul", 0.10], ["stayMul", 0.25], ["dmgMul", 0.6, "killValMul", 0.4], ["dmgMul", 0.5, "spawnMul", 0.06], ["killValMul", 0.5, "stayMul", 0.15], ["dmgMul", 0.4, "killValMul", 0.3, "spawnMul", 0.05], ["dmgMul", 1.6]],
-  shield:      [["holdBonus", 0.5], ["stayMul", 0.30], ["holdBonus", 0.3, "stayMul", 0.15], ["cpsMul", 0.5], ["holdBonus", 0.7], ["stayMul", 0.45], ["holdBonus", 0.4, "cpsMul", 0.3], ["stayMul", 0.2, "cpsMul", 0.35], ["holdBonus", 0.3, "stayMul", 0.12, "cpsMul", 0.25]], // quotaSlow→holdBonus(2026-07-14: 減速は収入マイナス=lift(a)を束ごと壊すため「ノルマ維持中全生産」へ)
-  armorTop:    [["cpsMul", 1.0], ["allMul", 0.5], ["cpsMul", 0.7, "dropMul", 0.2], ["cpsMul", 1.4], ["allMul", 0.7], ["cpsMul", 0.6, "allMul", 0.25], ["allMul", 0.4, "dropMul", 0.3], ["cpsMul", 0.8, "allMul", 0.3], ["cpsMul", 0.5, "allMul", 0.3, "dropMul", 0.25]],
-  armorBottom: [["upDisc", 0.08], ["resDisc", 0.08], ["upDisc", 0.05, "resDisc", 0.05], ["cpsMul", 0.6], ["upDisc", 0.12], ["resDisc", 0.12], ["upDisc", 0.06, "cpsMul", 0.35], ["resDisc", 0.06, "cpsMul", 0.35], ["upDisc", 0.05, "resDisc", 0.05, "cpsMul", 0.3]],
-  hands:       [["clickMul", 1.0], ["critAdd", 0.03], ["clickMul", 0.7, "critAdd", 0.02], ["clickMul", 1.4], ["critAdd", 0.05], ["clickMul", 0.6, "dmgMul", 0.3], ["clickMul", 0.5, "critAdd", 0.03], ["critAdd", 0.04, "dmgMul", 0.3], ["clickMul", 0.5, "critAdd", 0.02, "dmgMul", 0.25]],
-  hat:         [["resDisc", 0.10], ["allMul", 0.45], ["resDisc", 0.06, "allMul", 0.25], ["cpsMul", 0.8], ["resDisc", 0.14], ["allMul", 0.6], ["resDisc", 0.07, "cpsMul", 0.4], ["allMul", 0.35, "cpsMul", 0.4], ["resDisc", 0.05, "allMul", 0.25, "cpsMul", 0.3]],
-  shoes:       [["dropMul", 0.5], ["dropRateAdd", 0.04], ["dropLuck", 0.06], ["spawnMul", 0.08], ["dropMul", 0.7], ["dropRateAdd", 0.08], ["dropLuck", 0.1, "spawnMul", 0.05], ["oreAdd", 2], ["dropMul", 0.3, "dropRateAdd", 0.05, "dropLuck", 0.05]],
-  accA:        [["goldenAmtMul", 1.0], ["goldenRateMul", 0.15], ["goldenBoostMul", 0.4], ["goldenAmtMul", 0.6, "goldenRateMul", 0.10], ["goldenAmtMul", 1.5], ["goldenRateMul", 0.22], ["goldenBoostMul", 0.3, "goldenAmtMul", 0.4], ["goldenRateMul", 0.12, "goldenBoostMul", 0.25], ["goldenAmtMul", 0.5, "goldenRateMul", 0.08, "goldenBoostMul", 0.2]],
-  accB:        [["rewardLvAdd", 2], ["killValMul", 0.6], ["rewardLvAdd", 1, "killValMul", 0.4], ["stayMul", 0.35], ["rewardLvAdd", 3], ["killValMul", 0.9], ["rewardLvAdd", 1.5, "stayMul", 0.2], ["killValMul", 0.5, "stayMul", 0.2], ["rewardLvAdd", 1, "killValMul", 0.35, "stayMul", 0.15]]
+  weapon: [
+    { m: "A", up: ["dmgMul", 0.9] }, { m: "A", up: ["critAdd", 0.04] }, { m: "A", up: ["killValMul", 0.7] },
+    { m: "B", up: ["dmgMul", 1.6], down: ["goldenAmtMul", 0.85] }, { m: "B", up: ["critAdd", 0.09], down: ["killValMul", 0.9] }, { m: "B", up: ["killValMul", 1.4], down: ["dmgMul", 0.9] },
+    { m: "C", cond: "boss", up: ["dmgMul", 3] }, { m: "C", cond: "monster", up: ["critAdd", 0.15] }, { m: "C", cond: "goldenBoost", up: ["dmgMul", 2, "killValMul", 1] }
+  ],
+  shield: [
+    { m: "A", up: ["holdBonus", 0.5] }, { m: "A", up: ["stayMul", 0.30] }, { m: "A", up: ["critAdd", 0.03] },
+    { m: "B", up: ["holdBonus", 0.9], down: ["clickMul", 0.9] }, { m: "B", up: ["cpsMul", 0.6], down: ["dmgMul", 0.9] }, { m: "B", up: ["stayMul", 0.5], down: ["goldenAmtMul", 0.9] },
+    { m: "C", cond: "quotaHold", up: ["holdBonus", 1.0] }, { m: "C", cond: "deep", up: ["cpsMul", 0.5] }, { m: "C", cond: "quotaHold", up: ["holdBonus", 0.4, "critAdd", 0.05] }
+  ],
+  armorTop: [
+    { m: "A", up: ["cpsMul", 1.0] }, { m: "A", up: ["allMul", 0.5] }, { m: "A", up: ["dropMul", 0.4] },
+    { m: "B", up: ["cpsMul", 1.6], down: ["dmgMul", 0.9] }, { m: "B", up: ["allMul", 0.8], down: ["clickMul", 0.9] }, { m: "B", up: ["cpsMul", 1.3], down: ["goldenAmtMul", 0.9] },
+    { m: "C", cond: "quotaHold", up: ["cpsMul", 1.0] }, { m: "C", cond: "deep", up: ["allMul", 0.6] }, { m: "C", cond: "buyUp", up: ["cpsMul", 1.5] }
+  ],
+  armorBottom: [
+    { m: "A", up: ["upDisc", 0.08] }, { m: "A", up: ["resDisc", 0.08] }, { m: "A", up: ["cpsMul", 0.6] },
+    { m: "B", up: ["upDisc", 0.15], down: ["dmgMul", 0.9] }, { m: "B", up: ["resDisc", 0.15], down: ["clickMul", 0.92] }, { m: "B", up: ["cpsMul", 0.9, "upDisc", 0.06], down: ["dmgMul", 0.9] },
+    { m: "C", cond: "quotaHold", up: ["upDisc", 0.20] }, { m: "C", cond: "deep", up: ["resDisc", 0.20] }, { m: "C", cond: "runStart", up: ["allMul", 0.5] }
+  ],
+  hands: [
+    { m: "A", up: ["clickMul", 1.0] }, { m: "A", up: ["critAdd", 0.03] }, { m: "A", up: ["clickMul", 0.7, "critAdd", 0.02] },
+    { m: "B", up: ["clickMul", 1.6], down: ["goldenAmtMul", 0.9] }, { m: "B", up: ["critAdd", 0.07], down: ["killValMul", 0.9] }, { m: "B", up: ["clickMul", 1.3], down: ["goldenAmtMul", 0.9] },
+    { m: "C", cond: "monster", up: ["clickMul", 2.5] }, { m: "C", cond: "goldenBoost", up: ["critAdd", 0.20] }, { m: "C", cond: "monster", up: ["clickMul", 2, "dmgMul", 0.5] }
+  ],
+  hat: [
+    { m: "A", up: ["resDisc", 0.10] }, { m: "A", up: ["allMul", 0.45] }, { m: "A", up: ["cpsMul", 0.8] },
+    { m: "B", up: ["allMul", 0.8], down: ["dmgMul", 0.9] }, { m: "B", up: ["resDisc", 0.16], down: ["goldenAmtMul", 0.9] }, { m: "B", up: ["allMul", 0.6, "resDisc", 0.06], down: ["clickMul", 0.9] },
+    { m: "C", cond: "buyRes", up: ["allMul", 1.0] }, { m: "C", cond: "deep", up: ["allMul", 0.6] }, { m: "C", cond: "quotaHold", up: ["holdBonus", 0.5, "resDisc", 0.08] }
+  ],
+  shoes: [
+    { m: "A", up: ["dropMul", 0.5] }, { m: "A", up: ["dropRateAdd", 0.04] }, { m: "A", up: ["dropLuck", 0.06] },
+    { m: "B", up: ["dropMul", 1.0], down: ["killValMul", 0.9] }, { m: "B", up: ["dropRateAdd", 0.08], down: ["killValMul", 0.9] }, { m: "B", up: ["oreAdd", 3], down: ["goldenAmtMul", 0.9] },
+    { m: "C", cond: "boss", up: ["dropMul", 3] }, { m: "C", cond: "monster", up: ["dropLuck", 0.15] }, { m: "C", cond: "goldenBoost", up: ["dropRateAdd", 0.12, "spawnMul", 0.06] }
+  ],
+  accA: [
+    { m: "A", up: ["goldenAmtMul", 1.0] }, { m: "A", up: ["goldenRateMul", 0.15] }, { m: "A", up: ["goldenBoostMul", 0.4] },
+    { m: "B", up: ["goldenAmtMul", 1.6], down: ["dmgMul", 0.9] }, { m: "B", up: ["goldenRateMul", 0.22], down: ["killValMul", 0.9] }, { m: "B", up: ["goldenBoostMul", 0.6], down: ["clickMul", 0.9] },
+    { m: "C", cond: "goldenBoost", up: ["allMul", 1.5] }, { m: "C", cond: "deep", up: ["goldenAmtMul", 0.6] }, { m: "C", cond: "goldenBoost", up: ["goldenAmtMul", 2, "goldenBoostMul", 0.3] }
+  ],
+  accB: [
+    { m: "A", up: ["rewardLvAdd", 2] }, { m: "A", up: ["killValMul", 0.6] }, { m: "A", up: ["rewardLvAdd", 1, "killValMul", 0.4] },
+    { m: "B", up: ["rewardLvAdd", 4], down: ["goldenAmtMul", 0.9] }, { m: "B", up: ["killValMul", 1.5], down: ["dmgMul", 0.9] }, { m: "B", up: ["rewardLvAdd", 3], down: ["clickMul", 0.9] },
+    { m: "C", cond: "boss", up: ["rewardLvAdd", 6] }, { m: "C", cond: "monster", up: ["killValMul", 2.5] }, { m: "C", cond: "goldenBoost", up: ["rewardLvAdd", 3, "killValMul", 1] }
+  ]
 };
+// 加算上限(sim EQUIP2_FLATCAP 同値)
+const EQUIP2_FLATCAP = { critAdd: 0.3, upDisc: 0.5, resDisc: 0.5 };
+// C型の状況ラベル(装備テキスト用)
+const EQUIP2_COND_LABEL = { goldenBoost: "金ブースト中", monster: "モンスター遭遇中", boss: "ボス戦中", quotaHold: "ノルマ維持中", deep: "層5到達後", buyUp: "設備購入後10秒", buyRes: "研究購入後10秒", runStart: "周回開始60秒" };
+// C型の状況判定(sim equip2CondOn 同値・ゲームの生信号で読む)
+function equip2CondOn(cond) {
+  switch (cond) {
+    case "goldenBoost": return goldenBoostActive();
+    case "monster": return (monsters || []).length > 0;
+    case "boss": return (monsters || []).some(m => m && m.typeId === "boss");
+    case "quotaHold": return !state.quotaFailed;
+    case "deep": return maxQuotaStage() >= 5;
+    case "buyUp": return Date.now() - (state.lastUpBuyAt || 0) < 10000;
+    case "buyRes": return Date.now() - (state.lastResBuyAt || 0) < 10000;
+    case "runStart": return Date.now() - (state.runStart || Date.now()) < 60000;
+    default: return true;
+  }
+}
 const EQUIP2_FX_LABEL = { clickMul: "タップ生産", cpsMul: "毎秒生産", allMul: "全生産", dmgMul: "討伐ダメージ", killValMul: "討伐報酬", spawnMul: "モンスター出現短縮", stayMul: "モンスター滞在", goldenAmtMul: "金クッキー獲得", goldenRateMul: "金クッキー出現短縮", goldenBoostMul: "金ブースト", holdBonus: "ノルマ維持中 全生産", quotaSlow: "ノルマ進行減速", upDisc: "設備費割引", resDisc: "研究費割引", dropMul: "素材ドロップ", oreAdd: "色素材+n/体", rewardLvAdd: "報酬レベル+n", critAdd: "会心率+n", dropRateAdd: "素材ドロップ率+", dropLuck: "確率で素材+1個" };
 let EQUIP2_ITEMS_CACHE = null;
 function equip2Items() {
@@ -10876,21 +10933,29 @@ function equip2Items() {
           if (v >= 7 && t >= 3) { const m3 = v % 2 === 0 ? smatA : smatB; cost[m3] = (cost[m3] || 0) + 2; }
           if (v === 9 && t >= 5) cost[t === 6 ? "voidSugar" : "bossCore"] = 1 + (t === 6 ? 1 : 0);
         }
-        const defs = EQUIP2_FX[cat][v - 1];
-        const scale = Math.pow(2, t - 1);
-        const fxList = [];
-        for (let i = 0; i < defs.length; i += 2) fxList.push([defs[i], defs[i + 1] * scale]);
+        const def = EQUIP2_FX[cat][v - 1];
+        const scale = Math.pow(1.5, t - 1); // sim同値(×1.5^(t-1))。旧×2^(t-1)はA/B/Cモデル同期(2026-07-16)で修正
+        const upText = k => {
+          const val = (k[1]) * scale;
+          if (k[0] === "oreAdd" || k[0] === "rewardLvAdd") return EQUIP2_FX_LABEL[k[0]].replace("+n", "+" + fmt(Math.floor(val) || val));
+          if (k[0] === "critAdd") return "会心率+" + Math.round(Math.min(EQUIP2_FLATCAP.critAdd, val) * 100) + "%";
+          if (k[0] === "upDisc" || k[0] === "resDisc") return EQUIP2_FX_LABEL[k[0]] + " " + Math.round(Math.min(0.5, val) * 100) + "%";
+          return EQUIP2_FX_LABEL[k[0]] + " ×" + fmt(1 + val);
+        };
+        const ups = [];
+        for (let i = 0; i < def.up.length; i += 2) ups.push(upText([def.up[i], def.up[i + 1]]));
+        let fxText = ups.join(" / ");
+        if (def.m === "C") fxText = "【" + (EQUIP2_COND_LABEL[def.cond] || def.cond) + "】" + fxText; // C=状況起動
+        if (def.m === "B" && def.down) { // B=トレードオフ(下げはティア非連動の固定係数)
+          const downs = [];
+          for (let i = 0; i < def.down.length; i += 2) downs.push(EQUIP2_FX_LABEL[def.down[i]] + " ×" + fmt(def.down[i + 1]));
+          fxText += " (代償: " + downs.join(" / ") + ")";
+        }
         // レシピは固定(2026-07-14): 色銘2,3,5,8=前ティア装備入り / 1,4,6,7,9=素材のみ(実行時の代替なし)
         EQUIP2_ITEMS_CACHE.push({
           id, cat, tier: t, variant: v, stages, prev: (t > 1 && [2, 3, 5, 8].includes(v)) ? `${cat}_t${t - 1}_v${v}` : null, cost,
           name: EQUIP2_GRADE_NAMES[t - 1] + EQUIP2_ITEM_NAMES[cat][v - 1],
-          fxList, // 効果は固定値で表示(2026-07-14 全面刷新)
-          fxText: fxList.map(([k, val]) => {
-            if (k === "oreAdd" || k === "rewardLvAdd") return EQUIP2_FX_LABEL[k].replace("+n", "+" + fmt(Math.floor(val) || val));
-            if (k === "critAdd") return "会心率+" + Math.round(Math.min(0.3, val) * 100) + "%";
-            if (k === "quotaSlow" || k === "upDisc" || k === "resDisc") return EQUIP2_FX_LABEL[k] + " " + Math.round(Math.min(0.5, val) * 100) + "%";
-            return EQUIP2_FX_LABEL[k] + " ×" + fmt(1 + val);
-          }).join(" / ")
+          fxText // 効果本体は equip2Fx() が EQUIP2_FX+tier から動的に算出(A/B/Cモデル・2026-07-16 sim同期)
         });
       }
     }
@@ -10922,21 +10987,31 @@ function equip2Items() {
 }
 function equip2ById(id) { for (const it of equip2Items()) if (it.id === id) return it; return null; }
 let _eq2FxCache = null, _eq2FxKey = "";
+const EQUIP2_CONDS = ["goldenBoost", "monster", "boss", "quotaHold", "deep", "buyUp", "buyRes", "runStart"];
 function equip2Fx() {
+  // A/B/Cモデル集約(sim equip2Fx 同値・2026-07-16 同期): up=×1.5^(t-1)スケール / B=down固定係数 / C=cond時のみ有効。
+  // C型は状況で変わるためキャッシュキーに8状況のビットを含める(状況が変わった瞬間に自然に再計算)。
   const eq = state.eq2Equipped || {};
-  const key = JSON.stringify(eq);
+  const key = JSON.stringify(eq) + "|" + EQUIP2_CONDS.map(c => equip2CondOn(c) ? 1 : 0).join("");
   if (_eq2FxCache && _eq2FxKey === key) return _eq2FxCache;
   const fx = { clickMul: 1, cpsMul: 1, allMul: 1, dmgMul: 1, killValMul: 1, spawnMul: 1, stayMul: 1,
     goldenAmtMul: 1, goldenRateMul: 1, goldenBoostMul: 1, holdBonus: 1, quotaSlow: 0, upDisc: 0, resDisc: 0,
     dropMul: 1, oreAdd: 0, rewardLvAdd: 0, critAdd: 0, dropRateAdd: 0, dropLuck: 0 };
+  const put = (type, v) => {
+    if (type === "oreAdd" || type === "rewardLvAdd" || type === "dropRateAdd" || type === "dropLuck") fx[type] += v; // 加算系
+    else if (EQUIP2_FLATCAP[type] != null) fx[type] = Math.min(EQUIP2_FLATCAP[type], fx[type] + Math.min(0.5, v));
+    else fx[type] *= 1 + v;
+  };
   for (const slot of EQUIP2_SLOTS) {
     const it = eq[slot] ? equip2ById(eq[slot]) : null;
     if (!it) continue;
-    for (const [type, v] of it.fxList) {
-      if (type === "quotaSlow" || type === "upDisc" || type === "resDisc" || type === "critAdd") fx[type] = Math.min(type === "critAdd" ? 0.3 : 0.5, fx[type] + Math.min(0.5, v));
-      else if (type === "oreAdd" || type === "rewardLvAdd" || type === "dropRateAdd" || type === "dropLuck") fx[type] += v; // 加算系(ドロップ率+/固定確率+数)
-      else fx[type] *= 1 + v;
-    }
+    const def = EQUIP2_FX[it.cat] && EQUIP2_FX[it.cat][(it.variant || 1) - 1];
+    if (!def) continue;
+    if (def.m === "C" && !equip2CondOn(def.cond)) continue; // 状況外は無効
+    const scale = Math.pow(1.5, it.tier - 1);
+    const up = def.up || [];
+    for (let i = 0; i < up.length; i += 2) put(up[i], up[i + 1] * scale);
+    if (def.down) for (let i = 0; i < def.down.length; i += 2) fx[def.down[i]] *= def.down[i + 1]; // B: 固定ペナルティ(ティア非連動)
   }
   _eq2FxKey = key; _eq2FxCache = fx;
   return fx;
@@ -12525,6 +12600,7 @@ function buyUpgrade(id) {
   }
 
   if (bought > 0) {
+    state.lastUpBuyAt = Date.now(); // 新装備C型「設備購入後10秒」の信号(2026-07-16 A/B/C同期)
     if (!state.everUpgrades[id]) { state.everUpgrades[id] = true; markUnlock(); }
     trackOrderProgress("buyUpgrade", id, bought);
     playSound("upgrade");
@@ -12558,6 +12634,7 @@ function buyResearch(id) {
 
   if (!state.everResearch[id]) { state.everResearch[id] = true; markUnlock(); }
   state.research[id] = true;
+  state.lastResBuyAt = Date.now(); // 新装備C型「研究購入後10秒」の信号(2026-07-16 A/B/C同期)
   trackOrderProgress("buyResearch", id, 1);
 
   playSound("upgrade");
