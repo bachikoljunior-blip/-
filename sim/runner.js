@@ -677,6 +677,44 @@ function judgeWholeTiming(hours, sims) {
   return ok;
 }
 
+// ⑬v3(2026-07-16): 窓限定の枝分かれ比。単一周回全体だと離散×再投資の効果(mature/portal)が方針依存で二極発散
+// (1.0↔1e9)する測定限界。同一スナップから最適/放置を「同じ短窓W秒だけ」枝分かれ→窓内クッキー比。転生を跨がず
+// 複利発散が有界=機能の周回内の限界寄与を安定して測る(段2は晩期取得だが機能自体は周回頭から効くのでW=600sで測れる)。
+function judgeWindowTiming(hours, W) {
+  const win = W || 600;
+  let ok = 0;
+  console.log(`⑬ タイミング機能v3(窓${win}s・同一スナップから最適/放置を同窓枝分かれした窓内クッキー比の中央値, 要求[1.05,2.00])`);
+  const optSnap = {};
+  for (const s of STRATEGIES) optSnap[s.id] = G.simulate(s, { hours, snapshots: true });
+  for (const f of TIMING_FEATURES) {
+    const rid = f.stage.split(':')[0];
+    const rows = [];
+    let feature = false;
+    for (const s of STRATEGIES) {
+      const sim = optSnap[s.id];
+      const acq = sim.runs.filter(r => !r.partial && timingHeld(r, rid) && sim.snapshots[r.idx]);
+      if (!acq.length) continue;
+      const ratios = [];
+      for (const run of sampleRuns(acq, 6)) {
+        const on = G.replayRun(s, sim.snapshots[run.idx], { hours }, win);            // 機能ON(最適)
+        const off = G.replayRun(s, sim.snapshots[run.idx], { hours, idleTiming: f.key }, win); // 機能だけ放置
+        if (on && off && on.runCookies > 0 && off.runCookies > 0 && Number.isFinite(on.runCookies) && Number.isFinite(off.runCookies)) {
+          ratios.push(Math.min(BRANCH_CAP, on.runCookies / off.runCookies));
+        }
+      }
+      const m = ratios.length ? medianOf(ratios) : null;
+      if (m == null) continue;
+      const inBand = m >= 1.05 && m <= 2.0;
+      if (inBand) feature = true;
+      rows.push(`${s.id}=${m.toFixed(3)}${inBand ? '✓' : ''}(n=${ratios.length})`);
+    }
+    if (feature) ok++;
+    console.log(`  ${feature ? 'OK' : 'NG'} ${f.label.padEnd(26)} ${rows.join(' ') || '(未使用)'}`);
+  }
+  console.log(`⑬v3 タイミング ${ok}/${TIMING_FEATURES.length}`);
+  return ok;
+}
+
 // ⑬v2(2026-07-16 ユーザー指示「周回を跨いで効く要素は取得後全周回で比べればいい」):
 // 段2機能は取得後、以降の全周回で永続的に効く=1周回だけの枝分かれ(judgeWholeTiming)だと晩期取得機能が
 // n=1で過少評価・巨大化する。ここでは「取得後の全周回の獲得効率(runCookies/duration)の幾何平均」を、
@@ -780,6 +818,9 @@ if (mode === 'baseline') {
 } else if (mode === 'timingw') {
   // ⑬ 単体(取得後全周回の通し比較v2): node runner.js timingw "" [hours]
   judgeWholeTimingV2(hours);
+} else if (mode === 'timingwin') {
+  // ⑬ 単体(窓限定枝分かれv3): node runner.js timingwin "" [hours] [windowSec]
+  judgeWindowTiming(hours, Number(process.argv[5]) || 600);
 } else if (mode === 'checks') {
   // まとめ実行: node runner.js checks S1 [hours] → ⑧(全方針) / ⑫ / ⑬(指定方針)
   const sims = {};
