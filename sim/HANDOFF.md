@@ -148,7 +148,8 @@
 - **ブラウザ実機QA(Playwright/Chromium・移植3件のend-to-end)**: 起動ページエラー0。①金クッキー取得(forceGoldenCookie→collectGoldenCookie)で
   portalHuntUntil=0のまま(金では開かない)②スポーン常時項0.993^200=0.245・窓中×0.997^200=0.135(式どおり)③defeatMonsterソースに40000あり/旧+=2000なし
   ④fireBhBoost: BH100台でmult=2.8(=1+1.8×√100/10)・持続120000ms ⑤C型装備(weapon_t2_v7)がboss出現でdmgMul 1→5.5に切替
-  ⑥buyUpgradeでlastUpBuyAtスタンプ→C型buyUp条件true ⑦486種生成・A/B/C表示文字列(「×4.38 (代償: 討伐報酬 ×0.9)」等)。
+  ⑥buyUpgradeでlastUpBuyAtスタンプ→C型buyUp条件true ⑦486種生成・A/B/C表示文字列(「×4.38 (代償: 討伐報酬 ×0.9)」等)
+  ⑧実DOMフロー(startGameFromTitle→showMonster→defeatMonster)で討伐が窓をnow+40s(実測39994ms)に設定 ⑨save→reload往復で装備/スタンプ/段2状態が保持されfx適用継続 ⑩転生リセット(resetRunLimitedEffects)とオフラインshiftUntilが新タイマー(portalHuntUntil/bhBoostUntil)を正しく扱うことをコード確認。
   手順: playwright-coreをscratchpadにnpm install→chromium実行パス/opt/pw-browsers/chromium-*/chrome-linux/chrome→file://でindex.htmlを開き#audioGateへpointerdown→evaluateでゲームAPIを直接駆動。
 
 ---
