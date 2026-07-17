@@ -60,3 +60,11 @@
   OK stage:antimatterRecipe:2     S5 min=1.28
   OK stage:portalGlobalFold:3     S7 min=1.35
 ⑨ 段階whole軸(短い枝分かれ比べ・同一状態から1周回ぶん・総クッキー比の中央値 ≥1.05・利息/余熱)
+  OK stage:bankClickDividend:2    S1 中央値比=696269.138 (n=9)
+  OK stage:bankClickDividend:3    S2 中央値比=1000000000.000 (n=9)
+  OK stage:fingerTechnique:3      S2 中央値比=1000000000.000 (n=7)
+⑨ whole軸 3/3
+⑨ 段階 合計 20/21 (instant 17/18 + whole 3/3・⑬タイミング段4件は⑬で判定のため除外)
+⑬ タイミング機能v4(取得直後snap→同窓900s枝分かれの窓内クッキー比の中央値, 要求[1.05,2.00])
+  OK 観測ゆらぎ(量子発酵 段2)             S1=1.101✓ S3=1.125✓ S5=1.126✓ S6=1.125✓ S7=1.125✓ S8=1.002 S9=1.125✓
+  OK 圧縮チャージ(重力圧縮 段2)            S1=1.000 S3=1.000 S5=1.228✓ S6=1.000 S7=1.000 S8=1.000 S9=1.000
