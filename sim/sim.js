@@ -960,7 +960,20 @@ function equip2DropOre(sim, units, strength, colorTier) {
   const oreId = 'ore_t' + t;
   // 希少化: 素の5% × 強さ × レア度 + 装備の色素材ボーナス(oreAdd=投資ぶん)
   const exp = (P.ws.drops.dropBase * (strength || 1) * matTierDrop(oreId) + equip2Fx(sim).oreAdd) * (units || 1);
-  ws.mats[oreId] = (ws.mats[oreId] || 0) + exp; // 新装備: 色素材追加系
+  // ステージ署名色(R17b 2026-07-17 ユーザー指示「ノルマ層の色違いにもステージごとの特色を」):
+  // 討伐ドロップの一部(stageSigFrac)は今いるステージの署名色(S1=白銀t1〜S6=紅t6)になる。
+  // 色の入手が「層を進める(帯色=進行軸)」と「そのステージへ行く(署名色=場所軸)」の二軸になり、
+  // ステージ選択に素材の意味が出る。署名色ぶんの量はその色のレア度準拠=高色は署名でも希少。
+  const sigFrac = E.stageSigFrac || 0;
+  const sigT = Math.max(1, Math.min(E.tiers, sim.run.wsStage || 1));
+  if (sigFrac > 0 && sigT !== t) {
+    ws.mats[oreId] = (ws.mats[oreId] || 0) + exp * (1 - sigFrac);
+    const sigId = 'ore_t' + sigT;
+    const sigExp = (P.ws.drops.dropBase * (strength || 1) * matTierDrop(sigId) + equip2Fx(sim).oreAdd) * (units || 1);
+    ws.mats[sigId] = (ws.mats[sigId] || 0) + sigExp * sigFrac;
+  } else {
+    ws.mats[oreId] = (ws.mats[oreId] || 0) + exp; // 新装備: 色素材追加系
+  }
 }
 // 装備専用の素材判定/消費: 料理用costMul(×4)や万能粉代替は適用しない生コスト
 // 色素材は上位が下位を代替できる(層が深いと低位色が落ちないため。ore_tNの必要にはore_tN..t6を低い方から充当)

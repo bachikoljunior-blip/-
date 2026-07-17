@@ -9549,7 +9549,19 @@ function grantMonsterDrops(typeId, level, overkill, colorTier) {
       const ct = Math.max(1, Math.min(EQUIP2_CFG.tiers || 6, colorTier || layerOreTier())); // そのモンスターの色の素材(2026-07-15)
       const oreId = "ore_t" + ct;
       const oreExp = (MAT_DROP_BASE * monsterDropStrength(typeId) * matRarityDrop(oreId) + equip2Fx().oreAdd) * count;
-      addDrop(oreId, rollDropQty(oreExp)); // 新装備: 色素材系
+      // ステージ署名色(2026-07-17 sim同期・ユーザー指示「色違いにもステージごとの特色を」):
+      // ドロップの35%は今いるステージの署名色(S1=白銀〜S6=紅)。量はその色のレア度準拠=高色は署名でも希少。
+      // 色の入手が「層を進める(帯色)」と「そのステージへ行く(署名色)」の二軸になる。
+      const sigFrac = 0.35;
+      const sigT = Math.max(1, Math.min(EQUIP2_CFG.tiers || 6, stageNo || 1));
+      if (sigT !== ct) {
+        addDrop(oreId, rollDropQty(oreExp * (1 - sigFrac)));
+        const sigId = "ore_t" + sigT;
+        const sigExp = (MAT_DROP_BASE * monsterDropStrength(typeId) * matRarityDrop(sigId) + equip2Fx().oreAdd) * count;
+        addDrop(sigId, rollDropQty(sigExp * sigFrac));
+      } else {
+        addDrop(oreId, rollDropQty(oreExp)); // 新装備: 色素材系
+      }
     }
 
     if (dropsEnabled) {
@@ -9922,7 +9934,7 @@ function renderWorkshop() {
     <div class="infoBox eq2CraftBox">
       <h3>装備の作成 <span class="desc" style="font-weight:normal">(この周回あと ${Math.max(0, (EQUIP2_CFG.craftPerRunCap || 5) - (state.eq2CraftTotalThisRun || 0))}/${EQUIP2_CFG.craftPerRunCap || 5} 個)</span></h3>
       ${craftCatBar}
-      ${craftRows || `<div class="desc">${state.eq2CraftCat === "all" ? "素材が揃うとレシピが並ぶ(モンスターの色素材+ステージ素材)" : "この種類の作れる装備はまだない"}</div>`}
+      ${craftRows || `<div class="desc">${state.eq2CraftCat === "all" ? "素材が揃うとレシピが並ぶ(モンスターの色素材+ステージ素材)。色素材はノルマ層の帯色に加え、各ステージの署名色(S1=白銀〜S6=紅)も一部ドロップ" : "この種類の作れる装備はまだない"}</div>`}
     </div>`;
   // 料理は既存の工房スキル解放のまま。装備と料理は工房タブ内で別タブ(2026-07-13)
   // 料理タブは解放(スキル「素材の嗅覚」取得)するまで出さない(2026-07-13 ユーザー指示)

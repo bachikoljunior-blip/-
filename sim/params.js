@@ -472,7 +472,8 @@ module.exports = {
     stageMatNeed: 3,      // レシピのステージ素材必要数
     dropAllMul: 1,        // 素材ドロップ全体倍率(2026-07-15「もっと少なく」で×2撤回=1)
     dishReserve: 40,      // 料理リザーブ(2026-07-14): 装備作成が料理素材を食い潰してバフを失わないための残量確保
-    craftPerRunCap: Number(process.env.CRAFT_CAP) || 5     // 装備作成は1周回に0〜5個まで(2026-07-15 ユーザー指示・検証用にCRAFT_CAP上書き可)
+    craftPerRunCap: Number(process.env.CRAFT_CAP) || 5,    // 装備作成は1周回に0〜5個まで(2026-07-15 ユーザー指示・検証用にCRAFT_CAP上書き可)
+    stageSigFrac: 0.35    // ステージ署名色(R17b 2026-07-17 ユーザー指示): 討伐ドロップの35%が今のステージの署名色(S1=白銀〜S6=紅)。量は色レア度準拠
   },
   ws: {
     // ステージ(v3 §13: 周回選択制・S6深層は層が無限)。ボス化=そのステージ累計討伐 bossBase+bossPer×(no-1)−コンパスLv
