@@ -851,28 +851,45 @@ const EQ2_FAV = {
   hunt: new Set(['dmgMul', 'killValMul', 'rewardLvAdd', 'stayMul', 'spawnMul', 'allMul', 'oreAdd'])
 };
 const EQ2_CONDFREQ = { goldenBoost: 0.15, monster: 0.4, boss: 0.06, quotaHold: 0.8, deep: 0.3, buyUp: 0.12, buyRes: 0.10, runStart: 0.12 };
-function equip2Rel(pol, stat) { if (stat === 'cpsMul' || stat === 'allMul') return 0.8; const f = EQ2_FAV[pol]; if (!f) return 0.7; return f.has(stat) ? 1 : 0.2; } // cps/allは土台=全方針で重視
+// 装備の好み(R17 2026-07-17 ユーザー指示「プレイ方針を(シミュ条件を考慮せず)追加」):
+// 戦略ごとの装備選好。fav=価値を置くステータス集合 / bAversion=B型の得意ステータス代償への嫌悪(既定6・
+// リスク愛好家は低い/堅実家は高い) / cFreqMul=C型状況頻度への楽観(既定1・状況を使いこなす人は高い)。
+// eq2Taste未定義の戦略(S1-S9)は従来どおり方針の既定選好(EQ2_FAV)=既存経済は完全不変。
+function eq2TasteOf(sim) { return (sim.strat && sim.strat.eq2Taste) || null; }
+function equip2Rel(sim, pol, stat) {
+  const t = eq2TasteOf(sim);
+  if (t && t.fav) {
+    if (stat === 'cpsMul' || stat === 'allMul') return t.fav.has(stat) ? 1 : 0.8; // 生産は土台=誰でも0.8
+    return t.fav.has(stat) ? 1 : 0.2;
+  }
+  if (stat === 'cpsMul' || stat === 'allMul') return 0.8;
+  const f = EQ2_FAV[pol]; if (!f) return 0.7; return f.has(stat) ? 1 : 0.2;
+} // cps/allは土台=全方針で重視
 function equip2Score(sim, it) {
-  // equip2Scoreは(方針, 装備種)だけで決まりtick非依存(EQ2_CONDFREQは定数の頻度)=周回内不変。
-  // 毎tickの装備作成ソートで大量に呼ばれるため装備オブジェクト上にメモ化(方針が変わった時だけ再計算)。
-  // (perf 2026-07-16: 旧・毎tick再計算がホットパス最上位だった。文字列キー回避で二重に高速化)
+  // equip2Scoreは(戦略, 方針, 装備種)だけで決まりtick非依存(EQ2_CONDFREQは定数の頻度)=周回内不変。
+  // 毎tickの装備作成ソートで大量に呼ばれるため装備オブジェクト上にメモ化(戦略/方針が変わった時だけ再計算)。
+  // (perf 2026-07-16: 旧・毎tick再計算がホットパス最上位だった)
   const pol0 = sim.run.policy || 'balanced';
-  if (it._scPol === pol0) return it._sc;
+  const key = (sim.strat ? sim.strat.id : '') + ':' + pol0;
+  if (it._scKey === key) return it._sc;
   const def = EQUIP2_FX[it.cat] && EQUIP2_FX[it.cat][(it.variant || 1) - 1];
-  if (!def) { it._scPol = pol0; it._sc = 0; return 0; }
+  if (!def) { it._scKey = key; it._sc = 0; return 0; }
   const pol = pol0;
+  const taste = eq2TasteOf(sim);
   const scale = Math.pow(1.5, it.tier - 1);
   let s = 0;
   const u = def.up || [];
-  for (let i = 0; i < u.length; i += 2) s += (EQ2_UNIT[u[i]] || 0.3) * u[i + 1] * scale * equip2Rel(pol, u[i]);
-  // B型の下げ: 方針が価値を置くステータスへの下げは重く罰する(=得意分野を削るB装備を選ばない=lift(a)を守る)。
-  // 得意ステータスへの下げ×6・使わないステータスへの下げ×0.3(ほぼ無害)。
+  for (let i = 0; i < u.length; i += 2) s += (EQ2_UNIT[u[i]] || 0.3) * u[i + 1] * scale * equip2Rel(sim, pol, u[i]);
+  // B型の下げ: プレイヤーが価値を置くステータスへの下げは重く罰する(=得意分野を削るB装備を選ばない=lift(a)を守る)。
+  // 嫌悪係数はbAversion(既定6)・使わないステータスへの下げ×0.3(ほぼ無害)。
   if (def.m === 'B' && def.down) for (let i = 0; i < def.down.length; i += 2) {
-    const st = def.down[i], fav = EQ2_FAV[pol] && EQ2_FAV[pol].has(st);
-    s -= (EQ2_UNIT[st] || 0.3) * (1 - def.down[i + 1]) * (fav ? 6 : (EQ2_FAV[pol] ? 0.3 : 1));
+    const st = def.down[i];
+    const favSet = (taste && taste.fav) || EQ2_FAV[pol];
+    const fav = favSet && favSet.has(st);
+    s -= (EQ2_UNIT[st] || 0.3) * (1 - def.down[i + 1]) * (fav ? ((taste && taste.bAversion != null) ? taste.bAversion : 6) : (favSet ? 0.3 : 1));
   }
-  if (def.m === 'C') s *= (EQ2_CONDFREQ[def.cond] || 0.2);
-  it._scPol = pol0; it._sc = s;
+  if (def.m === 'C') s *= Math.min(1, (EQ2_CONDFREQ[def.cond] || 0.2) * ((taste && taste.cFreqMul) || 1));
+  it._scKey = key; it._sc = s;
   return s;
 }
 // C型の状況(on/off・数連動ではない)。sim/ゲーム共通で読める信号のみ。

@@ -485,6 +485,59 @@ const STRATEGIES = [
     skillOrder: skillOrderByBranch(['core', 'monster', 'auto', 'reward', 'economy', 'research', 'click', 'golden', 'upgrade', 'start', 'master'])
   },
   // S10(のんびり放置型)は削除(2026-07-13 ユーザー指示「プレイ方針は総クッキーを増やすことを目指すので、のんびりとか論外」)
+  // ==== R17(2026-07-17 ユーザー指示「プレイ方針のパターンが少ないなら、シミュ条件を考慮せず追加」) ====
+  // 追加4種はいずれも実在するプレイヤー類型で、総クッキー最大化を自分の流儀で狙う(シミュ条件は考慮しない)。
+  // 装備の好み(eq2Taste)が既存5方針の既定選好と違う=自然に別の装備を「自分の最良」として着る。
+  {
+    id: 'S10', name: 'リスク愛好型',
+    // 豪快なギャンブラー: 金クッキーの波で一気に稼ぐ。装備は代償つき(B型)の強い上げを平気で使い、
+    // 会心や討伐ダメージの博打ステータスを好む。買い物も強気(高予算比)。
+    tapRate: 4, goldenTake: 1,
+    pickPolicy: sim => 'golden',
+    buy: standardBuy(0.35, 0.30),
+    // 張り先は金と討伐に分散(金パワー系の三点積み=goldenPower+Amount+Chainは複利が暴走し
+    // 転生周回がInfinity化する=「転生周回は有限」の教義違反を実測。博打好きでも張り先は散らすのが自然)
+    pickReward: pickRewardByPriority(['crackedFang', 'goldenPower', 'monsterDamage', 'goldenTarget', 'brandHunt', 'goldenAmount']),
+    shouldPrestige: prestigeWhen(1200, 1.0),
+    skillOrder: skillOrderByBranch(['core', 'golden', 'click', 'monster', 'economy', 'auto', 'research', 'upgrade', 'reward', 'start', 'master']),
+    eq2Taste: { fav: new Set(['goldenAmtMul', 'goldenBoostMul', 'critAdd', 'dmgMul']), bAversion: 0.5, cFreqMul: 1 }
+  },
+  {
+    id: 'S11', name: '状況殺法型',
+    // 状況を使いこなす機会主義者: ボス・モンスター交戦・金ブーストなどの「その瞬間」に強い
+    // C型(状況起動)装備を信頼して使う。討伐の間合いで稼ぐ。
+    tapRate: 5, goldenTake: 1,
+    pickPolicy: sim => 'hunt',
+    buy: standardBuy(0.30, 0.30),
+    pickReward: pickRewardAffinityAware(['monsterDamage', 'monsterRate', 'crackedFang', 'beastHeatFerment', 'monsterStay', 'goldenAmount']),
+    shouldPrestige: prestigeWhen(1200, 1.1),
+    skillOrder: skillOrderByBranch(['core', 'monster', 'auto', 'economy', 'reward', 'research', 'click', 'golden', 'upgrade', 'start', 'master']),
+    eq2Taste: { fav: new Set(['dmgMul', 'critAdd', 'spawnMul', 'stayMul', 'killValMul']), bAversion: 6, cFreqMul: 3 }
+  },
+  {
+    id: 'S12', name: '職人型',
+    // 工房を愛するクラフター: 素材・ドロップ・色素材が増える装備を好み、料理と装備作成で経済を回す。
+    // 生産は堅実に焼成で稼ぐ。
+    tapRate: 4, goldenTake: 1,
+    pickPolicy: sim => 'bake',
+    buy: standardBuy(0.30, 0.25),
+    pickReward: pickRewardByPriority(['beastHeatFerment', 'monsterStay', 'monsterDamage', 'monsterRate', 'goldenAmount', 'biteRecovery']),
+    shouldPrestige: prestigeWhen(1200, 1.2),
+    skillOrder: skillOrderByBranch(['core', 'economy', 'auto', 'monster', 'research', 'reward', 'click', 'golden', 'upgrade', 'start', 'master']),
+    eq2Taste: { fav: new Set(['dropMul', 'dropRateAdd', 'dropLuck', 'oreAdd', 'resDisc', 'upDisc']), bAversion: 6, cFreqMul: 1 }
+  },
+  {
+    id: 'S13', name: '堅実割引型',
+    // 無駄嫌いの倹約家: 割引・維持ボーナスなどの確実に効く装備だけを信じ、代償つき(B型)は嫌い、
+    // 状況起動(C型)は信用しない。買い物は慎重(低予算比)でコツコツ伸ばす。
+    tapRate: 4, goldenTake: 1,
+    pickPolicy: sim => 'balanced',
+    buy: standardBuy(0.25, 0.20),
+    pickReward: pickRewardAffinityAware(['goldenAmount', 'monsterDamage', 'beastHeatFerment', 'goldenRate', 'monsterRate']),
+    shouldPrestige: prestigeWhen(1200, 1.2),
+    skillOrder: cheapestFirst,
+    eq2Taste: { fav: new Set(['upDisc', 'resDisc', 'cpsMul', 'holdBonus']), bAversion: 10, cFreqMul: 0.5 }
+  }
 ];
 
 module.exports = { STRATEGIES, cheapestNextSkillCost };
