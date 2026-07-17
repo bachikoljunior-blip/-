@@ -9,3 +9,4 @@ S8: own=34 cum=126 last=8.8e+271
 S9: own=31 cum=131 last=1.1e+292
 S10: own=28 cum=131 last=2.0e+278
 S11: own=34 cum=142 last=2.6e+271
+S12: own=40 cum=146 last=1.8e+268
