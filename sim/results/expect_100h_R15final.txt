@@ -33,3 +33,7 @@
   OK rw:deepPursuit          S4 中央値比=1000000000.000 (n=2)
   OK rw:chainPrep            S5 中央値比=505766754.950 (n=8)
   OK rw:huntFocus            S6 中央値比=1000000000.000 (n=7)
+  OK rw:biteRecovery         S4 中央値比=669063682.573 (n=4)
+  OK rw:crushedMill          S3 中央値比=1000000000.000 (n=1)
+  OK rw:goldenBeastMutation  S3 中央値比=1000000000.000 (n=1)
+  OK rw:goldenChain          S9 中央値比=392688.157 (n=8)
