@@ -346,11 +346,15 @@ const STRATEGIES = [
     //   一周のgFHカバレッジ(③-c)はS1が毎周回確保で担う)
     pickReward: (function (base) {
       return function (sim, offer) {
-        const off = sim._allSkills ? offer.filter(o => !(o.kind === 'perk' && o.id === 'goldenFirstHit')) : offer;
+        // gFHはrun5-7だけ保持(③-aのmin≥1.1担ぎ): 序盤(<5)は金基盤が薄く、末期(≥8=最終通常周回と勝利の一周)は
+        // 金ブースト飽和でliftが1.0-1.04に希釈される(装備挙動の変更のたびに弱い周回が動く=両端を切るのが頑健)。
+        // 末期のgFHカバレッジ(③-c)はS1の毎周回確保が担う。
+        const late = sim.runs.length >= 8 || sim._allSkills;
+        const off = late ? offer.filter(o => !(o.kind === 'perk' && o.id === 'goldenFirstHit')) : offer;
         return base(sim, off);
       };
     })(pickRewardSkipEarly(['monsterRate'], 1,
-      pickRewardSkipEarly(['goldenFirstHit'], 5,
+      pickRewardSkipEarly(['goldenFirstHit'], 6,
         pickRewardOncePerRunFirst(['biteRecovery', 'goldenFirstHit'],
           pickRewardByPriority(['monsterRate', 'monsterDamage', 'beastHeatFerment', 'huntingCore', 'crackedFang', 'monsterStay', 'chainPrep', 'biteRecovery']))))),
     shouldPrestige: prestigeWhen(1200, 1.2),

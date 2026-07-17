@@ -989,6 +989,18 @@ function equip2SwapOk(sim, cur, it) {
   if (it.tier === cur.tier) return si >= sc;
   return si > sc;
 }
+// 生産コア判定(2026-07-16 装備(a)ガード): 常時稼働の生産直結ステータスを持つ装備か。
+// C型は状況起動=周回の大半で素通しのためコアとは見なさない。寄り道(非厳密改善の付け替え)で
+// 生産コアのスロットを非コア(割引/ドロップ系/C型)へ明け渡すと、その周回の装備束が2桁落ちる実測
+// (S5のupDisc喪失→購入減→momentum崩壊で0.003等)。
+const EQUIP2_PROD_STATS = { clickMul: 1, cpsMul: 1, allMul: 1, dmgMul: 1, killValMul: 1, goldenAmtMul: 1, goldenRateMul: 1, goldenBoostMul: 1, holdBonus: 1 };
+function equip2ProdCore(it) {
+  const def = EQUIP2_FX[it.cat] && EQUIP2_FX[it.cat][(it.variant || 1) - 1];
+  if (!def || def.m === 'C') return false;
+  const up = def.up || [];
+  for (let i = 0; i < up.length; i += 2) if (EQUIP2_PROD_STATS[up[i]]) return true;
+  return false;
+}
 function equip2Tick(sim) {
   const E = P.equip2; if (!E) return;
   if (sim.opt.noNewEquip) return; // 装備lift判定の枝分かれ: 新規作成・付け替えを封止
@@ -1007,19 +1019,26 @@ function equip2Tick(sim) {
       (sim.eq2EverEquipped || (sim.eq2EverEquipped = {}))[it.id] = true; // 収集優先の既着判定用
     };
     let side = null; // {slot,it,ratio} 最良のサイドグレード候補
+    let improved = 0; // この付け替えで厳密改善した枠数
     for (const slot of Object.keys(pend)) {
       const it = equip2ById(pend[slot]);
       const cur = ws.eq2Equipped[slot] ? equip2ById(ws.eq2Equipped[slot]) : null;
       if (!it) { delete pend[slot]; continue; }
       const sc = cur ? equip2Score(sim, cur) : 0, si = equip2Score(sim, it);
-      if (!cur || si > sc) { wear(slot, it); } // 厳密改善は無制限
-      else if (equip2SwapOk(sim, cur, it)) {
+      // 生産コアのスロットを非コア(割引/ドロップ/C型)に明け渡さない(スコア上の「改善」でも禁止)。
+      // スコアモデルは割引系(unit=3)を生産より高く評価しうるが、実生産では帽子=全生産等の喪失で
+      // 周回の装備束が2-3桁落ちる(S3 hat resDisc化で0.002等を実測)=装備(a)の要。
+      const coreYield = cur && equip2ProdCore(cur) && !equip2ProdCore(it);
+      if (!cur || (si > sc && !coreYield)) { wear(slot, it); improved++; } // 厳密改善(コア明け渡し以外)
+      else if (!coreYield && equip2SwapOk(sim, cur, it)) {
         const ratio = sc > 0 ? si / sc : 1;
         if (!side || ratio > side.ratio) side = { slot, it, ratio };
       }
       delete pend[slot];
     }
-    if (side) wear(side.slot, side.it); // 寄り道は最も無害な1枠だけ
+    // 寄り道は最も無害な1枠だけ・かつ同じ周回に厳密改善が1つ以上あるときだけ
+    // (寄り道単独の周回は装備束がその寄り道だけになり(a)中央値1.0-1.2に落ちる実測)
+    if (side && improved > 0) wear(side.slot, side.it);
   }
   // 早期打ち切り(perf 2026-07-16): 周回の作成上限に達したら以降このtickでは何も作れない=
   // 高コストな全装備ソート/スコア計算をまるごと省く(1周回のtickの大半は上限到達後)。
@@ -1050,7 +1069,8 @@ function equip2Tick(sim) {
   const stratIdx = Math.max(0, (parseInt(String(sim.strat.id).replace(/\D/g, ''), 10) || 1) - 1);
   const everEq = sim.eq2EverEquipped || (sim.eq2EverEquipped = {});
   const laneOf = it => ((stratIdx + it.tier + EQUIP2_CATS.indexOf(it.cat)) % 9) + 1;
-  const laneFirst = it => (it.variant === laneOf(it) && !everEq[it.id] && equip2SwapOk(sim, curSlot[it.cat], it)) ? 1 : 0;
+  const noCoreYield = it => !(curSlot[it.cat] && equip2ProdCore(curSlot[it.cat]) && !equip2ProdCore(it)); // 生産コアの明け渡しになる作成は優先しない
+  const laneFirst = it => (it.variant === laneOf(it) && !everEq[it.id] && equip2SwapOk(sim, curSlot[it.cat], it) && noCoreYield(it)) ? 1 : 0;
   const items = equip2Items().slice().sort((a, b) =>
     (laneFirst(b) - laneFirst(a)) || (upGain(b) - upGain(a)) || (catOrder[a.cat] - catOrder[b.cat]) || (equip2Score(sim, b) - equip2Score(sim, a)) || (b.tier - a.tier));
   // 1周回の作成上限(2026-07-15 ユーザー指示「装備は1周回に0〜5個まで作成」)
@@ -2471,14 +2491,20 @@ function measureTick(sim) {
     }
   }
   // ⑫文脈依存性: 5方針それぞれの稼ぎ力(この周回の中身に対して)。argmax を後で集計
-  if (!r._polPow) r._polPow = {};
-  const savedPol = r.policy;
-  for (const pol of MEASURE_POLICIES) {
-    r.policy = pol; clearCaches();
-    const pp = earningPowerSafe(sim);
-    if (pp > 0 && Number.isFinite(pp)) r._polPow[pol] = (r._polPow[pol] || 0) + Math.log(pp);
+  // 未達後のtickはサンプリングしない(2026-07-16 測定修正): ⑧確定形で全周回の末尾(ソフト未達〜転生)は
+  // モンスターが湧かない=そこを含めるとhunt方針の稼ぎ力だけが全周回で系統的に沈み、⑫の
+  // 「どの周回でもhuntが1位にならない」が測定アーティファクトとして出る(S4/S9でもbake14/19を実測)。
+  // 生きている区間(未達前)で5方針を公平比較する。
+  if (!r.quotaFailed) {
+    if (!r._polPow) r._polPow = {};
+    const savedPol = r.policy;
+    for (const pol of MEASURE_POLICIES) {
+      r.policy = pol; clearCaches();
+      const pp = earningPowerSafe(sim);
+      if (pp > 0 && Number.isFinite(pp)) r._polPow[pol] = (r._polPow[pol] || 0) + Math.log(pp);
+    }
+    r.policy = savedPol; clearCaches();
   }
-  r.policy = savedPol; clearCaches();
 }
 // 周回終了時に _meas / _polPow を平均して記録に落とす
 function finalizeMeasure(run) {
@@ -2708,6 +2734,11 @@ function defeatMonster(sim, mon) {
   const r = sim.run;
   const typeId = mon.typeId || 'normal';
   const M = P.mtype;
+  // ⑬延長狩りのsnap(measurement専用): 段2取得後の最初の討伐時に取る=モンスターが生きている窓から測る
+  if (sim._portalSnapPending && sim.opt.timingSnaps && resStage2(sim, 'portalNetwork')) {
+    (sim.timingSnaps || (sim.timingSnaps = {})).portalNetwork = takeSnapshot(sim);
+    sim._portalSnapPending = false;
+  }
   // こつぶ群れ=3体分(討伐数・報酬イベントとも)。ボスは討伐周期をリセット
   const units = (M && M.rewardEvents && M.rewardEvents[typeId]) || 1;
   r.kills += units;
@@ -3159,10 +3190,13 @@ function advanceTick(sim, strategy) {
         if (el >= minSec) {
           const next = cheapestNextSkillCostSim(sim);
           const tgt = Math.max(next != null ? next : 0, (sim._prTarget || 0) * 1.57);
-          const _g = prestigeGainOf(r.runCookies);
-          if (process.env.DBG8) r._dbg8 = { g: _g, tgt, relFrac, ratio: tgt > 0 ? _g / (tgt * relFrac) : -1 };
-          if (tgt > 0 && _g >= tgt * relFrac) {
-            quota = Math.max(quota || 1, r.runCookies * 2); // 未達を強制(runCookies<quotaに必ず落ちる形)
+          if (tgt > 0 && prestigeGainOf(r.runCookies) >= tgt * relFrac) {
+            // ソフト未達(2026-07-16 確定形): 到達連動の未達は記録のみ=モンスターは止めない。
+            // 停止まで伴うと (i)未達停止帯に高額研究の購入が重なり⑬延長狩りの測定窓が全滅
+            // (ii)gain未達の周回は停止で成長が失速し周回が3倍化=周回数が9→6に崩れる、を実測。
+            // 実停止は転生インターセプト(転生判断true→未達→次秒転生=停止1秒)だけが行う。
+            r.quotaFailed = true;
+            r.quotaFailAt = el;
           }
         }
       } else if (quota !== null && quota > 0 && P.quota.reachCoef && (sim.prevDuration || 0) > 0) {
@@ -3407,8 +3441,14 @@ function tryBuyResearchStage(sim, id, stage, budgetRatio) {
   if (stage === 2) r.research2[id] = true; else r.research3[id] = true;
   // ⑬測定用(2026-07-16・opt-in): タイミング機能段2の取得直後のスナップを保存=機能が「活性」な地点から
   // 短窓で最適/放置を枝分かれできる(周回頭からだと段2未取得で1.000・周回全体だと複利発散)。measurement専用=経済不変。
-  if (stage === 2 && sim.opt.timingSnaps && (id === 'quantumProofing' || id === 'blackHoleCompression' || id === 'spiceBlend' || id === 'portalNetwork')) {
+  // 延長狩り(portalNetwork)だけは購入時でなく「取得後の最初の討伐時」にsnapする(下のdefeatMonster側):
+  // 研究購入はクッキー最潤沢=ノルマ未達直後の尾(モンスターが湧かない)に集中し、購入時snapの900s窓が
+  // 全方針1.000に死ぬのを実測。討伐時snap=機能が活性かつモンスターが生きている地点=測れる窓。
+  if (stage === 2 && sim.opt.timingSnaps && (id === 'quantumProofing' || id === 'blackHoleCompression' || id === 'spiceBlend')) {
     (sim.timingSnaps || (sim.timingSnaps = {}))[id] = takeSnapshot(sim);
+  }
+  if (stage === 2 && sim.opt.timingSnaps && id === 'portalNetwork' && !(sim.timingSnaps && sim.timingSnaps.portalNetwork)) {
+    sim._portalSnapPending = true;
   }
   const key = id + ':' + stage;
   if (sim.firstStageBuy[key] === undefined) sim.firstStageBuy[key] = sim.t;
