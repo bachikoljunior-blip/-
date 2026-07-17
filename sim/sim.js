@@ -586,16 +586,6 @@ function wsPickStage(sim) {
   const un = sim.ws.stageUnlocked;
   const pol = sim.run.policy;
   if (un <= 1) return 1;
-  // R16 収集ラップのステージ巡回(2026-07-17): ツリー完成後のラップは、残りの計画品(と前提)の
-  // 作成ステージを順に訪ねる=全レシピの「その場でしか作れない」を解く。
-  if ((sim._lapN || 0) >= 1 && sim._allSkills) {
-    const needs = [];
-    for (const cat of EQUIP2_CATS) { const w = eq2PlanWant(sim, cat); if (w) needs.push(w.stageNo); }
-    if (needs.length) {
-      needs.sort((a, b) => a - b);
-      return Math.max(1, Math.min(un, needs[(sim._lapN - 1) % needs.length]));
-    }
-  }
   if (pol === 'click') return Math.max(1, Math.min(un, 1 + (sim.prestigeRuns % Math.min(un, 3))));
   if (pol === 'golden') return Math.min(un, Math.max(4, un - 1) <= un ? Math.min(4, un) : un);
   if (pol === 'balanced') return 1 + (sim.prestigeRuns % un);
@@ -1011,93 +1001,91 @@ function equip2ProdCore(it) {
   for (let i = 0; i < up.length; i += 2) if (EQUIP2_PROD_STATS[up[i]]) return true;
   return false;
 }
-// ==== 収集計画(2026-07-17 R16・装備(b)ユーザー指示「効果値も調整しないと全装備装着無理じゃない?」) ====
-// 本質は値でなく着装順: 担当54種(レーン分割 v=(方針idx+ティア+カテゴリidx)%9+1・9方針で486を一巡)を
-// **方針スコアの昇順**で着る。昇順なら付け替え規則(同ティア非減/ティアアップ50%/ティアダウン厳密改善)を
-// 各ステップが自動で満たす(次≥今なので同ティア/ダウンOK・アップは≥50%を包含)。
-// 多重ラップ(ツリー完成後も×1.05梯子で回る)が作成予算(5個/周回)と全ステージ素材を補う。
-function eq2Plan(sim) {
-  if (sim._eq2Plan) return sim._eq2Plan;
-  const stratIdx = Math.max(0, (parseInt(String(sim.strat.id).replace(/\D/g, ''), 10) || 1) - 1);
-  const plan = {};
-  for (let ci = 0; ci < EQUIP2_CATS.length; ci++) {
-    const cat = EQUIP2_CATS[ci];
-    const mine = equip2Items().filter(it => it.cat === cat && it.variant === ((stratIdx + it.tier + ci) % 9) + 1);
-    mine.sort((a, b) => (equip2Score(sim, a) - equip2Score(sim, b)) || (a.tier - b.tier));
-    plan[cat] = mine;
-  }
-  sim._eq2Plan = plan; sim._eq2PlanPtr = {};
-  return plan;
-}
-function eq2PlanNext(sim, cat) {
-  const plan = eq2Plan(sim)[cat];
-  const ever = sim.eq2EverEquipped || (sim.eq2EverEquipped = {});
-  let i = sim._eq2PlanPtr[cat] || 0;
-  while (i < plan.length && ever[plan[i].id]) i++;
-  sim._eq2PlanPtr[cat] = i;
-  return i < plan.length ? plan[i] : null;
-}
-function eq2PlanIncomplete(sim) {
-  for (const cat of EQUIP2_CATS) if (eq2PlanNext(sim, cat)) return true;
-  return false;
-}
-// 作成対象: 計画ポインタの品。合成レシピ(v2,3,5,8)は前ティア同色銘が要るため、未所持なら連鎖を遡って
-// 最下の未所持前提を先に作る(前提は担当外=着ない・消費専用)。
-function eq2PlanWant(sim, cat) {
-  const ws = sim.ws;
-  let need = eq2PlanNext(sim, cat);
-  if (!need) return null;
-  if ((ws.eq2Owned[need.id] || 0) > 0) return null; // 既に所持=作成不要(着装待ち)
-  let guard = 0;
-  while (guard++ < 8 && need.prev && !((ws.eq2Owned[need.prev] || 0) > 0)) {
-    need = equip2ById(need.prev); // 最下の未所持前提まで遡る(前提は消費専用・着ない)
-  }
-  return need;
-}
 function equip2Tick(sim) {
   const E = P.equip2; if (!E) return;
   if (sim.opt.noNewEquip) return; // 装備lift判定の枝分かれ: 新規作成・付け替えを封止
   const ws = sim.ws, r = sim.run;
-  // 周回開始の一式付け替え(R16 2026-07-17 収集計画): 各カテゴリの担当品(レーン分割54種)を方針スコアの
-  // 昇順で着ていく。昇順なら付け替え規則(同ティア非減/アップ50%/ダウン厳密)を各ステップが自動で満たす。
-  // 旧・greedy(保留箱の厳密改善+寄り道1枠)は廃止: greedyが先に最強品を着るとスロットが単調規則で
-  // 塞がり、担当の残り色銘を永久に着られない=装備(b)の構造上限(118/486)の正体だった。
-  // 着装は周回頭にまとめて行う=束が揃い、装備lift(a)の測定窓(周回まるごと)を最大に使う(従来と同じ)。
+  // 周回開始の一式付け替え(2026-07-14): 前周回までに作った上位装備をまとめて装備
+  // 寄り道は1周回に1枠まで(2026-07-16): 新規則(同ティア非減/ティアアップ50%)の「厳密改善でない」付け替えは
+  // 1周回に1スロットだけ(スコア比が最も高い候補)。残りスロットは厳密改善のみ=装備束の力(装備(a)≥1.5)を保つ。
+  // 制限なしだと C型(状況起動=スコアは頻度割引済みでも周回の大半が素通し)や割引系(生産に直接効かない)への
+  // 複数同時サイドグレードで束が崩れ、装備(a)中央値が0.02-1.06に落ちるのを実測。
   if (!r._eq2Dressed) {
     r._eq2Dressed = true;
-    for (const cat of EQUIP2_CATS) {
-      let guard = 0;
-      while (guard++ < 8) {
-        const nx = eq2PlanNext(sim, cat);
-        if (!nx || !((ws.eq2Owned[nx.id] || 0) > 0)) break;
-        const cur = ws.eq2Equipped[cat] ? equip2ById(ws.eq2Equipped[cat]) : null;
-        if (!equip2SwapOk(sim, cur, nx)) break; // 昇順なら通常起きない(合成即時充当の先行時の保険)
-        ws.eq2Equipped[cat] = nx.id;
-        (r.eq2NewEquipped || (r.eq2NewEquipped = [])).push(nx.id);
-        (sim.eq2EverEquipped || (sim.eq2EverEquipped = {}))[nx.id] = true;
+    const pend = ws.eq2Pending || {};
+    const wear = (slot, it) => {
+      ws.eq2Equipped[slot] = it.id;
+      (r.eq2NewEquipped || (r.eq2NewEquipped = [])).push(it.id);
+      (sim.eq2EverEquipped || (sim.eq2EverEquipped = {}))[it.id] = true; // 収集優先の既着判定用
+    };
+    let side = null; // {slot,it,ratio} 最良のサイドグレード候補
+    let improved = 0; // この付け替えで厳密改善した枠数
+    for (const slot of Object.keys(pend)) {
+      const it = equip2ById(pend[slot]);
+      const cur = ws.eq2Equipped[slot] ? equip2ById(ws.eq2Equipped[slot]) : null;
+      if (!it) { delete pend[slot]; continue; }
+      const sc = cur ? equip2Score(sim, cur) : 0, si = equip2Score(sim, it);
+      // 生産コアのスロットを非コア(割引/ドロップ/C型)に明け渡さない(スコア上の「改善」でも禁止)。
+      // スコアモデルは割引系(unit=3)を生産より高く評価しうるが、実生産では帽子=全生産等の喪失で
+      // 周回の装備束が2-3桁落ちる(S3 hat resDisc化で0.002等を実測)=装備(a)の要。
+      const coreYield = cur && equip2ProdCore(cur) && !equip2ProdCore(it);
+      // ※初装着の方針適合ゲート(θ=0.35)は実験の結果撤回(2026-07-17): 序盤束の強さは方針不適合の
+      // hands/accA(クリック/金=序盤の生きたチャネル)が担っており、ゲートが強い束を崩す逆効果を実測
+      // (S9 run1 8.36→1.29・S4 run1 0.84)。方針適合スコアは序盤価値と逆相関する。
+      if (!cur || (si > sc && !coreYield)) { wear(slot, it); improved++; } // 厳密改善(コア明け渡し以外)
+      else if (!coreYield && equip2SwapOk(sim, cur, it)) {
+        const ratio = sc > 0 ? si / sc : 1;
+        if (!side || ratio > side.ratio) side = { slot, it, ratio };
       }
+      delete pend[slot];
     }
+    // 寄り道は最も無害な1枠だけ・かつ同じ周回に厳密改善が1つ以上あるときだけ
+    // (寄り道単独の周回は装備束がその寄り道だけになり(a)中央値1.0-1.2に落ちる実測)
+    if (side && improved > 0) wear(side.slot, side.it);
   }
   // 早期打ち切り(perf 2026-07-16): 周回の作成上限に達したら以降このtickでは何も作れない=
   // 高コストな全装備ソート/スコア計算をまるごと省く(1周回のtickの大半は上限到達後)。
   const runCraftCapEarly = (E.craftPerRunCap != null) ? E.craftPerRunCap : 5;
   if ((r.eq2CraftTotal || 0) >= runCraftCapEarly) return;
   const curStage = Math.max(1, Math.min(E.tiers, r.wsStage || 1));
-  // R16 収集計画の作成(2026-07-17): 作るのは各カテゴリの計画ポインタ品(または合成レシピの最下の未所持前提)
-  // だけ。greedy作成は廃止(誰も着ない品を作らない=作成予算5個/周回を計画に集中)。
-  // カテゴリ順は周回ローテ(固定順だと末尾カテゴリが常に素材切れ後になる=既知の偏り対策)。
-  const runCraftCap = (P.equip2 && P.equip2.craftPerRunCap) || 5;
+  // 作れるのは「現ステージのラインナップ」(ばらけ配置・2026-07-14)。高ティア優先で1カテゴリ1個/周回。
+  // カテゴリ優先を周回ごとにローテーション(2026-07-13: 固定順だと末尾カテゴリ(hat/shoes/acc)が
+  // いつも素材切れ後=周回終盤の初作成になり装備lift(a)と作成テンポ(c)を落とす)
   const rot = (sim.prestigeRuns || 0) % EQUIP2_CATS.length;
-  for (let k = 0; k < EQUIP2_CATS.length; k++) {
-    if ((r.eq2CraftTotal || 0) >= runCraftCap) break; // 周回の作成数が上限(0〜5個)
-    const cat = EQUIP2_CATS[(k + rot) % EQUIP2_CATS.length];
-    const it = eq2PlanWant(sim, cat);
-    if (!it) continue;
-    if (!it.stages.includes(curStage)) continue; // 作成ステージ外(収集ラップのステージ巡回で解く)
+  const catOrder = {};
+  EQUIP2_CATS.forEach((c, i) => { catOrder[c] = (i - rot + EQUIP2_CATS.length) % EQUIP2_CATS.length; });
+  // 方針レーン制(2026-07-14 v2): 各方針は(カテゴリ,ティア)ごとに担当色銘 v=(方針idx+ティア+カテゴリidx)%9+1 を
+  // 優先して作り、装備はティアアップ時のみ(横滑り付け替え廃止=lift(a)を壊さない)。
+  // 9方針×54種のレーンで486種のカバレッジがちょうど一巡する。
+  // 作成順(2026-07-15 A/B/C固定モデル): カテゴリをローテ順に回し、各カテゴリ内は方針適合スコアが高い変種から作る。
+  // =各方針は自分の遊びに合う装備を作って着ける(B下げは使わないステータスへ・C状況は頻度で割引)。
+  // 方針×ステージ×ティアで最良変種が違う=作る変種が方針間で散る。(b)カバレッジは1000h窓で巡回。
+  // 作成上限(0〜5個/周回)下では、限られた作成枠を「今いちばん伸びるスロット」に回す=装備lift(a)を守る。
+  // 各カテゴリの現装備スコアを基準に、伸び幅(スコア差)が大きい順に作る。同点はローテ順→高ティア。
+  const curSlot = {};
+  const curSlotScore = {};
+  for (const cat of EQUIP2_CATS) { const eq = ws.eq2Equipped[cat] ? equip2ById(ws.eq2Equipped[cat]) : null; curSlot[cat] = eq; curSlotScore[cat] = eq ? equip2Score(sim, eq) : 0; }
+  const upGain = it => equip2Score(sim, it) - (curSlotScore[it.cat] || 0);
+  // 収集優先(2026-07-16 ユーザー決定の付け替え規則を作成順に反映): 「まだ着けたことがなく、新規則で
+  // 付け替え可能(同ティア=非減/ティアアップ=50%)」な担当色銘 v=(方針idx+ティア+カテゴリidx)%9+1 を最優先で作る
+  // =プレイヤーは規則の範囲で新しい装備を試す。規則を満たさない/既着なら従来どおり伸び幅順。
+  const stratIdx = Math.max(0, (parseInt(String(sim.strat.id).replace(/\D/g, ''), 10) || 1) - 1);
+  const everEq = sim.eq2EverEquipped || (sim.eq2EverEquipped = {});
+  const laneOf = it => ((stratIdx + it.tier + EQUIP2_CATS.indexOf(it.cat)) % 9) + 1;
+  const noCoreYield = it => !(curSlot[it.cat] && equip2ProdCore(curSlot[it.cat]) && !equip2ProdCore(it)); // 生産コアの明け渡しになる作成は優先しない
+  const laneFirst = it => (it.variant === laneOf(it) && !everEq[it.id] && equip2SwapOk(sim, curSlot[it.cat], it) && noCoreYield(it)) ? 1 : 0;
+  const items = equip2Items().slice().sort((a, b) =>
+    (laneFirst(b) - laneFirst(a)) || (upGain(b) - upGain(a)) || (catOrder[a.cat] - catOrder[b.cat]) || (equip2Score(sim, b) - equip2Score(sim, a)) || (b.tier - a.tier));
+  // 1周回の作成上限(2026-07-15 ユーザー指示「装備は1周回に0〜5個まで作成」)
+  const runCraftCap = (P.equip2 && P.equip2.craftPerRunCap) || 5;
+  for (const it of items) {
+    if ((r.eq2CraftTotal || 0) >= runCraftCap) break; // 周回の作成数が上限に達したら以降は作らない
+    if (!it.stages.includes(curStage)) continue;
     // 作成ティア解放(2026-07-15): ティア2以降はそれぞれ解放スキルが要る(作成欄が出る)
     if (it.tier >= 2 && !hasSkillEffect(sim, 'unlockSystem', 'eqcraftT' + it.tier)) continue;
-    if (((r.eq2Made && r.eq2Made[it.cat]) || 0) >= 1) continue; // 9カテゴリ各1個/周回
-    // レシピ固定(2026-07-14): 合成レシピは前ティア所持が必須(eq2PlanWantが遡るため通常は所持済み)
+    const cap = 1; // 9カテゴリ各1個/周回(アクセは甲/乙で別カテゴリ)
+    if (((r.eq2Made && r.eq2Made[it.cat]) || 0) >= cap) continue;
+    // レシピ固定(2026-07-14): 装備入りレシピは前ティア所持が必須・素材のみレシピは素材だけ(実行時の代替なし)
     const havePrev = it.prev ? ((ws.eq2Owned[it.prev] || 0) >= 1) : true;
     const cost = it.cost;
     const afford = havePrev && equip2Afford(sim, cost);
@@ -1107,17 +1095,27 @@ function equip2Tick(sim) {
     // 合成: 素材(+あれば前ティア装備1個)を消費
     equip2Consume(sim, cost);
     let upgradedSlot = null;
-    if (it.prev && havePrev) {
+    if (havePrev) {
       ws.eq2Owned[it.prev] = Math.max(0, (ws.eq2Owned[it.prev] || 0) - 1);
       for (const s of EQUIP2_SLOTS) if (ws.eq2Equipped[s] === it.prev && (ws.eq2Owned[it.prev] || 0) === 0) { upgradedSlot = s; break; }
     }
     ws.eq2Owned[it.id] = (ws.eq2Owned[it.id] || 0) + 1;
     (r.eq2Made || (r.eq2Made = {}))[it.cat] = ((r.eq2Made || {})[it.cat] || 0) + 1;
     r.eq2CraftTotal = (r.eq2CraftTotal || 0) + 1; // 周回の作成総数(0〜5上限)
-    if (upgradedSlot) { // 合成で装備中の物が消えた枠は即時充当(空白を作らない)
-      ws.eq2Equipped[upgradedSlot] = it.id;
-      (r.eq2NewEquipped || (r.eq2NewEquipped = [])).push(it.id);
-      (sim.eq2EverEquipped || (sim.eq2EverEquipped = {}))[it.id] = true;
+    // 装備は保留箱へ(2026-07-14 一式付け替え方式): 作成即装備をやめ、周回開始時にまとめて付け替える
+    // =付け替え束が周回頭に揃い、装備lift(a)の測定窓(その周回まるごと)を最大に使う
+    {
+      const slot = upgradedSlot || it.cat;
+      const pend = ws.eq2Pending || (ws.eq2Pending = {});
+      const curId = pend[slot] || ws.eq2Equipped[slot];
+      const cur = curId ? equip2ById(curId) : null;
+      if (equip2SwapOk(sim, cur, it)) pend[slot] = it.id; // 新規則(同ティア非減/ティアアップ50%)
+      if (upgradedSlot) { // 合成で装備中の物が消えた枠は即時充当(空白を作らない)
+        ws.eq2Equipped[upgradedSlot] = it.id;
+        (r.eq2NewEquipped || (r.eq2NewEquipped = [])).push(it.id);
+        (sim.eq2EverEquipped || (sim.eq2EverEquipped = {}))[it.id] = true;
+        delete pend[upgradedSlot];
+      }
     }
   }
 }
@@ -2838,10 +2836,9 @@ function doPrestige(sim) {
   if (r.cookies < cost) return false;
   const gain = prestigeGainOf(r.runCookies);
   if (gain <= 0) return false;
-  // 勝利の一周+収集ラップ(R16): 発火予約(_victoryLapArm=戦略の判断)をラップ実施回数(_lapN)へ変換。
-  // 引退(_victoryLapDone)は戦略側が「計画完了 or ラップ上限」で立てる(2026-07-17)。
+  // 勝利の一周: 発火予約(_victoryLapArm=戦略の判断)を実施済み(_victoryLapDone)へ変換(2026-07-17)。
   // 判断と同時にDoneを立てると⑧インターセプトの1秒遅延中にガードが転生を永久拒否するため分離。
-  if (sim._victoryLapArm) { sim._victoryLapArm = false; sim._lapN = (sim._lapN || 0) + 1; }
+  if (sim._victoryLapArm) { sim._victoryLapArm = false; sim._victoryLapDone = true; }
   const nextCostAt = cheapestUnownedSkillCost(sim); // ⑭: 購入前の次スキル最安
   const onHandCookies = r.cookies; // 転生時の所持クッキー(コスト控除前・第0回コスト再算定用=diag_prestige0.js)
   sim.lastPrestigeCps = computeProd(sim).cps; // テーブル生成用: この時点の毎秒(×500の10べき切捨てが次回コスト)
@@ -3552,6 +3549,6 @@ module.exports = {
   POLICY_SIGNATURE, ALL_SIGNATURES, foreignSignatures,
   tryBuyResearchStage, researchStageCostOf, researchStageUnlocked,
   replayRun, takeSnapshot, bandY,
-  equip2Items, eq2PlanIncomplete,
+  equip2Items,
   EQUIP2_FX_TABLE: () => EQUIP2_FX // 診断用(probe_chain.js: 装備(b)鎖の切断リンク検査)
 };

@@ -1,0 +1,2 @@
+S1: own=54 cum=54 last=Infinity
+S2: own=54 cum=108 last=Infinity
