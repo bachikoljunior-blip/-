@@ -1,1 +1,3 @@
 sim S1 バランス効率型 done (18913ms)
+sim S2 クリック会心型 done (17619ms)
+sim S3 金クッキー特化型 done (10835ms)
