@@ -3549,5 +3549,6 @@ module.exports = {
   POLICY_SIGNATURE, ALL_SIGNATURES, foreignSignatures,
   tryBuyResearchStage, researchStageCostOf, researchStageUnlocked,
   replayRun, takeSnapshot, bandY,
-  equip2Items
+  equip2Items,
+  EQUIP2_FX_TABLE: () => EQUIP2_FX // 診断用(probe_chain.js: 装備(b)鎖の切断リンク検査)
 };
