@@ -1,0 +1,15 @@
+=== 期待値方式(100h・各回の稼ぎ力の持ち上げ) ===
+① 研究instant(各回≥1.2・13本) 13/13
+  OK res:fingerTechnique          S2 min=6.69
+  OK res:grandmaCrowd             S10 min=16.15
+  OK res:ovenBatch                S10 min=58.93
+  OK res:factoryNetwork           S2 min=1.30
+  OK res:spiceBlend               S3 min=30693767496.15
+  OK res:portalNetwork            S6 min=1.28
+  OK res:bankClickDividend        S2 min=1.38
+  OK res:moonGlobalYeast          S5 min=249.71
+  OK res:portalGlobalFold         S2 min=38.71
+  OK res:galaxyAssembly           S4 min=1.25
+  OK res:blackHoleCompression     S6 min=5.00
+  OK res:quantumProofing          S13 min=1.25
+  OK res:antimatterRecipe         S8 min=104961454.53

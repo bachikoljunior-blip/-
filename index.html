@@ -10947,6 +10947,23 @@ function equip2Items() {
   // v%3==0は2ステージ重複・傾向=後半ほど高ティア・各(ステージ,カテゴリ)≥2種保証)
   const OFFSETS = [-2, -1, -1, 0, 0, 0, 1, 1, 2];
   const clampSt = x => Math.max(1, Math.min(EQUIP2_CFG.tiers, x));
+  // 強さ順コスト(2026-07-17 sim同期): 同カテゴリ内の色銘を中立強度(単位重み×効果値・C型は頻度割引)で
+  // 順位づけし、素材コストを弱⇒安/強⇒高に(弱rank0=×0.35 … 強rank8=×3.0)。強い装備ほど素材が重い。
+  const EQ2_COST_UNIT = { cpsMul: 1, allMul: 1.2, clickMul: 0.9, dmgMul: 0.7, killValMul: 0.7, holdBonus: 0.8, goldenAmtMul: 0.9, goldenRateMul: 2.5, goldenBoostMul: 1.5, dropMul: 0.3, oreAdd: 0.1, rewardLvAdd: 0.2, critAdd: 6, upDisc: 3, resDisc: 3, spawnMul: 2, stayMul: 1, dropRateAdd: 0.05, dropLuck: 0.1 };
+  const EQ2_COST_CONDFREQ = { goldenBoost: 0.15, monster: 0.4, boss: 0.06, quotaHold: 0.8, deep: 0.3, buyUp: 0.12, buyRes: 0.10, runStart: 0.12 };
+  const strengthOf = (cat, v) => {
+    const def = EQUIP2_FX[cat] && EQUIP2_FX[cat][v - 1];
+    if (!def) return 0;
+    let s = 0; const u = def.up || [];
+    for (let i = 0; i < u.length; i += 2) s += (EQ2_COST_UNIT[u[i]] || 0.3) * u[i + 1];
+    if (def.m === "C") s *= (EQ2_COST_CONDFREQ[def.cond] || 0.2);
+    return s;
+  };
+  const costRank = {};
+  for (const cat of EQUIP2_CATS) {
+    const order = [1,2,3,4,5,6,7,8,9].sort((a, b) => strengthOf(cat, a) - strengthOf(cat, b));
+    costRank[cat] = {}; order.forEach((v, i) => { costRank[cat][v] = i; });
+  }
   for (let t = 1; t <= EQUIP2_CFG.tiers; t++) {
     for (const cat of EQUIP2_CATS) {
       const ci = EQUIP2_CATS.indexOf(cat);
@@ -10970,6 +10987,10 @@ function equip2Items() {
           if (v >= 4 && t >= 3) { const m2 = PAL[(v + t + 2) % span]; if (m2 !== m1) cost[m2] = (cost[m2] || 0) + 1 + ((v + t) % 3); }
           if (v >= 7 && t >= 3) { const m3 = v % 2 === 0 ? smatA : smatB; cost[m3] = (cost[m3] || 0) + 2; }
           if (v === 9 && t >= 5) cost[t === 6 ? "voidSugar" : "bossCore"] = 1 + (t === 6 ? 1 : 0);
+        }
+        { // 強さ順コスト係数(sim同期): 弱×0.35 … 強×3.0
+          const cm = 0.35 + 0.33 * costRank[cat][v];
+          for (const k in cost) cost[k] = Math.max(1, Math.round(cost[k] * cm));
         }
         const def = EQUIP2_FX[cat][v - 1];
         const scale = Math.pow(1.5, t - 1); // sim同値(×1.5^(t-1))。旧×2^(t-1)はA/B/Cモデル同期(2026-07-16)で修正

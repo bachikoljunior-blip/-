@@ -714,6 +714,24 @@ function equip2Items() {
   // v%3==0 のアイテムは隣のステージでも作れる(2ステージ重複)。
   const OFFSETS = [-2, -1, -1, 0, 0, 0, 1, 1, 2]; // v1..v9(中心=同ティア・傾向維持)
   const clampSt = x => Math.max(1, Math.min(E.tiers, x));
+  // 強さ順コスト(R18 2026-07-17 ユーザー指示「装備全着用も調整でどうにかして」): 同カテゴリ内の色銘を
+  // 中立強度(単位重み×効果値・C型は状況頻度割引)で順位づけし、素材コストを弱⇒安/強⇒高に並べる。
+  // 従来はコストが強さと無相関=プレイヤーは最強の作れる色銘を最初に作って着るため、弱い色銘に出番がなかった。
+  // 強い色銘ほど素材が重いと、各ティア時代の序盤は弱い色銘しか作れず自然に着て、素材が貯まったら強い色銘へ
+  // 着替える(同ティア非減の規則どおり)=「改善の瞬間」が増えて自然プレイの着用種類が伸びる。
+  const strengthOf = (cat, v) => {
+    const def = EQUIP2_FX[cat] && EQUIP2_FX[cat][v - 1];
+    if (!def) return 0;
+    let s = 0; const u = def.up || [];
+    for (let i = 0; i < u.length; i += 2) s += (EQ2_UNIT[u[i]] || 0.3) * u[i + 1];
+    if (def.m === 'C') s *= (EQ2_CONDFREQ[def.cond] || 0.2);
+    return s;
+  };
+  const costRank = {}; // cat -> v -> 0..8(弱い順)
+  for (const cat of EQUIP2_CATS) {
+    const order = Array.from({ length: VARIANTS }, (_, i) => i + 1).sort((a, b) => strengthOf(cat, a) - strengthOf(cat, b));
+    costRank[cat] = {}; order.forEach((v, i) => { costRank[cat][v] = i; });
+  }
   for (let t = 1; t <= E.tiers; t++) {
     for (const cat of EQUIP2_CATS) {
       const ci = EQUIP2_CATS.indexOf(cat);
@@ -744,6 +762,9 @@ function equip2Items() {
         // レシピは固定(2026-07-14 ユーザー明確化「必要装備素材はゲーム内固定。固定の中身が裁量」):
         // 色銘2,3,5,8=前ティア装備を要求する合成レシピ / 色銘1,4,6,7,9=素材のみのレシピ(固定・実行時の代替なし)
         const hasPrevRecipe = t > 1 && [2, 3, 5, 8].includes(v);
+        // 強さ順コスト係数: 弱(rank0)=×0.35 … 強(rank8)=×3.0
+        const cm = 0.35 + 0.33 * costRank[cat][v]; // 幅を拡大(×0.35〜×3.0): ×0.5〜2.1では作成の時間差が1周回未満で着用が増えなかった
+        for (const k in cost) cost[k] = Math.max(1, Math.round(cost[k] * cm));
         EQUIP2_ITEMS.push({ id, cat, tier: t, variant: v, stages, stageNo: st1, prev: hasPrevRecipe ? `${cat}_t${t - 1}_v${v}` : null, cost });
       }
     }
