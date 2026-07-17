@@ -2836,6 +2836,9 @@ function doPrestige(sim) {
   if (r.cookies < cost) return false;
   const gain = prestigeGainOf(r.runCookies);
   if (gain <= 0) return false;
+  // 勝利の一周: 発火予約(_victoryLapArm=戦略の判断)を実施済み(_victoryLapDone)へ変換(2026-07-17)。
+  // 判断と同時にDoneを立てると⑧インターセプトの1秒遅延中にガードが転生を永久拒否するため分離。
+  if (sim._victoryLapArm) { sim._victoryLapArm = false; sim._victoryLapDone = true; }
   const nextCostAt = cheapestUnownedSkillCost(sim); // ⑭: 購入前の次スキル最安
   const onHandCookies = r.cookies; // 転生時の所持クッキー(コスト控除前・第0回コスト再算定用=diag_prestige0.js)
   sim.lastPrestigeCps = computeProd(sim).cps; // テーブル生成用: この時点の毎秒(×500の10べき切捨てが次回コスト)

@@ -232,10 +232,17 @@ function prestigeWhen(minElapsedSec, gainFactor) {
       // 完成後に一度だけ、従来と同じ梯子目標(前回目標×1.57)で転生する=「完成状態で一周だけ回ってから引退」。
       // その一周は最終スキル束(master_final等)を持つ=④(前周回超)も自然に満たす。2周目以降は従来どおり引退。
       if (sim._victoryLapDone) return false;
+      // 発火予約(_victoryLapArm)と実施済み(_victoryLapDone)を分離(2026-07-17 バグ修正): 判断trueと同時に
+      // Doneを立てると、⑧インターセプト(未達→転生を次秒に遅らせる)がtrueを飲み込んだ後、次tickの
+      // このガードが転生を永久拒否=完成後の一周が消える(S4 run9が7200s部分周回化を実測)。
+      // Armは判断時、Doneは実転生時(doPrestige)に立てる。Arm中は同じ判断を返し続ける。
+      if (sim._victoryLapArm) return true;
       const target = (sim._prTarget || 0) * 1.57;
       const gain = G.prestigeGainOf(sim.run.runCookies);
-      if (gain >= target * gainFactor && gain >= 1) { sim._victoryLapDone = true; sim._prTarget = Math.max(target, gain / gainFactor); return true; }
-      if (sim.t - sim.run.startT >= G.PRESTIGE_MAX_SEC && gain >= 1) { sim._victoryLapDone = true; sim._prTarget = Math.max(target, gain / gainFactor); return true; }
+      if (gain >= target * gainFactor && gain >= 1) { sim._victoryLapArm = true; sim._prTarget = Math.max(target, gain / gainFactor); return true; }
+      // 一周発火の時間上限はT1帯上限(7200s)に合わせる(2026-07-17 T1: matureRate0.009でS4の発火周回が
+      // 7538sに伸びて帯を超えた。目標未達でも7200sで発火=帯内・run0-8は不変・完成周回の測定時間はむしろ増える)
+      if (sim.t - sim.run.startT >= Math.min(7200, G.PRESTIGE_MAX_SEC) - 1 && gain >= 1) { sim._victoryLapArm = true; sim._prTarget = Math.max(target, gain / gainFactor); return true; }
       return false;
     }
     // 転生しきい値=次スキル束(相乗り段=約1e8×間隔)or 前回目標×1.57 の高い方(2026-07-14 ④修復の恒久解)。
@@ -463,9 +470,11 @@ const STRATEGIES = [
       if (next === null) {
         // 勝利の一周(prestigeWhenと同じ・2026-07-16): ツリー完成後に一度だけ梯子目標で転生
         if (sim._victoryLapDone) return false;
+        if (sim._victoryLapArm) return true; // 発火予約中(⑧インターセプトの1秒遅延を消化)=prestigeWhenと同じ
         const target = (sim._prTarget || 0) * 1.57;
-        if (gain >= target * factor && gain >= 1) { sim._victoryLapDone = true; sim._prTarget = target; return true; }
-        if ((sim.t - sim.run.startT) >= G.PRESTIGE_MAX_SEC && gain >= 1) { sim._victoryLapDone = true; sim._prTarget = Math.max(target, gain / factor); return true; }
+        if (gain >= target * factor && gain >= 1) { sim._victoryLapArm = true; sim._prTarget = target; return true; }
+        // 一周発火の時間上限はT1帯上限(7200s)に合わせる(prestigeWhenと同じ・2026-07-17)
+        if ((sim.t - sim.run.startT) >= Math.min(7200, G.PRESTIGE_MAX_SEC) - 1 && gain >= 1) { sim._victoryLapArm = true; sim._prTarget = Math.max(target, gain / factor); return true; }
         return false;
       }
       const target = Math.max(next, (sim._prTarget || 0) * 1.57);
