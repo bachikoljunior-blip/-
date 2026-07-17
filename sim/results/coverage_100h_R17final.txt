@@ -9,3 +9,6 @@ S8: own=40 cum=112 last=4.9e+271
 S9: own=37 cum=119 last=1.2e+281
 S10: own=29 cum=119 last=1.2e+274
 S11: own=30 cum=122 last=3.3e+271
+S12: own=40 cum=126 last=2.9e+268
+S13: own=47 cum=137 last=8.8e+269
+COVERAGE 100h: 137/486
