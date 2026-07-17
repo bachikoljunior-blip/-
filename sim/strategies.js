@@ -480,7 +480,9 @@ const STRATEGIES = [
         return false;
       }
       const target = Math.max(next, (sim._prTarget || 0) * 1.57);
-      if (gain >= target * factor && gain >= 1) { sim._prTarget = target; return true; }
+      // 達成gainを梯子に反映(2026-07-17 ④修復: prestigeWhenと同じ床。S9だけ target のみ保存で、
+      // 1200s床のオーバーシュート(実績5倍超過等)が記録されず次周回の目標が実績を下回り④が割れていた)
+      if (gain >= target * factor && gain >= 1) { sim._prTarget = Math.max(target, gain / factor); return true; }
       // 保険上限7200s(T1帯)に統一(prestigeWhenと同じ・2026-07-17 R17b)
       if ((sim.t - sim.run.startT) >= Math.min(7200, G.PRESTIGE_MAX_SEC) - 1 && gain >= 1) { sim._prTarget = Math.max(target, gain / factor); return true; }
       return false;
