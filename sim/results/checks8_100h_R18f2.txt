@@ -1,2 +1,31 @@
 sim S1 バランス効率型 done (17765ms)
 sim S2 クリック会心型 done (14815ms)
+sim S3 金クッキー特化型 done (12936ms)
+sim S4 狩猟特化型 done (18662ms)
+sim S5 研究貯蓄型 done (13968ms)
+sim S6 早回し転生型 done (14810ms)
+sim S7 長期育成型 done (12879ms)
+sim S8 最新設備ラッシュ型 done (20649ms)
+sim S9 ノルマ死守型 done (10651ms)
+sim S10 リスク愛好型 done (14117ms)
+sim S11 状況殺法型 done (15866ms)
+sim S12 職人型 done (14760ms)
+sim S13 堅実割引型 done (12458ms)
+
+S1: ⑧ 未達→転生 10/10 全周回OK
+S2: ⑧ 未達→転生 10/10 全周回OK
+S3: ⑧ 未達→転生 8/8 全周回OK
+S4: ⑧ 未達→転生 10/10 全周回OK
+S5: ⑧ 未達→転生 9/9 全周回OK
+S6: ⑧ 未達→転生 9/9 全周回OK
+S7: ⑧ 未達→転生 8/8 全周回OK
+S8: ⑧ 未達→転生 12/12 全周回OK
+S9: ⑧ 未達→転生 7/7 全周回OK
+S10: ⑧ 未達→転生 10/10 全周回OK
+S11: ⑧ 未達→転生 10/10 全周回OK
+S12: ⑧ 未達→転生 11/11 全周回OK
+S13: ⑧ 未達→転生 11/11 全周回OK
+
+⑫ 文脈依存性
+ 設備(最効率の最頻): S1=oven S2=oven S3=oven S4=oven S5=oven S6=oven S7=oven S8=oven S9=oven S10=oven S11=oven S12=oven S13=oven
+ 報酬(ピック1位カテゴリ): S1=hunt S2=hunt S3=golden S4=hunt S5=hunt S6=golden S7=hunt S8=hunt S9=hunt S10=golden S11=hunt S12=hunt S13=golden

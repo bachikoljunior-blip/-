@@ -866,10 +866,8 @@ const EQUIP2_FLATCAP = { critAdd: 0.3, upDisc: 0.5, resDisc: 0.5 };
 // 下げは「その方針が使わないステータスなら軽い」=Bの下げが遊びに合わない所へ落ちる。C型は状況頻度で割引。
 const EQ2_UNIT = { cpsMul: 1, allMul: 1.2, clickMul: 0.9, dmgMul: 0.7, killValMul: 0.7, holdBonus: 0.8, goldenAmtMul: 0.9, goldenRateMul: 2.5, goldenBoostMul: 1.5, dropMul: 0.3, oreAdd: 0.1, rewardLvAdd: 0.2, critAdd: 6, upDisc: 3, resDisc: 3, spawnMul: 2, stayMul: 1, dropRateAdd: 0.05, dropLuck: 0.1 };
 const EQ2_FAV = {
-  // balanced(2026-07-17 追加): kvM方針係数(balanced6.5)で討伐即時収入がbalancedの大黒柱になった経済の実態を
-  // 選好に反映。killValMulへのB代償(×0.9×複数)が空スロット初装着で束比0.35(=着ると65%損)を作っていた
-  // (S6 run早期・hands_t1_v2等の実測)。「討伐で稼いでいる人は討伐報酬を削る装備を着ない」= 自然な判断。
-  balanced: new Set(['killValMul', 'cpsMul', 'allMul', 'goldenAmtMul', 'clickMul']),
+  // ※balancedのfavセット追加は撤回(2026-07-17): 選好の激変で装備一式が入れ替わり㉘balancedが5/9→1/9に
+  // 崩れた。代わりにfav無し方針のB代償を一様×4(下のequip2Score)=毒装備(killVal×0.9等)だけ弾き構成は温存。
   bake: new Set(['cpsMul', 'allMul', 'holdBonus', 'upDisc', 'resDisc']),
   click: new Set(['clickMul', 'critAdd', 'allMul']),
   golden: new Set(['goldenAmtMul', 'goldenRateMul', 'goldenBoostMul', 'allMul']),
@@ -911,7 +909,7 @@ function equip2Score(sim, it) {
     const st = def.down[i];
     const favSet = (taste && taste.fav) || EQ2_FAV[pol];
     const fav = favSet && favSet.has(st);
-    s -= (EQ2_UNIT[st] || 0.3) * (1 - def.down[i + 1]) * (fav ? ((taste && taste.bAversion != null) ? taste.bAversion : 6) : (favSet ? 0.3 : 1));
+    s -= (EQ2_UNIT[st] || 0.3) * (1 - def.down[i + 1]) * (fav ? ((taste && taste.bAversion != null) ? taste.bAversion : 6) : (favSet ? 0.3 : 4)); // fav無し方針(balanced)は一様×4(2026-07-17: 何でも使う=何の代償も痛い。kvM経済でkillVal×0.9の初装着束比0.348の毒を弾く)
   }
   if (def.m === 'C') s *= Math.min(1, (EQ2_CONDFREQ[def.cond] || 0.2) * ((taste && taste.cFreqMul) || 1));
   it._scKey = key; it._sc = s;
