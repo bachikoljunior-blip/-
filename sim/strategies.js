@@ -220,10 +220,24 @@ function prestigeWhen(minElapsedSec, gainFactor) {
   // スキル束(入口4本=5PT等)や個別上書きで梯子の段差が×1.57未満になるペアは、前回目標×1.57が下駄になる
   // =転生しきい値の比が常に≥×1.57(pG0.023で=10^8.5=④の1e8+余裕)。プレイヤー語: 「前回より上を目指してから転生」。
   return function (sim) {
+    // ⑧対応(2026-07-16): 到達連動ノルマが「この戦略の実際の転生条件」に未達を係留できるよう公開
+    sim._prGainFactor = gainFactor; sim._prMinSec = minElapsedSec;
     if (sim.t - sim.run.startT < minElapsedSec) return false;
     if (sim.run.cookies < G.prestigeCostOf(sim)) return false; // 転生には所持クッキー(10のべき乗・前回より大)が必要
     const next = cheapestNextSkillCost(sim);
-    if (next === null) return false; // ツリー完了後はPTの使い道がないため転生しない
+    if (next === null) {
+      // 勝利の一周(2026-07-16 ③深部報酬対策・ユーザー決定「時間が問題なら地平を伸ばして達成でよい」):
+      // ツリー完成の転生で最深スキル(巨砕ミル/金獣変異の解禁等)を買った「完成後の一周」を、従来は
+      // 永遠の部分周回にしていた=解禁済み報酬を持つ完全な周回がゼロで③の判定が構造的に不可能だった。
+      // 完成後に一度だけ、従来と同じ梯子目標(前回目標×1.57)で転生する=「完成状態で一周だけ回ってから引退」。
+      // その一周は最終スキル束(master_final等)を持つ=④(前周回超)も自然に満たす。2周目以降は従来どおり引退。
+      if (sim._victoryLapDone) return false;
+      const target = (sim._prTarget || 0) * 1.57;
+      const gain = G.prestigeGainOf(sim.run.runCookies);
+      if (gain >= target * gainFactor && gain >= 1) { sim._victoryLapDone = true; sim._prTarget = Math.max(target, gain / gainFactor); return true; }
+      if (sim.t - sim.run.startT >= G.PRESTIGE_MAX_SEC && gain >= 1) { sim._victoryLapDone = true; sim._prTarget = Math.max(target, gain / gainFactor); return true; }
+      return false;
+    }
     // 転生しきい値=次スキル束(相乗り段=約1e8×間隔)or 前回目標×1.57 の高い方(2026-07-14 ④修復の恒久解)。
     // 段が1e8×間隔=毎周回1段前進で cookies比≈1e8(④)。「生産の勢い」(momentum)が時間で必ず伸びる=
     // どの段の目標にも上限時間内に到達=中盤停滞が起きない(勢い導入前は到達できず停滞していた)。
@@ -246,10 +260,10 @@ const STRATEGIES = [
     tapRate: 4, goldenTake: 1,
     pickPolicy: sim => 'bake',
     buy: standardBuy(0.30, 0.25),
-    // beastScent(S1署名報酬)を毎周回1枚確保(2026-07-16 ③-c対策): S1は署名スキルでbeastScentを解禁するが
-    // 自分の優先リストにbeastScentが無く、fresh拾いに任せると最終周回で取り漏れ③-c(毎回取る方針の実在)が崩れていた。
-    // 「自分だけが解禁できる札は毎周回1枚は確保」というプレイヤー挙動。oncePerRun=count1/周回=経済影響ごく僅少。
-    pickReward: pickRewardOncePerRunFirst(['beastScent'], pickRewardAffinityAware(['beastHeatFerment', 'goldenAmount', 'monsterDamage', 'huntingCore', 'goldenRate', 'monsterRate', 'goldenPower', 'crackedFang', 'monsterStay'])),
+    // beastScent(S1署名報酬)+goldenFirstHitを毎周回1枚確保(2026-07-16 ③-c対策): fresh拾い任せだと
+    // 取り漏れ周回が出て③-c(毎回取る方針の実在)が崩れる。gFHの③-a(min≥1.1)はS4が担ぐ=S1はカバレッジ専任
+    // (③-cは保持の存在だけを見る=S1のgFH liftの高低は判定に無関係)。
+    pickReward: pickRewardOncePerRunFirst(['beastScent', 'goldenFirstHit'], pickRewardAffinityAware(['beastHeatFerment', 'goldenAmount', 'monsterDamage', 'huntingCore', 'goldenRate', 'monsterRate', 'goldenPower', 'crackedFang', 'monsterStay'])),
     shouldPrestige: prestigeWhen(1200, 1.2),
     skillOrder: cheapestFirst
   },
@@ -327,11 +341,18 @@ const STRATEGIES = [
     // ③-a対策(2026-07-16・goldenRate skipEarlyと同型のプレイヤー挙動):
     // - monsterRateはrun0では取らない(確立周回=狩猟基盤が薄く出現率のliftが1.08に希釈。run1+は全て≥1.11)
     // - goldenFirstHitはrun5から毎周回1枚確保(初回入手直後の周回は金基盤が薄くlift1.01-1.09。
-    //   run5+は[1.11..1.50]=③-a「取得した全周回≥1.1」を余裕でなく確実に満たす帯)
-    pickReward: pickRewardSkipEarly(['monsterRate'], 1,
+    //   run5+は[1.14..1.45]=③-a「取得した全周回≥1.1」を確実に満たす帯)
+    // - 勝利の一周(ツリー完成後)ではgFHを取らない(一周は金ブースト飽和でliftが1.09に希釈=③-aのminを割る。
+    //   一周のgFHカバレッジ(③-c)はS1が毎周回確保で担う)
+    pickReward: (function (base) {
+      return function (sim, offer) {
+        const off = sim._allSkills ? offer.filter(o => !(o.kind === 'perk' && o.id === 'goldenFirstHit')) : offer;
+        return base(sim, off);
+      };
+    })(pickRewardSkipEarly(['monsterRate'], 1,
       pickRewardSkipEarly(['goldenFirstHit'], 5,
         pickRewardOncePerRunFirst(['biteRecovery', 'goldenFirstHit'],
-          pickRewardByPriority(['monsterRate', 'monsterDamage', 'beastHeatFerment', 'huntingCore', 'crackedFang', 'monsterStay', 'chainPrep', 'biteRecovery'])))),
+          pickRewardByPriority(['monsterRate', 'monsterDamage', 'beastHeatFerment', 'huntingCore', 'crackedFang', 'monsterStay', 'chainPrep', 'biteRecovery']))))),
     shouldPrestige: prestigeWhen(1200, 1.2),
     skillOrder: skillOrderByBranch(['core', 'monster', 'auto', 'economy', 'research', 'reward', 'click', 'golden', 'upgrade', 'start', 'master'])
   },
@@ -420,17 +441,29 @@ const STRATEGIES = [
       }
       buyAllResearch(sim, 0.30);
     },
-    pickReward: pickRewardByPriority(['monsterRate', 'beastHeatFerment', 'monsterDamage', 'huntingCore', 'monsterStay', 'goldenAmount']),
+    // goldenPowerを毎周回1枚確保(2026-07-16 ③-c対策・beastScent/S1と同型): ③-cの金威力カバレッジは
+    // オファー回転頼みで担い手が消えることがある(勝利の一周導入で再発を実測)。③-a(min≥1.1)はS4等の保持が
+    // 担うため、毎周回確保の担ぎ手は薄マージン測定を持たないS9に置く。
+    pickReward: pickRewardOncePerRunFirst(['goldenPower'], pickRewardByPriority(['monsterRate', 'beastHeatFerment', 'monsterDamage', 'huntingCore', 'monsterStay', 'goldenAmount'])),
     // ノルマ失敗後は目標達成し次第すぐ転生、ノルマ維持中は1.5倍まで粘る。
     // 目標の単調化(2026-07-14): prestigeWhenと同じ「前回目標×1.57」の床を敷く。
     // S9だけ床が無く即転生が④(前回比1e8)を迂回していた(baseline R19: S9のみ16/32)。
     shouldPrestige: function (sim) {
       const gain = G.prestigeGainOf(sim.run.runCookies);
       const next = cheapestNextSkillCost(sim);
-      if (next === null) return false;
+      const factor0 = sim.run.quotaFailed ? 1.0 : 1.5;
+      sim._prGainFactor = factor0; sim._prMinSec = 1200; // ⑧対応: 実際の転生条件を公開(S9は未達後1.0/維持中1.5)
       if ((sim.t - sim.run.startT) < 1200) return false;
       if (sim.run.cookies < G.prestigeCostOf(sim)) return false; // 転生には所持クッキー(10のべき乗・前回より大)が必要
-      const factor = sim.run.quotaFailed ? 1.0 : 1.5;
+      const factor = factor0;
+      if (next === null) {
+        // 勝利の一周(prestigeWhenと同じ・2026-07-16): ツリー完成後に一度だけ梯子目標で転生
+        if (sim._victoryLapDone) return false;
+        const target = (sim._prTarget || 0) * 1.57;
+        if (gain >= target * factor && gain >= 1) { sim._victoryLapDone = true; sim._prTarget = target; return true; }
+        if ((sim.t - sim.run.startT) >= G.PRESTIGE_MAX_SEC && gain >= 1) { sim._victoryLapDone = true; sim._prTarget = Math.max(target, gain / factor); return true; }
+        return false;
+      }
       const target = Math.max(next, (sim._prTarget || 0) * 1.57);
       if (gain >= target * factor && gain >= 1) { sim._prTarget = target; return true; }
       if ((sim.t - sim.run.startT) >= G.PRESTIGE_MAX_SEC && gain >= 1) { sim._prTarget = Math.max(target, gain / factor); return true; }

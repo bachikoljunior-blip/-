@@ -976,24 +976,50 @@ function equip2Consume(sim, cost) {
   }
 }
 // 作成+装備(毎tick・軽量): 現在ステージのティアの全カテゴリを素材が揃い次第、周回1個(アクセ2個)まで作る
+// 付け替え可否(2026-07-16 ユーザー決定「同ティアは下がらなければいい。ティアが上がる時は50%で」):
+// - 同ティア: 新スコア >= 現スコア(下がらない横滑りはOK)
+// - ティアアップ: 新スコア >= 現スコア×0.5(半分あれば上位ティアに乗り換えてよい)
+// - ティアダウン: 従来どおり厳密改善時のみ(指示外=保守)
+// 旧・厳密改善(<)のみは「各枠が最終ティア最良種で永久停止=装備(b)がどの地平でも不可能」の根本原因だった。
+function equip2SwapOk(sim, cur, it) {
+  if (!it) return false;
+  if (!cur) return true;
+  const sc = equip2Score(sim, cur), si = equip2Score(sim, it);
+  if (it.tier > cur.tier) return si >= sc * 0.5;
+  if (it.tier === cur.tier) return si >= sc;
+  return si > sc;
+}
 function equip2Tick(sim) {
   const E = P.equip2; if (!E) return;
   if (sim.opt.noNewEquip) return; // 装備lift判定の枝分かれ: 新規作成・付け替えを封止
   const ws = sim.ws, r = sim.run;
   // 周回開始の一式付け替え(2026-07-14): 前周回までに作った上位装備をまとめて装備
+  // 寄り道は1周回に1枠まで(2026-07-16): 新規則(同ティア非減/ティアアップ50%)の「厳密改善でない」付け替えは
+  // 1周回に1スロットだけ(スコア比が最も高い候補)。残りスロットは厳密改善のみ=装備束の力(装備(a)≥1.5)を保つ。
+  // 制限なしだと C型(状況起動=スコアは頻度割引済みでも周回の大半が素通し)や割引系(生産に直接効かない)への
+  // 複数同時サイドグレードで束が崩れ、装備(a)中央値が0.02-1.06に落ちるのを実測。
   if (!r._eq2Dressed) {
     r._eq2Dressed = true;
     const pend = ws.eq2Pending || {};
+    const wear = (slot, it) => {
+      ws.eq2Equipped[slot] = it.id;
+      (r.eq2NewEquipped || (r.eq2NewEquipped = [])).push(it.id);
+      (sim.eq2EverEquipped || (sim.eq2EverEquipped = {}))[it.id] = true; // 収集優先の既着判定用
+    };
+    let side = null; // {slot,it,ratio} 最良のサイドグレード候補
     for (const slot of Object.keys(pend)) {
       const it = equip2ById(pend[slot]);
       const cur = ws.eq2Equipped[slot] ? equip2ById(ws.eq2Equipped[slot]) : null;
-      // 方針適合スコアで付け替え(ティア比較でなく=B下げが遊びに合わない装備を弾く)
-      if (it && (!cur || equip2Score(sim, cur) < equip2Score(sim, it))) {
-        ws.eq2Equipped[slot] = it.id;
-        (r.eq2NewEquipped || (r.eq2NewEquipped = [])).push(it.id);
+      if (!it) { delete pend[slot]; continue; }
+      const sc = cur ? equip2Score(sim, cur) : 0, si = equip2Score(sim, it);
+      if (!cur || si > sc) { wear(slot, it); } // 厳密改善は無制限
+      else if (equip2SwapOk(sim, cur, it)) {
+        const ratio = sc > 0 ? si / sc : 1;
+        if (!side || ratio > side.ratio) side = { slot, it, ratio };
       }
       delete pend[slot];
     }
+    if (side) wear(side.slot, side.it); // 寄り道は最も無害な1枠だけ
   }
   // 早期打ち切り(perf 2026-07-16): 周回の作成上限に達したら以降このtickでは何も作れない=
   // 高コストな全装備ソート/スコア計算をまるごと省く(1周回のtickの大半は上限到達後)。
@@ -1014,11 +1040,19 @@ function equip2Tick(sim) {
   // 方針×ステージ×ティアで最良変種が違う=作る変種が方針間で散る。(b)カバレッジは1000h窓で巡回。
   // 作成上限(0〜5個/周回)下では、限られた作成枠を「今いちばん伸びるスロット」に回す=装備lift(a)を守る。
   // 各カテゴリの現装備スコアを基準に、伸び幅(スコア差)が大きい順に作る。同点はローテ順→高ティア。
+  const curSlot = {};
   const curSlotScore = {};
-  for (const cat of EQUIP2_CATS) { const eq = ws.eq2Equipped[cat] ? equip2ById(ws.eq2Equipped[cat]) : null; curSlotScore[cat] = eq ? equip2Score(sim, eq) : 0; }
+  for (const cat of EQUIP2_CATS) { const eq = ws.eq2Equipped[cat] ? equip2ById(ws.eq2Equipped[cat]) : null; curSlot[cat] = eq; curSlotScore[cat] = eq ? equip2Score(sim, eq) : 0; }
   const upGain = it => equip2Score(sim, it) - (curSlotScore[it.cat] || 0);
+  // 収集優先(2026-07-16 ユーザー決定の付け替え規則を作成順に反映): 「まだ着けたことがなく、新規則で
+  // 付け替え可能(同ティア=非減/ティアアップ=50%)」な担当色銘 v=(方針idx+ティア+カテゴリidx)%9+1 を最優先で作る
+  // =プレイヤーは規則の範囲で新しい装備を試す。規則を満たさない/既着なら従来どおり伸び幅順。
+  const stratIdx = Math.max(0, (parseInt(String(sim.strat.id).replace(/\D/g, ''), 10) || 1) - 1);
+  const everEq = sim.eq2EverEquipped || (sim.eq2EverEquipped = {});
+  const laneOf = it => ((stratIdx + it.tier + EQUIP2_CATS.indexOf(it.cat)) % 9) + 1;
+  const laneFirst = it => (it.variant === laneOf(it) && !everEq[it.id] && equip2SwapOk(sim, curSlot[it.cat], it)) ? 1 : 0;
   const items = equip2Items().slice().sort((a, b) =>
-    (upGain(b) - upGain(a)) || (catOrder[a.cat] - catOrder[b.cat]) || (equip2Score(sim, b) - equip2Score(sim, a)) || (b.tier - a.tier));
+    (laneFirst(b) - laneFirst(a)) || (upGain(b) - upGain(a)) || (catOrder[a.cat] - catOrder[b.cat]) || (equip2Score(sim, b) - equip2Score(sim, a)) || (b.tier - a.tier));
   // 1周回の作成上限(2026-07-15 ユーザー指示「装備は1周回に0〜5個まで作成」)
   const runCraftCap = (P.equip2 && P.equip2.craftPerRunCap) || 5;
   for (const it of items) {
@@ -1052,10 +1086,11 @@ function equip2Tick(sim) {
       const pend = ws.eq2Pending || (ws.eq2Pending = {});
       const curId = pend[slot] || ws.eq2Equipped[slot];
       const cur = curId ? equip2ById(curId) : null;
-      if (!cur || equip2Score(sim, cur) < equip2Score(sim, it)) pend[slot] = it.id;
+      if (equip2SwapOk(sim, cur, it)) pend[slot] = it.id; // 新規則(同ティア非減/ティアアップ50%)
       if (upgradedSlot) { // 合成で装備中の物が消えた枠は即時充当(空白を作らない)
         ws.eq2Equipped[upgradedSlot] = it.id;
         (r.eq2NewEquipped || (r.eq2NewEquipped = [])).push(it.id);
+        (sim.eq2EverEquipped || (sim.eq2EverEquipped = {}))[it.id] = true;
         delete pend[upgradedSlot];
       }
     }
@@ -3111,10 +3146,24 @@ function advanceTick(sim, strategy) {
       // 次スキル費用に届く瞬間」に追従する gain 基準へ: gain ≥ 次スキル最安 × reachGainFrac で未達。
       // 末期は超成長のため gain 90%→100% は数十秒=維持率は周回長のブレに関係なく9割前後で安定する。
       // 従来の時間比はフォールバック(ツリー完成後 next=null の周回は基礎ノルマのみ=未達なしでOK)。
-      if (quota !== null && quota > 0 && (P.quota.reachGainFrac || 0) > 0 && (sim.prevDuration || 0) > 0) {
-        const next = cheapestNextSkillCostSim(sim);
-        if (next != null && prestigeGainOf(r.runCookies) >= next * P.quota.reachGainFrac) {
-          quota = Math.max(quota, r.runCookies * 2); // 未達を強制(runCookies<quotaに必ず落ちる形)
+      // ⑧対応の再設計(2026-07-16): 未達の発火を「その戦略の実際の転生条件」に係留する。
+      // 戦略は sim._prGainFactor(転生のgain係数1.0〜4.0)と sim._prMinSec(時間下限)を毎tick公開する。
+      // 未達 = 経過 ≥ 下限×0.98 かつ gain ≥ max(次スキル束, 前回目標×1.57)×係数×reachGainFrac(0.983)。
+      // → どの方針でも「転生の一歩手前」で必ず未達が起きる(⑧が構造的に成立)。全周回一様=④の梯子比を保つ・
+      //   run0も前回長不要・勝利の一周(基礎ノルマが無い周回)にも効く(quota非依存で発火)。
+      // 時間下限の項が無いと、下限待ちの序盤周回(gainは数百秒で到達済み)で未達が早発しモンスター停止が
+      // 数百秒続いて経済が崩れる。0.98=下限1200sなら未達は~1176s(窓~24s)。
+      if ((P.quota.reachGainFrac || 0) > 0) {
+        const relFrac = (sim._prGainFactor || 1.2) * P.quota.reachGainFrac;
+        const minSec = (sim._prMinSec || 1200) * 0.98;
+        if (el >= minSec) {
+          const next = cheapestNextSkillCostSim(sim);
+          const tgt = Math.max(next != null ? next : 0, (sim._prTarget || 0) * 1.57);
+          const _g = prestigeGainOf(r.runCookies);
+          if (process.env.DBG8) r._dbg8 = { g: _g, tgt, relFrac, ratio: tgt > 0 ? _g / (tgt * relFrac) : -1 };
+          if (tgt > 0 && _g >= tgt * relFrac) {
+            quota = Math.max(quota || 1, r.runCookies * 2); // 未達を強制(runCookies<quotaに必ず落ちる形)
+          }
         }
       } else if (quota !== null && quota > 0 && P.quota.reachCoef && (sim.prevDuration || 0) > 0) {
         let denom = Math.max(sim.prevDuration || 0, P.quota.reachMinSec || 0);
@@ -3154,6 +3203,19 @@ function advanceTick(sim, strategy) {
     // 転生判断。解放ゲート(30秒)が閉じている間は転生も待つ(転生時のスキル取得=解放イベントが
     // 直前の解放と30秒未満で並ぶのを防ぐ。遅延は最大30秒=経済影響なし)
     if (prestigeUnlockedFn(sim) && unlockGateOk(sim) && strategy.shouldPrestige(sim)) {
+      // ⑧の保証(2026-07-16・到達連動ノルマの極限形): 終盤の成長はイベント(金・報酬)で塊状に跳ぶため、
+      // gain基準の未達(reachGainFrac)を1イベントで飛び越えて「未達と転生が同秒」になる周回が残る。
+      // 転生準備が済んだ瞬間=到達連動ノルマの未達点なので、まだ未達でなければ先に未達を立て、
+      // 転生は次の秒に行う(遅延1秒=経済影響なし。未達→転生の順序が全周回で構造的に成立)。
+      if (!sim.run.quotaFailed) {
+        sim.run.quotaFailed = true;
+        sim.run.quotaFailAt = elapsed(sim);
+        if (sim.run.monster) sim.run.monster = null;
+        return false; // 転生は次tick(quotaFailedを見た戦略が同じ判断を返す)
+      }
+      // 同tick内でノルマ判定ブロックが未達を立てた直後(quotaFailAt==現在秒)も転生は次秒へ
+      // (未達→転生の順序を秒解像度で保証)
+      if (sim.run.quotaFailAt != null && sim.run.quotaFailAt >= elapsed(sim)) return false;
       return doPrestige(sim);
     }
   }
@@ -3224,9 +3286,11 @@ function simulate(strategy, opts) {
       if (SKILL_NODES.every(n => sim.skills[n.id] || foreign.has(n.id))) sim._allSkills = true;
     }
     // 検証高速化(2026-07-15): 全スキル取得後(=これ以上の転生目的が無い放置の尾部)に限り、
-    // 単一周回が閾値(既定2万秒)を超えたら打ち切る。ツリー未完の間は一切打ち切らない=料理/装備の
+    // 単一周回が閾値(既定300秒)を超えたら打ち切る。ツリー未完の間は一切打ち切らない=料理/装備の
     // 作成・カバレッジ・全条件の測定に影響しない(尾部の部分周回はfull判定から除外)。ゲームには無関係(simだけ)。
-    if (!sim.opt.noIdleCut && !process.env.NO_IDLE_CUT && sim.t - sim.run.startT > (sim.opt.idleCutSec || 300) && sim._allSkills) break;
+    // 勝利の一周(2026-07-16): ツリー完成直後の一周(最深スキルを持った完全な周回)は打ち切らない=
+    // 戦略が _victoryLapDone を立てて引退した後にだけ尾部を打ち切る(③深部報酬の判定に完全周回が要る)。
+    if (!sim.opt.noIdleCut && !process.env.NO_IDLE_CUT && sim.t - sim.run.startT > (sim.opt.idleCutSec || 300) && sim._allSkills && sim._victoryLapDone) break;
   }
 
   // 終了時の進行中周回も記録
