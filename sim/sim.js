@@ -3330,7 +3330,12 @@ function simulate(strategy, opts) {
     // 作成・カバレッジ・全条件の測定に影響しない(尾部の部分周回はfull判定から除外)。ゲームには無関係(simだけ)。
     // 勝利の一周(2026-07-16): ツリー完成直後の一周(最深スキルを持った完全な周回)は打ち切らない=
     // 戦略が _victoryLapDone を立てて引退した後にだけ尾部を打ち切る(③深部報酬の判定に完全周回が要る)。
-    if (!sim.opt.noIdleCut && !process.env.NO_IDLE_CUT && sim.t - sim.run.startT > (sim.opt.idleCutSec || 300) && sim._allSkills && sim._victoryLapDone) break;
+    if (!sim.opt.noIdleCut && !process.env.NO_IDLE_CUT && sim._allSkills && sim._victoryLapDone
+        && (sim.t - sim.run.startT > (sim.opt.idleCutSec || 300) || sim.run.runCookies > 1e250 || !Number.isFinite(sim.run.runCookies))) break;
+    // ↑引退尾部の追加打ち切り(2026-07-17): 尾部は全ツリー+深部報酬の自己参照フロアで二重指数成長し
+    // 1tickでe50+跳んでInfinityに達し得る(matureRate0.009でS4尾部273sを実測)。earn()の教義
+    // (2026-07-06ユーザー許可「上限は超えてもよい・クランプしない・有限性判定は転生周回のみ」)どおり
+    // 値はクランプせず、打ち切りだけ早める(検証高速化)。記録にInfinityが残るのは許容仕様。完全周回には無影響。
   }
 
   // 終了時の進行中周回も記録
