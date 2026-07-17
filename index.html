@@ -4522,7 +4522,35 @@
       display: flex;
       gap: 6px;
       margin-bottom: 12px;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+      padding-bottom: 4px;
+    }
+
+    /* 一行に並べ、はみ出す分は横スクロールで見せるタブ行(工房カテゴリ・図鑑タブ共通)*/
+    .tabScrollRow {
+      flex-wrap: nowrap !important;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+      padding-bottom: 4px;
+    }
+    .codexTabs > *,
+    .tabScrollRow > * {
+      flex: 0 0 auto;
+    }
+    .codexTabs::-webkit-scrollbar,
+    .tabScrollRow::-webkit-scrollbar {
+      height: 5px;
+    }
+    .codexTabs::-webkit-scrollbar-thumb,
+    .tabScrollRow::-webkit-scrollbar-thumb {
+      background: rgba(255, 205, 130, 0.35);
+      border-radius: 4px;
     }
 
     .codexTab {
@@ -9888,7 +9916,7 @@ function renderWorkshop() {
   if (!craftCats.includes(state.eq2CraftCat)) state.eq2CraftCat = "all";
   const craftableAll = equip2Items().filter(it => equip2CraftableNow(it));
   const craftList = state.eq2CraftCat === "all" ? craftableAll : craftableAll.filter(it => it.cat === state.eq2CraftCat);
-  const craftCatBar = `<div class="buyModeBar" style="margin-bottom:8px;flex-wrap:wrap;gap:4px">`
+  const craftCatBar = `<div class="buyModeBar tabScrollRow" style="margin-bottom:8px;gap:4px">`
     + `<button class="item ${state.eq2CraftCat === "all" ? "tabSel" : ""}" data-eq2craftcat="all" style="width:auto;padding:4px 9px">全て</button>`
     + EQUIP2_CATS.map(cat =>
         `<button class="item ${state.eq2CraftCat === cat ? "tabSel" : ""}" data-eq2craftcat="${cat}" style="width:auto;padding:4px 9px">${EQUIP2_CAT_NAMES[cat]}</button>`
