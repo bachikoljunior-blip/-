@@ -866,6 +866,10 @@ const EQUIP2_FLATCAP = { critAdd: 0.3, upDisc: 0.5, resDisc: 0.5 };
 // 下げは「その方針が使わないステータスなら軽い」=Bの下げが遊びに合わない所へ落ちる。C型は状況頻度で割引。
 const EQ2_UNIT = { cpsMul: 1, allMul: 1.2, clickMul: 0.9, dmgMul: 0.7, killValMul: 0.7, holdBonus: 0.8, goldenAmtMul: 0.9, goldenRateMul: 2.5, goldenBoostMul: 1.5, dropMul: 0.3, oreAdd: 0.1, rewardLvAdd: 0.2, critAdd: 6, upDisc: 3, resDisc: 3, spawnMul: 2, stayMul: 1, dropRateAdd: 0.05, dropLuck: 0.1 };
 const EQ2_FAV = {
+  // balanced(2026-07-17 追加): kvM方針係数(balanced6.5)で討伐即時収入がbalancedの大黒柱になった経済の実態を
+  // 選好に反映。killValMulへのB代償(×0.9×複数)が空スロット初装着で束比0.35(=着ると65%損)を作っていた
+  // (S6 run早期・hands_t1_v2等の実測)。「討伐で稼いでいる人は討伐報酬を削る装備を着ない」= 自然な判断。
+  balanced: new Set(['killValMul', 'cpsMul', 'allMul', 'goldenAmtMul', 'clickMul']),
   bake: new Set(['cpsMul', 'allMul', 'holdBonus', 'upDisc', 'resDisc']),
   click: new Set(['clickMul', 'critAdd', 'allMul']),
   golden: new Set(['goldenAmtMul', 'goldenRateMul', 'goldenBoostMul', 'allMul']),
@@ -1080,11 +1084,12 @@ function equip2Tick(sim) {
       // スコアモデルは割引系(unit=3)を生産より高く評価しうるが、実生産では帽子=全生産等の喪失で
       // 周回の装備束が2-3桁落ちる(S3 hat resDisc化で0.002等を実測)=装備(a)の要。
       const coreYield = cur && equip2ProdCore(cur) && !equip2ProdCore(it);
-      // ※初装着の方針適合ゲート(θ=0.35)は実験の結果撤回(2026-07-17): 序盤束の強さは方針不適合の
-      // hands/accA(クリック/金=序盤の生きたチャネル)が担っており、ゲートが強い束を崩す逆効果を実測
-      // (S9 run1 8.36→1.29・S4 run1 0.84)。方針適合スコアは序盤価値と逆相関する。
-      if (!cur || (si > sc && !coreYield)) { wear(slot, it); improved++; } // 厳密改善(コア明け渡し以外)
-      else if (!coreYield && equip2SwapOk(sim, cur, it)) {
+      // ※初装着の方針適合ゲート(θ=0.35)は実験の結果撤回(2026-07-17): 正の弱い装備(hands/accA=序盤の
+      // 生きたチャネル)まで弾いて束を崩す逆効果を実測。ただし**負スコア**(=そのプレイヤーの評価で
+      // 「着ると損」なB型・代償が自分の大黒柱を削る装備)だけは空スロットでも着ない(2026-07-17 R18:
+      // コスト安の弱B初装着が束比0.348(65%損)を作った実測対策。損と分かって着る人はいない=自然な判断)。
+      if ((!cur && si >= 0) || (cur && si > sc && !coreYield)) { wear(slot, it); improved++; } // 初装着(非負のみ)/厳密改善
+      else if (cur && si >= 0 && !coreYield && equip2SwapOk(sim, cur, it)) { // 寄り道も「スロット使用中+非負」のみ(負の初装着が寄り道経路へ漏れる穴を封鎖)
         const ratio = sc > 0 ? si / sc : 1;
         if (!side || ratio > side.ratio) side = { slot, it, ratio };
       }
