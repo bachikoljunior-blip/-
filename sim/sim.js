@@ -1700,12 +1700,8 @@ function computeProd(sim) {
     if (u.id === 'factory' && resActive(sim, 'factoryNetwork')) {
       const low = (r.upgrades.finger || 0) + (r.upgrades.grandma || 0) + (r.upgrades.oven || 0);
       resM *= R.factorySelf * lg(capOwn(low), R.factoryLow) * lg(capOwn(owned), R.factoryOwn);
-      // 段階2: 銀行以上の上位設備の所持種類数で伸びる
-      if (resStage2(sim, 'factoryNetwork')) {
-        let hi = 0;
-        for (let j = UPIDX.bank; j < UPGRADES.length; j++) if ((r.upgrades[UPGRADES[j].id] || 0) > 0) hi++;
-        resM *= 1 + P.res2.factoryHiKind * hi;
-      }
+      // 段階2の増幅は設備直送側へ一本化(2026-07-17 ユーザー指示「一つの研究の増幅変数は1つ」+⑨:
+      // 工場の建物cpsは直送時代の総収入0.05%未満=ここに乗せても測定不能を実測。equipDirectIncomeのfnMが本体)
       // 段階3: 最高到達ノルマ層
       if (resStage3(sim, 'factoryNetwork')) resM *= 1 + P.res2.factoryStageCoef * r.maxStage;
     }
@@ -2228,7 +2224,17 @@ function equipDirectIncome(sim, base, prod) {
   // anchorGolden は係数(0=OFF・1=金相場フル)。1.0 は bake後半 設71%独走で②改が43→7/47に崩壊(100h実測)=係数で絞る。
   let anchor = base;
   if (P.equipDirect.anchorGolden > 0 && prod) anchor = Math.max(base, P.equipDirect.anchorGolden * goldenRateValue(sim, prod));
-  return genreDirect(sim, anchor, sim.run.upgrades.oven || 0, P.equipDirect) * polM;
+  // 工場ネットワーク段2の乗せ替え(2026-07-17 ⑨: 式変更): 「上位設備の種類数」ボーナスは工場の建物cps
+  // (直送時代の総収入の0.05%未満=何倍でも測定不能を実測)でなく、量産ラインの出口=設備直送に乗せる。
+  // テーマ整合(量産品の販路が上位設備網で広がる)。係数は小さく(hi≈8-10で+12-15%)=㉘/②の設備圧迫を避ける。
+  let fnM = 1;
+  if ((P.res2.factoryEqKind || 0) > 0 && resStage2(sim, 'factoryNetwork')) {
+    let hi = 0;
+    const r2 = sim.run;
+    for (let j = UPIDX.bank; j < UPGRADES.length; j++) if ((r2.upgrades[UPGRADES[j].id] || 0) > 0) hi++;
+    fnM = 1 + P.res2.factoryEqKind * hi;
+  }
+  return genreDirect(sim, anchor, sim.run.upgrades.oven || 0, P.equipDirect) * polM * fnM;
 }
 // 金直送: 投資量=金perk合計。ゲート=香料調合 段階2(スキル golden_1→段階2購入→効果)。
 function goldenDirectIncome(sim, base) {
@@ -2293,9 +2299,14 @@ function tapDirectIncome(sim, base, prod) {
   // 銀行liftが決まる=ここを上げると①が割れる)、投資時代(神指>0)=clickBonusLate/satMaxLate
   // (㉘後半のタップ主役25%はここだけの問題。satMax一律800はアンカー時代のraw≈196まで倍化させ①を希釈した)。
   const lateEra = (r.upgrades.godFinger || 0) > 0;
+  // otherMulLate(2026-07-17 ㉘balanced run3-8対策): 非click方針の係数も時代分離。アンカー時代は従来
+  // otherMul(balanced4.0=run1-2の打60%暴走を防ぐ)、投資時代はotherMulLate(神指が少ないbalancedの
+  // 投資量不足を係数で補い、中盤の打4-8%<10%を底上げ)。増加方向の新設・未定義なら従来どおり。
   const polM = policyIs(sim, 'click')
     ? ((lateEra ? P.tapDirect.clickBonusLate : 0) || P.tapDirect.clickBonus || 1)
-    : otherMulOf(sim, P.tapDirect, 'click');
+    : ((lateEra && P.tapDirect.otherMulLate)
+        ? otherMulOf(sim, { otherMul: Object.assign({}, P.tapDirect.otherMul, P.tapDirect.otherMulLate) }, 'click')
+        : otherMulOf(sim, P.tapDirect, 'click'));
   const cfgTap = (lateEra && P.tapDirect.satMaxLate)
     ? Object.assign({}, P.tapDirect, { satMax: P.tapDirect.satMaxLate })
     : P.tapDirect;

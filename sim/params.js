@@ -169,7 +169,7 @@ module.exports = {
   // clickBonusLate 18→21(2026-07-12 ㉘click残り: run33/47 タップ22-23%の押し込み)
   // satMaxLate 800→1200・otherMul.balanced 9.0→8.0(2026-07-12 最終: click後半は21-25%境界のノイズフリップ
   // =マージン確保で28-31%へ。balanced中盤はタップ38%が討伐8-9%を圧迫=hunt 0.22と対で再配分)
-  tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5, clickBonus: 3, clickBonusLate: 14, satMax: 150, satMaxLate: 400, anchorGolden: 0.2, stallFrac: 0.05, otherMul: { golden: 0.6, balanced: 4.0, default: 1 } }, // 新経済向け再スケール(2026-07-14 掃引r2)
+  tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5, clickBonus: 3, clickBonusLate: 30, satMax: 150, satMaxLate: 1200, anchorGolden: 0.2, stallFrac: 0.05, otherMul: { golden: 0.6, balanced: 4.0, default: 1 }, otherMulLate: { balanced: 15 } }, // 掃引2(2026-07-17 ㉘): clickBonusLate24+satMaxLate900(click後半の打16-19%→25%へ)・balancedはアンカー4.0/投資時代otherMulLate10の時代分離(5.5一律はrun1-2打60%暴走で撤回) // 新経済向け再スケール(2026-07-14 掃引r2)
   // 銀行配当(直送・第12次J-3 腐り解消): bankClickDividend研究の独立収入。クリック方針で厚く効かせ①の各回minを満たす。
   // 全体cps倍率をやめ加算収入へ(他機能のlift希釈を回避)。所持数はlog10で床あり=早い周回でも効く。増加方向のみ。
   // countPow 1.6は棄却→1.8へ差し戻し(2026-07-12: ①bankの真の束縛はS2 run25-32(count300-800=ratio>1域)で
@@ -425,7 +425,7 @@ module.exports = {
     supExtra: 0.008, supStageCoef: 0.001,
     ovenBakeMulBake: 1.7, ovenBakeMulOther: 1.2,
     ovenS3Flat: 0.06, ovenStageCoef: 0.008,
-    factoryHiKind: 0.4, factoryStageCoef: 0.0012,
+    factoryEqKind: 0.018, factoryStageCoef: 0.0012, // factoryEqKind=工場網段2の唯一の増幅変数(2026-07-17 一本化・ユーザー指示「1研究1増幅変数」): 上位設備の種類数×設備直送。旧factoryHiKind(工場cps側=総収入0.05%未満で測定不能)は削除
     matureRate: 0.009, aromaDur: 12, spiceStageCoef: 0.0015, // matureRate 0.006→0.009(2026-07-17 ⑬熟成: ⑫経済(killVal×6/satMax16)でS4の担ぎ手が消え全戦略1.01-1.04に希釈→増加方向で押し上げ)
     huntExtendSec: 40, huntStageCoef: 0.0008,
     bankIntRate: 0.005, bankIntCapCps: 8.0, bankIntEmaFrac: 0.05, bankCapStageCoef: 0.08, // bankIntEmaFrac(2026-07-11): ソフトキャップ=max(cps, 直近稼ぎ率EMA×0.05)×8=直送主流の周回でも利息が総収入の最大〜40%で見える(⑨bank1.000対策)
