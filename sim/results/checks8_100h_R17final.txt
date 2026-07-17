@@ -9,3 +9,23 @@ sim S8 最新設備ラッシュ型 done (33415ms)
 sim S9 ノルマ死守型 done (25080ms)
 sim S10 リスク愛好型 done (25364ms)
 sim S11 状況殺法型 done (33497ms)
+sim S12 職人型 done (27197ms)
+sim S13 堅実割引型 done (19955ms)
+
+S1: ⑧ 未達→転生 10/10 全周回OK
+S2: ⑧ 未達→転生 10/10 全周回OK
+S3: ⑧ 未達→転生 7/7 全周回OK
+S4: ⑧ 未達→転生 10/10 全周回OK
+S5: ⑧ 未達→転生 11/11 全周回OK
+S6: ⑧ 未達→転生 9/9 全周回OK
+S7: ⑧ 未達→転生 8/8 全周回OK
+S8: ⑧ 未達→転生 11/11 全周回OK
+S9: ⑧ 未達→転生 10/10 全周回OK
+S10: ⑧ 未達→転生 10/10 全周回OK
+S11: ⑧ 未達→転生 11/11 全周回OK
+S12: ⑧ 未達→転生 11/11 全周回OK
+S13: ⑧ 未達→転生 10/10 全周回OK
+
+⑫ 文脈依存性
+ 設備(最効率の最頻): S1=oven S2=oven S3=oven S4=oven S5=oven S6=oven S7=oven S8=oven S9=oven S10=oven S11=oven S12=oven S13=oven
+ 報酬(ピック1位カテゴリ): S1=hunt S2=hunt S3=golden S4=hunt S5=golden S6=hunt S7=hunt S8=hunt S9=hunt S10=golden S11=hunt S12=hunt S13=golden
