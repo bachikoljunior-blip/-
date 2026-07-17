@@ -226,21 +226,21 @@ function prestigeWhen(minElapsedSec, gainFactor) {
     if (sim.run.cookies < G.prestigeCostOf(sim)) return false; // 転生には所持クッキー(10のべき乗・前回より大)が必要
     const next = cheapestNextSkillCost(sim);
     if (next === null) {
-      // 勝利の一周(2026-07-16 ③深部報酬対策・ユーザー決定「時間が問題なら地平を伸ばして達成でよい」):
-      // ツリー完成の転生で最深スキル(巨砕ミル/金獣変異の解禁等)を買った「完成後の一周」を、従来は
-      // 永遠の部分周回にしていた=解禁済み報酬を持つ完全な周回がゼロで③の判定が構造的に不可能だった。
-      // 完成後に一度だけ、従来と同じ梯子目標(前回目標×1.57)で転生する=「完成状態で一周だけ回ってから引退」。
-      // その一周は最終スキル束(master_final等)を持つ=④(前周回超)も自然に満たす。2周目以降は従来どおり引退。
+      // 勝利の一周+収集ラップ(R16 2026-07-17 装備(b)ユーザー指示): ツリー完成後、
+      // (1)一周目=従来の梯子目標×1.57(③深部報酬の判定用の完全周回・従来どおり)
+      // (2)二周目以降=収集ラップ: 装備収集計画(担当54種の昇順着装)が残っている間、軽い梯子(×1.05)で
+      //    回り続ける(ステージ巡回で全レシピの作成場所を訪ね、作成予算5個/周回を稼ぐ)。
+      // (3)計画完了 or ラップ上限で引退(_victoryLapDone→idle-cut)。
+      // Arm=判断時/lapN加算=実転生時(doPrestige)の分離は⑧インターセプト対応(2026-07-17バグ修正)。
       if (sim._victoryLapDone) return false;
-      // 発火予約(_victoryLapArm)と実施済み(_victoryLapDone)を分離(2026-07-17 バグ修正): 判断trueと同時に
-      // Doneを立てると、⑧インターセプト(未達→転生を次秒に遅らせる)がtrueを飲み込んだ後、次tickの
-      // このガードが転生を永久拒否=完成後の一周が消える(S4 run9が7200s部分周回化を実測)。
-      // Armは判断時、Doneは実転生時(doPrestige)に立てる。Arm中は同じ判断を返し続ける。
       if (sim._victoryLapArm) return true;
-      const target = (sim._prTarget || 0) * 1.57;
+      const lapN = sim._lapN || 0;
+      if (lapN >= 1 && (!G.eq2PlanIncomplete(sim) || lapN >= 60)) { sim._victoryLapDone = true; return false; } // 引退
+      const mul = lapN === 0 ? 1.57 : 1.05;
+      const target = (sim._prTarget || 0) * mul;
       const gain = G.prestigeGainOf(sim.run.runCookies);
       if (gain >= target * gainFactor && gain >= 1) { sim._victoryLapArm = true; sim._prTarget = Math.max(target, gain / gainFactor); return true; }
-      // 一周発火の時間上限はT1帯上限(7200s)に合わせる(2026-07-17 T1: matureRate0.009でS4の発火周回が
+      // 発火の時間上限はT1帯上限(7200s)に合わせる(2026-07-17 T1: matureRate0.009でS4の発火周回が
       // 7538sに伸びて帯を超えた。目標未達でも7200sで発火=帯内・run0-8は不変・完成周回の測定時間はむしろ増える)
       if (sim.t - sim.run.startT >= Math.min(7200, G.PRESTIGE_MAX_SEC) - 1 && gain >= 1) { sim._victoryLapArm = true; sim._prTarget = Math.max(target, gain / gainFactor); return true; }
       return false;
@@ -468,12 +468,14 @@ const STRATEGIES = [
       if (sim.run.cookies < G.prestigeCostOf(sim)) return false; // 転生には所持クッキー(10のべき乗・前回より大)が必要
       const factor = factor0;
       if (next === null) {
-        // 勝利の一周(prestigeWhenと同じ・2026-07-16): ツリー完成後に一度だけ梯子目標で転生
+        // 勝利の一周+収集ラップ(prestigeWhenと同じ・R16 2026-07-17)
         if (sim._victoryLapDone) return false;
         if (sim._victoryLapArm) return true; // 発火予約中(⑧インターセプトの1秒遅延を消化)=prestigeWhenと同じ
-        const target = (sim._prTarget || 0) * 1.57;
+        const lapN = sim._lapN || 0;
+        if (lapN >= 1 && (!G.eq2PlanIncomplete(sim) || lapN >= 60)) { sim._victoryLapDone = true; return false; } // 引退
+        const target = (sim._prTarget || 0) * (lapN === 0 ? 1.57 : 1.05);
         if (gain >= target * factor && gain >= 1) { sim._victoryLapArm = true; sim._prTarget = target; return true; }
-        // 一周発火の時間上限はT1帯上限(7200s)に合わせる(prestigeWhenと同じ・2026-07-17)
+        // 発火の時間上限はT1帯上限(7200s)に合わせる(prestigeWhenと同じ・2026-07-17)
         if ((sim.t - sim.run.startT) >= Math.min(7200, G.PRESTIGE_MAX_SEC) - 1 && gain >= 1) { sim._victoryLapArm = true; sim._prTarget = Math.max(target, gain / factor); return true; }
         return false;
       }
