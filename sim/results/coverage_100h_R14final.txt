@@ -1,0 +1,10 @@
+S1: own=38 cum=38 last=3.3e+258
+S2: own=32 cum=60 last=1.0e+255
+S3: own=30 cum=73 last=8.4e+260
+S4: own=36 cum=90 last=7.3e+274
+S5: own=40 cum=96 last=9.8e+287
+S6: own=33 cum=101 last=1.3e+255
+S7: own=30 cum=107 last=1.5e+281
+S8: own=40 cum=113 last=5.1e+262
+S9: own=37 cum=119 last=1.7e+286
+COVERAGE 100h: 119/486
