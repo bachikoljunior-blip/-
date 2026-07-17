@@ -1029,6 +1029,9 @@ function equip2Tick(sim) {
       // スコアモデルは割引系(unit=3)を生産より高く評価しうるが、実生産では帽子=全生産等の喪失で
       // 周回の装備束が2-3桁落ちる(S3 hat resDisc化で0.002等を実測)=装備(a)の要。
       const coreYield = cur && equip2ProdCore(cur) && !equip2ProdCore(it);
+      // ※初装着の方針適合ゲート(θ=0.35)は実験の結果撤回(2026-07-17): 序盤束の強さは方針不適合の
+      // hands/accA(クリック/金=序盤の生きたチャネル)が担っており、ゲートが強い束を崩す逆効果を実測
+      // (S9 run1 8.36→1.29・S4 run1 0.84)。方針適合スコアは序盤価値と逆相関する。
       if (!cur || (si > sc && !coreYield)) { wear(slot, it); improved++; } // 厳密改善(コア明け渡し以外)
       else if (!coreYield && equip2SwapOk(sim, cur, it)) {
         const ratio = sc > 0 ? si / sc : 1;
@@ -2528,7 +2531,7 @@ function finalizeMeasure(run) {
     const d = run._incD; incomeDetail = {};
     for (const k of Object.keys(d)) if (k !== 'n') incomeDetail[k] = d[k] / d.n;
   }
-  return { lift, bestPol, income, incomeH1, incomeDetail, invLast: run._invLast || null };
+  return { lift, bestPol, polPow: run._polPow || null, income, incomeH1, incomeDetail, invLast: run._invLast || null };
 }
 // タイミング機能(⑬)の測定: idleTiming を _md ではなく opt で切替えるため別扱い
 const TIMING_KEYS = [

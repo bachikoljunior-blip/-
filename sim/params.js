@@ -86,7 +86,7 @@ module.exports = {
     rateKillBonus: 0.6, rateKillHalf: 2, // 0.35→0.5(2026-07-10 novelty導入で③monsterRateの中央値が1.1を割れ=専用の討伐手数ボーナスで回復)
     satKps: 2.0, // 討伐頻度の飽和半価点(2026-07-10): kill項の1体価値逓減。高テンポ期の討伐56-63%独走を[30,52]帯へ(balanced序盤0.02-0.05体/秒はほぼ線形)
     killValueSec: 7, // 8→7(2026-07-12 ②改2: huntのlift3.05-3.09が帯上限3.00超過。直送絞りでは動かず本体=討伐報酬項を微減。序盤の役割はpeddlerFrac0.06が引き継ぎ済み) // 討伐1体の価値=生産◯秒ぶん(第12次R3・params駆動化)。7→8: ㉘hunt序盤(直送ゲート前)run8/20が討31-32%で合格化・balanced+1・click②改+2・bake影響なし(100h実測)。9/10はhunt+3〜4だがbalancedの打が7-9%に潰れ(−1〜2)・hunt後半②改−2=不採用
-    killValMul: { balanced: 3.5, default: 1 }, // 方針係数(2026-07-14 ㉘balanced中盤討3-6%対策)
+    killValMul: { balanced: 6.5, hunt: 6.0, default: 1 }, // 方針係数(2026-07-14 ㉘balanced中盤討3-6%対策) // hunt 1.5(2026-07-17 ⑫: hunt方針の討伐即時収入を主役らしく=1位周回の復元)
     scarceBonus: 2, scarceHalf: 0.02 // 希少プレミアム(第12次R続き・2026-07-10採用): 低テンポ期ほど討伐1体の価値を増幅(1+bonus/(1+kps/half))。balanced序盤討3-9%→≥10%・hunt序盤討28→30%(100h実測: balanced25→35-36・hunt29→34)。half0.05はclick中盤の討を+5-8pt膨らませ打を圧迫=0.02でkps0.2+をほぼ等倍に
   },
 
@@ -155,7 +155,7 @@ module.exports = {
   // peddlerFrac 0.02→0.06(2026-07-11 hunt序盤対策) / otherMul.golden 0.9(2026-07-11) / 投資量=討伐perk8種・基準=金相場
   // otherMul.click 0.15→0.08(2026-07-12 ㉘click後半: 討直29-31%がタップ主役25%を圧迫。診断=partsDetail)
   // otherMul.balanced 0.15→0.18(2026-07-12 ㉘balanced中盤run13-19: 討伐8-9%<10%=タップ9.0倍の圧迫の再均衡)
-  huntDirect:   { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 12, otherMul: { click: 0.08, balanced: 0.35, golden: 0.9, default: 0.3 }, peddlerFrac: 0.06, rateBonus: 0.45, rateHalf: 25 }, // 新経済向け(2026-07-14 掃引r2)+回転ボーナス(③monsterRate後半飽和対策)
+  huntDirect:   { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 16, otherMul: { click: 0.08, balanced: 0.35, golden: 0.9, default: 0.3 }, peddlerFrac: 0.06, rateBonus: 0.45, rateHalf: 25 }, // 新経済向け(2026-07-14 掃引r2)+回転ボーナス(③monsterRate後半飽和対策) // satMax 12→14(2026-07-17 ⑫: huntの1位周回復元・②帯はhunt1.88で余裕)
   // tapDirect: clickBonus 5.0→5.6(2026-07-12 ②改2: clickのlift1.46が最弱=底上げで帯上限を引き上げhuntを収容)
   // clickBonus5.0+satMax150(2026-07-11 複合=中盤+22%・後半飽和) / otherMul.balanced7.0(echo対応) / anchorGolden0.5=神指前のみ
   // satMax 150→400・otherMul.balanced 7.0→9.0(2026-07-12 ㉘後半対策: click run33-47 打12-21%<25%・
@@ -426,7 +426,7 @@ module.exports = {
     ovenBakeMulBake: 1.7, ovenBakeMulOther: 1.2,
     ovenS3Flat: 0.06, ovenStageCoef: 0.008,
     factoryHiKind: 0.4, factoryStageCoef: 0.0012,
-    matureRate: 0.006, aromaDur: 12, spiceStageCoef: 0.0015,
+    matureRate: 0.009, aromaDur: 12, spiceStageCoef: 0.0015, // matureRate 0.006→0.009(2026-07-17 ⑬熟成: ⑫経済(killVal×6/satMax16)でS4の担ぎ手が消え全戦略1.01-1.04に希釈→増加方向で押し上げ)
     huntExtendSec: 40, huntStageCoef: 0.0008,
     bankIntRate: 0.005, bankIntCapCps: 8.0, bankIntEmaFrac: 0.05, bankCapStageCoef: 0.08, // bankIntEmaFrac(2026-07-11): ソフトキャップ=max(cps, 直近稼ぎ率EMA×0.05)×8=直送主流の周回でも利息が総収入の最大〜40%で見える(⑨bank1.000対策)
     moonMarginDiv: 10, moonResCount: 0.05,
