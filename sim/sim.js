@@ -1855,7 +1855,7 @@ function computeProd(sim) {
     // 会心1%開始(第9次): 開始値0.01(=会心率1.0%)+設備√+最高到達層(周回内で育つ動的項)
     const score = R.fingerBase + Math.sqrt(f) * R.fingerSqrt + (R.fingerStage || 0) * r.maxStage + policyC;
     // scoreの飽和上限6.2=会心率99.8%止まり(2026-07-11 ㉓-3「100%には到達しない」: S2の指2.8万台で100.0%到達の対策)
-    const chance = Math.min(0.995, (1 - Math.exp(-Math.min(score, 6.2))) + equip2Fx(sim).critAdd + ((r.ms && r.ms.critAdd) || 0)); // 新装備+研究(効果多様化)の会心率系(㉓-3の100%到達封鎖は維持)
+    const chance = Math.min(0.995, (R.critBaseCap || 1) * (1 - Math.exp(-Math.min(score, 6.2))) + equip2Fx(sim).critAdd + ((r.ms && r.ms.critAdd) || 0)); // 素の会心率はcritBaseCap(0.6)で頭打ち・上へは装備/研究のcritAddで埋める(2026-07-18 R26)=会心率装備の腐り解消(㉓-3の100%到達封鎖は維持)
     critChanceOut = chance;
     let critMul = R.fingerCritBase + score * R.fingerCritGrow;
     // 段階2: 会心コンボ(期待値: 直近30秒の会心回数。キャップ撤廃済み)
