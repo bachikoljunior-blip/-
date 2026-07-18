@@ -6402,7 +6402,7 @@ const RESEARCH = [
   { id: "moonGlobalYeast", name: "月面発酵", cost: 7.4e116, detail: "式：9×1.003^(最高到達層-2)×1.001^月面 ※第3層以降。段階2(スキル「時空免許」で購入可):log10(1+ノルマ余裕率)/10で発酵が進む。段階3(スキル「研究解析」で購入可):×(1+5%×取得研究数)。", desc: "最高到達層で全体生産を強化する。段階購入で余裕率連動と研究数連動が追加" },
   { id: "portalGlobalFold", name: "異世界増幅", cost: 8.7e38, detail: "式：1.002^異世界炉×3.5^出現中モンスター×金ブースト中×5。段階2(スキル「特異点管理」で購入可):折込連鎖=全生産×1.058^ノルマ中討伐数。討伐するほど成長率が上がる。段階3(スキル「超越体」で購入可):×(1+0.001×最高到達層)。", desc: "異世界炉の数・金ブースト中・モンスター出現で全生産UP。段階購入で「討伐するほど伸びる」連鎖が追加" },
   { id: "galaxyAssembly", name: "銀河分業", cost: 8.15e222, detail: "式：銀河工場×1.5^種類数×1.006^銀河工場。段階2(スキル「宇宙炉心」で購入可):編成ボーナス=全生産×(1+0.027×バランス係数)^銀河工場数。バランス係数=所持数の幾何平均/算術平均(まんべんなく揃えるほど1に近い)。段階3(スキル「特異点管理」で購入可):レート×(1+0.0008×最高到達層)。", desc: "設備の種類数で銀河工場を強化する。段階購入で「設備をまんべんなく揃えるほど伸びる」ボーナスが追加" },
-  { id: "blackHoleCompression", name: "重力圧縮", cost: 7.65e239, detail: "式：全生産×5。圧縮=必要ノルマ×0.9982^BH数(未達寸前に1回)。段階2(スキル「特異点管理」で購入可):圧縮ゲージ(√BH/秒、2500で満タン)発動で120秒 全生産×(1+1.8×√BH/10)、周回2回。段階3(スキル「量子厨房」で購入可):発動3回+倍率×(1+0.002×最高到達層)+圧縮×e^(-0.1%×最高到達層)(逓減式)。", desc: "全生産×5、さらに次のノルマ達成に必要な量を軽減。段階購入でゲージ発動時の一時ブーストが追加" },
+  { id: "blackHoleCompression", name: "重力圧縮", cost: 7.65e239, detail: "式：全生産×5。圧縮=必要ノルマ×0.9982^BH数(未達寸前に1回)。段階2(スキル「特異点管理」で購入可):圧縮ゲージ(√BH/秒、1200で満タン)発動で240秒 全生産×(1+1.8×√BH/10)、周回2回。段階3(スキル「量子厨房」で購入可):発動3回+倍率×(1+0.002×最高到達層)+圧縮×e^(-0.1%×最高到達層)(逓減式)。", desc: "全生産×5、さらに次のノルマ達成に必要な量を軽減。段階購入でゲージ発動時の一時ブーストが追加" },
   { id: "quantumProofing", name: "量子発酵", cost: 7.55e263, detail: "式：量子ベーカリー×1.30^研究数×1.006^量子。段階2(スキル「反物質炉」で購入可):観測ゆらぎ=90秒周期の波×(1+振幅×max(0,sin))、振幅=0.5+0.05×研究数。段階3(スキル「超越体」で購入可):振幅×(1+0.001×最高到達層)。", desc: "研究数で量子ベーカリーを強化する。段階購入で90秒の波(観測ゆらぎ)が追加" },
   { id: "antimatterRecipe", name: "反物質配合", cost: 7.55e263, detail: "式：全生産×1.002^反物質×1.032^取得スキル数。段階2(スキル「研究解析」で購入可):×(1+0.0008×最高到達層)。段階3(スキル「超越体」で購入可):対消滅=×(1+3%×転生回数)。周回をまたいで恒久成長する。", desc: "反物質とスキル数で全体生産を強化する。段階購入で層効果と恒久成長が追加" },
 
@@ -14287,7 +14287,7 @@ function renderResearch() {
       setArtImage(gaugeBtn, ASSETS.research.blackHoleCompression);
 
       addTap(gaugeBtn, () => {
-        if ((state.bhCharge || 0) >= 2500) {
+        if ((state.bhCharge || 0) >= 1200) {
           fireBhBoost();
           renderActiveTab();
         }
@@ -14323,7 +14323,7 @@ function renderResearch() {
 
   cards.forEach((btn, i) => {
     if (btn.dataset.id === "__bhGauge") {
-      const full = (state.bhCharge || 0) >= 2500;
+      const full = (state.bhCharge || 0) >= 1200;
       const uses = state.bhUses || 0;
       const maxUses = resStage3("blackHoleCompression") ? 3 : 2;
 
@@ -17592,7 +17592,7 @@ setInterval(() => {
       const bh = state.upgrades.blackHoleMixer || 0;
       state.bhCharge = (state.bhCharge || 0) + Math.sqrt(bh) / 20;
       const maxUses = resStage3("blackHoleCompression") ? 3 : 2;
-      if (state.bhCharge >= 2500 && (state.bhUses || 0) < maxUses) {
+      if (state.bhCharge >= 1200 && (state.bhUses || 0) < maxUses) {
         if (!state.bhFullSince) state.bhFullSince = Date.now();
         if (Date.now() - state.bhFullSince > 30000) fireBhBoost();
       } else {
@@ -17612,11 +17612,11 @@ function fireBhBoost() {
   const bh = state.upgrades.blackHoleMixer || 0;
   const maxUses = resStage3("blackHoleCompression") ? 3 : 2;
   if (!state.research.blackHoleCompression || !resStage2("blackHoleCompression")) return;
-  if ((state.bhCharge || 0) < 2500 || (state.bhUses || 0) >= maxUses) return;
+  if ((state.bhCharge || 0) < 1200 || (state.bhUses || 0) >= maxUses) return;
   let mult = 1 + 1.8 * Math.sqrt(bh) / 10; // 0.5→1.8(sim ⑬再強化 2026-07-13 R19dの未移植を同期 2026-07-16)
   if (resStage3("blackHoleCompression")) mult *= 1 + 0.002 * maxQuotaStage();
   state.bhBoostMult = mult;
-  state.bhBoostUntil = Date.now() + 120000; // 60秒→120秒(sim bhBoostDur=120同期)
+  state.bhBoostUntil = Date.now() + 240000; // 120秒→240秒(sim bhBoostDur=240同期 2026-07-18)
   state.bhCharge = 0;
   state.bhFullSince = 0;
   state.bhUses = (state.bhUses || 0) + 1;
@@ -17634,7 +17634,7 @@ function updateBhGaugeButton() {
   const charge = Math.min(100, Math.floor((state.bhCharge || 0) / 25));
   const uses = state.bhUses || 0;
   const maxUses = resStage3("blackHoleCompression") ? 3 : 2;
-  const ready = (state.bhCharge || 0) >= 2500 && uses < maxUses;
+  const ready = (state.bhCharge || 0) >= 1200 && uses < maxUses;
   btn.classList.toggle("bhReady", ready);
   btn.innerHTML = `重力圧縮<br>${charge}%<br>${uses}/${maxUses}回${ready ? "<br>発動!" : ""}`;
 }
@@ -17642,7 +17642,7 @@ function updateBhGaugeButton() {
 addTap($("bhGaugeBtn"), () => {
   const uses = state.bhUses || 0;
   const maxUses = resStage3("blackHoleCompression") ? 3 : 2;
-  if ((state.bhCharge || 0) >= 2500 && uses < maxUses) fireBhBoost();
+  if ((state.bhCharge || 0) >= 1200 && uses < maxUses) fireBhBoost();
 });
 
 setInterval(() => {
