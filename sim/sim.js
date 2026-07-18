@@ -834,7 +834,7 @@ const EQUIP2_FX = {
     { m: 'C', cond: 'quotaHold', up: ['upDisc', 0.20] }, { m: 'C', cond: 'deep', up: ['resDisc', 0.20] }, { m: 'C', cond: 'runStart', up: ['allMul', 0.5] }
   ],
   hands: [
-    { m: 'A', up: ['clickMul', 1.0] }, { m: 'A', up: ['critAdd', 0.03] }, { m: 'A', up: ['clickMul', 0.7, 'critAdd', 0.02] },
+    { m: 'A', up: ['clickMul', 1.0] }, { m: 'A', up: ['critValMul', 0.6] }, { m: 'A', up: ['clickMul', 0.7, 'critAdd', 0.02] },
     { m: 'B', up: ['clickMul', 1.6], down: ['goldenAmtMul', 0.9] }, { m: 'B', up: ['critAdd', 0.07], down: ['killValMul', 0.9] }, { m: 'B', up: ['clickMul', 1.3], down: ['goldenAmtMul', 0.9] },
     { m: 'C', cond: 'monster', up: ['clickMul', 2.5] }, { m: 'C', cond: 'goldenBoost', up: ['critAdd', 0.20] }, { m: 'C', cond: 'monster', up: ['clickMul', 2, 'dmgMul', 0.5] }
   ],
@@ -864,12 +864,12 @@ const EQUIP2_FLATCAP = { critAdd: 0.3, upDisc: 0.5, resDisc: 0.5 };
 // 装備の方針適合スコア(2026-07-15): A/B/C固定モデルでは「方針が価値を置くステータスに合う装備」を選ばないと
 // B(トレードオフ)の下げが効いてlift(a)が壊れる(R22実測min0.31)。方針の得意ステータスへの寄与でスコア化し、
 // 下げは「その方針が使わないステータスなら軽い」=Bの下げが遊びに合わない所へ落ちる。C型は状況頻度で割引。
-const EQ2_UNIT = { cpsMul: 1, allMul: 1.2, clickMul: 0.9, dmgMul: 0.7, killValMul: 0.7, holdBonus: 0.8, goldenAmtMul: 0.9, goldenRateMul: 2.5, goldenBoostMul: 1.5, dropMul: 0.3, oreAdd: 0.1, rewardLvAdd: 0.2, critAdd: 6, upDisc: 3, resDisc: 3, spawnMul: 2, stayMul: 1, dropRateAdd: 0.05, dropLuck: 0.1 };
+const EQ2_UNIT = { cpsMul: 1, allMul: 1.2, clickMul: 0.9, dmgMul: 0.7, killValMul: 0.7, holdBonus: 0.8, goldenAmtMul: 0.9, goldenRateMul: 2.5, goldenBoostMul: 1.5, dropMul: 0.3, oreAdd: 0.1, rewardLvAdd: 0.2, critAdd: 6, critValMul: 0.8, upDisc: 3, resDisc: 3, spawnMul: 2, stayMul: 1, dropRateAdd: 0.05, dropLuck: 0.1 };
 const EQ2_FAV = {
   // ※balancedのfavセット追加は撤回(2026-07-17): 選好の激変で装備一式が入れ替わり㉘balancedが5/9→1/9に
   // 崩れた。代わりにfav無し方針のB代償を一様×4(下のequip2Score)=毒装備(killVal×0.9等)だけ弾き構成は温存。
   bake: new Set(['cpsMul', 'allMul', 'holdBonus', 'upDisc', 'resDisc']),
-  click: new Set(['clickMul', 'critAdd', 'allMul']),
+  click: new Set(['clickMul', 'critAdd', 'critValMul', 'allMul']),
   golden: new Set(['goldenAmtMul', 'goldenRateMul', 'goldenBoostMul', 'allMul']),
   hunt: new Set(['dmgMul', 'killValMul', 'rewardLvAdd', 'stayMul', 'spawnMul', 'allMul', 'oreAdd'])
 };
@@ -937,7 +937,7 @@ function equip2Fx(sim) {
   if (ws._eq2FxT === sim.t && ws._eq2FxSig === eqSig && ws._eq2FxCache) return ws._eq2FxCache;
   const fx = { clickMul: 1, cpsMul: 1, allMul: 1, dmgMul: 1, killValMul: 1, spawnMul: 1, stayMul: 1,
     goldenAmtMul: 1, goldenRateMul: 1, goldenBoostMul: 1, holdBonus: 1, quotaSlow: 0, upDisc: 0, resDisc: 0,
-    dropMul: 1, oreAdd: 0, rewardLvAdd: 0, critAdd: 0, dropRateAdd: 0, dropLuck: 0 };
+    dropMul: 1, oreAdd: 0, rewardLvAdd: 0, critAdd: 0, critValMul: 1, dropRateAdd: 0, dropLuck: 0 };
   const put = (type, v) => {
     if (type === 'oreAdd' || type === 'rewardLvAdd' || type === 'dropRateAdd' || type === 'dropLuck') fx[type] += v; // 加算系(ドロップ率+/固定確率+数)
     else if (EQUIP2_FLATCAP[type] != null) fx[type] = Math.min(EQUIP2_FLATCAP[type], fx[type] + Math.min(0.5, v));
@@ -1863,6 +1863,7 @@ function computeProd(sim) {
       const combo = chance * sim.strat.tapRate * P.res2.comboWindow;
       critMul *= 1 + P.res2.comboRate * combo;
     }
+    critMul *= equip2Fx(sim).critValMul; // 新装備: 会心の威力系(率は上限0.3だが威力は上限なし)
     critEV = 1 + chance * (critMul - 1);
   }
 

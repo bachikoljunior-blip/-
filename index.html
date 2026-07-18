@@ -10272,7 +10272,7 @@ function fingerCritMultiplier() {
     const combo = (Date.now() - (state.lastCritAt || 0) > 30000) ? 0 : (state.critCombo || 0);
     m *= 1 + 0.03 * combo;
   }
-  return m;
+  return m * equip2Fx().critValMul; // 新装備: 会心の威力系(率は上限0.3だが威力は上限なし)
 }
 
 function fingerDoubleChance() {
@@ -10895,7 +10895,7 @@ const EQUIP2_FX = {
     { m: "C", cond: "quotaHold", up: ["upDisc", 0.20] }, { m: "C", cond: "deep", up: ["resDisc", 0.20] }, { m: "C", cond: "runStart", up: ["allMul", 0.5] }
   ],
   hands: [
-    { m: "A", up: ["clickMul", 1.0] }, { m: "A", up: ["critAdd", 0.03] }, { m: "A", up: ["clickMul", 0.7, "critAdd", 0.02] },
+    { m: "A", up: ["clickMul", 1.0] }, { m: "A", up: ["critValMul", 0.6] }, { m: "A", up: ["clickMul", 0.7, "critAdd", 0.02] },
     { m: "B", up: ["clickMul", 1.6], down: ["goldenAmtMul", 0.9] }, { m: "B", up: ["critAdd", 0.07], down: ["killValMul", 0.9] }, { m: "B", up: ["clickMul", 1.3], down: ["goldenAmtMul", 0.9] },
     { m: "C", cond: "monster", up: ["clickMul", 2.5] }, { m: "C", cond: "goldenBoost", up: ["critAdd", 0.20] }, { m: "C", cond: "monster", up: ["clickMul", 2, "dmgMul", 0.5] }
   ],
@@ -10938,7 +10938,7 @@ function equip2CondOn(cond) {
     default: return true;
   }
 }
-const EQUIP2_FX_LABEL = { clickMul: "タップ生産", cpsMul: "毎秒生産", allMul: "全生産", dmgMul: "討伐ダメージ", killValMul: "討伐報酬", spawnMul: "モンスター出現短縮", stayMul: "モンスター滞在", goldenAmtMul: "金クッキー獲得", goldenRateMul: "金クッキー出現短縮", goldenBoostMul: "金ブースト", holdBonus: "ノルマ維持中 全生産", quotaSlow: "ノルマ進行減速", upDisc: "設備費割引", resDisc: "研究費割引", dropMul: "素材ドロップ", oreAdd: "色素材+n/体", rewardLvAdd: "報酬レベル+n", critAdd: "会心率+n", dropRateAdd: "素材ドロップ率+", dropLuck: "確率で素材+1個" };
+const EQUIP2_FX_LABEL = { clickMul: "タップ生産", cpsMul: "毎秒生産", allMul: "全生産", dmgMul: "討伐ダメージ", killValMul: "討伐報酬", spawnMul: "モンスター出現短縮", stayMul: "モンスター滞在", goldenAmtMul: "金クッキー獲得", goldenRateMul: "金クッキー出現短縮", goldenBoostMul: "金ブースト", holdBonus: "ノルマ維持中 全生産", quotaSlow: "ノルマ進行減速", upDisc: "設備費割引", resDisc: "研究費割引", dropMul: "素材ドロップ", oreAdd: "色素材+n/体", rewardLvAdd: "報酬レベル+n", critAdd: "会心率+n", critValMul: "会心の威力", dropRateAdd: "素材ドロップ率+", dropLuck: "確率で素材+1個" };
 let EQUIP2_ITEMS_CACHE = null;
 function equip2Items() {
   if (EQUIP2_ITEMS_CACHE) return EQUIP2_ITEMS_CACHE;
@@ -10949,7 +10949,7 @@ function equip2Items() {
   const clampSt = x => Math.max(1, Math.min(EQUIP2_CFG.tiers, x));
   // 強さ順コスト(2026-07-17 sim同期): 同カテゴリ内の色銘を中立強度(単位重み×効果値・C型は頻度割引)で
   // 順位づけし、素材コストを弱⇒安/強⇒高に(弱rank0=×0.35 … 強rank8=×3.0)。強い装備ほど素材が重い。
-  const EQ2_COST_UNIT = { cpsMul: 1, allMul: 1.2, clickMul: 0.9, dmgMul: 0.7, killValMul: 0.7, holdBonus: 0.8, goldenAmtMul: 0.9, goldenRateMul: 2.5, goldenBoostMul: 1.5, dropMul: 0.3, oreAdd: 0.1, rewardLvAdd: 0.2, critAdd: 6, upDisc: 3, resDisc: 3, spawnMul: 2, stayMul: 1, dropRateAdd: 0.05, dropLuck: 0.1 };
+  const EQ2_COST_UNIT = { cpsMul: 1, allMul: 1.2, clickMul: 0.9, dmgMul: 0.7, killValMul: 0.7, holdBonus: 0.8, goldenAmtMul: 0.9, goldenRateMul: 2.5, goldenBoostMul: 1.5, dropMul: 0.3, oreAdd: 0.1, rewardLvAdd: 0.2, critAdd: 6, critValMul: 0.8, upDisc: 3, resDisc: 3, spawnMul: 2, stayMul: 1, dropRateAdd: 0.05, dropLuck: 0.1 };
   const EQ2_COST_CONDFREQ = { goldenBoost: 0.15, monster: 0.4, boss: 0.06, quotaHold: 0.8, deep: 0.3, buyUp: 0.12, buyRes: 0.10, runStart: 0.12 };
   const strengthOf = (cat, v) => {
     const def = EQUIP2_FX[cat] && EQUIP2_FX[cat][v - 1];
@@ -11056,7 +11056,7 @@ function equip2Fx() {
   if (_eq2FxCache && _eq2FxKey === key) return _eq2FxCache;
   const fx = { clickMul: 1, cpsMul: 1, allMul: 1, dmgMul: 1, killValMul: 1, spawnMul: 1, stayMul: 1,
     goldenAmtMul: 1, goldenRateMul: 1, goldenBoostMul: 1, holdBonus: 1, quotaSlow: 0, upDisc: 0, resDisc: 0,
-    dropMul: 1, oreAdd: 0, rewardLvAdd: 0, critAdd: 0, dropRateAdd: 0, dropLuck: 0 };
+    dropMul: 1, oreAdd: 0, rewardLvAdd: 0, critAdd: 0, critValMul: 1, dropRateAdd: 0, dropLuck: 0 };
   const put = (type, v) => {
     if (type === "oreAdd" || type === "rewardLvAdd" || type === "dropRateAdd" || type === "dropLuck") fx[type] += v; // 加算系
     else if (EQUIP2_FLATCAP[type] != null) fx[type] = Math.min(EQUIP2_FLATCAP[type], fx[type] + Math.min(0.5, v));
