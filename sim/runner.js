@@ -1083,24 +1083,47 @@ if (mode === 'baseline') {
     }
     return baseCache[key];
   };
+  // 基準色銘: 各(カテゴリ,ティア)につき担当方針が最も好む色銘(=「前に着けていたはずの得意装備」の代役)。
+  // 同ティアの現物を着ている周回が無い(ティア飛ばし等)場合は、基準色銘を強制装着した凍結周回を
+  // ベースラインにし、対象色銘の強制装着と純A/B比較する=全486が判定可能。
+  const refCache = {};
+  const refOf = (s, cat, tier) => {
+    const key = s.id + ':' + cat + ':' + tier;
+    if (!(key in refCache)) {
+      let best = -Infinity, bid = null;
+      for (const x of items) if (x.cat === cat && x.tier === tier) { const sc = G.eq2ScoreOf(s, x); if (sc > best) { best = sc; bid = x.id; } }
+      refCache[key] = bid;
+    }
+    return refCache[key];
+  };
+  const forcedBaseCache = {};
+  const forcedBase = (s, sim, r, cat, refId) => {
+    const key = s.id + ':' + r.idx + ':' + cat + ':' + refId;
+    if (!(key in forcedBaseCache)) {
+      const off = G.replayRun(s, sim.snapshots[r.idx], { hours: H, noNewEquip: true, forceEquip: { [cat]: refId } }, r.duration);
+      forcedBaseCache[key] = (off && off.runCookies > 0 && Number.isFinite(off.runCookies)) ? off.runCookies : null;
+    }
+    return forcedBaseCache[key];
+  };
   let ok = 0, ng = 0, na = 0; const ngRows = [];
   for (const it of items) {
     const s = assign[it.id]; const sim = sims[s.id];
-    const elig = [];
-    for (const r of sim.runs) {
-      if (r.partial || !(r.duration > 0) || !sim.snapshots[r.idx]) continue;
-      const snap = sim.snapshots[r.idx];
-      const curId = snap.ws && snap.ws.eq2Equipped && snap.ws.eq2Equipped[it.cat];
-      if (!curId) continue;
-      const cur = byId[curId];
-      if (!cur || cur.tier !== it.tier) continue;
-      elig.push(r);
+    const fulls = sim.runs.filter(r => !r.partial && r.duration > 0 && sim.snapshots[r.idx]);
+    const tierOfRun = r => { const cid = sim.snapshots[r.idx].ws && sim.snapshots[r.idx].ws.eq2Equipped && sim.snapshots[r.idx].ws.eq2Equipped[it.cat]; const c = cid && byId[cid]; return c ? c.tier : 0; };
+    let elig = fulls.filter(r => tierOfRun(r) === it.tier);
+    let forced = false;
+    if (!elig.length) {
+      // 最も近いティアを着ている周回で両側強制A/B(基準=担当方針の同ティア最推し色銘)
+      forced = true;
+      const sorted = fulls.slice().sort((a, b) => Math.abs(tierOfRun(a) - it.tier) - Math.abs(tierOfRun(b) - it.tier));
+      elig = sorted;
     }
     if (!elig.length) { na++; continue; }
-    const sample = isMat(it) ? elig : elig.slice(0, 3);
+    const sample = isMat(it) ? elig.slice(0, 8) : elig.slice(0, 3);
+    const refId = refOf(s, it.cat, it.tier);
     const ratios = [];
     for (const r of sample) {
-      const base = frozenBase(s, sim, r);
+      const base = forced ? forcedBase(s, sim, r, it.cat, refId) : frozenBase(s, sim, r);
       if (!base) continue;
       const on = G.replayRun(s, sim.snapshots[r.idx], { hours: H, noNewEquip: true, forceEquip: { [it.cat]: it.id } }, r.duration);
       if (on && on.runCookies > 0 && Number.isFinite(on.runCookies)) ratios.push(on.runCookies / base);
@@ -1108,10 +1131,10 @@ if (mode === 'baseline') {
     if (!ratios.length) { na++; continue; }
     const pass = isMat(it) ? (medianOf(ratios) >= 0.5) : ratios.every(x => x >= 0.5);
     if (pass) ok++;
-    else { ng++; ngRows.push(`  NG ${it.id.padEnd(20)} ${s.id.padEnd(4)} ratios=[${ratios.map(x => x.toFixed(2)).join(',')}]${isMat(it) ? ' 素材系=中央値' : ''}`); }
+    else { ng++; ngRows.push(`  NG ${it.id.padEnd(20)} ${s.id.padEnd(4)}${forced ? ' 強制A/B' : ''} ratios=[${ratios.map(x => x.toFixed(2)).join(',')}]${isMat(it) ? ' 素材系=中央値' : ''}`); }
   }
-  console.log(`装備(b)新定義: 同ティア差し替え≥50%(担当方針・凍結A/B) 合格 ${ok} / NG ${ng} / 対象周回なし ${na} (全${items.length})`);
-  ngRows.slice(0, 60).forEach(x => console.log(x));
+  console.log(`装備(b)新定義: 同ティア差し替え≥50%(担当方針・凍結A/B・現物なしは基準色銘との両側強制) 合格 ${ok} / NG ${ng} / 判定不能 ${na} (全${items.length})`);
+  ngRows.slice(0, 80).forEach(x => console.log(x));
 } else if (mode === 'affinity') {
   // ㉔㉕㉖(第9次【仮】): モンスター種類×報酬相性
   // ㉔ 有効性: 「その回だけ相性を全部×1.0」との獲得効率比(幾何平均≥1.1)+各回minも表示
