@@ -35,3 +35,21 @@ S17: ⑧ 未達→転生 11/11 全周回OK
 ⑫ 文脈依存性
  設備(最効率の最頻): S1=oven S2=oven S3=oven S4=oven S5=oven S6=oven S7=oven S8=oven S9=oven S10=oven S11=oven S12=oven S13=oven S14=oven S15=oven S17=oven
  報酬(ピック1位カテゴリ): S1=hunt S2=hunt S3=golden S4=hunt S5=hunt S6=golden S7=hunt S8=hunt S9=hunt S10=golden S11=hunt S12=hunt S13=golden S14=hunt S15=hunt S17=hunt
+ 研究(有効無効差が最大): S1=quantumProofing S2=fingerTechnique S3=portalNetwork S4=quantumProofing S5=fingerTechnique S6=ovenBatch S7=ovenBatch S8=quantumProofing S9=quantumProofing S10=quantumProofing S11=quantumProofing S12=quantumProofing S13=quantumProofing S14=quantumProofing S15=quantumProofing S17=ovenBatch
+ → 設備1種 / 報酬2種 / 研究4種 (各2種以上で OK): NG
+ 周回方針(S1で5方針差し替え):
+  balanced  total=2.23e+269 kills=8119 golden=4411 maxSt=326 runs=9 ★maxStage
+  click     total=1.18e+271 kills=9946 golden=4485 maxSt=326 runs=10 ★total ★kills ★runs
+  golden    total=9.19e+269 kills=8791 golden=4787 maxSt=326 runs=10
+  hunt      total=7.83e+270 kills=9051 golden=5009 maxSt=326 runs=10 ★golden
+  bake      total=1.50e+269 kills=9539 golden=4869 maxSt=326 runs=10
+ → 総合効率 最良/最悪=78.61 (≤3で OK: NG) / 最良獲得方針 3/5種
+
+S1: ⑬ タイミング機能 (最適操作/完全放置の獲得効率比, 要求 +5%〜+100% = [1.05, 2.00])
+ 観測ゆらぎ(量子発酵 段2)         4.1414831109102595e+36 NG (初購入t=4h, 対象1周回)
+ 圧縮チャージ(重力圧縮 段2)        4.1414831109102595e+36 NG (初購入t=4h, 対象1周回)
+ 熟成(香料調合 段2)            127904197.755 NG (初購入t=0h, 対象9周回)
+ 延長狩り(異世界接続網 段2)        1351602267.720 NG (初購入t=1h, 対象8周回)
+ → S1 ⑬: NG
+
+①②③⑨⑩は toggles で: node runner.js toggles S1 30 all
