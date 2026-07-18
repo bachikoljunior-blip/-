@@ -1,0 +1,2 @@
+sim S1 バランス効率型 done (23486ms)
+sim S2 クリック会心型 done (19772ms)
