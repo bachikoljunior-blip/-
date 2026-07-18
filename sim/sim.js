@@ -816,7 +816,7 @@ const EQUIP2_FX = {
   weapon: [
     { m: 'A', up: ['dmgMul', 0.9] }, { m: 'A', up: ['critAdd', 0.04] }, { m: 'A', up: ['killValMul', 0.7] },
     { m: 'B', up: ['dmgMul', 1.6], down: ['goldenAmtMul', 0.85] }, { m: 'B', up: ['critAdd', 0.09], down: ['killValMul', 0.9] }, { m: 'B', up: ['killValMul', 1.4], down: ['dmgMul', 0.9] },
-    { m: 'C', cond: 'boss', up: ['dmgMul', 3] }, { m: 'C', cond: 'monster', up: ['critAdd', 0.15] }, { m: 'C', cond: 'goldenBoost', up: ['dmgMul', 2, 'killValMul', 1] }
+    { m: 'C', cond: 'boss', up: ['dmgMul', 3] }, { m: 'C', cond: 'monster', up: ['critAdd', 0.22] }, { m: 'C', cond: 'goldenBoost', up: ['dmgMul', 2, 'killValMul', 1] }
   ],
   shield: [
     { m: 'A', up: ['holdBonus', 0.5] }, { m: 'A', up: ['stayMul', 0.30] }, { m: 'A', up: ['critAdd', 0.03] },
@@ -834,7 +834,7 @@ const EQUIP2_FX = {
     { m: 'C', cond: 'quotaHold', up: ['upDisc', 0.20] }, { m: 'C', cond: 'deep', up: ['resDisc', 0.20] }, { m: 'C', cond: 'runStart', up: ['allMul', 0.5] }
   ],
   hands: [
-    { m: 'A', up: ['clickMul', 1.0] }, { m: 'A', up: ['critValMul', 0.6] }, { m: 'A', up: ['clickMul', 0.7, 'critAdd', 0.02] },
+    { m: 'A', up: ['clickMul', 1.0] }, { m: 'A', up: ['critValMul', 0.6] }, { m: 'A', up: ['clickMul', 0.7, 'critAdd', 0.05] },
     { m: 'B', up: ['clickMul', 1.6], down: ['goldenAmtMul', 0.9] }, { m: 'B', up: ['critAdd', 0.07], down: ['killValMul', 0.9] }, { m: 'B', up: ['clickMul', 1.3], down: ['goldenAmtMul', 0.9] },
     { m: 'C', cond: 'monster', up: ['clickMul', 2.5] }, { m: 'C', cond: 'goldenBoost', up: ['critAdd', 0.20] }, { m: 'C', cond: 'monster', up: ['clickMul', 2, 'dmgMul', 0.5] }
   ],
@@ -871,10 +871,10 @@ const EQ2_FAV = {
   bake: new Set(['cpsMul', 'allMul', 'holdBonus', 'upDisc', 'resDisc']),
   click: new Set(['clickMul', 'critAdd', 'critValMul', 'allMul']),
   golden: new Set(['goldenAmtMul', 'goldenRateMul', 'goldenBoostMul', 'allMul']),
-  hunt: new Set(['dmgMul', 'killValMul', 'rewardLvAdd', 'stayMul', 'spawnMul', 'allMul', 'oreAdd'])
+  hunt: new Set(['dmgMul', 'killValMul', 'rewardLvAdd', 'stayMul', 'spawnMul', 'allMul', 'oreAdd', 'goldenAmtMul'])
 };
 const EQ2_CONDFREQ = { goldenBoost: 0.15, monster: 0.4, boss: 0.06, quotaHold: 0.8, deep: 0.3, buyUp: 0.12, buyRes: 0.10, runStart: 0.12 };
-const EQ2_DOWN_W = { dmgMul: 3 }; // B代償の複利重み(2026-07-18 R27): 層進行ステータスの下げは線形評価だと過小(実被害は複利)
+const EQ2_DOWN_W = { dmgMul: 3, goldenAmtMul: 4 }; // B代償の複利重み(2026-07-18 R27): 層進行ステータスの下げは線形評価だと過小(実被害は複利)
 // 装備の好み(R17 2026-07-17 ユーザー指示「プレイ方針を(シミュ条件を考慮せず)追加」):
 // 戦略ごとの装備選好。fav=価値を置くステータス集合 / bAversion=B型の得意ステータス代償への嫌悪(既定6・
 // リスク愛好家は低い/堅実家は高い) / cFreqMul=C型状況頻度への楽観(既定1・状況を使いこなす人は高い)。

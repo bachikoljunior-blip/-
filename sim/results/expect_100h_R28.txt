@@ -1,0 +1,62 @@
+=== 期待値方式(100h・各回の稼ぎ力の持ち上げ) ===
+① 研究instant(各回≥1.2・13本) 13/13
+  OK res:fingerTechnique          S2 min=2.45
+  OK res:grandmaCrowd             S5 min=40.85
+  OK res:ovenBatch                S10 min=60.65
+  OK res:factoryNetwork           S2 min=1.30
+  OK res:spiceBlend               S3 min=23810390.70
+  OK res:portalNetwork            S11 min=1.31
+  OK res:bankClickDividend        S2 min=1.38
+  OK res:moonGlobalYeast          S5 min=277.00
+  OK res:portalGlobalFold         S13 min=56.99
+  OK res:galaxyAssembly           S9 min=1.25
+  OK res:blackHoleCompression     S9 min=5.00
+  OK res:quantumProofing          S15 min=1.25
+  OK res:antimatterRecipe         S8 min=218403912.20
+  OK res:cpsStrike(whole軸) S1 中央値比=245.357 (n=10)
+① 研究 合計 14/14 (instant 13/13 + whole 1/1)
+③-a 報酬instant(全周回≥1.1・2026-07-13ユーザー変更) 8/8
+  OK rw:goldenRate                S2 min=9.88
+  OK rw:goldenPower               S10 min=2.33
+  OK rw:goldenAmount              S1 min=2.38
+  OK rw:monsterRate               S4 min=1.13
+  OK rw:goldenTarget              S14 min=2.28
+  OK rw:goldenFirstHit            S4 min=1.23
+  OK rw:beastHeatFerment          S12 min=5654.12
+  OK rw:huntingCore               S9 min=36136.88
+③-c 毎回取る方針の実在 20/20
+③ 報酬utility軸(短い枝分かれ比べ・同一状態から1周回ぶん・総クッキー比の中央値 ≥1.1)
+  OK rw:monsterDamage        S8 中央値比=500014620.587 (n=12)
+  OK rw:monsterStay          S12 中央値比=587714846.053 (n=11)
+  OK rw:crackedFang          S11 中央値比=500396568.288 (n=10)
+  OK rw:brandHunt            S2 中央値比=1000000000.000 (n=4)
+  OK rw:deepPursuit          S3 中央値比=1000000000.000 (n=2)
+  OK rw:chainPrep            S17 中央値比=1000000000.000 (n=9)
+  OK rw:huntFocus            S8 中央値比=1000000000.000 (n=8)
+  OK rw:biteRecovery         S4 中央値比=1000000000.000 (n=6)
+  OK rw:crushedMill          S5 中央値比=1000000000.000 (n=1)
+  OK rw:goldenBeastMutation  S8 中央値比=1000000000.000 (n=2)
+  OK rw:goldenChain          S8 中央値比=1000000000.000 (n=8)
+  OK rw:beastScent           S1 中央値比=1000000000.000 (n=5)
+③ utility軸 12/12
+③ 報酬 合計 20/20 (instant 8/8 + utility 12/12)
+⑨-a 段階instant(各回≥1.05・⑬タイミング段は除外) 18/18
+  OK stage:ovenBatch:2            S5 min=3.38
+  OK stage:spiceBlend:2           S3 min=1.23
+  OK stage:fingerTechnique:2      S2 min=5.57
+  OK stage:grandmaCrowd:2         S3 min=68.45
+  OK stage:spiceBlend:3           S1 min=1.06
+  OK stage:moonGlobalYeast:2      S6 min=17.18
+  OK stage:grandmaCrowd:3         S10 min=1.22
+  OK stage:ovenBatch:3            S10 min=3.18
+  OK stage:factoryNetwork:2       S8 min=1.05
+  OK stage:factoryNetwork:3       S1 min=1.06
+  OK stage:portalNetwork:2        S9 min=7.41
+  OK stage:portalNetwork:3        S1 min=1.06
+  OK stage:galaxyAssembly:2       S7 min=1.81
+  OK stage:portalGlobalFold:2     S11 min=4.70
+  OK stage:galaxyAssembly:3       S8 min=1.19
+  OK stage:moonGlobalYeast:3      S5 min=1.50
+  OK stage:antimatterRecipe:2     S5 min=1.27
+  OK stage:portalGlobalFold:3     S7 min=1.35
+⑨ 段階whole軸(短い枝分かれ比べ・同一状態から1周回ぶん・総クッキー比の中央値 ≥1.05・利息/余熱)

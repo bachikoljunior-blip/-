@@ -517,7 +517,7 @@ const STRATEGIES = [
     pickReward: pickRewardAffinityAware(['monsterDamage', 'monsterRate', 'crackedFang', 'beastHeatFerment', 'monsterStay', 'goldenAmount']),
     shouldPrestige: prestigeWhen(1200, 1.1),
     skillOrder: skillOrderByBranch(['core', 'monster', 'auto', 'economy', 'reward', 'research', 'click', 'golden', 'upgrade', 'start', 'master']),
-    eq2Taste: { fav: new Set(['dmgMul', 'critAdd', 'spawnMul', 'stayMul', 'killValMul']), bAversion: 6, cFreqMul: 3 }
+    eq2Taste: { fav: new Set(['dmgMul', 'critAdd', 'spawnMul', 'stayMul', 'killValMul', 'goldenAmtMul']), bAversion: 6, cFreqMul: 3 }
   },
   {
     id: 'S12', name: '職人型',
@@ -575,7 +575,7 @@ const STRATEGIES = [
     pickReward: pickRewardAffinityAware(['huntingCore', 'monsterDamage', 'beastHeatFerment', 'monsterRate', 'goldenAmount']),
     shouldPrestige: prestigeWhen(1200, 1.1),
     skillOrder: skillOrderByBranch(['core', 'monster', 'reward', 'economy', 'auto', 'research', 'click', 'golden', 'upgrade', 'start', 'master']),
-    eq2Taste: { fav: new Set(['rewardLvAdd', 'killValMul', 'dropLuck']), bAversion: 5, cFreqMul: 1.2 }
+    eq2Taste: { fav: new Set(['rewardLvAdd', 'killValMul', 'dropLuck', 'goldenAmtMul']), bAversion: 5, cFreqMul: 1.2 }
   }
 ];
 
