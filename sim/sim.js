@@ -3189,6 +3189,12 @@ function advanceTick(sim, strategy) {
       r.bhCharge += Math.sqrt(bh) * dt;
       const maxUses = resStage3(sim, 'blackHoleCompression') ? 3 : 2;
       if (r.bhCharge >= P.res2.bhChargeFull && r.bhUses < maxUses && sim.t >= r.bhBoostUntil) {
+        // ⑬測定用(2026-07-18 R27): snapは購入時でなく「初回発火の瞬間」。研究購入は転生直前
+        // (クッキー最潤沢)に集中し、購入時snapの900s窓が周回終端で即切れ全方針1.000に死ぬのを実測
+        // (portalNetworkの討伐時snapと同じ処方)。発火直前にsnap=両枝が発火判断から分岐できる。
+        if (sim.opt.timingSnaps && !(sim.timingSnaps && sim.timingSnaps.blackHoleCompression)) {
+          (sim.timingSnaps || (sim.timingSnaps = {})).blackHoleCompression = takeSnapshot(sim);
+        }
         // タイミング(条件⑬・2026-07-09 作り替え=承認事項2の式変更): 最適操作=満タンで狙って放出(全力)/
         // 完全放置=自動で放出されるが効率が落ちる(bhIdleEff倍の増分)。旧・遅延方式(放置は気づくまでbhIdleDelay秒)は
         // 「発動が周回内に収まるか」の二値で枝分かれ比が〜1.0か>2に二極化し帯[1.05,2.0]に安定して入らないため、
@@ -3529,7 +3535,7 @@ function tryBuyResearchStage(sim, id, stage, budgetRatio) {
   // 延長狩り(portalNetwork)だけは購入時でなく「取得後の最初の討伐時」にsnapする(下のdefeatMonster側):
   // 研究購入はクッキー最潤沢=ノルマ未達直後の尾(モンスターが湧かない)に集中し、購入時snapの900s窓が
   // 全方針1.000に死ぬのを実測。討伐時snap=機能が活性かつモンスターが生きている地点=測れる窓。
-  if (stage === 2 && sim.opt.timingSnaps && (id === 'quantumProofing' || id === 'blackHoleCompression' || id === 'spiceBlend')) {
+  if (stage === 2 && sim.opt.timingSnaps && (id === 'quantumProofing' || id === 'spiceBlend')) { // blackHoleCompressionは初回発火時snap(2026-07-18 R27・下の充填ブロック)
     (sim.timingSnaps || (sim.timingSnaps = {}))[id] = takeSnapshot(sim);
   }
   if (stage === 2 && sim.opt.timingSnaps && id === 'portalNetwork' && !(sim.timingSnaps && sim.timingSnaps.portalNetwork)) {
