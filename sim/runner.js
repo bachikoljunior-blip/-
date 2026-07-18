@@ -1119,10 +1119,13 @@ if (mode === 'baseline') {
       elig = sorted;
     }
     if (!elig.length) { na++; continue; }
-    const sample = isMat(it) ? elig.slice(0, 8) : elig.slice(0, 3);
+    // 判定不能ゼロ化v2(2026-07-18 R29): 固定スライスだと先頭サンプルの再生が全て無効(引退尾部Infinity等)の
+    // 場合に判定不能へ落ちる=有効ratioが目標数に達するまで適格周回を走査する。
+    const want = isMat(it) ? 8 : 3;
     const refId = refOf(s, it.cat, it.tier);
     const ratios = [];
-    for (const r of sample) {
+    for (const r of elig) {
+      if (ratios.length >= want) break;
       const base = forced ? forcedBase(s, sim, r, it.cat, refId) : frozenBase(s, sim, r);
       if (!base) continue;
       const on = G.replayRun(s, sim.snapshots[r.idx], { hours: H, noNewEquip: true, forceEquip: { [it.cat]: it.id } }, r.duration);
