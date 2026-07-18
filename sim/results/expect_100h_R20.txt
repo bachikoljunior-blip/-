@@ -1,0 +1,34 @@
+=== 期待値方式(100h・各回の稼ぎ力の持ち上げ) ===
+① 研究instant(各回≥1.2・13本) 13/13
+  OK res:fingerTechnique          S2 min=6.69
+  OK res:grandmaCrowd             S8 min=128.55
+  OK res:ovenBatch                S10 min=58.93
+  OK res:factoryNetwork           S9 min=1.31
+  OK res:spiceBlend               S3 min=29939371027.77
+  OK res:portalNetwork            S6 min=1.28
+  OK res:bankClickDividend        S2 min=1.38
+  OK res:moonGlobalYeast          S5 min=311.03
+  OK res:portalGlobalFold         S2 min=38.71
+  OK res:galaxyAssembly           S1 min=1.25
+  OK res:blackHoleCompression     S17 min=5.00
+  OK res:quantumProofing          S3 min=1.25
+  OK res:antimatterRecipe         S8 min=104961454.53
+  OK res:cpsStrike(whole軸) S1 中央値比=661.127 (n=10)
+① 研究 合計 14/14 (instant 13/13 + whole 1/1)
+③-a 報酬instant(全周回≥1.1・2026-07-13ユーザー変更) 8/8
+  OK rw:goldenRate                S1 min=1.63
+  OK rw:goldenPower               S10 min=2.43
+  OK rw:goldenAmount              S1 min=2.36
+  OK rw:monsterRate               S4 min=1.21
+  OK rw:goldenTarget              S14 min=2.56
+  OK rw:goldenFirstHit            S4 min=1.25
+  OK rw:beastHeatFerment          S4 min=23365.77
+  OK rw:huntingCore               S4 min=67201.32
+③-c 毎回取る方針の実在 20/20
+③ 報酬utility軸(短い枝分かれ比べ・同一状態から1周回ぶん・総クッキー比の中央値 ≥1.1)
+  OK rw:monsterDamage        S8 中央値比=444223.302 (n=12)
+  OK rw:monsterStay          S12 中央値比=1000000000.000 (n=11)
+  OK rw:crackedFang          S14 中央値比=1000000000.000 (n=9)
+  OK rw:brandHunt            S11 中央値比=1000000000.000 (n=4)
+  OK rw:deepPursuit          S4 中央値比=1000000000.000 (n=2)
+  OK rw:chainPrep            S17 中央値比=1079.015 (n=7)
