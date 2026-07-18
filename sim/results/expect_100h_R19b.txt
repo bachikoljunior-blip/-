@@ -26,3 +26,14 @@
   OK rw:huntingCore               S9 min=31011.79
 ③-c 毎回取る方針の実在 20/20
 ③ 報酬utility軸(短い枝分かれ比べ・同一状態から1周回ぶん・総クッキー比の中央値 ≥1.1)
+  OK rw:monsterDamage        S8 中央値比=383181.373 (n=12)
+  OK rw:monsterStay          S12 中央値比=1000000000.000 (n=11)
+  OK rw:crackedFang          S14 中央値比=1000000000.000 (n=9)
+  OK rw:brandHunt            S2 中央値比=1000000000.000 (n=4)
+  OK rw:deepPursuit          S4 中央値比=1000000000.000 (n=2)
+  OK rw:chainPrep            S17 中央値比=1000000000.000 (n=9)
+  OK rw:huntFocus            S12 中央値比=1000000000.000 (n=8)
+  OK rw:biteRecovery         S12 中央値比=1000000000.000 (n=6)
+  OK rw:crushedMill          S5 中央値比=12.047 (n=1)
+  OK rw:goldenBeastMutation  S4 中央値比=1000000000.000 (n=1)
+  OK rw:goldenChain          S13 中央値比=1000000000.000 (n=8)
