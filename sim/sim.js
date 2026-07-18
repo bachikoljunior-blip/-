@@ -851,7 +851,7 @@ const EQUIP2_FX = {
   ],
   accA: [
     { m: 'A', up: ['goldenAmtMul', 1.0] }, { m: 'A', up: ['goldenRateMul', 0.15] }, { m: 'A', up: ['goldenBoostMul', 0.4] },
-    { m: 'B', up: ['goldenAmtMul', 2.0], down: ['dmgMul', 0.9] }, { m: 'B', up: ['goldenRateMul', 0.22], down: ['killValMul', 0.9] }, { m: 'B', up: ['goldenBoostMul', 0.6], down: ['clickMul', 0.9] },
+    { m: 'B', up: ['goldenAmtMul', 1.6], down: ['dmgMul', 0.9] }, { m: 'B', up: ['goldenRateMul', 0.22], down: ['killValMul', 0.9] }, { m: 'B', up: ['goldenBoostMul', 0.6], down: ['clickMul', 0.9] },
     { m: 'C', cond: 'goldenBoost', up: ['allMul', 1.5] }, { m: 'C', cond: 'deep', up: ['goldenAmtMul', 0.6] }, { m: 'C', cond: 'goldenBoost', up: ['goldenAmtMul', 2, 'goldenBoostMul', 0.3] }
   ],
   accB: [
