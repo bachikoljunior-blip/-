@@ -542,6 +542,40 @@ const STRATEGIES = [
     shouldPrestige: prestigeWhen(1200, 1.2),
     skillOrder: cheapestFirst,
     eq2Taste: { fav: new Set(['upDisc', 'resDisc', 'cpsMul', 'holdBonus']), bAversion: 10, cFreqMul: 0.5 }
+  },
+  // ==== R18(2026-07-18 装備(b)着用拡大の続き): 未着用の色銘ニッチを自然に好む類型を追加 ====
+  {
+    id: 'S14', name: '会心一点型',
+    // 会心にロマンを感じる一点豪華主義のクリッカー: 会心率と一撃の重さを最優先で積む。
+    tapRate: 7, goldenTake: 1,
+    pickPolicy: sim => 'click',
+    buy: standardBuy(0.30, 0.30),
+    pickReward: pickRewardByPriority(['crackedFang', 'monsterDamage', 'goldenAmount', 'goldenTarget', 'brandHunt']),
+    shouldPrestige: prestigeWhen(1200, 1.0),
+    skillOrder: skillOrderByBranch(['core', 'click', 'monster', 'golden', 'economy', 'auto', 'research', 'upgrade', 'reward', 'start', 'master']),
+    eq2Taste: { fav: new Set(['critAdd', 'clickMul']), bAversion: 2, cFreqMul: 2 }
+  },
+  {
+    id: 'S15', name: '守りの砦型',
+    // 腰を据えた籠城派: モンスターを長く留めて捌き、ノルマ維持ボーナスと毎秒生産で堅く積む。
+    tapRate: 3, goldenTake: 1,
+    pickPolicy: sim => 'bake',
+    buy: standardBuy(0.30, 0.25),
+    pickReward: pickRewardByPriority(['monsterStay', 'beastHeatFerment', 'goldenAmount', 'monsterDamage', 'biteRecovery']),
+    shouldPrestige: prestigeWhen(1200, 1.2),
+    skillOrder: skillOrderByBranch(['core', 'auto', 'economy', 'monster', 'research', 'reward', 'click', 'golden', 'upgrade', 'start', 'master']),
+    eq2Taste: { fav: new Set(['stayMul', 'holdBonus', 'cpsMul']), bAversion: 8, cFreqMul: 0.8 }
+  },
+  {
+    id: 'S17', name: '報酬蒐集型',
+    // 報酬レベルと戦利品の実入りを追う堅実ハンター: 報酬Lvと討伐報酬、運任せのおまけドロップを好む。
+    tapRate: 5, goldenTake: 1,
+    pickPolicy: sim => 'hunt',
+    buy: standardBuy(0.30, 0.30),
+    pickReward: pickRewardAffinityAware(['huntingCore', 'monsterDamage', 'beastHeatFerment', 'monsterRate', 'goldenAmount']),
+    shouldPrestige: prestigeWhen(1200, 1.1),
+    skillOrder: skillOrderByBranch(['core', 'monster', 'reward', 'economy', 'auto', 'research', 'click', 'golden', 'upgrade', 'start', 'master']),
+    eq2Taste: { fav: new Set(['rewardLvAdd', 'killValMul', 'dropLuck']), bAversion: 5, cFreqMul: 1.2 }
   }
 ];
 
