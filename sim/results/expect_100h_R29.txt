@@ -32,3 +32,4 @@
   OK rw:brandHunt            S2 中央値比=1000000000.000 (n=4)
   OK rw:deepPursuit          S15 中央値比=1000000000.000 (n=2)
   OK rw:chainPrep            S15 中央値比=1000000000.000 (n=8)
+  OK rw:huntFocus            S15 中央値比=1000000000.000 (n=8)
