@@ -86,7 +86,7 @@ module.exports = {
     rateKillBonus: 0.6, rateKillHalf: 2, // 0.35→0.5(2026-07-10 novelty導入で③monsterRateの中央値が1.1を割れ=専用の討伐手数ボーナスで回復)
     satKps: 2.0, // 討伐頻度の飽和半価点(2026-07-10): kill項の1体価値逓減。高テンポ期の討伐56-63%独走を[30,52]帯へ(balanced序盤0.02-0.05体/秒はほぼ線形)
     killValueSec: 7, // 8→7(2026-07-12 ②改2: huntのlift3.05-3.09が帯上限3.00超過。直送絞りでは動かず本体=討伐報酬項を微減。序盤の役割はpeddlerFrac0.06が引き継ぎ済み) // 討伐1体の価値=生産◯秒ぶん(第12次R3・params駆動化)。7→8: ㉘hunt序盤(直送ゲート前)run8/20が討31-32%で合格化・balanced+1・click②改+2・bake影響なし(100h実測)。9/10はhunt+3〜4だがbalancedの打が7-9%に潰れ(−1〜2)・hunt後半②改−2=不採用
-    killValMul: { balanced: 7.5, hunt: 6.0, default: 1 }, // 方針係数(2026-07-14 ㉘balanced中盤討3-6%対策) // hunt 1.5(2026-07-17 ⑫: hunt方針の討伐即時収入を主役らしく=1位周回の復元)
+    killValMul: { balanced: 6.5, hunt: 6.0, default: 1 }, // 方針係数(2026-07-14 ㉘balanced中盤討3-6%対策) // hunt 1.5(2026-07-17 ⑫: hunt方針の討伐即時収入を主役らしく=1位周回の復元)
     scarceBonus: 2, scarceHalf: 0.02 // 希少プレミアム(第12次R続き・2026-07-10採用): 低テンポ期ほど討伐1体の価値を増幅(1+bonus/(1+kps/half))。balanced序盤討3-9%→≥10%・hunt序盤討28→30%(100h実測: balanced25→35-36・hunt29→34)。half0.05はclick中盤の討を+5-8pt膨らませ打を圧迫=0.02でkps0.2+をほぼ等倍に
   },
 
@@ -169,7 +169,7 @@ module.exports = {
   // clickBonusLate 18→21(2026-07-12 ㉘click残り: run33/47 タップ22-23%の押し込み)
   // satMaxLate 800→1200・otherMul.balanced 9.0→8.0(2026-07-12 最終: click後半は21-25%境界のノイズフリップ
   // =マージン確保で28-31%へ。balanced中盤はタップ38%が討伐8-9%を圧迫=hunt 0.22と対で再配分)
-  tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5, clickBonus: 3, clickBonusLate: 24, satMax: 150, satMaxLate: 900, anchorGolden: 0.2, stallFrac: 0.05, otherMul: { golden: 0.6, balanced: 4.0, default: 1 }, otherMulLate: { balanced: 40 } }, // 掃引2(2026-07-17 ㉘): clickBonusLate24+satMaxLate900(click後半の打16-19%→25%へ)・balancedはアンカー4.0/投資時代otherMulLate10の時代分離(5.5一律はrun1-2打60%暴走で撤回) // 新経済向け再スケール(2026-07-14 掃引r2)
+  tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5, clickBonus: 3, clickBonusLate: 45, satMax: 150, satMaxLate: 900, anchorGolden: 0.2, stallFrac: 0.05, otherMul: { golden: 0.6, balanced: 4.0, default: 1 }, otherMulLate: { balanced: 40 } }, // 掃引2(2026-07-17 ㉘): clickBonusLate24+satMaxLate900(click後半の打16-19%→25%へ)・balancedはアンカー4.0/投資時代otherMulLate10の時代分離(5.5一律はrun1-2打60%暴走で撤回) // 新経済向け再スケール(2026-07-14 掃引r2)
   // 銀行配当(直送・第12次J-3 腐り解消): bankClickDividend研究の独立収入。クリック方針で厚く効かせ①の各回minを満たす。
   // 全体cps倍率をやめ加算収入へ(他機能のlift希釈を回避)。所持数はlog10で床あり=早い周回でも効く。増加方向のみ。
   // countPow 1.6は棄却→1.8へ差し戻し(2026-07-12: ①bankの真の束縛はS2 run25-32(count300-800=ratio>1域)で
