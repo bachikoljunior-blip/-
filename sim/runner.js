@@ -1131,6 +1131,18 @@ if (mode === 'baseline') {
       const on = G.replayRun(s, sim.snapshots[r.idx], { hours: H, noNewEquip: true, forceEquip: { [it.cat]: it.id } }, r.duration);
       if (on && on.runCookies > 0 && Number.isFinite(on.runCookies)) ratios.push(on.runCookies / base);
     }
+    // 第二フォールバック(2026-07-18 R29c): 同ティア現物周回が全て無効(引退尾部Infinity等)なら
+    // 最寄りティア周回への両側強制A/Bで測り直す(初回フォールバックと同処方)。
+    if (!ratios.length && !forced) {
+      const sorted = fulls.slice().sort((a, b) => Math.abs(tierOfRun(a) - it.tier) - Math.abs(tierOfRun(b) - it.tier));
+      for (const r of sorted) {
+        if (ratios.length >= want) break;
+        const base = forcedBase(s, sim, r, it.cat, refId);
+        if (!base) continue;
+        const on = G.replayRun(s, sim.snapshots[r.idx], { hours: H, noNewEquip: true, forceEquip: { [it.cat]: it.id } }, r.duration);
+        if (on && on.runCookies > 0 && Number.isFinite(on.runCookies)) ratios.push(on.runCookies / base);
+      }
+    }
     if (!ratios.length) { na++; ngRows.push(`  判定不能(有効ratioなし) ${it.id} ${s.id} elig=${elig.length}`); continue; }
     const pass = isMat(it) ? (medianOf(ratios) >= 0.5) : ratios.every(x => x >= 0.5);
     if (pass) ok++;
