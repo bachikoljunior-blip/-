@@ -86,7 +86,7 @@ module.exports = {
     rateKillBonus: 0.6, rateKillHalf: 2, // 0.35→0.5(2026-07-10 novelty導入で③monsterRateの中央値が1.1を割れ=専用の討伐手数ボーナスで回復)
     satKps: 2.0, // 討伐頻度の飽和半価点(2026-07-10): kill項の1体価値逓減。高テンポ期の討伐56-63%独走を[30,52]帯へ(balanced序盤0.02-0.05体/秒はほぼ線形)
     killValueSec: 7, // 8→7(2026-07-12 ②改2: huntのlift3.05-3.09が帯上限3.00超過。直送絞りでは動かず本体=討伐報酬項を微減。序盤の役割はpeddlerFrac0.06が引き継ぎ済み) // 討伐1体の価値=生産◯秒ぶん(第12次R3・params駆動化)。7→8: ㉘hunt序盤(直送ゲート前)run8/20が討31-32%で合格化・balanced+1・click②改+2・bake影響なし(100h実測)。9/10はhunt+3〜4だがbalancedの打が7-9%に潰れ(−1〜2)・hunt後半②改−2=不採用
-    killValMul: { balanced: 6.5, hunt: 6.0, default: 1 }, // 方針係数(2026-07-14 ㉘balanced中盤討3-6%対策) // hunt 1.5(2026-07-17 ⑫: hunt方針の討伐即時収入を主役らしく=1位周回の復元)
+    killValMul: { balanced: 7.2, hunt: 6.0, default: 1 }, // balanced 6.5→7.2(2026-07-18 R25 ㉘balanced run2討伐9.6%→10.2%。7.5は⑫click1位強奪で不可の前科=7.2は要⑫検証) // 方針係数(2026-07-14 ㉘balanced中盤討3-6%対策) // hunt 1.5(2026-07-17 ⑫: hunt方針の討伐即時収入を主役らしく=1位周回の復元)
     scarceBonus: 2, scarceHalf: 0.02 // 希少プレミアム(第12次R続き・2026-07-10採用): 低テンポ期ほど討伐1体の価値を増幅(1+bonus/(1+kps/half))。balanced序盤討3-9%→≥10%・hunt序盤討28→30%(100h実測: balanced25→35-36・hunt29→34)。half0.05はclick中盤の討を+5-8pt膨らませ打を圧迫=0.02でkps0.2+をほぼ等倍に
   },
 
