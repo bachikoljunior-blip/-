@@ -1118,7 +1118,7 @@ if (mode === 'baseline') {
       const sorted = fulls.slice().sort((a, b) => Math.abs(tierOfRun(a) - it.tier) - Math.abs(tierOfRun(b) - it.tier));
       elig = sorted;
     }
-    if (!elig.length) { na++; continue; }
+    if (!elig.length) { na++; ngRows.push(`  判定不能(適格周回なし) ${it.id} ${s.id}`); continue; }
     // 判定不能ゼロ化v2(2026-07-18 R29): 固定スライスだと先頭サンプルの再生が全て無効(引退尾部Infinity等)の
     // 場合に判定不能へ落ちる=有効ratioが目標数に達するまで適格周回を走査する。
     const want = isMat(it) ? 8 : 3;
@@ -1131,7 +1131,7 @@ if (mode === 'baseline') {
       const on = G.replayRun(s, sim.snapshots[r.idx], { hours: H, noNewEquip: true, forceEquip: { [it.cat]: it.id } }, r.duration);
       if (on && on.runCookies > 0 && Number.isFinite(on.runCookies)) ratios.push(on.runCookies / base);
     }
-    if (!ratios.length) { na++; continue; }
+    if (!ratios.length) { na++; ngRows.push(`  判定不能(有効ratioなし) ${it.id} ${s.id} elig=${elig.length}`); continue; }
     const pass = isMat(it) ? (medianOf(ratios) >= 0.5) : ratios.every(x => x >= 0.5);
     if (pass) ok++;
     else { ng++; ngRows.push(`  NG ${it.id.padEnd(20)} ${s.id.padEnd(4)}${forced ? ' 強制A/B' : ''} ratios=[${ratios.map(x => x.toFixed(2)).join(',')}]${isMat(it) ? ' 素材系=中央値' : ''}`); }
