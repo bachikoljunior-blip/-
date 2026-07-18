@@ -1609,7 +1609,8 @@ function computeProd(sim) {
   }
   if (resActive(sim, 'blackHoleCompression')) {
     globalRes *= R.bhGlobal;
-    if (sim.t < (r.bhBoostUntil || 0)) globalRes *= r.bhBoostMult || 1; // 段階2: 圧縮チャージ発動中
+    // 段階2の圧縮チャージは earn() 側で総収入に適用(2026-07-18 R27: 旧・基礎生産のみだと後半の
+    // 直送経済(アンカー=金相場)にブーストが流れず⑬の枝分かれ比が1.000に潰れる=実測)
   }
   if (resActive(sim, 'antimatterRecipe')) {
     const anti = r.upgrades.antimatterOven || 0;
@@ -2695,6 +2696,10 @@ function visibleUpgrades(sim) {
 // 有限性の判定は「転生する周回」のみを対象とする(転生周回の最大は ~e155 で十分収まる)。
 function earn(sim, amount) {
   if (!(amount > 0)) return 0;
+  // 圧縮チャージ(重力圧縮 段2)発動中は総収入ブースト(2026-07-18 R27: 時空圧縮=全ての実入りが増える。
+  // 基礎生産のみだと直送経済で測定不能=⑬圧縮チャージ1.000の正体だった)
+  const r0 = sim.run;
+  if (r0 && sim.t < (r0.bhBoostUntil || 0)) amount *= r0.bhBoostMult || 1;
   sim.run.cookies += amount;
   sim.run.runCookies += amount;
   sim.totalCookies += amount;

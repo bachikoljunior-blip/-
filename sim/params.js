@@ -432,7 +432,7 @@ module.exports = {
     moonMarginDiv: 10, moonResCount: 0.05,
     foldKillCoef: 0.002, foldStageCoef: 0.001,
     galaxyBonusCoef: 0.05, galaxySat: 120, galaxyStageCoef: 0.0008,
-    bhChargeFull: 1200, bhBoostCoef: 1.8, bhBoostDur: 120, bhBoostStageCoef: 0.002, // ⑬圧縮チャージ再係留2回目(2026-07-14)
+    bhChargeFull: 1200, bhBoostCoef: 0.3, bhBoostDur: 120, bhBoostStageCoef: 0.002, // ⑬圧縮チャージ再係留2回目(2026-07-14)
     bhCompStageCoef: 0.001,
     waveAmpBase: 0.45, waveAmpPerRes: 0.05, wavePeriod: 90, waveStageCoef: 0.001,
     antiStageCoef: 0.0008, antiPrestigeCoef: 0.03
