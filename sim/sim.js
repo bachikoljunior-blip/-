@@ -874,6 +874,7 @@ const EQ2_FAV = {
   hunt: new Set(['dmgMul', 'killValMul', 'rewardLvAdd', 'stayMul', 'spawnMul', 'allMul', 'oreAdd'])
 };
 const EQ2_CONDFREQ = { goldenBoost: 0.15, monster: 0.4, boss: 0.06, quotaHold: 0.8, deep: 0.3, buyUp: 0.12, buyRes: 0.10, runStart: 0.12 };
+const EQ2_DOWN_W = { dmgMul: 3 }; // B代償の複利重み(2026-07-18 R27): 層進行ステータスの下げは線形評価だと過小(実被害は複利)
 // 装備の好み(R17 2026-07-17 ユーザー指示「プレイ方針を(シミュ条件を考慮せず)追加」):
 // 戦略ごとの装備選好。fav=価値を置くステータス集合 / bAversion=B型の得意ステータス代償への嫌悪(既定6・
 // リスク愛好家は低い/堅実家は高い) / cFreqMul=C型状況頻度への楽観(既定1・状況を使いこなす人は高い)。
@@ -905,11 +906,13 @@ function equip2Score(sim, it) {
   for (let i = 0; i < u.length; i += 2) s += (EQ2_UNIT[u[i]] || 0.3) * u[i + 1] * scale * equip2Rel(sim, pol, u[i]);
   // B型の下げ: プレイヤーが価値を置くステータスへの下げは重く罰する(=得意分野を削るB装備を選ばない=lift(a)を守る)。
   // 嫌悪係数はbAversion(既定6)・使わないステータスへの下げ×0.3(ほぼ無害)。
+  // EQ2_DOWN_W(2026-07-18 R27): 層進行に効くステータス(dmgMul)の代償は線形でなく複利で痛い
+  // (攻撃減→層遅れ→全収入沈下。S11のarmorTop_t2_v6束=実測0.408の正体)=代償側だけ追加重み。
   if (def.m === 'B' && def.down) for (let i = 0; i < def.down.length; i += 2) {
     const st = def.down[i];
     const favSet = (taste && taste.fav) || EQ2_FAV[pol];
     const fav = favSet && favSet.has(st);
-    s -= (EQ2_UNIT[st] || 0.3) * (1 - def.down[i + 1]) * (fav ? ((taste && taste.bAversion != null) ? taste.bAversion : 6) : (favSet ? 0.3 : 4)); // fav無し方針(balanced)は一様×4(2026-07-17: 何でも使う=何の代償も痛い。kvM経済でkillVal×0.9の初装着束比0.348の毒を弾く)
+    s -= (EQ2_UNIT[st] || 0.3) * (EQ2_DOWN_W[st] || 1) * (1 - def.down[i + 1]) * (fav ? ((taste && taste.bAversion != null) ? taste.bAversion : 6) : (favSet ? 0.3 : 4)); // fav無し方針(balanced)は一様×4(2026-07-17: 何でも使う=何の代償も痛い。kvM経済でkillVal×0.9の初装着束比0.348の毒を弾く)
   }
   if (def.m === 'C') s *= Math.min(1, (EQ2_CONDFREQ[def.cond] || 0.2) * ((taste && taste.cFreqMul) || 1));
   it._scKey = key; it._sc = s;
