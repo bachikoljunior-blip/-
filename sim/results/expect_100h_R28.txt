@@ -60,3 +60,4 @@
   OK stage:antimatterRecipe:2     S5 min=1.27
   OK stage:portalGlobalFold:3     S7 min=1.35
 ⑨ 段階whole軸(短い枝分かれ比べ・同一状態から1周回ぶん・総クッキー比の中央値 ≥1.05・利息/余熱)
+  OK stage:bankClickDividend:2    S11 中央値比=770671.840 (n=11)
