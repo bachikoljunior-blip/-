@@ -10,3 +10,28 @@ sim S9 ノルマ死守型 done (12891ms)
 sim S10 リスク愛好型 done (15794ms)
 sim S11 状況殺法型 done (16425ms)
 sim S12 職人型 done (14695ms)
+sim S13 堅実割引型 done (14373ms)
+sim S14 会心一点型 done (15515ms)
+sim S15 守りの砦型 done (14398ms)
+sim S17 報酬蒐集型 done (12228ms)
+
+S1: ⑧ 未達→転生 10/10 全周回OK
+S2: ⑧ 未達→転生 10/10 全周回OK
+S3: ⑧ 未達→転生 8/8 全周回OK
+S4: ⑧ 未達→転生 10/10 全周回OK
+S5: ⑧ 未達→転生 9/9 全周回OK
+S6: ⑧ 未達→転生 9/9 全周回OK
+S7: ⑧ 未達→転生 8/8 全周回OK
+S8: ⑧ 未達→転生 12/12 全周回OK
+S9: ⑧ 未達→転生 7/7 全周回OK
+S10: ⑧ 未達→転生 10/10 全周回OK
+S11: ⑧ 未達→転生 10/10 全周回OK
+S12: ⑧ 未達→転生 11/11 全周回OK
+S13: ⑧ 未達→転生 11/11 全周回OK
+S14: ⑧ 未達→転生 11/11 全周回OK
+S15: ⑧ 未達→転生 11/11 全周回OK
+S17: ⑧ 未達→転生 11/11 全周回OK
+
+⑫ 文脈依存性
+ 設備(最効率の最頻): S1=oven S2=oven S3=oven S4=oven S5=oven S6=oven S7=oven S8=oven S9=oven S10=oven S11=oven S12=oven S13=oven S14=oven S15=oven S17=oven
+ 報酬(ピック1位カテゴリ): S1=hunt S2=hunt S3=golden S4=hunt S5=hunt S6=golden S7=hunt S8=hunt S9=hunt S10=golden S11=hunt S12=hunt S13=golden S14=hunt S15=hunt S17=hunt
