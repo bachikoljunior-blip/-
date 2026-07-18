@@ -1054,6 +1054,64 @@ if (mode === 'baseline') {
     // (c) 毎周回全カテゴリ作成 = 廃止(2026-07-15 ユーザー指示「装備毎週回全種条件は廃止」)。
     // カバレッジ(b)は計測窓(1000h)内で達成できていればよい(同ユーザー指示「その時間内で達成できてればいい」)。
   }
+} else if (mode === 'eqswap') {
+  // 装備(b)新定義(R19 2026-07-18 ユーザー指示「プレイ方針ごとに得意装備割り振って、周回ごとのシミュレーションを
+  // 何回かやり直して同じティアの別装備でやり直して、全部50%以上行けばいい。素材は取得後全周回で中央値50%以上」):
+  // 各装備を最高選好スコアの方針へ割り振り(=得意装備)、担当方針の周回スナップショットから
+  // 「そのスロットの装着品が同ティア」の周回を選び、担当装備へ差し替えた凍結A/Bリプレイで比較。
+  // 差し替え周回/元周回 ≥ 0.5 で合格(通常装備=対象周回のうち最大3本すべて / 素材系=全対象周回の中央値)。
+  const H = hours;
+  const items = G.equip2Items();
+  const byId = {}; for (const it of items) byId[it.id] = it;
+  const assign = {};
+  for (const it of items) {
+    let best = -Infinity, bs = null;
+    for (const s of STRATEGIES) { const sc = G.eq2ScoreOf(s, it); if (sc > best) { best = sc; bs = s; } }
+    assign[it.id] = bs;
+  }
+  const MATCH = new Set(['dropMul', 'dropRateAdd', 'dropLuck', 'oreAdd']);
+  const FX = G.EQUIP2_FX_TABLE();
+  const isMat = it => { const def = FX[it.cat][it.variant - 1]; const u = def.up || []; if (!u.length) return false; for (let i = 0; i < u.length; i += 2) if (!MATCH.has(u[i])) return false; return true; };
+  const sims = {};
+  for (const s of STRATEGIES) sims[s.id] = G.simulate(s, { hours: H, snapshots: true });
+  const baseCache = {};
+  const frozenBase = (s, sim, r) => {
+    const key = s.id + ':' + r.idx;
+    if (!(key in baseCache)) {
+      const off = G.replayRun(s, sim.snapshots[r.idx], { hours: H, noNewEquip: true }, r.duration);
+      baseCache[key] = (off && off.runCookies > 0 && Number.isFinite(off.runCookies)) ? off.runCookies : null;
+    }
+    return baseCache[key];
+  };
+  let ok = 0, ng = 0, na = 0; const ngRows = [];
+  for (const it of items) {
+    const s = assign[it.id]; const sim = sims[s.id];
+    const elig = [];
+    for (const r of sim.runs) {
+      if (r.partial || !(r.duration > 0) || !sim.snapshots[r.idx]) continue;
+      const snap = sim.snapshots[r.idx];
+      const curId = snap.ws && snap.ws.eq2Equipped && snap.ws.eq2Equipped[it.cat];
+      if (!curId) continue;
+      const cur = byId[curId];
+      if (!cur || cur.tier !== it.tier) continue;
+      elig.push(r);
+    }
+    if (!elig.length) { na++; continue; }
+    const sample = isMat(it) ? elig : elig.slice(0, 3);
+    const ratios = [];
+    for (const r of sample) {
+      const base = frozenBase(s, sim, r);
+      if (!base) continue;
+      const on = G.replayRun(s, sim.snapshots[r.idx], { hours: H, noNewEquip: true, forceEquip: { [it.cat]: it.id } }, r.duration);
+      if (on && on.runCookies > 0 && Number.isFinite(on.runCookies)) ratios.push(on.runCookies / base);
+    }
+    if (!ratios.length) { na++; continue; }
+    const pass = isMat(it) ? (medianOf(ratios) >= 0.5) : ratios.every(x => x >= 0.5);
+    if (pass) ok++;
+    else { ng++; ngRows.push(`  NG ${it.id.padEnd(20)} ${s.id.padEnd(4)} ratios=[${ratios.map(x => x.toFixed(2)).join(',')}]${isMat(it) ? ' 素材系=中央値' : ''}`); }
+  }
+  console.log(`装備(b)新定義: 同ティア差し替え≥50%(担当方針・凍結A/B) 合格 ${ok} / NG ${ng} / 対象周回なし ${na} (全${items.length})`);
+  ngRows.slice(0, 60).forEach(x => console.log(x));
 } else if (mode === 'affinity') {
   // ㉔㉕㉖(第9次【仮】): モンスター種類×報酬相性
   // ㉔ 有効性: 「その回だけ相性を全部×1.0」との獲得効率比(幾何平均≥1.1)+各回minも表示

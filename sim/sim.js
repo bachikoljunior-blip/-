@@ -3615,5 +3615,7 @@ module.exports = {
   tryBuyResearchStage, researchStageCostOf, researchStageUnlocked,
   replayRun, takeSnapshot, bandY,
   equip2Items,
+  // 得意装備の割り振り用(R19 2026-07-18): 戦略の装備選好スコア(equip2Scoreと同式)を擬似simで計算
+  eq2ScoreOf: (strategy, item) => equip2Score({ strat: strategy, run: { policy: (strategy.pickPolicy ? strategy.pickPolicy(null) : 'balanced') } }, item),
   EQUIP2_FX_TABLE: () => EQUIP2_FX // 診断用(probe_chain.js: 装備(b)鎖の切断リンク検査)
 };
