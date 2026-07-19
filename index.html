@@ -6479,8 +6479,8 @@ const SKILL_NODES = [
   { id: "ensemble", name: "編成の心得", branchId: "core", cost: 3, x: 728, y: 547, icon: "❖", prereqs: ["core"], desc: "方針「標準」のとき、4つの稼ぎ方(設備・金・討伐・タップ)の収入がそろうほど全生産が上がる(最大 +15%)。", effects: [{ type: "unlockSystem", target: "ensemble" }] },
   { id: "monster_amp", name: "仕留めの一撃", branchId: "monster", cost: 20, x: 382, y: 959, icon: "◉", prereqs: ["monster_1"], desc: "モンスター最終ダメージ +60%。", effects: [{ type: "monsterDamageSkill", value: 0.6 }] },
   // 提案10/11(2026-07-11 承認): タップ/討伐の換金収入を安いスキルで先行開始(研究の段階2でフル。消えずに出続ける)
-  { id: "click_stall", name: "土産の屋台", branchId: "click", cost: 2, x: 1999, y: -144, icon: "◆", prereqs: ["click_amp"], desc: "タップで稼ぐほど毎秒クッキーが自動でもらえるようになる(強い指系の設備と到達層が多いほど多い。研究「指先の型」段階2で全開、それまでは5%)。", effects: [{ type: "unlockSystem", target: "tapStall" }] },
-  { id: "monster_peddler", name: "戦利品の行商", branchId: "monster", cost: 20, x: 343, y: 1156, icon: "◉", prereqs: ["monster_1"], desc: "モンスター討伐で得た報酬カード(討伐系)を多く持つほど毎秒クッキーが自動でもらえるようになる(到達層が多いほど多い。研究「異世界接続網」段階2で全開、それまでは6%)。", effects: [{ type: "unlockSystem", target: "huntPeddler" }] },
+  { id: "click_stall", name: "土産の屋台", branchId: "click", cost: 2, x: 1999, y: -144, icon: "◆", prereqs: ["click_amp"], desc: "屋台を開く。強い指系の設備と到達層に応じて毎秒クッキーを自動獲得(「指先の型」段階2で全開、まずは5%)。", effects: [{ type: "unlockSystem", target: "tapStall" }] },
+  { id: "monster_peddler", name: "戦利品の行商", branchId: "monster", cost: 20, x: 343, y: 1156, icon: "◉", prereqs: ["monster_1"], desc: "行商を開く。討伐系の報酬カードの所持数と到達層に応じて毎秒クッキーを自動獲得(「異世界接続網」段階2で全開、まずは6%)。", effects: [{ type: "unlockSystem", target: "huntPeddler" }] },
   { id: "auto_amp", name: "炉の熱気", branchId: "auto", cost: 35, x: 251, y: 2599, icon: "◇", prereqs: ["auto_1"], desc: "毎秒生産 +75%。", effects: [{ type: "cps", value: 0.75 }] },
   { id: "golden_2", name: "金粉回収", branchId: "golden", cost: 1550, x: 869, y: 773, icon: "✦", prereqs: ["golden_1"], desc: "金クッキー即時獲得量 +75%。", effects: [{ type: "goldenAmount", value: 0.75 }] },
   { id: "golden_3", name: "輝き増幅", branchId: "golden", cost: 550000, x: 1028, y: 858, icon: "✦", prereqs: ["golden_2"], desc: "金ブースト倍率 +2.1。", effects: [{ type: "goldenPower", value: 2.1 }] },
@@ -8140,7 +8140,7 @@ function policyBiasText(p) {
 const RUN_POLICIES = [
   { id: "balanced", name: "標準", desc: "補正なし。いつもの周回。", bias: "素材: 万能粉(任意素材の代替・必要数2倍換算)が討伐で手に入る唯一の方針" },
   { id: "click", name: "会心型", desc: "タップと会心を伸ばし、手動クリック寄りにする。", bias: "素材: 討伐数が伸びやすく、通常撃破の基本素材集めと相性が良い" },
-  { id: "bake", name: "焼成型", desc: "毎秒生産とオーブンを伸ばし、焼き加減が「ちょうどいい」に寄りやすくなる。", bias: "素材: 余裕率2倍撃破の発酵系素材と相性が良い" },
+  { id: "bake", name: "焼成型", desc: "毎秒生産とオーブン研究を伸ばす。", bias: "素材: 余裕率2倍撃破の発酵系素材と相性が良い" },
   { id: "hunt", name: "狩猟型", desc: "モンスター火力と滞在時間を伸ばす。", bias: "素材: オーバーキル撃破(残HP5倍ダメージ)のレア素材と相性が良い" },
   { id: "golden", name: "金色型", desc: "金クッキーの回転とブーストを伸ばす。", bias: "素材: 金ブースト中撃破の黄金粉(唯一の入手経路)と相性が良い" }
 ];
@@ -13502,14 +13502,12 @@ function codexPolicyEffectRows(id) {
   if (id === "bake") {
     return `<div>・毎秒生産倍率 <b>+0.12</b>（毎秒倍率 = 1 + スキル + 全体スキル + <b>0.12</b>）</div>`
       + `<div>・オーブン研究倍率 <b>×1.10</b>・設備直送(量産品の売上)が満額で稼働(他方針は減額)</div>`
-      + `<div>・焼き加減が「ちょうどいい」に寄りやすい(+0.85)</div>`
       ;
   }
   if (id === "hunt") {
     return `<div>・モンスター最終ダメージ <b>+0.14</b>（ダメージ倍率へ加算）</div>`
       + `<div>・モンスター滞在時間 約<b>+10%</b>（滞在 = 基準 × e^(スキル + <b>0.10</b> + 報酬)）</div>`
       + `<div>・モンスター出現間隔 <b>−0.10</b>（出現が速くなる）・討伐直送(行商)が満額で稼働(他方針は減額)</div>`
-      + `<div>・焼き加減が「カリカリ」に寄りやすい(+0.85)</div>`
       ;
   }
   if (id === "golden") {
@@ -13517,7 +13515,7 @@ function codexPolicyEffectRows(id) {
       + `<div>・金ブースト持続の伸び幅 <b>+900</b>（基準9秒〜最大約35秒への育ちが速くなる）</div>`
       + `<div>・金クッキー獲得量倍率 <b>+0.10</b></div>`
       + `<div>・金クッキー出現間隔 <b>−0.12</b>（出現が速くなる）・金直送(香料の売上)が満額で稼働(他方針は減額)</div>`
-      + `<div>・焼き加減が「しっとり」に寄りやすい(+0.85)</div>`
+      
       + `<div>・香料棚(スパイス調合)の倍率 <b>×1.08</b>(常時)</div>`
       ;
   }
