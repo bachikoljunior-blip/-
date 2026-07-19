@@ -169,7 +169,7 @@ module.exports = {
   // clickBonusLate 18→21(2026-07-12 ㉘click残り: run33/47 タップ22-23%の押し込み)
   // satMaxLate 800→1200・otherMul.balanced 9.0→8.0(2026-07-12 最終: click後半は21-25%境界のノイズフリップ
   // =マージン確保で28-31%へ。balanced中盤はタップ38%が討伐8-9%を圧迫=hunt 0.22と対で再配分)
-  tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5, clickBonus: 3, clickBonusLate: 55, satMax: 150, satMaxLate: 2800, anchorGolden: 0.2, stallFrac: 0.05, otherMul: { golden: 0.6, balanced: 4.0, default: 1 }, otherMulLate: { balanced: 40 } }, // satMaxLate 900→2400(2026-07-18 R24 ㉘click run6-9: 真の律速は係数でなく飽和上限と内訳診断(_incD)で特定。2400で4周回とも27前後・2000/3000は経済フィードバックで逆戻り=スイートスポット) // 掃引2(2026-07-17 ㉘): clickBonusLate24+satMaxLate900(click後半の打16-19%→25%へ)・balancedはアンカー4.0/投資時代otherMulLate10の時代分離(5.5一律はrun1-2打60%暴走で撤回) // 新経済向け再スケール(2026-07-14 掃引r2)
+  tapDirect:    { coef: 0.01, stagePow: 0.5, countPow: 2, ref: 20,  startStage: 5, clickBonus: 3, clickBonusLate: 65, satMax: 150, satMaxLate: 2800, anchorGolden: 0.2, stallFrac: 0.05, otherMul: { golden: 0.6, balanced: 4.0, default: 1 }, otherMulLate: { balanced: 40 } }, // satMaxLate 900→2400(2026-07-18 R24 ㉘click run6-9: 真の律速は係数でなく飽和上限と内訳診断(_incD)で特定。2400で4周回とも27前後・2000/3000は経済フィードバックで逆戻り=スイートスポット) // 掃引2(2026-07-17 ㉘): clickBonusLate24+satMaxLate900(click後半の打16-19%→25%へ)・balancedはアンカー4.0/投資時代otherMulLate10の時代分離(5.5一律はrun1-2打60%暴走で撤回) // 新経済向け再スケール(2026-07-14 掃引r2)
   // 銀行配当(直送・第12次J-3 腐り解消): bankClickDividend研究の独立収入。クリック方針で厚く効かせ①の各回minを満たす。
   // 全体cps倍率をやめ加算収入へ(他機能のlift希釈を回避)。所持数はlog10で床あり=早い周回でも効く。増加方向のみ。
   // countPow 1.6は棄却→1.8へ差し戻し(2026-07-12: ①bankの真の束縛はS2 run25-32(count300-800=ratio>1域)で

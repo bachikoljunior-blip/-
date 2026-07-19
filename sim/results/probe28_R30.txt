@@ -1,1 +1,5 @@
 --- S2 (cBL, satL) ペアグリッド (run7/8含む後半全部≥25%狙い) ---
+cBL=55 satL=2800: run5=35.2% run6=30.7% run7=26.8% run8=23.7% run9=27.3%
+cBL=60 satL=2800: run5=39.2% run6=30.4% run7=25.4% run8=24.8% run9=26.0%
+cBL=65 satL=2800: run5=40.9% run6=28.2% run7=28.6% run8=25.8% run9=26.8%
+cBL=60 satL=3200: run5=37.4% run6=28.3% run7=26.1% run8=25.0% run9=27.5%
