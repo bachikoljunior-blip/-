@@ -6517,7 +6517,7 @@ const SKILL_NODES = [
   { id: "economy_analysis", name: "経済分析", branchId: "economy", cost: 2200, x: 502, y: 2514, icon: "⬡", prereqs: ["economy_2"], desc: "強化カードに、価格あたりの増加量を追加表示する。", effects: [{ type: "unlockSystem", target: "economyAnalysis" }] },
   { id: "mastery_low", name: "職人の手", branchId: "economy", cost: 10500, x: 644, y: 2436, icon: "⚒", prereqs: ["economy_2"], desc: "下位設備(強い指〜異世界炉)に熟練：同じ設備を買うほど1台あたりの生産が+0.3%ずつ複利で伸びる。", effects: [{ type: "unlockSystem", target: "masteryLow" }] },
   { id: "mastery_high", name: "工程の極み", branchId: "economy", cost: 150000000, x: 754, y: 2126, icon: "⚒", prereqs: ["mastery_low", "upgrade_galaxy"], desc: "上位設備(月面ベーカリー〜反物質オーブン)にも熟練：同じ設備を買うほど1台あたりの生産が+0.5%ずつ複利で伸びる。", effects: [{ type: "unlockSystem", target: "masteryHigh" }] },
-  { id: "order_board", name: "注文ボード", branchId: "economy", cost: 770, x: 616, y: 2200, icon: "⬡", prereqs: ["economy_analysis"], desc: "一覧タブに注文ボードを追加。要求量を納めると報酬倍率が得られる短期目標を表示(進むほど要求量・報酬とも増える)。", effects: [{ type: "unlockSystem", target: "orderBoard" }] },
+  { id: "order_board", name: "注文ボード", branchId: "economy", cost: 770, x: 616, y: 2200, icon: "⬡", prereqs: ["economy_analysis"], desc: "注文タブを追加。制限時間内に要求を納めると報酬(獲得+50%・素材補充・毎秒×2)が得られる短期依頼が届く。", effects: [{ type: "unlockSystem", target: "orderBoard" }] },
 
 { id: "upgrade_moon", name: "月面許可", branchId: "upgrade", cost: 63500, x: 731, y: 2615, icon: "◌", prereqs: ["economy_2"], desc: "月面ベーカリーを解放。", effects: [{ type: "unlockUpgrade", target: "moonBakery" }] },
   { id: "upgrade_time", name: "時空免許", branchId: "upgrade", cost: 865000, x: 900, y: 2355, icon: "◌", prereqs: ["upgrade_moon", "research_remodel"], desc: "時空オーブンを解放。", effects: [{ type: "unlockUpgrade", target: "timeOven" }] },
@@ -6621,12 +6621,12 @@ const MATERIALS = [
 const DISHES = [
   { id: "butterCookie", name: "バタークッキー生地", cost: { butter: 5, flour: 3 }, desc: "全生産アップ(最高到達層が深いほど強い)" },
   { id: "chocoFondant", name: "濃厚ショコラ", cost: { cacao: 4, butter: 3 }, desc: "タップに乗る毎秒生産の割合が2倍" },
-  { id: "mintIce", name: "ミントアイスサンド", cost: { mint: 6, frostSugar: 3 }, desc: "金クッキー出現間隔 ×0.75" },
-  { id: "hunterStew", name: "狩人のシチュー", cost: { ironShard: 2, spice: 4 }, desc: "モンスター出現間隔 ×0.75、モンスターダメージ ×1.5" },
-  { id: "frostCake", name: "霜降りケーキ", cost: { frostSugar: 5, silentCore: 1 }, desc: "ノルマの進行が遅くなり(-55%)、モンスターを出すためのノルマを稼ぎやすくなる" },
-  { id: "stardustParfait", name: "星屑パフェ", cost: { stardust: 8, cometShard: 1 }, desc: "効果中に購入した設備はその周回中、生産 ×1.25" },
+  { id: "mintIce", name: "ミントアイスサンド", cost: { mint: 6, frostSugar: 3 }, desc: "金クッキーが出やすくなる(式は図鑑)" },
+  { id: "hunterStew", name: "狩人のシチュー", cost: { ironShard: 2, spice: 4 }, desc: "モンスターが出やすくなり、与えるダメージも上がる(式は図鑑)" },
+  { id: "frostCake", name: "霜降りケーキ", cost: { frostSugar: 5, silentCore: 1 }, desc: "ノルマの進行がゆっくりになり、余裕を持って稼げる(式は図鑑)" },
+  { id: "stardustParfait", name: "星屑パフェ", cost: { stardust: 8, cometShard: 1 }, desc: "効果中に購入した設備がその周回中ずっと強くなる(式は図鑑)" },
   // v2: エンドコンテンツ料理。レシピはS6(深層領域)到達で開示
-  { id: "voidTart", name: "虚空タルト", cost: { voidSugar: 10, cometShard: 2 }, desc: "素材ドロップ ×2、モンスター出現間隔 ×0.7" }
+  { id: "voidTart", name: "虚空タルト", cost: { voidSugar: 10, cometShard: 2 }, desc: "素材が多く落ち、モンスターも出やすくなる(式は図鑑)" }
 ];
 const DISH_DURATION_MS = 600000;
 const MAX_ACTIVE_DISHES = 3;
@@ -8139,7 +8139,7 @@ function policyBiasText(p) {
 // v4 §18: 素材は「どう倒したか」の条件ドロップ制。方針は倒し方を通じて間接的に素材を偏らせる
 const RUN_POLICIES = [
   { id: "balanced", name: "標準", desc: "補正なし。いつもの周回。", bias: "素材: 万能粉(任意素材の代替・必要数2倍換算)が討伐で手に入る唯一の方針" },
-  { id: "click", name: "会心型", desc: "タップと会心を伸ばし、手動クリック寄りにする。", bias: "素材: 討伐数が伸びやすく、とどめ+1の共通素材集めと相性が良い" },
+  { id: "click", name: "会心型", desc: "タップと会心を伸ばし、手動クリック寄りにする。", bias: "素材: 討伐数が伸びやすく、通常撃破の基本素材集めと相性が良い" },
   { id: "bake", name: "焼成型", desc: "毎秒生産とオーブンを伸ばし、焼き加減が「ちょうどいい」に寄りやすくなる。", bias: "素材: 余裕率2倍撃破の発酵系素材と相性が良い" },
   { id: "hunt", name: "狩猟型", desc: "モンスター火力と滞在時間を伸ばす。", bias: "素材: オーバーキル撃破(残HP5倍ダメージ)のレア素材と相性が良い" },
   { id: "golden", name: "金色型", desc: "金クッキーの回転とブーストを伸ばす。", bias: "素材: 金ブースト中撃破の黄金粉(唯一の入手経路)と相性が良い" }
@@ -8415,7 +8415,7 @@ function orderScale() {
 // 転生コスト(2026-07-11 ユーザー仕様・確定形): 完成版の測定(基準方針100hシム)で「第n回が転生した時点の
 // 毎秒生産×500」を10のべき乗に切り捨てた固定テーブル(全プレイヤー共通)。sim/prestige_costs.json と同期。
 // テーブルを超えた周回は末尾の桁ステップで自動延長。初回は1億(2026-07-11)。
-const PRESTIGE_COST_TABLE = [100000000, 1000000000, 1000000000000, 100000000000000, 10000000000000000, 10000000000000000000, 1e+25, 1e+30, 1e+32, 1.0000000000000001e+34, 9.999999999999999e+35, 1.0000000000000001e+39, 1e+45, 1e+48, 1e+53, 1e+55, 1.0000000000000001e+58, 1.0000000000000001e+61, 1e+64, 1e+66, 1e+71, 1e+77, 1e+84, 1e+90, 1e+97, 1e+101, 1e+108, 1e+113, 1e+119, 1e+121, 1e+124, 1.0000000000000001e+126, 1e+129, 1.0000000000000001e+126, 1e+127, 1e+128, 1e+131, 1e+133, 1e+135, 1e+138, 1e+140, 9.999999999999999e+141, 1e+148, 1e+151, 1e+153, 1e+156, 1e+160, 1e+160, 1e+163, 1.0000000000000001e+166, 1.0000000000000001e+169, 1e+172, 1e+175, 1e+178, 1e+181, 1e+184, 1.0000000000000001e+187, 1e+190, 1e+193, 1e+196, 1e+199, 1e+202, 1e+205, 1e+208, 1e+211, 1e+214, 1e+217, 1e+220];
+const PRESTIGE_COST_TABLE = [100000000, 1000000000, 1000000000000, 100000000000000, 10000000000000000, 10000000000000000000, 1e+25, 1e+30, 1e+32, 1.0000000000000001e+34, 9.999999999999999e+35, 1.0000000000000001e+39, 1e+45, 1e+48, 1e+53, 1e+55, 1.0000000000000001e+58, 1.0000000000000001e+61, 1e+64, 1e+66, 1e+71, 1e+77, 1e+84, 1e+90, 1e+97, 1e+101, 1e+108, 1e+113, 1e+119, 1e+121, 1e+124, 1.0000000000000001e+126, 1.0000000000000001e+126, 1.0000000000000001e+126, 1e+127, 1e+128, 1e+131, 1e+133, 1e+135, 1e+138, 1e+140, 9.999999999999999e+141, 1e+148, 1e+151, 1e+153, 1e+156, 1e+160, 1e+160, 1e+163, 1.0000000000000001e+166, 1.0000000000000001e+169, 1e+172, 1e+175, 1e+178, 1e+181, 1e+184, 1.0000000000000001e+187, 1e+190, 1e+193, 1e+196, 1e+199, 1e+202, 1e+205, 1e+208, 1e+211, 1e+214, 1e+217, 1e+220];
 function prestigeCookieCost() {
   const runs = Math.max(0, Math.floor(Number(state.prestigeRuns) || 0));
   if (PRESTIGE_COST_TABLE[runs] != null) return PRESTIGE_COST_TABLE[runs]; // 初回もテーブル(10のべき乗・調整対象)
@@ -8613,7 +8613,7 @@ function orderProgressRatio(order) {
 function orderRewardText(order) {
   const def = orderDef(order.id);
   if (def.id === "ovenOrder" || def.id === "clickOrder") return `追い焼き: 300秒間 獲得+50%を上乗せ`;
-  if (def.id === "monsterOrder" || def.id === "spiceOrder") return workshopTabUnlocked() ? "作りたい装備の不足素材を補充(不足分×1.25・最大4種)" : `追い焼き: 300秒間 獲得+50%を上乗せ`;
+  if (def.id === "monsterOrder" || def.id === "spiceOrder") return workshopTabUnlocked() ? "工房の素材を補充(不足分×1.25・最大4種)" : `追い焼き: 300秒間 獲得+50%を上乗せ`;
   return "毎秒生産 x2(120秒)";
 }
 
@@ -9823,7 +9823,7 @@ function renderEquip2Tab() {
     </div>`;
   let body = "";
   if (sub === "equipped") {
-    body = `<div class="desc">装備合計: 全生産×${fmt(equip2Fx().allMul)} / タップ×${fmt(equip2Fx().clickMul)} / 毎秒×${fmt(equip2Fx().cpsMul)} / 討伐ダメ×${fmt(equip2Fx().dmgMul)}</div>` + EQUIP2_SLOTS.map(slot => {
+    body = `<div class="desc">装備合計: 全生産×${equip2Fx().allMul >= 100 ? fmt(equip2Fx().allMul) : (Math.round(equip2Fx().allMul * 100) / 100)} / タップ×${equip2Fx().clickMul >= 100 ? fmt(equip2Fx().clickMul) : (Math.round(equip2Fx().clickMul * 100) / 100)} / 毎秒×${equip2Fx().cpsMul >= 100 ? fmt(equip2Fx().cpsMul) : (Math.round(equip2Fx().cpsMul * 100) / 100)} / 討伐ダメ×${equip2Fx().dmgMul >= 100 ? fmt(equip2Fx().dmgMul) : (Math.round(equip2Fx().dmgMul * 100) / 100)}</div>` + EQUIP2_SLOTS.map(slot => {
       const id = state.eq2Equipped[slot];
       const it = id ? equip2ById(id) : null;
       const choosing = equip2ChoosingSlot === slot;
@@ -11000,6 +11000,8 @@ function equip2Items() {
           if (k[0] === "oreAdd" || k[0] === "rewardLvAdd") return EQUIP2_FX_LABEL[k[0]].replace("+n", "+" + fmtF(Math.floor(val) || val));
           if (k[0] === "critAdd") return "会心率+" + Math.round(Math.min(EQUIP2_FLATCAP.critAdd, val) * 100) + "%";
           if (k[0] === "upDisc" || k[0] === "resDisc") return EQUIP2_FX_LABEL[k[0]] + " " + Math.round(Math.min(0.5, val) * 100) + "%";
+          if (k[0] === "dropRateAdd") return "素材ドロップ率 +" + Math.round(val * 100) + "%";
+          if (k[0] === "dropLuck") return Math.round(val * 100) + "%で素材+1個";
           return EQUIP2_FX_LABEL[k[0]] + " ×" + fmtF(1 + val);
         };
         const ups = [];
@@ -11524,7 +11526,7 @@ function renderQuota() {
     </div>
     <div class="quotaGauge ${underTarget ? "quotaUnderTarget" : "quotaOverTarget"}" aria-label="モンスター生成ノルマ ${fmt(run)} / ${fmt(gaugeQuota)}">
       ${layerHtml}
-      <div class="quotaStageBadge" title="層の試練：層が深いほどノルマが重い">第<span class="quotaStageNumber">${stageDisplay.stage}</span>層${trialText}</div>
+      <div class="quotaStageBadge" title="現在のノルマ層">第<span class="quotaStageNumber">${stageDisplay.stage}</span>層${trialText}</div>
     </div>
   `;
 }
@@ -13255,7 +13257,7 @@ function codexGoldenHtml() {
     ? codexItem("金ブースト倍率(全生産×)",
         `<div>金ブーストの倍率。金クッキーを取ると約50%の確率で発動し、一定時間すべての生産が倍増する。</div>`
         + (analyzed
-          ? `<div>基準は追加 x2.1。報酬「金ブースト倍率アップ」・スキル・金色型の方針で上がる。</div>`
+          ? `<div>基準は追加 x2.1。報酬「金ブースト倍率アップ」・スキル・金色型の方針・装備(香料圧搾機や金ブースト系装備)・報酬の系統ボーナスで上がる。</div>`
             + `<div class="codexSub">現在：追加 x${goldenMultiplier().toFixed(2)}</div>`
           : lock),
         goldenIcon)
@@ -13336,18 +13338,17 @@ function codexWorkshopHtml() {
     });
   }
 
-  // 作成：装備の欄をすべて表示。作成前は伏せる
-  parts.push(`<div class="codexGroupLabel">作成(永続装備)</div>`);
-  EQUIPMENT.forEach(eq => {
-    const lv = equipLv(eq.id);
-    if (lv > 0) {
+  // 旧装備(作成手段は現行の工房装備に移行済み): 所持している場合のみ効果を表示する
+  const ownedOldEq = EQUIPMENT.filter(eq => equipLv(eq.id) > 0);
+  if (ownedOldEq.length) {
+    parts.push(`<div class="codexGroupLabel">永続装備(効果は継続)</div>`);
+    ownedOldEq.forEach(eq => {
+      const lv = equipLv(eq.id);
       const rule = EQUIP_FORMULA[eq.id];
       parts.push(codexItem(`${eq.name} Lv.${lv}`,
         `<div>現在効果：${eq.effect(lv)}</div>` + (rule ? `<div>式：${rule}</div>` : "")));
-    } else {
-      parts.push(codexHiddenItem());
-    }
-  });
+    });
+  }
 
   return parts.join("");
 }
@@ -13356,7 +13357,12 @@ function codexWorkshopHtml() {
 // 料理の細かい数値はカードに載せず、図鑑にだけ式として出す(2026-07-14)
 const DISH_FORMULA = {
   butterCookie: "全生産 ×(1 + 0.02×最高到達層)。",
-  chocoFondant: "クリックの生産連動係数 ×2(0.4%→0.8%)。"
+  chocoFondant: "クリックの生産連動係数 ×2(0.4%→0.8%)。",
+  mintIce: "金クッキー出現間隔 ×0.75。",
+  hunterStew: "モンスター出現間隔 ×0.75、モンスターダメージ ×1.5。",
+  frostCake: "ノルマの進行速度 −55%。",
+  stardustParfait: "効果中に購入した設備の生産 ×1.25(その周回中ずっと)。",
+  voidTart: "素材ドロップ ×2、モンスター出現間隔 ×0.7。"
 };
 
 const EQUIP_FORMULA = {
@@ -13379,7 +13385,7 @@ function codexOrderHtml() {
 
   const items = [];
   items.push(codexItem("注文の仕組み",
-    `<div>ノルマの進行に応じて短期目標(注文)が届く。制限時間内に達成すると報酬。同時に1件のみ。</div>`
+    `<div>一定間隔で短期目標(注文)が届く(間隔は転生を重ねると短縮)。制限時間内に達成すると報酬。同時に1件のみ。</div>`
     + `<div>制限時間は、プレイ時間が長くなるほど少しずつ伸びる。</div>`
     + `<div>次の注文までの間隔は、転生するほど短くなる。</div>`
     + `<div>要求量は、そのときの生産力や討伐ペースに合わせて決まる（放置では届かないが、動けば届く量）。</div>`
@@ -13389,13 +13395,13 @@ function codexOrderHtml() {
   // 報酬ごとの項目(その報酬を受け取るまで伏せる)
   items.push(codex.orderCookie
     ? codexItem("報酬：追い焼き(獲得+50%)",
-        `<div>300秒間、クッキーの獲得量が +50% になる。</div>`
+        `<div>300秒間、毎秒の自動獲得(生産・直送収入)に +50% を上乗せで受け取る。</div>`
         + `<div class="codexSub">対象の注文：追加焼成・手ごね依頼 など</div>`,
         orderIcon)
     : codexHiddenItem());
   items.push(codex.orderMaterial
     ? codexItem("報酬：素材の補充",
-        `<div>作りたい装備の不足素材を補充する(不足分×1.25・最大4種)。不足がなければ選択中ステージの基本素材を +5。</div>`
+        `<div>工房の素材を補充する(不足分×1.25・最大4種)。不足がなければ選択中ステージの基本素材を +5。</div>`
         + `<div class="codexSub">対象の注文：討伐依頼・香料仕入れ（工房の解放時）</div>`,
         orderIcon)
     : codexHiddenItem());
@@ -14512,7 +14518,7 @@ function renderPrestige() {
       <div class="infoRow">今回の総クッキー：${fmt(state.runCookies)}</div>
       <div class="infoRow">今回のノルマ維持記録：${fmtTime(state.quotaHoldSeconds || 0)} / ノルマ中討伐 ${fmt(state.quotaMonsterKills || 0)}体</div>
       <div class="infoRow">今回獲得できるPT：+${fmt(gain)}</div>
-      <div class="infoRow">転生で所持クッキー ${fmt(prestigeCost)} を消費(現在 ${fmt(state.cookies)})。必要量は周回ごとに上がります。</div>
+      <div class="infoRow">転生で所持クッキー ${fmt(prestigeCost)} を消費(現在 ${fmt(state.cookies)})。必要量は周回が進むほど上がっていきます。</div>
       <button id="prestigeBtn" class="item ${canPrestige ? "canBuy" : "locked"}">${canPrestige ? `転生する(${fmt(prestigeCost)}クッキー消費)` : (gain <= 0 ? "未獲得PTなし" : `クッキー${fmt(prestigeCost)}が必要`)}</button>
       <button id="resetBtn" class="item danger">完全リセット</button>
     </div>
