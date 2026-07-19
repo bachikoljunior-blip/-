@@ -10,7 +10,7 @@ const shares = (st) => {
   return r.runs.filter(x => !x.partial && x.measure && x.measure.income).map(x => ({ idx: x.idx, i: x.measure.income }));
 };
 console.log('--- S2 (cBL, satL) ペアグリッド (run7/8含む後半全部≥25%狙い) ---');
-for (const [cbl, satl] of [[50, 2400], [50, 2800], [55, 2800], [60, 2800], [55, 3200]]) {
+for (const [cbl, satl] of [[55, 2800], [60, 2800], [65, 2800], [60, 3200]]) {
   P.tapDirect.clickBonusLate = cbl; P.tapDirect.satMaxLate = satl;
   const rows = shares(S2);
   console.log(`cBL=${cbl} satL=${satl}: ` + rows.slice(-5).map(x => `run${x.idx}=${(x.i.tap * 100).toFixed(1)}%`).join(' '));
