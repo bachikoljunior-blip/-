@@ -1054,6 +1054,24 @@ if (mode === 'baseline') {
     // (c) 毎周回全カテゴリ作成 = 廃止(2026-07-15 ユーザー指示「装備毎週回全種条件は廃止」)。
     // カバレッジ(b)は計測窓(1000h)内で達成できていればよい(同ユーザー指示「その時間内で達成できてればいい」)。
   }
+} else if (mode === 'unlockgap') {
+  // ㉚ 解放間隔(2026-07-19 ユーザー新設条件): 新要素の解放イベント同士の間隔が30秒以上のものが9割以上。
+  // 解放ラッシュ(通知の機関銃)を禁止し、1つずつ味わえるペーシングを合格条件化。
+  console.log('㉚ 解放間隔: 連続する解放イベントの間隔≥30秒が90%以上(全解放イベント・100h)');
+  let okAll = 0, cnt = 0;
+  for (const s of STRATEGIES) {
+    const sim = G.simulate(s, { hours });
+    const ev = (sim.unlockEvents || []).slice().sort((a, b) => a.t - b.t);
+    const gaps = [];
+    for (let i = 1; i < ev.length; i++) gaps.push(ev[i].t - ev[i - 1].t);
+    const ok = gaps.filter(g => g >= 30).length;
+    const ratio = gaps.length ? ok / gaps.length : 1;
+    const pass = ratio >= 0.9;
+    if (pass) okAll++;
+    cnt++;
+    console.log(`  ${pass ? 'OK' : 'NG'} ${s.id} 解放${ev.length}件 間隔${gaps.length}本 ≥30s: ${ok}/${gaps.length} (${(ratio * 100).toFixed(1)}%)`);
+  }
+  console.log(`㉚ 合計 ${okAll}/${cnt}方針`);
 } else if (mode === 'eqswap') {
   // 装備(b)新定義(R19 2026-07-18 ユーザー指示「プレイ方針ごとに得意装備割り振って、周回ごとのシミュレーションを
   // 何回かやり直して同じティアの別装備でやり直して、全部50%以上行けばいい。素材は取得後全周回で中央値50%以上」):
