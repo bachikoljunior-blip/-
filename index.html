@@ -5255,6 +5255,44 @@
 
     /* 重力圧縮の発動ボタン: 研究欄からプレイ画面(クッキーの横)へ移設。
        モンスター(z-index:40)より前面に置き、重なってもタップできるようにする */
+    /* 会心コンボ表示(R35 面白さ監査・要素1): 連続会心の"連鎖を切らすな"を見える化 */
+    #critCombo {
+      position: absolute;
+      left: 50%;
+      top: 6px;
+      transform: translateX(-50%);
+      z-index: 65;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 4px 12px 6px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(70, 20, 10, 0.92), rgba(120, 40, 12, 0.92));
+      border: 1px solid rgba(255, 170, 80, 0.7);
+      box-shadow: 0 3px 12px rgba(255, 120, 40, 0.4);
+      pointer-events: none;
+      animation: critComboPop 0.18s ease-out;
+    }
+    #critComboN {
+      font-size: 20px;
+      font-weight: 900;
+      color: #ffd27a;
+      text-shadow: 0 0 8px rgba(255, 140, 40, 0.9), 0 1px 2px rgba(0, 0, 0, 0.8);
+      line-height: 1;
+      letter-spacing: 0.3px;
+    }
+    #critComboN::before { content: "🔥 コンボ ×"; font-size: 12px; font-weight: 800; }
+    #critComboBar {
+      display: block;
+      height: 4px;
+      width: 64px;
+      border-radius: 2px;
+      background: linear-gradient(90deg, #ffdf8a, #ff7a2a);
+      transform-origin: left center;
+      transition: transform 0.2s linear;
+    }
+    @keyframes critComboPop { 0% { transform: translateX(-50%) scale(1.35); } 100% { transform: translateX(-50%) scale(1); } }
     #bhGaugeBtn {
       position: absolute;
       right: 4px;
@@ -5725,6 +5763,7 @@
         <span class="sparkle"></span>
       </button>
       <button id="bhGaugeBtn" type="button" aria-label="重力圧縮の発動" style="display: none;"></button>
+      <div id="critCombo" aria-hidden="true" style="display:none;"><span id="critComboN">0</span><i id="critComboBar"></i></div>
       <div id="floatArea"></div>
     </div>
 
@@ -12571,7 +12610,23 @@ function tapCookie() {
   playSound(critical ? "crit" : "cookie");
   playTapAnimation(critical);
   showFloat((critical ? "会心 +" : "+") + fmt(gained), critical);
+  updateCritComboUI(critical);
   updateTopOnly();
+}
+
+// 会心コンボ表示(R35 面白さ監査・要素1): 連続会心の"連鎖を切らすな"を見える化。
+// 段2「会心コンボ」取得時のみ意味を持つ。コンボ≥2で表示、30秒ゲージが尽きる=リセット。経済には一切触れない純表示。
+function updateCritComboUI(bump) {
+  const box = $("critCombo");
+  if (!box) return;
+  const combo = Math.max(0, Math.floor(Number(state.critCombo) || 0));
+  const elapsed = Date.now() - (Number(state.lastCritAt) || 0);
+  const alive = combo >= 2 && elapsed < 30000 && resStage2("fingerTechnique");
+  if (!alive) { if (box.style.display !== "none") box.style.display = "none"; return; }
+  box.style.display = "flex";
+  const nEl = $("critComboN"); if (nEl) nEl.textContent = String(combo);
+  const bar = $("critComboBar"); if (bar) bar.style.transform = "scaleX(" + Math.max(0, 1 - elapsed / 30000).toFixed(3) + ")";
+  if (bump) { box.style.animation = "none"; void box.offsetWidth; box.style.animation = ""; } // 会心ごとに弾ませる
 }
 
 addTap($("cookie"), tapCookie);
@@ -17636,6 +17691,7 @@ setInterval(() => {
       state.lastSecondEarn = dEarn; // 直近1秒の実獲得(=瞬間ペース。注文報酬cookieの基準・sim同期)
       recentTapsPerSec = Math.max(0, (state.totalClicks || 0) - _lastTotalClicksSample); // 直送の基準(タップ流量)
       _lastTotalClicksSample = state.totalClicks || 0;
+      updateCritComboUI(false); // 会心コンボ表示のゲージ減衰・失効時の非表示(R35)
       // ㉚解放ドリップ(毎秒1回): 生涯初の新コンテンツを30秒間隔で1つずつ棚に並べる
       if (!overlayOpen) {
         const revealedBefore = state.lastRevealAt;
