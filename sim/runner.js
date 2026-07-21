@@ -1447,6 +1447,22 @@ if (mode === 'baseline') {
     const role = ROLE_CHANNEL[pol] ? `主役=${CH_NAME[ROLE_CHANNEL[pol]]}≥25%` : '4つすべて≥10%';
     console.log(`${pol}(${s.id} ${s.name}) ${role}: ${ok}/${all}周回 合格`);
     rows.forEach(x => console.log(x));
+    // ㉘'(R34・提案レンズ=「選択と能動で形が変わる」向け・暫定閾値/ユーザー決定待ち):
+    // 型の署名稼ぎ口が"支配的"(非balanced=署名≥30% / balanced=最大<55%で偏らない) かつ どの稼ぎ口も"死んでいない"(≥5%)。
+    // 旧㉘(全稼ぎ口≥10%=均一強制)と違い、支配を許し死のみ禁じる=型ごとに山谷を作れる。
+    { const ch2 = ROLE_CHANNEL[pol];
+      let okB = 0, allB = 0;
+      for (const r of full) {
+        const gateList2 = ROLE_RESEARCH[pol] || ALL_ROLE_RES;
+        if (!(r.researchBought || []).some(id => gateList2.includes(id))) continue;
+        const i = r.measure.income; const arr = [i.equip, i.golden, i.hunt, i.tap];
+        const minS = Math.min(...arr), maxS = Math.max(...arr);
+        const domOk = ch2 ? (i[ch2] >= 0.30) : (maxS < 0.55);
+        const aliveOk = minS >= 0.05;
+        allB++; if (domOk && aliveOk) okB++;
+      }
+      console.log(`  → ㉘'(署名支配+死なない床・暫定): ${okB}/${allB}周回`);
+    }
   }
   console.log(`㉘合計: ${okAll}/${allAll}周回`);
   // ②改(方針間・2026-07-12 ユーザー再定義): 各方針の得意分野lift(中央値)が方針間の幾何平均の±1.5倍以内
