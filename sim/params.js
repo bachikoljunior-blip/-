@@ -151,6 +151,12 @@ module.exports = {
   msResearch: { massProdMul: 1.25, massProdSec: 32, momentumCapSec: 14400, momentumFixedMul: 2, momBuyDiv: 12, momBuyCapExp: 8000,
     costTable: (function () { try { return require('./ms_costs.json'); } catch (e) { return null; } })() },
 
+  // ㉚解放間隔(2026-07-21 R33 ユーザー新設「解放間隔30秒以上が9割以上」): 初登場コンテンツの順次公開の最小間隔(秒)。
+  // 旧「30秒ごとに入荷」ドリップ(全購入を待たせる=クソ機能として撤去済み)とは別物:
+  // 対象は生涯初のみ(everフラグ)=転生後の再購入・既出コンテンツは常に即。ゲーム側は非公開のうちは項目自体を出さない
+  // (見えているのに買えない待ちは発生しない)。31=判定閾値30秒+丸め余裕1秒。
+  reveal: { minGap: 31 },
+
   // huntDirect: satMax 15→14(2026-07-12 ②改2: huntのlift3.09が帯上限3.00超過→飽和を微絞り)
   // peddlerFrac 0.02→0.06(2026-07-11 hunt序盤対策) / otherMul.golden 0.9(2026-07-11) / 投資量=討伐perk8種・基準=金相場
   // otherMul.click 0.15→0.08(2026-07-12 ㉘click後半: 討直29-31%がタップ主役25%を圧迫。診断=partsDetail)

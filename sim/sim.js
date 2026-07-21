@@ -3429,9 +3429,15 @@ function simulate(strategy, opts) {
 }
 
 // 購入ヘルパー(unlockイベント記録込み)
-// 解放ゲート(30秒下限)は廃止(2026-07-15 ユーザー指示「開放まで30待たないといけないクソ機能消した」)。
-// 常に通す=待ち時間なし。解放イベントの記録(pushUnlock/unlockEvents)はT2「解放≥1件」「第0回上限」で使うため維持。
-function unlockGateOk(sim) { return true; }
+// ㉚解放間隔(2026-07-21 R33 ユーザー新設「解放間隔30秒以上が9割以上」): 初登場コンテンツの順次公開。
+// 旧・全購入30秒ドリップ(2026-07-15撤去のクソ機能)とは対象が違う: このゲートは生涯初(ever*未登録)の
+// 取得だけに効く=転生後の再購入・既出コンテンツは常に即。ゲーム側は非公開項目を表示しない見せ方
+// (見えるのに買えない待ちは無い)。ws料理/ノルマ層/スキルはプレイヤー主導の進行なのでゲート外
+// (小間隔の発生源として実測 計~13本/286=㉚の1割枠内)。
+function unlockGateOk(sim) {
+  const gap = (P.reveal && P.reveal.minGap != null) ? P.reveal.minGap : 31;
+  return sim.lastUnlockT == null || sim.t >= sim.lastUnlockT + gap;
+}
 function pushUnlock(sim, kind, id, n) {
   sim.lastUnlockT = sim.t;
   const ev = { t: sim.t, kind, id };

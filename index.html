@@ -8029,7 +8029,7 @@ function msResearchLists() {
   // スキル解放型の実績研究(msk_/msk2_)は「スキル取得」が条件なので、対応スキルを取得するまでは
   // デバッグ中でも出さない(スキル未解放なのに実績研究が並ぶバグの修正・2026-07-13 ユーザー指摘)。
   const isSkillMs = m => m.id.startsWith("msk_") || m.id.startsWith("msk2_");
-  const avail = debugMode ? unbought.filter(m => !isSkillMs(m) || m.trig()) : unbought.filter(m => m.trig());
+  const avail = debugMode ? unbought.filter(m => !isSkillMs(m) || m.trig()) : unbought.filter(m => m.trig() && revealOk("ms:" + m.id));
   const lockedAll = debugMode ? [] : unbought.filter(m => !m.trig());
   const nextOfSeries = {};
   lockedAll.forEach(m => {
@@ -10045,7 +10045,8 @@ function visibleUpgrades() {
   if (debugMode) return UPGRADES;
 
   const limit = visibleUpgradeLimitIndex();
-  return UPGRADES.filter((u, i) => i <= limit && upgradeUnlocked(u));
+  // ㉚解放ドリップ: まだ持っていない設備は「棚に並んだ(解放済み)」ものだけ出す(所持済みは常に残る)。
+  return UPGRADES.filter((u, i) => i <= limit && upgradeUnlocked(u) && revealOk("up:" + u.id));
 }
 
 function prestigeMultiplier() {
@@ -12597,8 +12598,7 @@ function updateStageArrows() {
 addTap($("stageArrowL"), () => moveStageBy(-1));
 addTap($("stageArrowR"), () => moveStageBy(1));
 
-// 新規解放アイテムの「30秒ごとに入荷」ドリップ制限は撤廃(2026-07-14/15 ユーザー指示「開放まで30待つクソ機能消した」)。
-// 解放されたものは即購入・即解放できる。常にtrueを返す。
+// 旧「全購入を30秒待たせる」ドリップは撤廃済み(2026-07-15)。常にtrue=買う時に待たされない。
 const UNLOCK_GAP_MS = 30000;
 function unlockGateOk() {
   return true;
@@ -12606,6 +12606,74 @@ function unlockGateOk() {
 function markUnlock() {
   const now = Date.now();
   if (!state.lastUnlockAt || now - state.lastUnlockAt >= 1000) state.lastUnlockAt = now;
+}
+
+// ㉚解放ドリップ(2026-07-21 R33 ユーザー新設「解放間隔30秒以上が9割以上」・sim同期):
+// 生涯初の新コンテンツ(設備/研究/段階/実績研究)は、前回の解放から30秒あけて1つずつ棚に並ぶ。
+// 旧クソ機能との違い: 対象は「生涯初」だけ=既出・再購入・所持済みは常に即。並ぶ前は棚に出さない
+// (見えるのに買えない待ちは無い)。フェイルオープン設計=判定に迷えば表示する→進行が詰まることは無い。
+const REVEAL_GAP_MS = 30000;
+function ensureRevealState() {
+  if (!state.revealedEver || typeof state.revealedEver !== "object") state.revealedEver = {};
+  if (typeof state.lastRevealAt !== "number") state.lastRevealAt = 0;
+}
+function isRevealed(key) {
+  ensureRevealState();
+  return state.revealedEver[key] === true;
+}
+function markRevealed(key) {
+  ensureRevealState();
+  if (!state.revealedEver[key]) { state.revealedEver[key] = true; state.lastRevealAt = Date.now(); }
+}
+// 既存セーブ・進行済み内容の移行: 既に所持/購入済みのものは「解放済み」として無条件で棚に残す
+// (revealキー未登録でも表示されるよう、各visible判定側でも所持チェックをORする)。
+function revealKeyOwned(key) {
+  const c = key.indexOf(":");
+  const kind = key.slice(0, c), id = key.slice(c + 1);
+  if (kind === "up") return (state.upgrades[id] || 0) > 0;
+  if (kind === "res") return !!(state.research || {})[id];
+  if (kind === "ms") return msBought(id);
+  if (kind === "stage") { const m = id.match(/^(.+)__s(\d)$/); return m ? researchStagePurchased(m[1], Number(m[2])) : false; }
+  return false;
+}
+// 棚に出してよいか: 解放済み or 所持済み(移行) なら常にOK。フェイルオープンの共通判定。
+function revealOk(key) {
+  return isRevealed(key) || revealKeyOwned(key);
+}
+// 1tickに最大1つ、前回解放から30秒経過していれば「解放条件は満たすが未解放」の中で最安を1つ解放する。
+// 解放条件=各種visible判定のゲート手前(所持/設備購入済み/トリガ達成)まで。棚順=最安から。
+function processContentReveals() {
+  ensureRevealState();
+  if (Date.now() - state.lastRevealAt < REVEAL_GAP_MS) return;
+  if (pausedForSkillChoice() || titleScreenActive()) return;
+  let best = null;
+  const consider = (key, cost) => {
+    if (state.revealedEver[key] || revealKeyOwned(key)) return;
+    const c = Number(cost);
+    if (!isFinite(c)) return;
+    if (!best || c < best.cost) best = { key, cost: c };
+  };
+  // 設備: 表示枠内(highestOwned+1)かつスキル解放済みの、まだ持っていない次の設備
+  const upLimit = visibleUpgradeLimitIndex();
+  UPGRADES.forEach((u, i) => {
+    if (i <= upLimit && upgradeUnlocked(u) && (state.upgrades[u.id] || 0) === 0) consider("up:" + u.id, costOf(u, 0));
+  });
+  // 研究: 対応設備を購入済みで未研究のもの
+  RESEARCH.forEach(r => {
+    if (!state.research[r.id] && researchUnlocked(r)) consider("res:" + r.id, researchCost(r));
+  });
+  // 段階(段2/段3): 解放スキルを持ち段階カードが出る対象(revealゲート手前の条件で判定=自己矛盾回避)
+  RESEARCH.forEach(r => {
+    if (!state.research[r.id] || (!debugMode && !researchUnlocked(r))) return;
+    const cur = Math.max(1, Math.floor(Number((state.researchStages || {})[r.id]) || 1));
+    if (cur < 2 && hasSkill(RES_STAGE2[r.id])) consider("stage:" + r.id + "__s2", researchStageCost(r, 2));
+    else if (cur === 2 && hasSkill(RES_STAGE3[r.id])) consider("stage:" + r.id + "__s3", researchStageCost(r, 3));
+  });
+  // 実績研究: トリガ達成済み・未購入
+  MILESTONE_RESEARCH.forEach(ms => {
+    if (!msBought(ms.id) && (function () { try { return ms.trig(); } catch (e) { return false; } })()) consider("ms:" + ms.id, msResearchCost(ms));
+  });
+  if (best) markRevealed(best.key);
 }
 function buyUpgrade(id) {
   if (pausedForSkillChoice()) {
@@ -14133,9 +14201,9 @@ function visibleResearchStageCards() {
     const cur = Math.max(1, Math.floor(Number((state.researchStages || {})[r.id]) || 1));
 
     if (cur < 2 && hasSkill(RES_STAGE2[r.id])) {
-      cards.push({ r, stageNo: 2, key: r.id + "__s2" });
+      if (debugMode || revealOk("stage:" + r.id + "__s2")) cards.push({ r, stageNo: 2, key: r.id + "__s2" });
     } else if (cur === 2 && hasSkill(RES_STAGE3[r.id])) {
-      cards.push({ r, stageNo: 3, key: r.id + "__s3" });
+      if (debugMode || revealOk("stage:" + r.id + "__s3")) cards.push({ r, stageNo: 3, key: r.id + "__s3" });
     }
   });
 
@@ -14153,7 +14221,7 @@ function researchCardDesc(r) {
 function renderResearch() {
   const box = $("research");
   // 購入済みの研究は購入欄から消す(効果は「研究解析」パネルと一覧タブで確認できる)
-  const list = debugMode ? RESEARCH.filter(r => !state.research[r.id]) : RESEARCH.filter(r => researchUnlocked(r) && !state.research[r.id]);
+  const list = debugMode ? RESEARCH.filter(r => !state.research[r.id]) : RESEARCH.filter(r => researchUnlocked(r) && !state.research[r.id] && revealOk("res:" + r.id));
   // 対応設備がまだ未購入(=次に表示された設備)の研究は、伏せたプレビューとして並べる。
   // 効果と絵を隠し、対応設備を買うまで購入できない。
   const lockedList = debugMode ? [] : RESEARCH.filter(r => {
@@ -15245,6 +15313,9 @@ function prestigeReset() {
   const keepBossKills = { ...(state.bossKills || {}) };
   const keepTotalPlaySec = Math.max(0, Number(state.totalPlaySec) || 0);
   const keepMaxQuotaStageEver = Math.max(1, Math.floor(Number(state.maxQuotaStageEver) || 1));
+  // ㉚解放ドリップ: 「生涯すでに棚に並んだ」記録は転生を跨いで持ち越す(=再購入は待たされない)
+  const keepRevealedEver = { ...(state.revealedEver || {}) };
+  const keepLastRevealAt = Number(state.lastRevealAt) || 0;
   // 実績研究: トリガは「その周回だけ」(2026-07-11)=カウンタも購入状態も転生でリセット(持ち越さない)
   // 提案8(第12次H): 今周回の天井を次周回の層の試練の相対基準として持ち越す。表示層数は絶対累積のまま。
   // 層の試練の天井持ち越し=直近2周回のmax(R3・trialFloorRuns=2相当・sim同期)
@@ -15294,6 +15365,8 @@ function prestigeReset() {
   state.bossKills = keepBossKills;
   state.totalPlaySec = keepTotalPlaySec;
   state.maxQuotaStageEver = keepMaxQuotaStageEver;
+  state.revealedEver = keepRevealedEver;
+  state.lastRevealAt = keepLastRevealAt;
   state.lastPrestigeCps = keepLastPrestigeCps;
   state.prevMaxQuotaStage = keepPrevMaxQuotaStage;
   state._prevMaxStage1 = keepPrevMaxStage1;
@@ -17555,6 +17628,12 @@ setInterval(() => {
       state.lastSecondEarn = dEarn; // 直近1秒の実獲得(=瞬間ペース。注文報酬cookieの基準・sim同期)
       recentTapsPerSec = Math.max(0, (state.totalClicks || 0) - _lastTotalClicksSample); // 直送の基準(タップ流量)
       _lastTotalClicksSample = state.totalClicks || 0;
+      // ㉚解放ドリップ(毎秒1回): 生涯初の新コンテンツを30秒間隔で1つずつ棚に並べる
+      if (!overlayOpen) {
+        const revealedBefore = state.lastRevealAt;
+        processContentReveals();
+        if (state.lastRevealAt !== revealedBefore) renderActiveTab();
+      }
       // 提案13「編成の心得」(2026-07-11 承認・通常型限定): 4稼ぎ口のそろい具合(毎秒更新の遅延値=再帰回避)
       if (hasSkill("ensemble") && runPolicyIs("balanced")) {
         const eq = currentCps() + equipDirectCps() + bankDirectCps();
