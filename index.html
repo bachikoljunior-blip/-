@@ -8127,6 +8127,34 @@ function buyMilestone(id) {
   saveGame(); updateTopOnly(); renderActiveTab();
 }
 
+// 実績研究の自動取得(R35 面白さ監査・レバー2「買うだけ連打」の解消):
+// 達成(trig)+解放済み(㉚ドリップ尊重)+購入可の実績研究を自動で取得し、手動連打を消す。
+// 意味ある購入(設備/段階研究/スキル/装備)は手動のまま=手はそっちに集中(F5保つ・F6改善)。
+// 経済はsimが元々自動購入=不変。進行感はバッチのサマリートーストで保つ(トースト連打は避ける)。
+function autoBuyMilestones() {
+  if (settings.autoMilestone === false) return;
+  if (pausedForSkillChoice() || titleScreenActive() || debugMode) return;
+  const b = state.msResearch = (state.msResearch && typeof state.msResearch === "object") ? state.msResearch : {};
+  let bought = 0, lastName = "";
+  for (const ms of MILESTONE_RESEARCH) {
+    if (ms.repeatSec) continue;                 // 繰り返し系は対象外(現状未使用の安全策)
+    if (b[ms.id]) continue;
+    let ok = false; try { ok = ms.trig(); } catch (e) { ok = false; }
+    if (!ok) continue;
+    if (!revealOk("ms:" + ms.id)) continue;     // ㉚: 棚に並んだ(解放済み)ものだけ=ドリップのペースを壊さない
+    const cost = msResearchCost(ms);
+    if (state.cookies.lt(cost)) continue;
+    state.cookies = state.cookies.sub(cost);
+    b[ms.id] = true;
+    markUnlock();
+    bought++; lastName = ms.name;
+  }
+  if (bought > 0) {
+    showMessage(bought === 1 ? `実績研究「${lastName}」を自動取得` : `実績研究 ${bought}件を自動取得`);
+    updateTopOnly(); renderActiveTab();
+  }
+}
+
 // 実績研究カードの絵(専用絵は無いので、関連する既存アセットを流用する)
 function msArtOf(ms) {
   const id = ms.id;
@@ -11658,7 +11686,8 @@ const settings = {
   fancyFx: true,
   cardArt: true,
   compactCards: false,
-  showBuyMode: true
+  showBuyMode: true,
+  autoMilestone: true // R35面白さ監査: 実績研究(達成→即買いのノイズ)を自動取得。手動連打を消し、意味ある購入(設備/段階/スキル/装備)に手を集中させる
 };
 
 function loadSettings() {
@@ -17858,6 +17887,7 @@ setInterval(() => {
         processContentReveals();
         if (state.lastRevealAt !== revealedBefore) renderActiveTab();
       }
+      autoBuyMilestones(); // R35レバー2: 実績研究(買うだけ連打のノイズ)を自動取得=手は意味ある購入に集中
       // 提案13「編成の心得」(2026-07-11 承認・通常型限定): 4稼ぎ口のそろい具合(毎秒更新の遅延値=再帰回避)
       if (hasSkill("ensemble") && runPolicyIs("balanced")) {
         const eq = currentCps() + equipDirectCps() + bankDirectCps();
