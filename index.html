@@ -5343,8 +5343,9 @@
     /* 金ブースト発動中バッジ(R35 要素3): フレンジーの倍率と残り時間を見せて"今のうちに!"を作る */
     #goldenBoostBadge {
       position: absolute;
-      left: 4px;
-      top: 4px;
+      left: 50%;
+      bottom: 6px;
+      transform: translateX(-50%);
       z-index: 63;
       padding: 4px 10px;
       border-radius: 12px;
@@ -5358,7 +5359,7 @@
       pointer-events: none;
       animation: goldBoostPulse 0.8s ease-in-out infinite;
     }
-    @keyframes goldBoostPulse { 0%,100% { transform: scale(1); box-shadow: 0 0 10px rgba(255,190,60,0.7); } 50% { transform: scale(1.06); box-shadow: 0 0 20px rgba(255,210,90,1); } }
+    @keyframes goldBoostPulse { 0%,100% { transform: translateX(-50%) scale(1); box-shadow: 0 0 10px rgba(255,190,60,0.7); } 50% { transform: translateX(-50%) scale(1.06); box-shadow: 0 0 20px rgba(255,210,90,1); } }
     #bhGaugeBtn {
       position: absolute;
       right: 4px;
