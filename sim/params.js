@@ -240,7 +240,7 @@ module.exports = {
     // ⑬延長狩り再係留2回目(2026-07-14)。※同日修復: 前の編集でportalHuntSpawn/SpawnBaseが行中コメントに
     // 飲まれて未定義化(窓の加速=延長狩りの実体が死んでS7比0.956/S9比1.000の一因)。独立行に復元。
     portalSelf: 6, portalHuntDur: 9000, portalHuntGrow: 0.03,
-    portalHuntSpawn: 0.0008, portalHuntSpawnBase: 0.007,
+    portalHuntSpawn: 0.005, portalHuntSpawnBase: 0.007, // R34: 窓中の出現加速を0.0008→0.005(portal100台で窓中1.65×速い出現)=延長狩りを"討伐→窓→速い出現→また討伐"の能動リズムとして機能させる(旧0.0008は8%差で死に機構=⑬1.000)。要フルバッテリー確認
     bankOwn: 0.0288, bankSaved: 5.0,
     moonBase: 8, moonStage: 0.001, moonOwn: 0.0008,
     foldPortal: 0.002, foldMonster: 2.5, foldGold: 8,
