@@ -1468,6 +1468,42 @@ if (mode === 'baseline') {
       console.log(`②(改2・方針間: 得意分野liftの中央値が幾何平均${gm.toFixed(2)}の±1.5倍以内) ${parts.join(' ')} → ${ok2 ? 'OK' : 'NG'}`);
     }
   }
+} else if (mode === 'shape') {
+  // 「選択と能動で一周の形が変わる」の現状測定(R34・2026-07-21):
+  //   ① 署名支配度 = 各型の署名稼ぎ口シェアの中央値(高いほど、その型がその稼ぎ口で"形"を作れている)。
+  //      均一化(㉘=全稼ぎ口≥10%)が効いていると、どの型も署名シェアが低く横並び=形が無い。
+  //   ② 能動優位 = 能動プレイ(タップ/金取り有)の総クッキー log10 − 放置プレイ(tapRate0/goldenTake0)の log10。
+  //      桁差が大きいほど「積極的に遊ぶ意味がある」型。bakeは放置主役なので小さくてよい(=それも一つの形)。
+  const H = hours;
+  const ROLE_CHANNEL = { bake: 'equip', golden: 'golden', hunt: 'hunt', click: 'tap', balanced: null };
+  const CH_NAME = { equip: '設備', golden: '金', hunt: '討伐', tap: 'タップ' };
+  const reps = {};
+  for (const s of STRATEGIES) {
+    let pol = null;
+    try { pol = s.pickPolicy({ prestigeRuns: 1, runs: [], t: 0, run: {} }); } catch (e) { /* skip */ }
+    if (pol && !reps[pol]) reps[pol] = s;
+  }
+  const median = arr => { const a = arr.slice().sort((x, y) => x - y); return a.length ? a[a.length >> 1] : 0; };
+  console.log(`=== 形の測定(${H}h): 署名支配度 / 能動優位(能動→放置の桁差) ===`);
+  for (const pol of ['balanced', 'click', 'golden', 'hunt', 'bake']) {
+    const s = reps[pol];
+    if (!s) { console.log(`${pol}: 代表方針なし`); continue; }
+    const A = G.simulate(s, { hours: H, measure: true });
+    const idle = Object.assign({}, s, { tapRate: 0, goldenTake: 0 });
+    const I = G.simulate(idle, { hours: H, measure: true });
+    const full = A.runs.filter(r => !r.partial && r.measure && r.measure.income);
+    const ch = ROLE_CHANNEL[pol];
+    let domStr;
+    if (ch) {
+      domStr = `署名=${CH_NAME[ch]}${(median(full.map(r => r.measure.income[ch])) * 100).toFixed(0)}%`;
+    } else {
+      const minShare = full.map(r => Math.min(r.measure.income.equip, r.measure.income.golden, r.measure.income.hunt, r.measure.income.tap));
+      domStr = `最小稼ぎ口=${(median(minShare) * 100).toFixed(0)}%(=均衡度)`;
+    }
+    const la = Math.log10(Math.max(1, A.totalCookies)), li = Math.log10(Math.max(1, I.totalCookies));
+    console.log(`${pol.padEnd(9)}(${s.id}) ${domStr.padEnd(16)} 能動優位=+${(la - li).toFixed(1)}桁 (能動e${la.toFixed(0)}/放置e${li.toFixed(0)}) 周回${A.runs.length}`);
+  }
+  console.log('※署名支配度が低く横並び=均されて形が無い / 能動優位が小=積極プレイの意味が薄い(bake以外)');
 } else if (mode === 'skillsum') {
   let sum = 0;
   for (const n of G.SKILL_NODES) sum += G.skillCostOf(n);
