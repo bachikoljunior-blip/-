@@ -12655,15 +12655,26 @@ function updateTopOnly() {
   updateGoldenBoostBadge(); // 金ブースト発動中バッジ(R35)
 }
 
-// 金ブースト発動中バッジ(R35 面白さ監査・要素3): 全生産×Nと残り秒を見せて"フレンジー"を felt に。純表示・経済無関係。
+// 生産ブースト発動中バッジ(R35 面白さ監査・要素3/11): 金ブースト・注文報酬の全生産×N・獲得+50%を一元表示。
+// どれも今まで残り時間が不可視で"フレンジー"が felt でなかった漏れを塞ぐ。純表示・経済には一切触れない。
 function updateGoldenBoostBadge() {
   const box = $("goldenBoostBadge");
   if (!box) return;
-  if (titleScreenActive() || pausedForSkillChoice() || !goldenBoostActive()) { box.style.display = "none"; return; }
-  const mul = goldenBoostMultiplier() * goldenAfterheatMultiplier();
   const now = Date.now();
-  const left = Math.max(0, Math.ceil((Math.max(...activeGoldenBoosts.map(b => b.until), now) - now) / 1000));
-  box.textContent = "⚡ 全生産 ×" + (mul >= 10 ? Math.round(mul) : mul.toFixed(1)) + " 残り" + left + "秒";
+  const goldenOn = goldenBoostActive();
+  const orderCpsOn = orderTempCpsMultiplier() > 1;
+  const orderCookieOn = orderCookieActive();
+  if (titleScreenActive() || pausedForSkillChoice() || !(goldenOn || orderCpsOn || orderCookieOn)) { box.style.display = "none"; return; }
+  const mul = goldenBoostMultiplier() * goldenAfterheatMultiplier() * orderTempCpsMultiplier();
+  const untilList = [];
+  if (goldenOn) untilList.push(...activeGoldenBoosts.map(b => b.until));
+  if (orderCpsOn) untilList.push(state.orderTempCpsUntil || 0);
+  if (orderCookieOn) untilList.push(state.orderCookieUntil || 0);
+  const left = Math.max(0, Math.ceil((Math.max(now, ...untilList) - now) / 1000));
+  let label = "";
+  if (mul > 1) label += "⚡ 全生産 ×" + (mul >= 10 ? Math.round(mul) : mul.toFixed(1));
+  if (orderCookieOn) label += (label ? " " : "⚡ ") + "獲得+50%";
+  box.textContent = label + " 残り" + left + "秒";
   box.style.display = "";
 }
 
