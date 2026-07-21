@@ -5340,6 +5340,25 @@
     #bossApproach.imminent { animation: bossPulse 0.9s ease-in-out infinite; border-color: rgba(255, 120, 90, 0.9); }
     #bossApproach.here { color: #fff; background: linear-gradient(180deg, rgba(140, 20, 30, 0.96), rgba(90, 10, 20, 0.96)); border-color: rgba(255, 90, 70, 1); font-size: 14px; }
     @keyframes bossPulse { 0%,100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.08); } }
+    /* 金ブースト発動中バッジ(R35 要素3): フレンジーの倍率と残り時間を見せて"今のうちに!"を作る */
+    #goldenBoostBadge {
+      position: absolute;
+      left: 4px;
+      top: 4px;
+      z-index: 63;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 900;
+      white-space: nowrap;
+      color: #3a2400;
+      background: linear-gradient(180deg, #ffe27a, #ffb02e);
+      border: 1px solid rgba(255, 255, 210, 0.9);
+      box-shadow: 0 0 14px rgba(255, 190, 60, 0.85);
+      pointer-events: none;
+      animation: goldBoostPulse 0.8s ease-in-out infinite;
+    }
+    @keyframes goldBoostPulse { 0%,100% { transform: scale(1); box-shadow: 0 0 10px rgba(255,190,60,0.7); } 50% { transform: scale(1.06); box-shadow: 0 0 20px rgba(255,210,90,1); } }
     #bhGaugeBtn {
       position: absolute;
       right: 4px;
@@ -5812,6 +5831,7 @@
       <button id="bhGaugeBtn" type="button" aria-label="重力圧縮の発動" style="display: none;"></button>
       <div id="critCombo" aria-hidden="true" style="display:none;"><span id="critComboN">0</span><i id="critComboBar"></i></div>
       <div id="superCritFlash" aria-hidden="true"></div>
+      <div id="goldenBoostBadge" aria-hidden="true" style="display:none;"></div>
       <div id="floatArea"></div>
     </div>
 
@@ -12631,6 +12651,19 @@ function updateTopOnly() {
 
   if (monsterVisible) renderMonsterHp();
   updateBossApproach(); // ボス接近インジケータ(R35)
+  updateGoldenBoostBadge(); // 金ブースト発動中バッジ(R35)
+}
+
+// 金ブースト発動中バッジ(R35 面白さ監査・要素3): 全生産×Nと残り秒を見せて"フレンジー"を felt に。純表示・経済無関係。
+function updateGoldenBoostBadge() {
+  const box = $("goldenBoostBadge");
+  if (!box) return;
+  if (titleScreenActive() || pausedForSkillChoice() || !goldenBoostActive()) { box.style.display = "none"; return; }
+  const mul = goldenBoostMultiplier() * goldenAfterheatMultiplier();
+  const now = Date.now();
+  const left = Math.max(0, Math.ceil((Math.max(...activeGoldenBoosts.map(b => b.until), now) - now) / 1000));
+  box.textContent = "⚡ 全生産 ×" + (mul >= 10 ? Math.round(mul) : mul.toFixed(1)) + " 残り" + left + "秒";
+  box.style.display = "";
 }
 
 function tapCookie() {
