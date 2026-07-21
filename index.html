@@ -5319,6 +5319,27 @@
       18% { transform: translate(-50%, -14px) scale(1.4); opacity: 1; }
       100% { transform: translate(-50%, -68px) scale(1.1); opacity: 0; }
     }
+    /* ボス接近インジケータ(R35 要素5): 不意打ちを"期待"に変える */
+    #bossApproach {
+      position: absolute;
+      left: 50%;
+      top: 4px;
+      transform: translateX(-50%);
+      z-index: 58;
+      padding: 3px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+      color: #ffe1b0;
+      background: linear-gradient(180deg, rgba(60, 20, 70, 0.9), rgba(90, 20, 40, 0.9));
+      border: 1px solid rgba(220, 130, 200, 0.6);
+      box-shadow: 0 2px 8px rgba(180, 60, 140, 0.4);
+      pointer-events: none;
+    }
+    #bossApproach.imminent { animation: bossPulse 0.9s ease-in-out infinite; border-color: rgba(255, 120, 90, 0.9); }
+    #bossApproach.here { color: #fff; background: linear-gradient(180deg, rgba(140, 20, 30, 0.96), rgba(90, 10, 20, 0.96)); border-color: rgba(255, 90, 70, 1); font-size: 14px; }
+    @keyframes bossPulse { 0%,100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.08); } }
     #bhGaugeBtn {
       position: absolute;
       right: 4px;
@@ -5793,6 +5814,8 @@
       <div id="superCritFlash" aria-hidden="true"></div>
       <div id="floatArea"></div>
     </div>
+
+    <div id="bossApproach" aria-hidden="true" style="display:none;"></div>
 
     <button id="goldenCookie" aria-label="金のクッキー"></button>
 
@@ -12607,6 +12630,7 @@ function updateTopOnly() {
   updateWorkshopTabVisibility();
 
   if (monsterVisible) renderMonsterHp();
+  updateBossApproach(); // ボス接近インジケータ(R35)
 }
 
 function tapCookie() {
@@ -12674,6 +12698,26 @@ function updateCritComboUI(bump) {
   const nEl = $("critComboN"); if (nEl) nEl.textContent = String(combo);
   const bar = $("critComboBar"); if (bar) bar.style.transform = "scaleX(" + Math.max(0, 1 - elapsed / 30000).toFixed(3) + ")";
   if (bump) { box.style.animation = "none"; void box.offsetWidth; box.style.animation = ""; } // 会心ごとに弾ませる
+}
+
+// ボス接近インジケータ(R35 面白さ監査・要素5): プレイ画面に「ボスまであと N体」を出し、不意打ちを期待に変える。純表示・経済無関係。
+function updateBossApproach() {
+  const box = $("bossApproach");
+  if (!box) return;
+  if (titleScreenActive() || pausedForSkillChoice()) { box.style.display = "none"; return; }
+  const bossHere = Array.isArray(monsters) && monsters.some(m => m && m.typeId === "boss");
+  if (bossHere) {
+    box.textContent = "👑 ボス出現！";
+    box.className = "here";
+    box.style.display = "";
+    return;
+  }
+  let left = Infinity;
+  try { left = stageKillsUntilBoss(currentStageNo()); } catch (e) { left = Infinity; }
+  if (!isFinite(left) || left > 5 || left < 0) { box.style.display = "none"; return; }
+  box.textContent = left <= 0 ? "👑 まもなくボス！" : ("👑 ボスまであと " + Math.ceil(left) + " 体");
+  box.className = left <= 2 ? "imminent" : "";
+  box.style.display = "";
 }
 
 addTap($("cookie"), tapCookie);
