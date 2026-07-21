@@ -5293,6 +5293,32 @@
       transition: transform 0.2s linear;
     }
     @keyframes critComboPop { 0% { transform: translateX(-50%) scale(1.35); } 100% { transform: translateX(-50%) scale(1); } }
+    /* 超会心の演出(R35 要素1B): 一瞬の金フラッシュ+特大フロート。純演出・経済無関係 */
+    #superCritFlash {
+      position: absolute;
+      inset: 0;
+      z-index: 62;
+      pointer-events: none;
+      opacity: 0;
+      background: radial-gradient(circle at 50% 45%, rgba(255, 224, 130, 0.55), rgba(255, 170, 40, 0.12) 45%, transparent 68%);
+    }
+    @keyframes superCritFlash {
+      0% { opacity: 0; transform: scale(0.6); }
+      25% { opacity: 1; transform: scale(1.05); }
+      100% { opacity: 0; transform: scale(1.25); }
+    }
+    .superCritFloat {
+      font-size: 30px !important;
+      font-weight: 900 !important;
+      color: #fff3c4 !important;
+      text-shadow: 0 0 12px rgba(255, 180, 60, 1), 0 0 24px rgba(255, 120, 20, 0.9), 0 2px 4px rgba(0, 0, 0, 0.9) !important;
+      animation: superCritFloatAnim 1.2s ease-out forwards !important;
+    }
+    @keyframes superCritFloatAnim {
+      0% { transform: translate(-50%, 0) scale(0.7); opacity: 0; }
+      18% { transform: translate(-50%, -14px) scale(1.4); opacity: 1; }
+      100% { transform: translate(-50%, -68px) scale(1.1); opacity: 0; }
+    }
     #bhGaugeBtn {
       position: absolute;
       right: 4px;
@@ -5764,6 +5790,7 @@
       </button>
       <button id="bhGaugeBtn" type="button" aria-label="重力圧縮の発動" style="display: none;"></button>
       <div id="critCombo" aria-hidden="true" style="display:none;"><span id="critComboN">0</span><i id="critComboBar"></i></div>
+      <div id="superCritFlash" aria-hidden="true"></div>
       <div id="floatArea"></div>
     </div>
 
@@ -9540,6 +9567,10 @@ function dropMaterialIdFor(stageNo, typeId) {
 // v4 §18 条件ドロップ制: 素材は「どう倒したか」で決まる(方針の直接倍率は全廃)。
 // 調整パラメータ: オーバーキル5倍・狩り窓連続3体・余裕率2倍・万能粉0.8個/討伐(バランス型のみ)
 const OVERKILL_MUL = 5;
+// 超会心(R35 面白さ監査・要素1B): 会心のSUPER_CRIT_P割が特大(×K)、残りは僅かに小さく(×M)。平均倍率不変=平均保存の再分配。
+// K×P + M×(1-P) = 1(=通常倍率を保存)。simは期待値で計算=分散再分配は不可視=経済/バランス影響ゼロ。純粋な"稀で特大"の体験。
+const SUPER_CRIT_P = 0.03, SUPER_CRIT_K = 4;
+const SUPER_CRIT_M = (1 - SUPER_CRIT_P * SUPER_CRIT_K) / (1 - SUPER_CRIT_P); // ≈0.907
 const CHAIN_KILLS = 3;
 const MARGIN_THRESH = 2;
 // 素材ドロップの希少化(2026-07-15 ユーザー指示「もっと少なく・最初は5%に一個・強さ/レア度でドロップ率を変える」):
@@ -12446,12 +12477,12 @@ function showChainIndicator() {
   chainIndicatorTimer = setTimeout(() => el.classList.remove("show"), 3000);
 }
 
-function showFloat(text, critical = false) {
+function showFloat(text, critical = false, superCrit = false) {
   const div = document.createElement("div");
-  div.className = critical ? "float critFloat" : "float";
+  div.className = superCrit ? "float critFloat superCritFloat" : (critical ? "float critFloat" : "float");
   div.textContent = text;
   $("floatArea").appendChild(div);
-  setTimeout(() => div.remove(), critical ? 850 : 600);
+  setTimeout(() => div.remove(), superCrit ? 1200 : (critical ? 850 : 600));
 }
 
 // クッキー本体のタップ演出。会心時は専用の大きな弾み+金色リング+多めのかけら
@@ -12586,9 +12617,14 @@ function tapCookie() {
 
   let tapPower = currentClickPower();
   let critical = false;
+  let superCrit = false;
 
   if (Math.random() < fingerCritChance()) {
-    tapPower *= fingerCritMultiplier();
+    // 超会心(R35・要素1B/横断"稀で特大"): 会心のSUPER_CRIT_P割が特大(×SUPER_CRIT_K)、残りは僅かに小さく(×SUPER_CRIT_M)。
+    // 平均倍率は不変=平均保存の再分配。simは期待値を使うので分散再分配はsimに一切見えない=経済/バランス影響ゼロ。
+    // プレイヤーだけが「たまに桁違いの一撃」を体験する(ユーザー最愛の"たまに出る大きいやつ")。
+    superCrit = Math.random() < SUPER_CRIT_P;
+    tapPower *= fingerCritMultiplier() * (superCrit ? SUPER_CRIT_K : SUPER_CRIT_M);
     critical = true;
     // 段階2: 会心コンボ(30秒途切れでリセット、上限なし)
     if (resStage2("fingerTechnique")) {
@@ -12607,11 +12643,19 @@ function tapCookie() {
   state.totalClicks += 1;
   trackOrderProgress("click", null, 1);
 
-  playSound(critical ? "crit" : "cookie");
+  playSound(superCrit ? "crit" : (critical ? "crit" : "cookie"));
   playTapAnimation(critical);
-  showFloat((critical ? "会心 +" : "+") + fmt(gained), critical);
+  if (superCrit) triggerSuperCritFx();
+  showFloat((superCrit ? "特大会心 +" : (critical ? "会心 +" : "+")) + fmt(gained), critical, superCrit);
   updateCritComboUI(critical);
   updateTopOnly();
+}
+
+// 超会心の演出(R35): 画面の一瞬フラッシュ。経済には無関係の純演出。
+function triggerSuperCritFx() {
+  const el = $("superCritFlash");
+  if (!el) return;
+  el.style.animation = "none"; void el.offsetWidth; el.style.animation = "superCritFlash 0.5s ease-out";
 }
 
 // 会心コンボ表示(R35 面白さ監査・要素1): 連続会心の"連鎖を切らすな"を見える化。
