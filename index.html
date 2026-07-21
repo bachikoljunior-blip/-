@@ -9571,6 +9571,9 @@ const OVERKILL_MUL = 5;
 // K×P + M×(1-P) = 1(=通常倍率を保存)。simは期待値で計算=分散再分配は不可視=経済/バランス影響ゼロ。純粋な"稀で特大"の体験。
 const SUPER_CRIT_P = 0.03, SUPER_CRIT_K = 4;
 const SUPER_CRIT_M = (1 - SUPER_CRIT_P * SUPER_CRIT_K) / (1 - SUPER_CRIT_P); // ≈0.907
+// 金の大当たり(R35・同手法): 即時金の3%が×5、残りを×Mで平均保存=経済ゼロ影響
+const GOLDEN_JACKPOT_P = 0.03, GOLDEN_JACKPOT_K = 5;
+const GOLDEN_JACKPOT_M = (1 - GOLDEN_JACKPOT_P * GOLDEN_JACKPOT_K) / (1 - GOLDEN_JACKPOT_P); // ≈0.876
 const CHAIN_KILLS = 3;
 const MARGIN_THRESH = 2;
 // 素材ドロップの希少化(2026-07-15 ユーザー指示「もっと少なく・最初は5%に一個・強さ/レア度でドロップ率を変える」):
@@ -16405,11 +16408,16 @@ function collectGoldenCookie() {
   const r = Math.random();
 
   if (r < 0.5) {
+    // 金の大当たり(R35・横断"稀で特大"): 即時金のGOLDEN_JACKPOT_P割が特大(×K)、残りは僅かに小さく(×M)。
+    // 平均保存の再分配=即時金の期待値は不変=simに不可視=経済/バランス影響ゼロ。稀に「大当たり!」の桁違い金。
+    const jackpot = Math.random() < GOLDEN_JACKPOT_P;
+    const jackMul = jackpot ? GOLDEN_JACKPOT_K : GOLDEN_JACKPOT_M;
     const gained = earn(
-      Math.max(100, currentCps() * 2.5, currentClickPower() * clickAnchorCoef()) * goldenAmountMultiplier() * goldenEarlyMultiplier() * equip2Fx().goldenAmtMul // 新装備: 金獲得系
+      Math.max(100, currentCps() * 2.5, currentClickPower() * clickAnchorCoef()) * goldenAmountMultiplier() * goldenEarlyMultiplier() * equip2Fx().goldenAmtMul * jackMul // 新装備: 金獲得系
     );
     state.codex.goldenInstant = true;
-    showMessage(`金 +${fmt(gained)}${effectSuffix}`);
+    if (jackpot) { triggerSuperCritFx(); showFloat("金 大当たり +" + fmt(gained), true, true); showMessage(`💰 金 大当たり +${fmt(gained)}${effectSuffix}`); }
+    else showMessage(`金 +${fmt(gained)}${effectSuffix}`);
   } else {
     const added = goldenMultiplier();
     const totalBoost = addGoldenBoost(added, goldenBoostDuration());
