@@ -1489,7 +1489,9 @@ if (mode === 'baseline') {
     const s = reps[pol];
     if (!s) { console.log(`${pol}: 代表方針なし`); continue; }
     const A = G.simulate(s, { hours: H, measure: true });
-    const idle = Object.assign({}, s, { tapRate: 0, goldenTake: 0 });
+    // 放置基準=「カジュアル」(入力ゼロだと立ち上がりで全滅し限界効用が測れないため、最低限の入力は残す):
+    // タップ率を1に落とし、金取りを1/4に。署名ループを積極的に回すプレイ(A)との桁差=積極プレイの限界効用。
+    const idle = Object.assign({}, s, { tapRate: Math.min(1, s.tapRate || 0), goldenTake: 0.25 });
     const I = G.simulate(idle, { hours: H, measure: true });
     const full = A.runs.filter(r => !r.partial && r.measure && r.measure.income);
     const ch = ROLE_CHANNEL[pol];
