@@ -6393,27 +6393,27 @@ const RESEARCH = [
   // 段階2/3は「対応スキル取得後、研究タブに購入カードが出現し、クッキーで購入して有効化」する。
   { id: "fingerTechnique", name: "指先の型", cost: 2500, detail: "式：会心率=99.5%×score/(score+12)+装備/研究の会心率(上限なしで99.5%へ漸近)、会心倍率=8+score×10。score=0.01+√強い指×0.045+0.002×最高到達層+方針補正(クリック型+0.01)。さらに毎秒生産の約0.4%(強い指の√で増加)がタップ力に加算。段階2(スキル「連打の呼吸」で購入可):会心コンボ=会心ごとに+1(上限なし、30秒途切れでリセット)、会心倍率×(1+0.03×コンボ)＋屋台が全開になる。段階3(スキル「神経直結」で購入可):会心の余熱=会心のたびに毎秒生産×0.025%×最高到達層を追加獲得。", s2: "会心ごとにコンボ+1(30秒途切れでリセット)、会心倍率+3%/コンボ。屋台も全開。", s3: "会心のたび追加クッキー(毎秒生産と最高到達層で上昇)。", desc: "タップに会心を追加。会心率と倍率は強い指・最高到達層で上昇。段階購入でコンボ・屋台・余熱が追加" },
   { id: "grandmaCrowd", name: "おばあちゃん連携", cost: 100000, detail: "式：おばあちゃん自身の生産×12。支援=1.002〜1.003^おばあちゃん(強い指・オーブン・工場)。段階2(スキル「炉の列」で購入可):支援先に銀行・香料棚を追加(×1.008^おばあちゃん)。段階3(スキル「無人ライン」で購入可):全支援×(1+0.001×最高到達層)。", s2: "支援先に銀行・香料棚を追加(+0.8%/台)。", s3: "最高到達層でさらに上昇。", desc: "おばあちゃんの生産×12。さらに1台ごとに強い指・オーブン・工場を+0.2〜0.3%強化。段階購入で対象と層連動が追加" },
-  { id: "ovenBatch", name: "オーブン大量焼成", cost: 300000, detail: "式：9×1.008^オーブン×1.015^(最高到達層-1)。さらに量産波及＝全生産×1.00012^オーブン。段階2(スキル「火種」で購入可):オーブン強化倍率×1.35＋量産品の売上(毎秒収入)が始まる。段階3(スキル「無人ライン」で購入可):オーブン個別強化Lv×(1+0.05×Lv)。", s2: "オーブン強化×1.35。量産品の売上(毎秒収入)を開始。", s3: "個別強化Lvごとに+5%。", desc: "オーブンを強化(オーブン数・最高到達層で上昇)。段階購入で倍率と個別強化連動が追加" },
-  { id: "factoryNetwork", name: "工場ネットワーク", cost: 1000000, detail: "式：9×1.002^(指+婆+炉)×1.008^工場。さらに物流波及＝全生産×1.00012^工場。段階2(スキル「無人ライン」で購入可):銀行以上の所持設備種類×(1+0.15×種類数)。段階3(スキル「まとめ買い」で購入可):×(1+0.0012×最高到達層)。", s2: "上位設備の種類ごとに+15%。", s3: "最高到達層でさらに上昇。", desc: "工場を強化(下位設備・工場数で上昇)。段階購入で設備種類と層連動が追加" },
+  { id: "ovenBatch", name: "オーブン大量焼成", cost: 300000, detail: "式：9×1.0128^オーブン×1.015^(最高到達層-1)。さらに量産波及＝全生産×1.00012^オーブン。段階2(スキル「火種」で購入可):オーブン強化倍率×1.35＋量産品の売上(毎秒収入)が始まる。段階3(スキル「無人ライン」で購入可):オーブン個別強化Lv×(1+0.05×Lv)。", s2: "オーブン強化×1.35。量産品の売上(毎秒収入)を開始。", s3: "個別強化Lvごとに+5%。", desc: "オーブンを強化(オーブン数・最高到達層で上昇)。段階購入で倍率と個別強化連動が追加" },
+  { id: "factoryNetwork", name: "工場ネットワーク", cost: 1000000, detail: "式：9×1.002^(指+婆+炉)×1.0128^工場。さらに物流波及＝全生産×1.00012^工場。段階2(スキル「無人ライン」で購入可):銀行以上の所持設備種類×(1+0.15×種類数)。段階3(スキル「まとめ買い」で購入可):×(1+0.0012×最高到達層)。", s2: "上位設備の種類ごとに+15%。", s3: "最高到達層でさらに上昇。", desc: "工場を強化(下位設備・工場数で上昇)。段階購入で設備種類と層連動が追加" },
   { id: "cpsStrike", name: "生産火力転換", cost: 30000000, detail: "式：モンスターへのダメージに現在の毎秒生産がそのまま加算される。", desc: "毎秒生産の値がそのままモンスターへのダメージに加算されるようになる" },
-  { id: "spiceBlend", name: "香料調合", cost: 20000000, detail: "式：常時 香料棚×1.008^棚。金取得後30秒(棚数で少し延長)はさらに×8×1.006^棚。段階2(スキル「金色の匂い」で購入可):風味の熟成=金取得から12秒間、全生産×(1+0.9%×前回の金からの経過秒・最大60秒)＋香料の売上(毎秒収入)が始まる。段階3(スキル「輝き増幅」で購入可):熟成×(1+0.0015×最高到達層)。", s2: "金取得で全生産バースト(12秒・間が空くほど強い、最大60秒分)。香料の売上も開始。", s3: "最高到達層でさらに上昇。", desc: "香料棚を強化、金取得後はさらに大きく強化。段階購入でバーストと香料の売上が追加" },
+  { id: "spiceBlend", name: "香料調合", cost: 20000000, detail: "式：常時 香料棚×1.0128^棚。金取得後30秒(棚数で少し延長)はさらに×8×1.0096^棚。段階2(スキル「金色の匂い」で購入可):風味の熟成=金取得から12秒間、全生産×(1+0.9%×前回の金からの経過秒・最大60秒)＋香料の売上(毎秒収入)が始まる。段階3(スキル「輝き増幅」で購入可):熟成×(1+0.0015×最高到達層)。", s2: "金取得で全生産バースト(12秒・間が空くほど強い、最大60秒分)。香料の売上も開始。", s3: "最高到達層でさらに上昇。", desc: "香料棚を強化、金取得後はさらに大きく強化。段階購入でバーストと香料の売上が追加" },
   { id: "portalNetwork", name: "異世界接続網", cost: 1200000, detail: "式：異世界炉の生産×9。出現間隔×0.993^異世界炉(常時)。段階2(スキル「砕ける皮」で購入可):延長狩り=討伐のたびに狩り窓を40秒張り直す(討伐間隔<40秒なら窓が続く)、窓中は出現×0.997^異世界炉＋行商が全開になる。段階3(スキル「群れ読み」で購入可):窓中の出現×e^(-0.0008×最高到達層)。", s2: "討伐ごとに40秒の狩り窓(窓中は炉の数だけ出現がさらに速い)。行商も全開。", s3: "窓中の出現間隔が最高到達層でさらに短縮。", desc: "異世界炉の生産×9・炉の数だけ出現が速くなる。段階購入で狩り窓と行商全開が追加" },
-  { id: "bankClickDividend", name: "銀行クリック配当", cost: 4000000, detail: "式：クリック×1.008^銀行×(1+log(所持クッキーの桁数+1)×8)。取得と同時に銀行配当(毎秒収入)を開始。段階2(スキル「まとめ買い」で購入可):複利利息=所持×0.5%×log10(1+銀行)を毎秒獲得(毎秒生産×8付近から逓減、打ち止めなし)。段階3(スキル「経済分析」で購入可):逓減基準×(1+0.08×最高到達層)。", s2: "毎秒利息を獲得(所持クッキーと銀行数で上昇・大きいほど伸びは緩やか)。", s3: "利息の上限が最高到達層で上昇。", desc: "タップを強化(銀行数・貯蓄で上昇)、銀行配当(毎秒収入)も開始。段階購入で複利利息が追加" },
-  { id: "moonGlobalYeast", name: "月面発酵", cost: 7.4e116, detail: "式：全生産×9(常時)。さらに第3層以降 ×1.003^(最高到達層-2)×1.001^月面。段階2(スキル「時空免許」で購入可):log10(1+ノルマ余裕率)/10で発酵が進む。段階3(スキル「研究解析」で購入可):×(1+5%×取得研究数)。", s2: "ノルマの余裕が大きいほど全生産上昇。", s3: "研究1件ごとに+5%。", desc: "全生産×9。第3層からは最高到達層・月面数でさらに上昇。段階購入で余裕率連動と研究数連動が追加" },
+  { id: "bankClickDividend", name: "銀行クリック配当", cost: 4000000, detail: "式：クリック×1.0128^銀行×(1+log(所持クッキーの桁数+1)×8)。取得と同時に銀行配当(毎秒収入)を開始。段階2(スキル「まとめ買い」で購入可):複利利息=所持×0.5%×log10(1+銀行)を毎秒獲得(毎秒生産×8付近から逓減、打ち止めなし)。段階3(スキル「経済分析」で購入可):逓減基準×(1+0.08×最高到達層)。", s2: "毎秒利息を獲得(所持クッキーと銀行数で上昇・大きいほど伸びは緩やか)。", s3: "利息の上限が最高到達層で上昇。", desc: "タップを強化(銀行数・貯蓄で上昇)、銀行配当(毎秒収入)も開始。段階購入で複利利息が追加" },
+  { id: "moonGlobalYeast", name: "月面発酵", cost: 7.4e116, detail: "式：全生産×9(常時)。さらに第3層以降 ×1.003^(最高到達層-2)×1.0016^月面。段階2(スキル「時空免許」で購入可):log10(1+ノルマ余裕率)/10で発酵が進む。段階3(スキル「研究解析」で購入可):×(1+5%×取得研究数)。", s2: "ノルマの余裕が大きいほど全生産上昇。", s3: "研究1件ごとに+5%。", desc: "全生産×9。第3層からは最高到達層・月面数でさらに上昇。段階購入で余裕率連動と研究数連動が追加" },
   { id: "portalGlobalFold", name: "異世界増幅", cost: 8.7e38, detail: "式：1.002^異世界炉×3.5^出現中モンスター×金ブースト中×5。段階2(スキル「特異点管理」で購入可):折込連鎖=全生産×1.058^ノルマ中討伐数。討伐するほど成長率が上がる。段階3(スキル「超越体」で購入可):×(1+0.001×最高到達層)。", s2: "ノルマ中の討伐ごとに全生産+5.8%(複利)。", s3: "最高到達層でさらに上昇。", desc: "全生産アップ(異世界炉・出現中モンスター・金ブーストで上昇)。段階購入で討伐連鎖が追加" },
-  { id: "galaxyAssembly", name: "銀河分業", cost: 8.15e222, detail: "式：銀河工場×1.5^種類数×1.006^銀河工場。段階2(スキル「宇宙炉心」で購入可):編成ボーナス=全生産×(1+0.027×バランス係数)^銀河工場数。バランス係数=所持数の幾何平均/算術平均(まんべんなく揃えるほど1に近い)。段階3(スキル「特異点管理」で購入可):レート×(1+0.0008×最高到達層)。", s2: "設備を均等に揃えるほど全生産上昇(銀河工場数で複利)。", s3: "最高到達層でさらに上昇。", desc: "銀河工場を強化(設備の種類数で上昇)。段階購入で編成ボーナスが追加" },
+  { id: "galaxyAssembly", name: "銀河分業", cost: 8.15e222, detail: "式：銀河工場×1.5^種類数×1.0096^銀河工場。段階2(スキル「宇宙炉心」で購入可):編成ボーナス=全生産×(1+0.027×バランス係数)^銀河工場数。バランス係数=所持数の幾何平均/算術平均(まんべんなく揃えるほど1に近い)。段階3(スキル「特異点管理」で購入可):レート×(1+0.0008×最高到達層)。", s2: "設備を均等に揃えるほど全生産上昇(銀河工場数で複利)。", s3: "最高到達層でさらに上昇。", desc: "銀河工場を強化(設備の種類数で上昇)。段階購入で編成ボーナスが追加" },
   { id: "blackHoleCompression", name: "重力圧縮", cost: 7.65e239, detail: "式：全生産×5。圧縮=必要ノルマ×0.9982^BH数(未達寸前に1回)。段階2(スキル「特異点管理」で購入可):圧縮ゲージ(√BH/秒、1200で満タン)。満タンでボタン発動(30秒放置なら自動発動)、240秒間 全生産×(1+1.8×√BH/10)、周回2回。段階3(スキル「量子厨房」で購入可):発動3回+倍率×(1+0.002×最高到達層)+圧縮×e^(-0.1%×最高到達層)(逓減式)。", s2: "ゲージ満タンで発動(放置30秒で自動)、240秒間 全生産アップ(BH数で上昇)。周回2回。", s3: "発動が周回3回に増加。倍率は最高到達層で上昇、ノルマ圧縮も深まる。", desc: "全生産×5・次のノルマ必要量を軽減(BH数で上昇)。段階購入で圧縮ゲージが追加" },
-  { id: "quantumProofing", name: "量子発酵", cost: 7.55e263, detail: "式：量子ベーカリー×1.30^研究数×1.006^量子。段階2(スキル「反物質炉」で購入可):観測ゆらぎ=90秒周期の波×(1+振幅×max(0,sin))、振幅=0.5+0.05×研究数。段階3(スキル「超越体」で購入可):振幅×(1+0.001×最高到達層)。", s2: "90秒周期の波で全生産が上下(振幅は研究数で上昇)。", s3: "振幅が最高到達層で上昇。", desc: "量子ベーカリーを強化(研究数で上昇)。段階購入で90秒の波が追加" },
-  { id: "antimatterRecipe", name: "反物質配合", cost: 7.55e263, detail: "式：全生産×1.002^反物質×1.032^取得スキル数。段階2(スキル「研究解析」で購入可):×(1+0.0008×最高到達層)。段階3(スキル「超越体」で購入可):対消滅=×(1+3%×転生回数)。周回をまたいで恒久成長する。", s2: "最高到達層でさらに上昇。", s3: "転生ごとに恒久+3%(周回をまたいで蓄積)。", desc: "全生産アップ(反物質数・スキル数で上昇)。段階購入で層連動と恒久成長が追加" },
+  { id: "quantumProofing", name: "量子発酵", cost: 7.55e263, detail: "式：量子ベーカリー×1.30^研究数×1.0096^量子。段階2(スキル「反物質炉」で購入可):観測ゆらぎ=90秒周期の波×(1+振幅×max(0,sin))、振幅=0.5+0.05×研究数。段階3(スキル「超越体」で購入可):振幅×(1+0.001×最高到達層)。", s2: "90秒周期の波で全生産が上下(振幅は研究数で上昇)。", s3: "振幅が最高到達層で上昇。", desc: "量子ベーカリーを強化(研究数で上昇)。段階購入で90秒の波が追加" },
+  { id: "antimatterRecipe", name: "反物質配合", cost: 7.55e263, detail: "式：全生産×1.0032^反物質×1.032^取得スキル数。段階2(スキル「研究解析」で購入可):×(1+0.0008×最高到達層)。段階3(スキル「超越体」で購入可):対消滅=×(1+3%×転生回数)。周回をまたいで恒久成長する。", s2: "最高到達層でさらに上昇。", s3: "転生ごとに恒久+3%(周回をまたいで蓄積)。", desc: "全生産アップ(反物質数・スキル数で上昇)。段階購入で層連動と恒久成長が追加" },
 
   // ==== v2: 設備増幅研究の全設備化(効果は既存と同型: その設備の生産×9×レート^所持数。段階購入なし) ====
-  { id: "bankVault", name: "複利金庫", cost: 8000000, detail: "式：銀行生産×9×1.006^銀行数。銀行を持つほど倍率が伸びる腐らない指数型。", desc: "銀行数で銀行の生産を増幅する" },
-  { id: "moonBake", name: "月光焼成", cost: 80000000, detail: "式：月面ベーカリー生産×9×1.005^月面ベーカリー数。", desc: "月面ベーカリー数で月面ベーカリーの生産を増幅する" },
-  { id: "timeLayer", name: "時間差焼成", cost: 150000000, detail: "式：時空オーブン生産×9×1.005^時空オーブン数。", desc: "時空オーブン数で時空オーブンの生産を増幅する" },
-  { id: "eventHorizon", name: "事象縁焼成", cost: 320000000000, detail: "式：ブラックホールミキサー生産×9×1.004^ブラックホール数。", desc: "ブラックホール数でブラックホールミキサーの生産を増幅する" },
-  { id: "cosmicConvection", name: "宇宙対流", cost: 800000000000, detail: "式：宇宙焼成炉生産×9×1.004^宇宙焼成炉数。", desc: "宇宙焼成炉数で宇宙焼成炉の生産を増幅する" },
-  { id: "singularityFlow", name: "特異点整流", cost: 1600000000000, detail: "式：クッキー特異点生産×9×1.004^特異点数。", desc: "特異点数でクッキー特異点の生産を増幅する" },
-  { id: "annihilationCore", name: "対消滅炉心", cost: 128000000000000, detail: "式：反物質オーブン生産×9×1.004^反物質オーブン数。", desc: "反物質オーブン数で反物質オーブンの生産を増幅する" }
+  { id: "bankVault", name: "複利金庫", cost: 8000000, detail: "式：銀行生産×9×1.0096^銀行数。銀行を持つほど倍率が伸びる腐らない指数型。", desc: "銀行数で銀行の生産を増幅する" },
+  { id: "moonBake", name: "月光焼成", cost: 80000000, detail: "式：月面ベーカリー生産×9×1.008^月面ベーカリー数。", desc: "月面ベーカリー数で月面ベーカリーの生産を増幅する" },
+  { id: "timeLayer", name: "時間差焼成", cost: 150000000, detail: "式：時空オーブン生産×9×1.008^時空オーブン数。", desc: "時空オーブン数で時空オーブンの生産を増幅する" },
+  { id: "eventHorizon", name: "事象縁焼成", cost: 320000000000, detail: "式：ブラックホールミキサー生産×9×1.0064^ブラックホール数。", desc: "ブラックホール数でブラックホールミキサーの生産を増幅する" },
+  { id: "cosmicConvection", name: "宇宙対流", cost: 800000000000, detail: "式：宇宙焼成炉生産×9×1.0064^宇宙焼成炉数。", desc: "宇宙焼成炉数で宇宙焼成炉の生産を増幅する" },
+  { id: "singularityFlow", name: "特異点整流", cost: 1600000000000, detail: "式：クッキー特異点生産×9×1.0064^特異点数。", desc: "特異点数でクッキー特異点の生産を増幅する" },
+  { id: "annihilationCore", name: "対消滅炉心", cost: 128000000000000, detail: "式：反物質オーブン生産×9×1.0064^反物質オーブン数。", desc: "反物質オーブン数で反物質オーブンの生産を増幅する" }
 ].sort((a, b) => a.cost - b.cost);
 
 const REWARD_POOL = [
@@ -7002,7 +7002,6 @@ function ensureState() {
   state.eq2Seen = state.eq2Seen && typeof state.eq2Seen === "object" ? state.eq2Seen : {};
   state.eq2MadeThisRun = state.eq2MadeThisRun && typeof state.eq2MadeThisRun === "object" ? state.eq2MadeThisRun : {};
   state.eq2CraftTotalThisRun = Number(state.eq2CraftTotalThisRun) || 0; // 周回の作成総数(0〜5上限)
-  state.momBuysThisRun = Number(state.momBuysThisRun) || 0;
   state.questKills = state.questKills && typeof state.questKills === "object" ? state.questKills : {};
   state.quotaPauseStartedAt = Math.max(0, Number(state.quotaPauseStartedAt) || 0);
   state.activeOrder = state.activeOrder && typeof state.activeOrder === "object" ? state.activeOrder : null;
@@ -7869,10 +7868,6 @@ const MILESTONE_RESEARCH = (() => {
   const facEarly = [[3, 40, 1.35], [6, 80, 1.4], [8, 120, 1.45]];
   facEarly.forEach(([n, cs, m], i) => add("ms_factory_e" + (i + 1), "工場の助走 " + ROMA[i], "クッキー工場 " + n + "台",
     () => (state.upgrades.factory || 0) >= n, "クッキー工場の生産 ×" + m, { up: { factory: m } }, cs));
-  // 生産の勢い(2026-07-15 sim同期): 旧・量産体制(繰り返し購入)を廃止し、研究で一度解放したら
-  // 自動でかかる時限の全生産の勢いに置換。周回の経過とともに全生産が伸びる(3分でおよそ2倍)。工場1台以降に解放。
-  add("ms_momentum", "生産の勢い", "クッキー工場 1台",
-    () => (state.upgrades.factory || 0) >= 1, "設備を買うほど勢いがつき、全生産が伸びる(この周回の間・経過時間では増えず、購入という行動で伸びる)", { momentum: true }, 40);
   // 討伐実績(周回内)。※spawn/stay/hp は未配線=効果が出ないため削除(2026-07-14 ユーザー指示)。
   // 実装済みの hunt(討伐ダメージ)/dropAdd(素材ドロップ)のみ残す。IDは既存互換のため元の添字(k1/k4/k6/k7)を維持。
   const killTiers = [[10, 100, { hunt: 1.3 }, "モンスターダメージ ×1.3"], null,
@@ -8417,7 +8412,7 @@ function orderScale() {
 // 転生コスト(2026-07-11 ユーザー仕様・確定形): 完成版の測定(基準方針100hシム)で「第n回が転生した時点の
 // 毎秒生産×500」を10のべき乗に切り捨てた固定テーブル(全プレイヤー共通)。sim/prestige_costs.json と同期。
 // テーブルを超えた周回は末尾の桁ステップで自動延長。初回は1億(2026-07-11)。
-const PRESTIGE_COST_TABLE = [100000000, 1000000000, 1000000000000, 100000000000000, 10000000000000000, 10000000000000000000, 1e+25, 1e+30, 1e+32, 1.0000000000000001e+34, 9.999999999999999e+35, 1.0000000000000001e+39, 1e+45, 1e+48, 1e+53, 1e+55, 1.0000000000000001e+58, 1.0000000000000001e+61, 1e+64, 1e+66, 1e+71, 1e+77, 1e+84, 1e+90, 1e+97, 1e+101, 1e+108, 1e+113, 1e+119, 1e+121, 1e+124, 1.0000000000000001e+126, 1.0000000000000001e+126, 1.0000000000000001e+126, 1e+127, 1e+128, 1e+131, 1e+133, 1e+135, 1e+138, 1e+140, 9.999999999999999e+141, 1e+148, 1e+151, 1e+153, 1e+156, 1e+160, 1e+160, 1e+163, 1.0000000000000001e+166, 1.0000000000000001e+169, 1e+172, 1e+175, 1e+178, 1e+181, 1e+184, 1.0000000000000001e+187, 1e+190, 1e+193, 1e+196, 1e+199, 1e+202, 1e+205, 1e+208, 1e+211, 1e+214, 1e+217, 1e+220];
+const PRESTIGE_COST_TABLE = [1e+9, 1e+17, 1e+25, 1e+31, 1e+40, 1e+50, 1e+66, 1e+91, 1e+99, 1e+110, 1e+114, 1e+122, 1e+120, 1e+147, 1e+174, 1e+182, 1e+180, 1e+186, 1e+194, 1e+209, 1e+214, 1e+227, 1e+246, 1e+259, 1e+272, 1e+285, 1e+298];
 function prestigeCookieCost() {
   const runs = Math.max(0, Math.floor(Number(state.prestigeRuns) || 0));
   if (PRESTIGE_COST_TABLE[runs] != null) return PRESTIGE_COST_TABLE[runs]; // 初回もテーブル(10のべき乗・調整対象)
@@ -8965,7 +8960,7 @@ function galaxyAssemblyMultiplier() {
   const types = ownedUpgradeTypeCount();
   const galaxy = state.upgrades.galaxyFactory || 0;
 
-  return levelGrowth(types, 0.5) * levelGrowth(galaxy, 0.006);
+  return levelGrowth(types, 0.5) * levelGrowth(galaxy, 0.0096);
 }
 
 // 銀河分業 段階2: 編成ボーナス(全生産)。バランス係数 = 所持数の幾何平均 / 算術平均
@@ -10057,16 +10052,6 @@ function prestigeMultiplier() {
   return 1 + skillEffect("all");
 }
 
-// 生産の勢い(2026-07-15 sim同期): 研究「生産の勢い」解放中、周回経過で全生産が自動で伸びる。
-// 3分でおよそ2倍(×1.25^(経過/45秒))。上限=7200秒で頭打ち。旧・量産体制(繰り返し購入)の自動版。
-function productionMomentumMul() {
-  // 2026-07-15 ユーザー指示「研究の効果は固定・経過時間で増えるのはナシ」:
-  // 時間スケールを撤廃し購入駆動へ=「この周回で買った設備数」で全生産が伸びる(1台あたりの伸び率は固定)。
-  // 増えるのは経過時間ではなく購入という行動=放置ゲーム本来の複利。買えなくなると自然にプラトー。
-  if (!msBought("ms_momentum")) return 1;
-  const n = Math.min(Number(state.momBuysThisRun) || 0, 8000); // この周回で買った設備数(経過時間ではない)
-  return Math.pow(1.25, n / 12); // 行動駆動=sim同期(momBuyDiv=12 / cap=8000)
-}
 
 function clickSkillMultiplier() {
   return 1 + skillEffect("click") + skillEffect("all") + (runPolicyIs("click") ? 0.12 : 0);
@@ -10341,7 +10326,7 @@ function factoryNetworkMultiplier() {
 
   const factory = state.upgrades.factory || 0;
 
-  let m = levelGrowth(low, 0.002) * levelGrowth(factory, 0.008);
+  let m = levelGrowth(low, 0.002) * levelGrowth(factory, 0.0128);
   // 段階2: 銀行以上の上位設備の所持種類数で伸びる
   if (resStage2("factoryNetwork")) {
     let hi = 0;
@@ -10420,13 +10405,13 @@ function researchUpgradeMultiplier(u) {
   if (u.id === "quantumBakery" && state.research.quantumProofing) m *= quantumProofingMultiplier();
 
   // v2: 設備増幅研究の全設備化(その設備の生産×9×レート^所持数)
-  if (u.id === "bank" && state.research.bankVault) m *= 9 * levelGrowth(state.upgrades.bank || 0, 0.006);
-  if (u.id === "moonBakery" && state.research.moonBake) m *= 9 * levelGrowth(state.upgrades.moonBakery || 0, 0.005);
-  if (u.id === "timeOven" && state.research.timeLayer) m *= 9 * levelGrowth(state.upgrades.timeOven || 0, 0.005);
-  if (u.id === "blackHoleMixer" && state.research.eventHorizon) m *= 9 * levelGrowth(state.upgrades.blackHoleMixer || 0, 0.004);
-  if (u.id === "universeOven" && state.research.cosmicConvection) m *= 9 * levelGrowth(state.upgrades.universeOven || 0, 0.004);
-  if (u.id === "cookieSingularity" && state.research.singularityFlow) m *= 9 * levelGrowth(state.upgrades.cookieSingularity || 0, 0.004);
-  if (u.id === "antimatterOven" && state.research.annihilationCore) m *= 9 * levelGrowth(state.upgrades.antimatterOven || 0, 0.004);
+  if (u.id === "bank" && state.research.bankVault) m *= 9 * levelGrowth(state.upgrades.bank || 0, 0.0096);
+  if (u.id === "moonBakery" && state.research.moonBake) m *= 9 * levelGrowth(state.upgrades.moonBakery || 0, 0.008);
+  if (u.id === "timeOven" && state.research.timeLayer) m *= 9 * levelGrowth(state.upgrades.timeOven || 0, 0.008);
+  if (u.id === "blackHoleMixer" && state.research.eventHorizon) m *= 9 * levelGrowth(state.upgrades.blackHoleMixer || 0, 0.0064);
+  if (u.id === "universeOven" && state.research.cosmicConvection) m *= 9 * levelGrowth(state.upgrades.universeOven || 0, 0.0064);
+  if (u.id === "cookieSingularity" && state.research.singularityFlow) m *= 9 * levelGrowth(state.upgrades.cookieSingularity || 0, 0.0064);
+  if (u.id === "antimatterOven" && state.research.annihilationCore) m *= 9 * levelGrowth(state.upgrades.antimatterOven || 0, 0.0064);
 
   return m;
 }
@@ -10489,7 +10474,7 @@ function bankClickMultiplier() {
   const bank = state.upgrades.bank || 0;
   const saved = state.cookies.add(10).log10();
 
-  const bankM = levelGrowth(bank, 0.008);
+  const bankM = levelGrowth(bank, 0.0128);
   const savedM = 1 + Math.log1p(saved) * 8.0;
   const policyM = runPolicyIs("click") ? 1.08 : 1;
 
@@ -10518,7 +10503,7 @@ function quantumProofingMultiplier() {
   const researchCount = RESEARCH.filter(r => state.research[r.id]).length;
   const quantum = state.upgrades.quantumBakery || 0;
 
-  let m = levelGrowth(researchCount, 0.30) * levelGrowth(quantum, 0.006);
+  let m = levelGrowth(researchCount, 0.30) * levelGrowth(quantum, 0.0096);
   // 段階2: 観測ゆらぎ(90秒周期の波。山でのみ増幅、谷はx1)
   if (resStage2("quantumProofing")) {
     let amp = 0.5 + 0.05 * researchCount;
@@ -10533,7 +10518,7 @@ function antimatterRecipeMultiplier() {
   if (!state.research.antimatterRecipe) return 1;
 
   const antimatter = state.upgrades.antimatterOven || 0;
-  let m = levelGrowth(antimatter, 0.002) * levelGrowth(boughtSkillCount(), 0.032);
+  let m = levelGrowth(antimatter, 0.0032) * levelGrowth(boughtSkillCount(), 0.032);
   // 段階2: 最高到達ノルマ層
   if (resStage2("antimatterRecipe")) m *= 1 + 0.0008 * maxQuotaStage();
   // 段階3: 対消滅(転生回数で恒久的に伸びる)
@@ -10772,7 +10757,6 @@ function baseClickPower() {
   v *= bankClickMultiplier();
   v *= clickSkillMultiplier();
   v *= prestigeMultiplier();
-  v *= productionMomentumMul(); // 生産の勢い(時限・自動)
   v *= globalResearchMultiplier();
   v *= runRewardAllMultiplier();
   v *= dishProductionMultiplier();
@@ -10812,7 +10796,6 @@ function baseCps() {
 
   v *= cpsSkillMultiplier();
   v *= prestigeMultiplier();
-  v *= productionMomentumMul(); // 生産の勢い(時限・自動)
   v *= globalResearchMultiplier();
   v *= runRewardAllMultiplier();
   v *= runRewardCpsMultiplier();
@@ -12650,7 +12633,6 @@ function buyUpgrade(id) {
     }
 
     state.upgrades[id] += 1;
-    state.momBuysThisRun = (state.momBuysThisRun || 0) + 1; // 生産の勢い(2026-07-15): 設備購入数で伸びる=行動駆動
     bumpSurge(id); // まとめ買い割増: 買うほど熱量+1(時間で半減)
     bought += 1;
 
@@ -14035,13 +14017,13 @@ function researchFormulaText(r) {
   if (r.id === "ovenBatch") {
     const oven = state.upgrades.oven || 0;
     const stage = maxQuotaStage();
-    return `式：オーブン研究倍率 = 9 × 1.008^オーブン数 × 1.015^(最高到達層 - 1) × 方針補正 / 現在：オーブン ${fmt(oven)}個、最高到達 第${fmt(stage)}層、倍率 x${(9 * ovenStageMultiplier()).toFixed(3)}`;
+    return `式：オーブン研究倍率 = 9 × 1.0128^オーブン数 × 1.015^(最高到達層 - 1) × 方針補正 / 現在：オーブン ${fmt(oven)}個、最高到達 第${fmt(stage)}層、倍率 x${(9 * ovenStageMultiplier()).toFixed(3)}`;
   }
 
   if (r.id === "factoryNetwork") {
     const low = (state.upgrades.finger || 0) + (state.upgrades.grandma || 0) + (state.upgrades.oven || 0);
     const factory = state.upgrades.factory || 0;
-    return `式：工場倍率 = 9 × 1.002^(強い指+おばあちゃん+オーブン) × 1.008^工場数 / 現在：低ランク設備 ${fmt(low)}個、工場 ${fmt(factory)}個、倍率 x${(9 * factoryNetworkMultiplier()).toFixed(3)}`;
+    return `式：工場倍率 = 9 × 1.002^(強い指+おばあちゃん+オーブン) × 1.0128^工場数 / 現在：低ランク設備 ${fmt(low)}個、工場 ${fmt(factory)}個、倍率 x${(9 * factoryNetworkMultiplier()).toFixed(3)}`;
   }
 
   if (r.id === "spiceBlend") {
@@ -14058,13 +14040,13 @@ function researchFormulaText(r) {
   if (r.id === "bankClickDividend") {
     const bank = state.upgrades.bank || 0;
     const saved = state.cookies.add(10).log10();
-    return `式：クリック倍率 = 1.008^銀行数 × (1 + log(log10(所持クッキー + 10) + 1) × 8.0) × 方針補正 / 現在：銀行 ${fmt(bank)}個、所持指数 ${saved.toFixed(2)}、倍率 x${bankClickMultiplier().toFixed(3)}`;
+    return `式：クリック倍率 = 1.0128^銀行数 × (1 + log(log10(所持クッキー + 10) + 1) × 8.0) × 方針補正 / 現在：銀行 ${fmt(bank)}個、所持指数 ${saved.toFixed(2)}、倍率 x${bankClickMultiplier().toFixed(3)}`;
   }
 
   if (r.id === "moonGlobalYeast") {
     const moon = state.upgrades.moonBakery || 0;
     const stage = maxQuotaStage();
-    return `式：全体倍率 = 9(常時) × 1.003^(最高到達層-2) × 1.001^月面ベーカリー数(この2項は第3層以上) / 現在：最高到達 第${fmt(stage)}層、月面 ${fmt(moon)}個、月面層倍率 x${moonLayerGlobalMultiplier().toFixed(3)}`;
+    return `式：全体倍率 = 9(常時) × 1.003^(最高到達層-2) × 1.0016^月面ベーカリー数(この2項は第3層以上) / 現在：最高到達 第${fmt(stage)}層、月面 ${fmt(moon)}個、月面層倍率 x${moonLayerGlobalMultiplier().toFixed(3)}`;
   }
 
   if (r.id === "portalGlobalFold") {
@@ -14075,7 +14057,7 @@ function researchFormulaText(r) {
   if (r.id === "galaxyAssembly") {
     const types = ownedUpgradeTypeCount();
     const galaxy = state.upgrades.galaxyFactory || 0;
-    return `式：銀河工場倍率 = 1.5^所持設備種類数 × 1.006^銀河工場数 / 現在：${fmt(types)}種類、銀河工場 ${fmt(galaxy)}個、倍率 x${galaxyAssemblyMultiplier().toFixed(3)}`;
+    return `式：銀河工場倍率 = 1.5^所持設備種類数 × 1.0096^銀河工場数 / 現在：${fmt(types)}種類、銀河工場 ${fmt(galaxy)}個、倍率 x${galaxyAssemblyMultiplier().toFixed(3)}`;
   }
 
   if (r.id === "blackHoleCompression") {
@@ -14086,12 +14068,12 @@ function researchFormulaText(r) {
   if (r.id === "quantumProofing") {
     const researchCount = RESEARCH.filter(x => state.research[x.id]).length;
     const quantum = state.upgrades.quantumBakery || 0;
-    return `式：量子ベーカリー倍率 = 1.30^取得済み研究数 × 観測ゆらぎ波 × 1.006^量子ベーカリー数 / 現在：研究 ${fmt(researchCount)}個、量子 ${fmt(quantum)}個、倍率 x${quantumProofingMultiplier().toFixed(3)}`;
+    return `式：量子ベーカリー倍率 = 1.30^取得済み研究数 × 観測ゆらぎ波 × 1.0096^量子ベーカリー数 / 現在：研究 ${fmt(researchCount)}個、量子 ${fmt(quantum)}個、倍率 x${quantumProofingMultiplier().toFixed(3)}`;
   }
 
   if (r.id === "antimatterRecipe") {
     const antimatter = state.upgrades.antimatterOven || 0;
-    return `式：全体倍率 = 1.002^反物質オーブン数 × 1.032^取得済みスキル数 / 現在：反物質 ${fmt(antimatter)}個、スキル ${fmt(boughtSkillCount())}個、倍率 x${antimatterRecipeMultiplier().toFixed(3)}`;
+    return `式：全体倍率 = 1.0032^反物質オーブン数 × 1.032^取得済みスキル数 / 現在：反物質 ${fmt(antimatter)}個、スキル ${fmt(boughtSkillCount())}個、倍率 x${antimatterRecipeMultiplier().toFixed(3)}`;
   }
 
   return r.detail ? `式の要点：${r.detail}` : "";
@@ -15307,7 +15289,6 @@ function prestigeReset() {
   state.questKills = keepQuestKills;
   state.eq2MadeThisRun = {};
   state.eq2CraftTotalThisRun = 0; // 周回の作成総数リセット(0〜5上限)
-  state.momBuysThisRun = 0; // 生産の勢い: 購入数リセット
   state.deepLayer = keepDeepLayer;
   state.stageKills = keepStageKills;
   state.bossKills = keepBossKills;

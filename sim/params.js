@@ -210,32 +210,32 @@ module.exports = {
     // grandmaSelf 30→40(2026-07-12 ①grandmaCrowd: 金アンカー(第0回タップ40回分)で第0回の地力が膨らみ
     // 全方針の初回liftが1.06-1.18に希釈。S7の初回1.182を帯内へ=①は「1方針が全周回≥1.2」で判定)
     // grandmaOwn(2026-07-13 新設・ユーザー指示「1台あたりの初期生産1のままもっと強く」): 1台あたり生産×(1.02)^台数
-    grandmaOwn: 0.02,
+    grandmaOwn: 0.032,
     grandmaSelf: 12, grandmaSup: [0.003, 0.003, 0.003], // 6→12(2026-07-14 ①再係留: 初回周回の希釈対策)
     // 2026-07-06 第8次: ⑫(設備の文脈依存性)用に所持数指数を再配分。
     // factory一強(全方針の最効率=工場固定)を解消: oven 0.060→0.067 / spice 0.062→0.071 / factory 0.060→0.057
     // → 12h実測で最効率設備が factory 7方針 / oven 3方針 に分岐
-    ovenSelf: 20, ovenOwn: 0.03, ovenStage: 0.05, // ①ovenBatch 1.18→層ランプ増し(2026-07-14 2回目) // 0.03→0.045(2026-07-11: 工場の助走カード追加でS10のovenBatch liftが6NG/36 min1.104に希釈→層ランプ増し。NG0/35 min1.281実測) // 0.012→0.03(2026-07-11 ①oven: surge減速で直送比のcpsが痩せ中盤以降のliftが1.02-1.12に沈む→層ランプで再係留。S10 NG9/23→0/24 min1.296)
-    factorySelf: 14, factoryLow: 0.002, factoryOwn: 0.026, // ①factory再係留2回目(2026-07-14: コスト100万はユーザー固定のため効果側で)
+    ovenSelf: 20, ovenOwn: 0.048, ovenStage: 0.05, // ①ovenBatch 1.18→層ランプ増し(2026-07-14 2回目) // 0.03→0.045(2026-07-11: 工場の助走カード追加でS10のovenBatch liftが6NG/36 min1.104に希釈→層ランプ増し。NG0/35 min1.281実測) // 0.012→0.03(2026-07-11 ①oven: surge減速で直送比のcpsが痩せ中盤以降のliftが1.02-1.12に沈む→層ランプで再係留。S10 NG9/23→0/24 min1.296)
+    factorySelf: 14, factoryLow: 0.002, factoryOwn: 0.0416, // ①factory再係留2回目(2026-07-14: コスト100万はユーザー固定のため効果側で)
     // 量産波及(2026-07-14 ①後半希釈対策): 研究ゲート付きの全生産×(1+係数)^台数。
     // 後半周回(台数2500-3300)で×1.6-1.9=lift受け皿・序盤(台数40-90)は≈1.01で無害。
     // 0.0002→0.00012(2026-07-14 R20: 全体項が設備収入を押し上げ②改2のbake2.66>帯2.57・balanced5/29に。
     // ①の後半liftは1.00012^2600=1.37で維持)
     ovenGlobal: 0.00012, factoryGlobal: 0.00012,
-    spiceOwn: 0.032, spiceGold: 7, spiceGoldOwn: 0.006, spiceGoldDur: 30000,
+    spiceOwn: 0.0512, spiceGold: 7, spiceGoldOwn: 0.0096, spiceGoldDur: 30000,
     // 狩り窓(2026-07-09 ⑬作り替え): 窓は討伐が開く・維持する(金クッキー非関与)。portalHuntDur/Grow は旧・金開窓用=現在未使用(移植時に削除)。
     // portalHuntSpawnBase=窓に関係ない常時スポーン加速(研究解放中)/ portalHuntSpawn=窓中の追加加速(⑬延長狩りのコントラスト)。
     // ⑬延長狩り再係留2回目(2026-07-14)。※同日修復: 前の編集でportalHuntSpawn/SpawnBaseが行中コメントに
     // 飲まれて未定義化(窓の加速=延長狩りの実体が死んでS7比0.956/S9比1.000の一因)。独立行に復元。
     portalSelf: 6, portalHuntDur: 9000, portalHuntGrow: 0.03,
     portalHuntSpawn: 0.0008, portalHuntSpawnBase: 0.007,
-    bankOwn: 0.018, bankSaved: 5.0,
-    moonBase: 8, moonStage: 0.001, moonOwn: 0.0005,
+    bankOwn: 0.0288, bankSaved: 5.0,
+    moonBase: 8, moonStage: 0.001, moonOwn: 0.0008,
     foldPortal: 0.002, foldMonster: 2.5, foldGold: 8,
-    galaxyTypes: 0.22, galaxyOwn: 0.014,
+    galaxyTypes: 0.22, galaxyOwn: 0.0224,
     bhGlobal: 5, bhCompress: 0.0018,
-    quantumRes: 0.17, quantumOwn: 0.014,
-    antimatterOwn: 0.005, antimatterSkill: 0.02,
+    quantumRes: 0.17, quantumOwn: 0.0224,
+    antimatterOwn: 0.008, antimatterSkill: 0.02,
     ctrlOven: 0.05, ctrlMoon: 0.07, ctrlBh: 0.10
   },
 

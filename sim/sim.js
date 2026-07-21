@@ -1674,16 +1674,6 @@ function computeProd(sim) {
   if (!rwOff(sim, 'goldenBeastMutation') && (r.perks.goldenBeastMutation || 0) > 0) globalRes *= 1 + (r.perks.goldenBeastMutation || 0) * (P.rw.goldenBeastMutationProd || 0);
   if (!rwOff(sim, 'brandHunt') && (r.perks.brandHunt || 0) > 0) globalRes *= 1 + (r.perks.brandHunt || 0) * (P.rw.brandHuntProd || 0);
 
-  // 生産の勢い(2026-07-16 ユーザー指示「実績/スキル解放研究の効果値は固定・経過時間でどんどん増えるのはナシ」):
-  // 旧・時間スケール(massProdMul^(経過/秒))を撤廃。伸びるのは「経過時間」ではなく「その周回で買った設備数」=
-  // 行動駆動の複利(買うほど伸びる=放置ゲーム本来の成長)。1台あたりの伸び率(massProdMul)は固定値。
-  // 買えなくなれば自然にプラトー→転生。研究解放でオン(ms_momentum)。
-  if (r.ms && r.ms.momentum && P.msResearch) {
-    const div = Number(process.env.MOM_DIV) || P.msResearch.momBuyDiv || 16;
-    const cap = Number(process.env.MOM_CAP) || P.msResearch.momBuyCapExp || 200;
-    const n = Math.min(r.momBuys || 0, cap);
-    globalRes *= Math.pow(P.msResearch.massProdMul, n / div);
-  }
 
   // ③死に報酬対策(第12次P・枝分かれmeasure下では安全): 討伐ダメージ系報酬(割れた牙/焼き印狩り)を「討伐数×全生産倍率」へ繋ぐ。
   // ダメージ二値しきい値(killable)に吸収されず、討伐が速い方針でも討伐数に比例して総クッキーに効く経路。
@@ -2079,10 +2069,6 @@ const MILESTONE_RESEARCH = (() => {
   }
   // 工場の早期強化 3段(2026-07-11 ユーザー指示「工場の段1研究が高いので、実績研究でその前にいくつか
   // 工場強化できるものを入れて」): 組立ライン網(段1)が買える前の3/6/8台で工場生産を先行強化。安価(即買い帯)
-  // 量産体制(2026-07-13 メトロノーム): 工場1台以降、45秒ごとに繰り返し購入可・全生産×1.25・コスト=生産30秒分
-  // 生産の勢い(2026-07-15): 旧・量産体制(繰り返し購入)を廃止し、研究で一度解放したら自動でかかる
-  // 時限の全生産の勢い(momentum)に置換=新⑥(3分2倍)の床の作り直し。工場1台以降に解放。
-  add('ms_momentum', sim => (sim.run.upgrades.factory || 0) >= 1, { momentum: true }, 40);
   const facEarly = [[3, 40, 1.35], [6, 80, 1.4], [8, 120, 1.45]];
   facEarly.forEach(([n, cs, m], i) => add('ms_factory_e' + (i + 1), sim => (sim.run.upgrades.factory || 0) >= n, { up: { factory: m } }, cs));
   // 討伐実績 8段(周回内): 効果はダメージ/出現/滞在/HP/ドロップのローテ
@@ -2189,7 +2175,6 @@ function tryBuyMilestones(sim, prod) {
     if (m.fx.own) for (const k in m.fx.own) r.ms.own[k] = (r.ms.own[k] || 0) + m.fx.own[k]; // 自設備数連動
     if (m.fx.sup) { const [up, src, rate] = m.fx.sup; (r.ms.sup[up] = r.ms.sup[up] || []).push([src, rate]); } // 他設備数連動(支援)
     if (m.fx.critAdd) r.ms.critAdd = (r.ms.critAdd || 0) + m.fx.critAdd;              // 確率: 会心率+N
-    if (m.fx.momentum) r.ms.momentum = true;                                          // 生産の勢い(自動・時限)
     if (!sim.everMs) sim.everMs = {};
     if (!sim.everMs[m.id]) { sim.everMs[m.id] = true; pushUnlock(sim, 'research', m.id); } // 解放イベントは初回のみ(買い直しはT2の「新規解放」に数えない)
   }
@@ -3460,7 +3445,6 @@ function tryBuyUpgrade(sim, u, budgetRatio) {
   if (cost > sim.run.cookies) return false;
   sim.run.cookies -= cost;
   sim.run.upgrades[u.id]++;
-  sim.run.momBuys = (sim.run.momBuys || 0) + 1; // 生産の勢い(2026-07-15): 設備購入数で伸びる=行動駆動(経過時間ではない)
   sim.run._lastUpBuyT = sim.t; // 装備C型「設備購入直後」用
   // 星屑パフェ: 効果中に購入した設備はその周回中、生産×1.25(成長ゲート型)
   if (sim.run.buffs && (sim.run.buffs.stardustParfait || 0) > sim.t) sim.run.parfaitUps[u.id] = (sim.run.parfaitUps[u.id] || 0) + 1;
