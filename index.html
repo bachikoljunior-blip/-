@@ -16344,6 +16344,13 @@ function monsterLevel() {
   return Math.max(1, 1 + early + late);
 }
 
+// 最小タップ床(2026-07-21 R33): この型を倒すのに最低限必要なタップ数(1タップの削り量=maxHp/この値)。
+const MONSTER_MIN_TAPS = { normal: 4, swarm: 2, speedy: 3, tank: 8, boss: 16, goldenBeast: 6, default: 4 };
+function monsterMinTaps(typeId) {
+  const t = MONSTER_TYPES[typeId];
+  const base = (t && t.base) || String(typeId || "normal").replace(/\d+$/, "");
+  return MONSTER_MIN_TAPS[base] != null ? MONSTER_MIN_TAPS[base] : MONSTER_MIN_TAPS.default;
+}
 function monsterHpValue(level) {
   const s = quotaElapsedSeconds();
   const timePressure = 1 + Math.pow(Math.max(0, s - 45) / 430, 1.95);
@@ -16686,9 +16693,10 @@ function hitMonster(id) {
     earn(gained);
   }
 
-  // §18: オーバーキル撃破判定(残HPの5倍以上のダメージ)
+  // §18: オーバーキル撃破判定は生ダメージで(素材機構は無傷)。§R33: 削りは1タップ maxHp/minTaps まで=ワンパン禁止
   mon.overkill = damage >= mon.hp * OVERKILL_MUL;
-  mon.hp -= damage;
+  const perTapCap = Math.max(1, (mon.maxHp || mon.hp) / monsterMinTaps(mon.typeId));
+  mon.hp -= Math.min(damage, perTapCap);
 
   playSound("monster");
   renderMonsterHp(mon.id);

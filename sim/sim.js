@@ -1978,6 +1978,12 @@ function monsterHpValue(sim, level) {
   }
   return Math.floor(hp);
 }
+// 最小タップ床(2026-07-21 R33): この型を倒すのに最低限必要なタップ数。1タップの削り量を maxHp/この値 に制限する。
+function monsterMinTaps(typeId) {
+  const M = (P.monster && P.monster.minTaps) || {};
+  const base = String(typeId || 'normal').replace(/\d+$/, ''); // normal2/tank3 → normal/tank
+  return M[base] != null ? M[base] : (M.default != null ? M.default : 4);
+}
 function monsterStayMs(sim) {
   const r = sim.run;
   const rewardLv = rwOff(sim, 'monsterStay') ? 0 : Math.max(0, r.perks.monsterStay || 0);
@@ -2390,7 +2396,10 @@ function earningPower(sim) {
     const level = monsterLevel(sim);
     const hp = Math.max(1, monsterHpValue(sim, level));
     const dmg = Math.max(1, monsterDamage(sim, prod));
-    const ttk = hp / Math.max(1e-9, dmg * tapRate); // 撃破所要秒
+    // 最小タップ床(2026-07-21 R33): 1タップ削り量≤hp/minTaps=撃破に最低 minTaps/tapRate 秒かかる
+    // (=max(hp/(dmg*tapRate), minTaps/tapRate))。出現間隔42-80秒に対しコンマ秒なのでkillsPerSecへの影響は微小。
+    const effPerTap = Math.min(dmg, hp / monsterMinTaps('normal'));
+    const ttk = hp / Math.max(1e-9, effPerTap * tapRate); // 撃破所要秒(床あり)
     const stay = monsterStayMs(sim) / 1000;
     const killable = ttk <= stay ? 1 : 0;             // 滞在内に倒せるか(滞在報酬が効く)
     // 出現頻度報酬の討伐手数ボーナス(増加方向・飽和形): killsPerSec への ttk 非依存の純乗算。
@@ -3102,7 +3111,11 @@ function advanceTick(sim, strategy) {
         r.monster.firstHitUsed = true;
       }
       let hits = tapRate * dt;
-      let dealt = hits * dmg * (1 + (r.huntFocusLv || 0)) + firstBonus;
+      // 最小タップ床(2026-07-21 R33): 生ダメージ=オーバーキル判定用。削り(depletion)は 1タップ maxHp/minTaps まで。
+      const rawPerTap = dmg * (1 + (r.huntFocusLv || 0));
+      const perTapCap = Math.max(1, r.monster.maxHp / monsterMinTaps(r.monster.typeId));
+      const dealt = hits * Math.min(rawPerTap, perTapCap) + Math.min(firstBonus, perTapCap); // 削り(床あり)
+      const rawDealt = hits * rawPerTap + firstBonus;                                        // 生(オーバーキル判定)
       // 甘噛み回収
       const biteLv = rwOff(sim, 'biteRecovery') ? 0 : (r.perks.biteRecovery || 0);
       if (biteLv > 0) {
@@ -3114,7 +3127,7 @@ function advanceTick(sim, strategy) {
       r.monster.hp -= dealt;
       tapsForCookies = 0;
       if (r.monster.hp <= 0) {
-        r.monster.overkill = dealt >= (P.ws && P.ws.drops ? P.ws.drops.overkillMul : 5) * Math.max(1, hpBefore);
+        r.monster.overkill = rawDealt >= (P.ws && P.ws.drops ? P.ws.drops.overkillMul : 5) * Math.max(1, hpBefore);
         defeatMonster(sim, r.monster);
         r.monster = null;
         scheduleMonster(sim);

@@ -1,0 +1,6 @@
+sim S1 バランス効率型 done (33178ms)
+sim S2 クリック会心型 done (50559ms)
+sim S3 金クッキー特化型 done (40697ms)
+sim S4 狩猟特化型 done (65356ms)
+sim S5 研究貯蓄型 done (35294ms)
+sim S6 早回し転生型 done (32920ms)
