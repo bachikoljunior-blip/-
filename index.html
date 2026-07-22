@@ -10313,6 +10313,14 @@ function goldenAfterheatMultiplier() {
   return activeGoldenAfterheats.reduce((m, b) => m * b.multiplier, 1);
 }
 
+// 熟成の香り(香料調合 段2)の現在の全生産バースト倍率(不発なら1)。globalResearchMultiplierと同条件=表示用。
+function spiceBurstMultiplier() {
+  if (state.research.spiceBlend && resStage2("spiceBlend") && Date.now() < (state.spiceAromaUntil || 0)) {
+    return state.spiceBurstM || 1;
+  }
+  return 1;
+}
+
 function timeOvenAfterheatDurationMs() {
   const timeOven = state.upgrades.timeOven || 0;
   if (timeOven <= 0) return 0;
@@ -12750,12 +12758,14 @@ function updateGoldenBoostBadge() {
   const goldenOn = goldenBoostActive();
   const orderCpsOn = orderTempCpsMultiplier() > 1;
   const orderCookieOn = orderCookieActive();
-  if (titleScreenActive() || pausedForSkillChoice() || !(goldenOn || orderCpsOn || orderCookieOn)) { box.style.display = "none"; return; }
-  const mul = goldenBoostMultiplier() * goldenAfterheatMultiplier() * orderTempCpsMultiplier();
+  const spiceOn = spiceBurstMultiplier() > 1; // 熟成の香り(金取得後の全生産バースト)
+  if (titleScreenActive() || pausedForSkillChoice() || !(goldenOn || orderCpsOn || orderCookieOn || spiceOn)) { box.style.display = "none"; return; }
+  const mul = goldenBoostMultiplier() * goldenAfterheatMultiplier() * orderTempCpsMultiplier() * spiceBurstMultiplier();
   const untilList = [];
   if (goldenOn) untilList.push(...activeGoldenBoosts.map(b => b.until));
   if (orderCpsOn) untilList.push(state.orderTempCpsUntil || 0);
   if (orderCookieOn) untilList.push(state.orderCookieUntil || 0);
+  if (spiceOn) untilList.push(state.spiceAromaUntil || 0);
   const left = Math.max(0, Math.ceil((Math.max(now, ...untilList) - now) / 1000));
   let label = "";
   if (mul > 1) label += "⚡ 全生産 ×" + (mul >= 10 ? Math.round(mul) : mul.toFixed(1));
