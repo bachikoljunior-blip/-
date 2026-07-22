@@ -1057,19 +1057,25 @@ if (mode === 'baseline') {
 } else if (mode === 'unlockgap') {
   // ㉚ 解放間隔(2026-07-19 ユーザー新設条件): 新要素の解放イベント同士の間隔が30秒以上のものが9割以上。
   // 解放ラッシュ(通知の機関銃)を禁止し、1つずつ味わえるペーシングを合格条件化。
-  console.log('㉚ 解放間隔: 連続する解放イベントの間隔≥30秒が90%以上(全解放イベント・100h)');
+  console.log('㉚ 解放間隔: 連続する解放イベントの間隔≥30秒が90%以上(同時解放=1判定・全解放イベント・100h)');
+  // 同時解放は1判定(2026-07-22 ユーザー指示「一回の転生で取れる複数スキル取っても一回判定で」):
+  // 同一瞬間(同一tick)に成立した複数の解放(転生時の複数スキル・設備+その研究の同時購入・工房の複数解禁)は
+  // 「機関銃通知」ではなく1回の解放体験なので、間隔判定では1つのモーメントにまとめる。
   let okAll = 0, cnt = 0;
   for (const s of STRATEGIES) {
     const sim = G.simulate(s, { hours });
     const ev = (sim.unlockEvents || []).slice().sort((a, b) => a.t - b.t);
+    // 同時(同一tick)イベントを1モーメントに畳む
+    const moments = [];
+    for (const e of ev) { if (!moments.length || e.t - moments[moments.length - 1] > 1e-9) moments.push(e.t); }
     const gaps = [];
-    for (let i = 1; i < ev.length; i++) gaps.push(ev[i].t - ev[i - 1].t);
+    for (let i = 1; i < moments.length; i++) gaps.push(moments[i] - moments[i - 1]);
     const ok = gaps.filter(g => g >= 30).length;
     const ratio = gaps.length ? ok / gaps.length : 1;
     const pass = ratio >= 0.9;
     if (pass) okAll++;
     cnt++;
-    console.log(`  ${pass ? 'OK' : 'NG'} ${s.id} 解放${ev.length}件 間隔${gaps.length}本 ≥30s: ${ok}/${gaps.length} (${(ratio * 100).toFixed(1)}%)`);
+    console.log(`  ${pass ? 'OK' : 'NG'} ${s.id} 解放${ev.length}件→${moments.length}モーメント 間隔${gaps.length}本 ≥30s: ${ok}/${gaps.length} (${(ratio * 100).toFixed(1)}%)`);
   }
   console.log(`㉚ 合計 ${okAll}/${cnt}方針`);
 } else if (mode === 'eqswap') {

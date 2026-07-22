@@ -12638,44 +12638,31 @@ function revealKeyOwned(key) {
   if (kind === "stage") { const m = id.match(/^(.+)__s(\d)$/); return m ? researchStagePurchased(m[1], Number(m[2])) : false; }
   return false;
 }
-// 解放ゲート撤去(2026-07-22 ユーザー指示「ゲート解放無くして、ゲーム調整で解放間隔30秒以上」):
-// 待たせるドリップは廃止。各要素は本来の解放条件(設備購入済み/スキル/トリガ)を満たした瞬間に棚へ出す。
-// 解放間隔≥30秒はノルマを本当の壁にした経済(ノルマ係数+討伐難度)で自然に生む。
+// 解放ゲート撤去(2026-07-22 ユーザー指示):
+// 設備/研究/段階=本来の解放条件を満たした瞬間に即棚出し(待ちゼロ)。
+// 実績/スキル研究(ms:)だけは「自動購入廃止・間隔分散」の代替として1つずつ棚出し(下 processContentReveals)。
 function revealOk(key) {
-  return true;
+  if (typeof key !== "string" || key.indexOf("ms:") !== 0) return true; // 設備/研究/段階/工房は即時
+  return isRevealed(key); // 実績/スキル研究は分散ドリップで解放されたものだけ
 }
 // 1tickに最大1つ、前回解放から30秒経過していれば「解放条件は満たすが未解放」の中で最安を1つ解放する。
 // 解放条件=各種visible判定のゲート手前(所持/設備購入済み/トリガ達成)まで。棚順=最安から。
+// 自動購入廃止・実績/スキル研究の間隔分散(2026-07-22 ユーザー指示):
+// 旧・全コンテンツの30秒ドリップ(設備/研究まで待たせる=撤去済み)ではなく、対象は実績/スキル研究(ms:)だけ。
+// トリガ成立済み・未解放の中から30秒ごとに最安1つを棚へ出す=解放ラッシュ(機関銃通知)を防ぐ。
+// 設備/研究/段階/工房は revealOk が即true=待ちは無い。棚に出た後の購入はプレイヤーが手動でタップ(自動購入なし)。
 function processContentReveals() {
-  // 解放ドリップ撤去(2026-07-22): revealOk が常にtrue=棚出しは解放条件成立で即時。ドリップ処理は無効。
-  return;
   ensureRevealState();
   if (Date.now() - state.lastRevealAt < REVEAL_GAP_MS) return;
   if (pausedForSkillChoice() || titleScreenActive()) return;
   let best = null;
   const consider = (key, cost) => {
-    if (state.revealedEver[key] || revealKeyOwned(key)) return;
+    if (state.revealedEver[key]) return;
     const c = Number(cost);
     if (!isFinite(c)) return;
     if (!best || c < best.cost) best = { key, cost: c };
   };
-  // 設備: 表示枠内(highestOwned+1)かつスキル解放済みの、まだ持っていない次の設備
-  const upLimit = visibleUpgradeLimitIndex();
-  UPGRADES.forEach((u, i) => {
-    if (i <= upLimit && upgradeUnlocked(u) && (state.upgrades[u.id] || 0) === 0) consider("up:" + u.id, costOf(u, 0));
-  });
-  // 研究: 対応設備を購入済みで未研究のもの
-  RESEARCH.forEach(r => {
-    if (!state.research[r.id] && researchUnlocked(r)) consider("res:" + r.id, researchCost(r));
-  });
-  // 段階(段2/段3): 解放スキルを持ち段階カードが出る対象(revealゲート手前の条件で判定=自己矛盾回避)
-  RESEARCH.forEach(r => {
-    if (!state.research[r.id] || (!debugMode && !researchUnlocked(r))) return;
-    const cur = Math.max(1, Math.floor(Number((state.researchStages || {})[r.id]) || 1));
-    if (cur < 2 && hasSkill(RES_STAGE2[r.id])) consider("stage:" + r.id + "__s2", researchStageCost(r, 2));
-    else if (cur === 2 && hasSkill(RES_STAGE3[r.id])) consider("stage:" + r.id + "__s3", researchStageCost(r, 3));
-  });
-  // 実績研究: トリガ達成済み・未購入
+  // 実績/スキル研究のみ: トリガ達成済み・未購入・未解放
   MILESTONE_RESEARCH.forEach(ms => {
     if (!msBought(ms.id) && (function () { try { return ms.trig(); } catch (e) { return false; } })()) consider("ms:" + ms.id, msResearchCost(ms));
   });

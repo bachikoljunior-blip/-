@@ -2136,48 +2136,70 @@ const MILESTONE_RESEARCH = (() => {
   return list;
 })();
 // 未購入で条件を満たしたものを自動購入(コスト=cps×msCostSec。安さゆえ全プレイヤー即買いのモデル)
+function msCostOf(sim, m, prod) {
+  const costSec = m.costSec != null ? m.costSec : ((P.msResearch && P.msResearch.costSec != null) ? P.msResearch.costSec : 30);
+  // コストはゲーム内で固定(2026-07-11 ユーザー指示): 焼き込み表(ms_costs.json)を優先。無いidだけ動的式。
+  const fixed = P.msResearch && P.msResearch.costTable && P.msResearch.costTable[m.id];
+  return fixed != null ? fixed : (m.cost != null ? m.cost : Math.max(100, (prod ? prod.cps : 0) * costSec));
+}
+function applyMs(sim, m, cost) {
+  const r = sim.run;
+  r.cookies -= cost;
+  if (m.repeatSec) { (r._msRepeatT || (r._msRepeatT = {}))[m.id] = sim.t; r.ms.bought[m.id] = (r.ms.bought[m.id] || 0) + 1; }
+  else r.ms.bought[m.id] = true;
+  if (!sim.msCostLog) sim.msCostLog = {};
+  if (!sim.msCostLog[m.id]) sim.msCostLog[m.id] = cost; // 初回購入時の支払額(固定コスト表の生成用)
+  if (m.fx.up) for (const k in m.fx.up) r.ms.up[k] = (r.ms.up[k] || 1) * m.fx.up[k];
+  if (m.fx.click) r.ms.click *= m.fx.click;
+  if (m.fx.cps) r.ms.cps = (r.ms.cps || 1) * m.fx.cps;
+  if (m.fx.all) r.ms.all *= m.fx.all;
+  if (m.fx.golden) r.ms.golden *= m.fx.golden;
+  if (m.fx.hunt) r.ms.hunt *= m.fx.hunt;
+  if (m.fx.dropAdd) r.ms.dropAdd += m.fx.dropAdd;
+  if (m.fx.spawn) r.ms.spawn = (r.ms.spawn || 1) * m.fx.spawn;
+  if (m.fx.stay) r.ms.stay = (r.ms.stay || 1) * m.fx.stay;
+  if (m.fx.hp) r.ms.hp = (r.ms.hp || 1) * m.fx.hp;
+  if (m.fx.cpsAdd) r.ms.cpsAdd = (r.ms.cpsAdd || 0) + m.fx.cpsAdd;
+  if (m.fx.own) for (const k in m.fx.own) r.ms.own[k] = (r.ms.own[k] || 0) + m.fx.own[k];
+  if (m.fx.sup) { const [up, src, rate] = m.fx.sup; (r.ms.sup[up] = r.ms.sup[up] || []).push([src, rate]); }
+  if (m.fx.critAdd) r.ms.critAdd = (r.ms.critAdd || 0) + m.fx.critAdd;
+  if (!sim.everMs) sim.everMs = {};
+  if (!sim.everMs[m.id]) { sim.everMs[m.id] = true; pushUnlock(sim, 'research', m.id); } // 解放イベントは初回のみ
+}
+// 実績/スキル研究の取得(2026-07-22 ユーザー指示「自動購入は廃止。実績・スキル間隔も分散」):
+// 旧・毎tickの一括自動購入(トリガ成立の全カードを同時取得=㉚解放ラッシュの主犯)を廃止。
+//  (1) 生涯で既に解放済み(everMs)の再取得=即時・解放イベント無し。ms効果は周回ごとに r.ms がリセットされ
+//      再取得されるため、既知コンテンツの再購入は待たせない(=解放ゲートが再購入を免除するのと同じ)。
+//      repeatSec(量産体制)はクールダウン付きで何度でも。
+//  (2) 生涯初の取得=直近の解放から msGap 秒あけて最安1つだけ取得(=間隔分散・解放イベント発火)。
+//      設備/研究/段階の解放とグローバルな lastUnlockT を共有=他の解放直後30秒以内には湧かない=バースト解消。
 function tryBuyMilestones(sim, prod) {
   const r = sim.run;
-  if (!r.ms) r.ms = { up: {}, click: 1, cps: 1, all: 1, golden: 1, hunt: 1, dropAdd: 0, bought: {}, cpsAdd: 0, own: {}, sup: {}, critAdd: 0, momentum: false }; // 効果多様化(2026-07-15): cpsAdd=加算/own=自設備数連動/sup=他設備数連動/critAdd=会心確率/momentum=生産の勢い
+  if (!r.ms) r.ms = { up: {}, click: 1, cps: 1, all: 1, golden: 1, hunt: 1, dropAdd: 0, bought: {}, cpsAdd: 0, own: {}, sup: {}, critAdd: 0, momentum: false };
+  // (1) 既解放(everMs)の再取得=即時・イベント無し。周回内で未取得のものを全て(repeatSecはクールダウンで)。
   for (const m of MILESTONE_RESEARCH) {
-    // 量産体制(2026-07-13 第13次ペーシング): repeatSec付きカードは時限クールダウンで何度でも買える
-    // =レート制御された成長のメトロノーム(45秒ごと×1.25 → 3分窓あたり×2.44が下支え=新⑥の床)
+    if (!(sim.everMs && sim.everMs[m.id])) continue; // 生涯初は(2)へ
     if (m.repeatSec) {
-      if ((r._msRepeatT && r._msRepeatT[m.id] || -Infinity) + m.repeatSec > sim.t) continue;
-    } else if (r.ms.bought[m.id]) continue;
+      if (r.ms.bought[m.id] && (r._msRepeatT && r._msRepeatT[m.id] || -Infinity) + m.repeatSec > sim.t) continue;
+    } else if (r.ms.bought[m.id]) continue; // 周回内で取得済み
     if (!m.trig(sim)) continue;
-    if ((!sim.everMs || !sim.everMs[m.id]) && !unlockGateOk(sim)) continue;
-    const costSec = m.costSec != null ? m.costSec : ((P.msResearch && P.msResearch.costSec != null) ? P.msResearch.costSec : 30);
-    // コストはゲーム内で固定(2026-07-11 ユーザー指示): 完成版測定の焼き込み表(ms_costs.json)を優先。
-    // 表に無いidだけ動的式(=表の生成にも使う)。丸め規則はビルド時に適用済み。
-    const fixed = P.msResearch && P.msResearch.costTable && P.msResearch.costTable[m.id];
-    // スキル解放研究(msk_/msk2_)は固定コスト(m.cost)を持つ=毎秒生産非依存の≥2倍階段(2026-07-16)。
-    // 焼き込み表があればそれを優先(表と固定costは同値)、無ければm.cost、それも無ければ従来の動的式。
-    const cost = fixed != null ? fixed : (m.cost != null ? m.cost : Math.max(100, (prod ? prod.cps : 0) * costSec));
+    const cost = msCostOf(sim, m, prod);
     if (r.cookies < cost) continue;
-    r.cookies -= cost;
-    if (m.repeatSec) { (r._msRepeatT || (r._msRepeatT = {}))[m.id] = sim.t; r.ms.bought[m.id] = (r.ms.bought[m.id] || 0) + 1; }
-    else r.ms.bought[m.id] = true;
-    if (!sim.msCostLog) sim.msCostLog = {};
-    if (!sim.msCostLog[m.id]) sim.msCostLog[m.id] = cost; // 初回購入時の支払額(固定コスト表の生成用)
-    if (m.fx.up) for (const k in m.fx.up) r.ms.up[k] = (r.ms.up[k] || 1) * m.fx.up[k];
-    if (m.fx.click) r.ms.click *= m.fx.click;
-    if (m.fx.cps) r.ms.cps = (r.ms.cps || 1) * m.fx.cps;
-    if (m.fx.all) r.ms.all *= m.fx.all;
-    if (m.fx.golden) r.ms.golden *= m.fx.golden;
-    if (m.fx.hunt) r.ms.hunt *= m.fx.hunt;
-    if (m.fx.dropAdd) r.ms.dropAdd += m.fx.dropAdd;
-    if (m.fx.spawn) r.ms.spawn = (r.ms.spawn || 1) * m.fx.spawn;
-    if (m.fx.stay) r.ms.stay = (r.ms.stay || 1) * m.fx.stay;
-    if (m.fx.hp) r.ms.hp = (r.ms.hp || 1) * m.fx.hp;
-    // 効果多様化(2026-07-15 ユーザー「倍率ばっかじゃなくプラス・自/他設備数の反映も」)
-    if (m.fx.cpsAdd) r.ms.cpsAdd = (r.ms.cpsAdd || 0) + m.fx.cpsAdd;                  // 加算: +N/秒の固定生産
-    if (m.fx.own) for (const k in m.fx.own) r.ms.own[k] = (r.ms.own[k] || 0) + m.fx.own[k]; // 自設備数連動
-    if (m.fx.sup) { const [up, src, rate] = m.fx.sup; (r.ms.sup[up] = r.ms.sup[up] || []).push([src, rate]); } // 他設備数連動(支援)
-    if (m.fx.critAdd) r.ms.critAdd = (r.ms.critAdd || 0) + m.fx.critAdd;              // 確率: 会心率+N
-    if (!sim.everMs) sim.everMs = {};
-    if (!sim.everMs[m.id]) { sim.everMs[m.id] = true; pushUnlock(sim, 'research', m.id); } // 解放イベントは初回のみ(買い直しはT2の「新規解放」に数えない)
+    applyMs(sim, m, cost);
   }
+  // (2) 生涯初の取得=解放間隔≥msGap秒で最安を1つずつ分散取得
+  const gap = (P.reveal && P.reveal.msGap != null) ? P.reveal.msGap : 30;
+  if (sim.lastUnlockT != null && sim.t < sim.lastUnlockT + gap) return;
+  let best = null;
+  for (const m of MILESTONE_RESEARCH) {
+    if (sim.everMs && sim.everMs[m.id]) continue; // 既出は(1)で処理済み
+    if (r.ms.bought[m.id]) continue;
+    if (!m.trig(sim)) continue;
+    const cost = msCostOf(sim, m, prod);
+    if (r.cookies < cost) continue;
+    if (!best || cost < best.cost) best = { m, cost };
+  }
+  if (best) applyMs(sim, best.m, best.cost);
 }
 
 // 稼ぎ力 = 直接生産 + 金クッキー収入率 + 討伐報酬(投資)価値率 の合成。すべて現在状態から式で算出。
