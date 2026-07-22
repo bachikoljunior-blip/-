@@ -12006,6 +12006,21 @@ function renderQuota() {
     return;
   }
 
+  // 開始直後の猶予(monsterQuotaRequiredAtElapsed が最初の30秒は0を返す)。
+  // 「ノルマ N / 0」は意味不明&満タン緑で誤解を生むので、「最初の敵まで あとN秒」の“接近ゲージ”に置き換える(純UI・次への動機)。
+  if (quota === 0 && elapsed < 30) {
+    const cd = Math.max(1, Math.ceil(30 - elapsed));
+    const chargePct = Math.min(100, Math.max(0, (elapsed / 30) * 100));
+    box.innerHTML = `
+      <div class="quotaFutureLine"><span>最初の敵まで あと ${cd} 秒</span></div>
+      <div class="quotaGauge quotaUnderTarget" aria-label="最初の敵まで あと ${cd} 秒">
+        <div class="quotaLayer" style="${quotaLayerStyle(0, chargePct, 1)}"></div>
+        <div class="quotaStageBadge" title="現在のノルマ層">第<span class="quotaStageNumber">${stageDisplay.stage}</span>層</div>
+      </div>
+    `;
+    return;
+  }
+
   // 層の試練(第12次D): 深い層に達した周回だけ倍率を表示(未到達の間は情報を出さない)
   const trialMul = quotaTrialMultiplier();
   const trialText = trialMul > 1 ? ` 試練 ×${trialMul >= 100 ? fmt(Math.round(trialMul)) : trialMul.toFixed(1)}` : "";
