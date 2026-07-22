@@ -180,3 +180,9 @@
 - 結果(regression_sweep2.js): 全DOMアンカー present(会心/超会心/金/ボス/波/狩り窓/hudStrip/questHud/ステージ祝祭/記録祝祭/圧縮ボタン) / hudStripは4メーターchip丁度 / 全14関数(update系+祝祭+questProgress/questBoxInner/nextStagePreview+工房通知) present / 平均保存exact(1.000000) / コンボ機構的意味present / 全updater+祝祭を叩いてthrow無し / pageerror無し。**VERDICT: ALL GREEN**。
 - 経済不変の確認: **lever-1 revert(21b8e2a)以降 sim.js/params/strategies/runner に変更ゼロ**(git diff空)。R35の全動機/演出はindex.html(+412行)+docのみ=経済ニュートラル=バッテリー再検証不要。sim経済は検証済healthy baselineのまま。
 - 埋まった面白さ: 無し。**全セッションの蓄積が整合・退行なし。**
+
+### 2026-07-22 持続プレイの頑健性確認(蓄積したtick追加のパフォーマンス/安定性)
+- 目的: R35で per-tick 呼び出し(波/狩り窓/進行HUD/工房通知+祝祭)を増やした後、長時間プレイで jank/エラー/リークが出ないか。短スモークでは見えない蓄積を確認。
+- 実施: 50秒連続(1320タップ+66回のモンスター出現/クリック+金クッキー回収)を Playwright で駆動。
+- 結果: **pageerror 0件・ゲーム応答性維持(tapCookie present)・進行HUD表示継続・クラッシュ/無反応なし**。蓄積したtick追加は軽量・安定と確認。
+- 埋まった面白さ: 無し。頑健性OK。
