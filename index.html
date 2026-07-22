@@ -11384,9 +11384,15 @@ function currentQuestText() {
   return `クエスト: 「${stageInfo(st).name}」でモンスターを ${need} 体討伐(${Math.min(got, need)}/${need}) → 「${stageInfo(st + 1).name}」解放`;
 }
 // クエストの進捗データ(表示用・純参照): 次のステージ解放という長期目標を felt にする。
+// 全ステージ解放後(エンドゲーム)は「深層の自己ベスト更新」を perpetual な目標に切替=動機が全編で途切れない。
 function questProgress() {
   const st = state.stageUnlocked || 1;
-  if (st >= MAX_STAGE_NO) return { done: true, st };
+  if (st >= MAX_STAGE_NO) {
+    const cur = maxQuotaStage();
+    const best = maxQuotaStageEver();
+    const atRecord = cur >= best; // 現周回が自己ベストに到達=更新モード
+    return { done: true, endgame: true, st, cur, best, atRecord, toBest: Math.max(0, best - cur) };
+  }
   const need = QUEST_KILLS_NEED[st - 1] || 0;
   const got = Math.min((state.questKills || {})[st] || 0, need);
   return {
@@ -11422,8 +11428,16 @@ function nextStagePreview() {
 // 「最新ステージのみ・周回跨ぎ・腰を据えて」の骨太フレーミングで felt に。純UI・経済無関係。
 function questBoxInner() {
   const q = questProgress();
-  if (q.done) {
-    return `<div class="infoBox orderBoardBox questBox"><h3>🎯 クエスト</h3><div class="desc">全ステージ解放済み。最果てへ。</div></div>`;
+  if (q.done && q.endgame) {
+    // エンドゲーム=深層の自己ベスト更新を perpetual goal に
+    const body = q.atRecord
+      ? `<div class="questGoal">深層 <span class="questNum">第${fmt(q.cur)}層</span> — <b>自己ベスト更新中！</b></div>
+         <div class="questRemain">ここからは1層進むたびに新記録。さらに深く。</div>`
+      : `<div class="questGoal">深層 第${fmt(q.cur)}層 ／ 自己ベスト <span class="questNum">第${fmt(q.best)}層</span></div>
+         <div class="orderProgressBar"><div class="orderProgressFill questFill" style="width:${(q.best > 0 ? (q.cur / q.best) * 100 : 0).toFixed(1)}%"></div></div>
+         <div class="questRemain">自己ベストまで あと <b>${fmt(q.toBest)}</b> 層 — 越えれば新記録</div>`;
+    return `<div class="infoBox orderBoardBox questBox"><h3>🎯 目標 — 最果てへ</h3>${body}
+      <div class="desc questHard">深層領域は無限。到達層は転生を跨ぐ最大の勲章。自己ベストを更新し続けろ。</div></div>`;
   }
   const pct = (q.ratio * 100).toFixed(1);
   return `
@@ -12983,12 +12997,21 @@ function updateQuestHud() {
   // 討伐を始める前(最序盤のタップ/購入チュートリアル期)は出さない=最初の討伐で目標が actionable になった瞬間に登場。
   if (titleScreenActive() || pausedForSkillChoice() || !((state.msKills || 0) > 0)) { box.style.display = "none"; return; }
   const q = questProgress();
-  if (q.done) { box.style.display = "none"; return; }
+  const nEl = $("questHudN");
+  const fill = document.querySelector("#questHudBar > i");
+  if (q.done && q.endgame) {
+    // エンドゲーム: 深層の自己ベスト更新が perpetual goal。動機は全編で途切れない。
+    box.classList.toggle("near", q.atRecord);
+    if (fill) fill.style.transform = "scaleX(" + Math.max(0.02, Math.min(1, q.best > 0 ? q.cur / q.best : 1)).toFixed(3) + ")";
+    if (nEl) nEl.textContent = q.atRecord
+      ? "🎯 深層 第" + fmt(q.cur) + "層 — 自己ベスト更新中！"
+      : "🎯 自己ベスト第" + fmt(q.best) + "層まで あと " + fmt(q.toBest) + " 層";
+    box.style.display = "";
+    return;
+  }
   const near = q.ratio >= 0.8 || q.remain <= 10;
   box.classList.toggle("near", near);
-  const fill = document.querySelector("#questHudBar > i");
   if (fill) fill.style.transform = "scaleX(" + Math.max(0.02, Math.min(1, q.ratio)).toFixed(3) + ")";
-  const nEl = $("questHudN");
   if (nEl) nEl.textContent = "🎯 「" + q.nextName + "」まで あと " + fmt(q.remain) + " 体";
   box.style.display = "";
 }
