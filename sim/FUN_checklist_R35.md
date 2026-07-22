@@ -166,3 +166,11 @@
   - **報酬モーダル**(既確認): 相性×Nで芯の強い選択。**盤面**(既確認): クラッター修正済。
 - 結論: **全ゲーム画面を目視した結果、「面白さ潰れ」は盤面HUDクラッターのみ=修正済。他の全画面はクラッター無し+「次への動機」明快。** 視覚QA完了。
 - 埋まった面白さ: 無し。
+
+### 2026-07-22 自己ベスト更新の祝祭(動機演出の磨き込み・エンドゲーム perpetual goalのpayoff)
+- 発見: エンドゲームの perpetual goal=深層の自己ベスト更新なのに、実際に記録を超えた瞬間(maxQuotaStageEver更新)が tick で無言更新=**triumph が無い**=「更新中!」の目標に payoff が無かった。
+- 実装: celebrateNewRecord()=「🏆 自己ベスト更新！ 第N層」の金の帯(ステージ解放より軽い・2.4s・盤面中央でフェード)。周回開始時の記録(runStartRecord)を超えたら **1周回1回だけ** 発火(pbShownThisRun)=スパム無し。純演出・maxQuotaStageの表示のみ=経済ゼロ。
+- チェック結果: F7/エンドゲーム動機=payoff拡張(記録更新が felt) / F28改善 / クラッター無(transient・strip非干渉に配置調整) / 経済系全F無影響。
+- 検証: E2E合格(baseline非発火→超過で1回発火→2回目非発火・resetでrunStartRecord捕捉・pbリセット)+スクショ配置確認+実プレイpageerror無し。
+- interconnection: 「climb→新記録→🏆→もっと深く」で perpetual loop の payoff が閉じた。ステージ解放(3周回の大payoff)と自己ベスト(周回毎の小payoff)で節目の大小が揃う。
+- 埋まった面白さ: 無し。

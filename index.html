@@ -5105,6 +5105,25 @@
       82% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
       100% { opacity: 0; transform: translate(-50%, -55%) scale(1.02); }
     }
+    /* 自己ベスト更新の祝祭(R35 動機演出): ステージ解放より軽い=小さめ・短め(2.4s)の金の帯 */
+    #recordBanner {
+      position: fixed; left: 50%; top: 40%; transform: translate(-50%, -50%) scale(0.7);
+      z-index: 118; pointer-events: none; opacity: 0;
+      padding: 8px 20px; border-radius: 14px;
+      font-size: 17px; font-weight: 900; white-space: nowrap;
+      color: #fff6d8; text-shadow: 0 0 10px rgba(255,180,50,0.9), 0 1px 3px rgba(0,0,0,0.8);
+      background: linear-gradient(180deg, rgba(70, 48, 12, 0.92), rgba(100, 62, 14, 0.92));
+      border: 2px solid rgba(255, 214, 120, 0.9);
+      box-shadow: 0 0 26px rgba(255, 190, 70, 0.6);
+    }
+    #recordBanner.show { animation: recordBannerAnim 2.4s ease-out forwards; }
+    @keyframes recordBannerAnim {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+      14% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+      26% { transform: translate(-50%, -50%) scale(1); }
+      78% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      100% { opacity: 0; transform: translate(-50%, -64%) scale(1); }
+    }
 
     .monsterTypeLabel {
       font-size: 11px;
@@ -5873,6 +5892,7 @@
 
 <div id="transitionFx" aria-hidden="true"></div>
 <div id="stageUnlockBanner" aria-hidden="true"><div class="subT">🎉 クエスト達成 — 新ステージ解放</div><div class="mainT"></div></div>
+<div id="recordBanner" aria-hidden="true"><span></span></div>
 
 <div id="policyChoiceScreen" class="policyChoiceScreen">
   <div class="policyChoiceInner">
@@ -9296,6 +9316,9 @@ function blackHoleQuotaCompressionMultiplier() {
 
 function resetRunLimitedEffects() {
   state.maxQuotaStage = 1;
+  // 自己ベスト更新の祝祭用: 周回開始時点の最高到達層を覚え、1周回1回だけ「更新!」を出す(R35 動機演出)
+  state.runStartRecord = Math.max(1, Math.floor(Number(state.maxQuotaStageEver) || 1));
+  state.pbShownThisRun = false;
   state.earlyRunMonsters = 0; // 周回序盤のクッキーモンスター(30秒おき×5体)を次の周回でも出す
   state.chainN = 0;            // 討伐連鎖は周回内変数(転生で0)
   state.chainLastKillEl = null;
@@ -12846,6 +12869,17 @@ function playScreenTransition() {
   el.classList.remove("active");
   void el.offsetWidth;
   el.classList.add("active");
+}
+
+// 自己ベスト更新の祝祭(R35 動機演出): 深層/層登りの perpetual goal の payoff。ステージ解放より軽い演出(頻度高め)。
+function celebrateNewRecord(layer) {
+  const el = $("recordBanner");
+  if (!el) return;
+  const s = el.querySelector("span");
+  if (s) s.textContent = "🏆 自己ベスト更新！ 第" + fmt(layer) + "層";
+  el.classList.remove("show");
+  void el.offsetWidth;
+  el.classList.add("show");
 }
 
 // クエスト達成=次ステージ解放の祝祭(R35 動機の payoff): 3周回の hard-won を triumph として felt に。純演出。
@@ -18223,6 +18257,14 @@ setInterval(() => {
     // 最高到達ノルマ層を記録(段階式研究の変数)
     state.maxQuotaStage = Math.max(state.maxQuotaStage || 1, currentQuotaStageNumber());
     state.maxQuotaStageEver = Math.max(state.maxQuotaStageEver || 1, state.maxQuotaStage);
+    // 自己ベスト更新の祝祭(R35 動機演出): 周回開始時点の記録を超えたら1周回1回だけ「🏆自己ベスト更新!」
+    {
+      const baseline = state.runStartRecord != null ? state.runStartRecord : (state.maxQuotaStageEver || 1);
+      if (!state.pbShownThisRun && state.maxQuotaStage > baseline) {
+        state.pbShownThisRun = true;
+        celebrateNewRecord(state.maxQuotaStage);
+      }
+    }
     // 霜降りケーキ: ノルマ時計を55%遅らせる(ゲージ増加速度×0.45・sim同期2026-07-14 ⑮の2: 新経済で1.013に希釈→再強化)
     if (dishActive("frostCake")) state.quotaPausedMs = (state.quotaPausedMs || 0) + 50 * 0.55;
     // 銀行クリック配当 段階2: 複利利息(所持クッキーに毎秒、毎秒生産比から逓減)
