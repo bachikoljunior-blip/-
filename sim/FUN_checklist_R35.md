@@ -174,3 +174,9 @@
 - 検証: E2E合格(baseline非発火→超過で1回発火→2回目非発火・resetでrunStartRecord捕捉・pbリセット)+スクショ配置確認+実プレイpageerror無し。
 - interconnection: 「climb→新記録→🏆→もっと深く」で perpetual loop の payoff が閉じた。ステージ解放(3周回の大payoff)と自己ベスト(周回毎の小payoff)で節目の大小が揃う。
 - 埋まった面白さ: 無し。
+
+### 2026-07-22 統合リグレッション(全セッション蓄積の整合確認)= ALL GREEN
+- 目的: クエスト系/クラッター修正(DOM移設)/工房通知/祝祭2種を積み上げた後、既存FUN勝ちが退行してないか+全部が整合してるかを一括検証。
+- 結果(regression_sweep2.js): 全DOMアンカー present(会心/超会心/金/ボス/波/狩り窓/hudStrip/questHud/ステージ祝祭/記録祝祭/圧縮ボタン) / hudStripは4メーターchip丁度 / 全14関数(update系+祝祭+questProgress/questBoxInner/nextStagePreview+工房通知) present / 平均保存exact(1.000000) / コンボ機構的意味present / 全updater+祝祭を叩いてthrow無し / pageerror無し。**VERDICT: ALL GREEN**。
+- 経済不変の確認: **lever-1 revert(21b8e2a)以降 sim.js/params/strategies/runner に変更ゼロ**(git diff空)。R35の全動機/演出はindex.html(+412行)+docのみ=経済ニュートラル=バッテリー再検証不要。sim経済は検証済healthy baselineのまま。
+- 埋まった面白さ: 無し。**全セッションの蓄積が整合・退行なし。**
