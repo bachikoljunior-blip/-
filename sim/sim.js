@@ -2138,9 +2138,16 @@ const MILESTONE_RESEARCH = (() => {
 // 未購入で条件を満たしたものを自動購入(コスト=cps×msCostSec。安さゆえ全プレイヤー即買いのモデル)
 function msCostOf(sim, m, prod) {
   const costSec = m.costSec != null ? m.costSec : ((P.msResearch && P.msResearch.costSec != null) ? P.msResearch.costSec : 30);
-  // コストはゲーム内で固定(2026-07-11 ユーザー指示): 焼き込み表(ms_costs.json)を優先。無いidだけ動的式。
   const fixed = P.msResearch && P.msResearch.costTable && P.msResearch.costTable[m.id];
-  return fixed != null ? fixed : (m.cost != null ? m.cost : Math.max(100, (prod ? prod.cps : 0) * costSec));
+  let cost = fixed != null ? fixed : (m.cost != null ? m.cost : Math.max(100, (prod ? prod.cps : 0) * costSec));
+  // 解放間隔=ゲーム調整で作る(2026-07-22 ユーザー指示・タイマー不使用): 実績研究(非repeat)のコストに
+  // 「直近収入の msCostSec 秒ぶん」の床を敷く。次の1件を買うにはその秒数ぶん稼ぐ必要=解放が経済で自然に空く。
+  // repeatSec(量産体制=生産機構)は据え置き。earnEma=直近稼ぎ率EMA(タップ/cps/直送すべて込み=序盤cps0でも効く)。
+  if (!m.repeatSec) {
+    const sec = (P.reveal && P.reveal.msCostSec != null) ? P.reveal.msCostSec : 0;
+    if (sec > 0) cost = Math.max(cost, (sim.run.earnEma || 0) * sec);
+  }
+  return cost;
 }
 function applyMs(sim, m, cost) {
   const r = sim.run;
@@ -2185,23 +2192,19 @@ function tryBuyMilestones(sim, prod) {
     if (r.cookies < cost) continue;
     applyMs(sim, m, cost);
   }
-  // 実績研究(非repeat)=熟慮購入: 予算規律内・最安を1tick1件。
-  // ・生涯初(未everMs)=解放イベント: 直近の解放から msGap 秒あけて分散(間隔分散)。
-  // ・再取得(everMs・周回リセット後の買い直し)=イベント無し・分散なし(既知コンテンツは待たせない)。
+  // 実績研究(非repeat)=熟慮購入: 達成済み・未取得・予算規律内の最安を1tick1件だけ取得。
+  // 解放間隔はタイマー(待ち)でなく**経済**で作る: 実績研究は「所持クッキーの msBudgetRatio 以内でしか買わない」ため、
+  // 次の1件を買えるようになるまで=クッキーが貯まるまで=自然に間隔が空く(初購入も再購入も同じ規律。待ち時間ゼロ)。
   const ratio = (P.reveal && P.reveal.msBudgetRatio != null) ? P.reveal.msBudgetRatio : 0.5;
-  const gap = (P.reveal && P.reveal.msGap != null) ? P.reveal.msGap : 30;
-  const canNew = sim.lastUnlockT == null || sim.t >= sim.lastUnlockT + gap;
-  let bestRe = null, bestNew = null;
+  let best = null;
   for (const m of MILESTONE_RESEARCH) {
     if (m.repeatSec || r.ms.bought[m.id]) continue;
     if (!m.trig(sim)) continue; // 実績達成で購入可
     const cost = msCostOf(sim, m, prod);
-    if (cost > r.cookies * ratio) continue; // 予算規律=他の購入と取り合う機会費用(無料一括でない)
-    if (sim.everMs && sim.everMs[m.id]) { if (!bestRe || cost < bestRe.cost) bestRe = { m, cost }; }
-    else if (canNew) { if (!bestNew || cost < bestNew.cost) bestNew = { m, cost }; }
+    if (cost > r.cookies * ratio) continue; // 予算規律=これだけが間隔の源(タイマー無し)
+    if (!best || cost < best.cost) best = { m, cost };
   }
-  if (bestRe) applyMs(sim, bestRe.m, bestRe.cost); // 再取得(1件/tick・分散なし)
-  if (bestNew) applyMs(sim, bestNew.m, bestNew.cost); // 生涯初(msGap分散・解放イベント発火)
+  if (best) applyMs(sim, best.m, best.cost);
 }
 
 // 稼ぎ力 = 直接生産 + 金クッキー収入率 + 討伐報酬(投資)価値率 の合成。すべて現在状態から式で算出。
