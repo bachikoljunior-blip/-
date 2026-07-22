@@ -95,3 +95,10 @@
 - 検証: E2E合格(25秒 ⛓️1/3表示・chain2で強調・不発時非表示・pageerror無し)。全HUD同時表示スクショで左上波/右上狩り窓/中央ボス・ブーストの階層確認。
 - interconnection: これで段2タイミング機構4種すべて可視化完了=重力圧縮(ボタン)/観測ゆらぎ(波)/熟成(バッジ)/延長狩り(狩り窓)。F24「山で動く遊び」が全型で felt に。
 - 埋まった面白さ: 無し。
+
+### 2026-07-22 全体リグレッションスイープ(F1-F29の生検証)= 全緑
+- 目的: ユーザーのループ指示「変更後に全ての面白さが埋まってないか一つ一つ確認」。直近の3新規+spice拡張の後、既存のFUN勝ち(会心/超会心/金/ボス/ブースト/レア/コンボ)が退行してないかを生ゲームで一括検証。
+- 結果(regression_sweep.js): 全機構関数present / 全アクティブ表示present(critCombo/superCritFlash/goldenBoostBadge/bossApproach/quantumWave/huntWindow/bhGaugeBtn) / 平均保存exact(超会心・金大当たり=1.0000) / コンボの機構的意味present(fingerCritMultiplier内 +3%/combo) / 全updateを1tick叩いてthrow無し / pageerror無し。
+- 唯一の非存在=#dishBuffBar: **意図的削除**(commit dd491ae「クッキー画面の表示を整理」で play画面から撤去、有効料理の残り時間は工房タブへ集約)。F26の準備の面白さ+有効状態(工房タブ)は健全=退行でない。renderDishBuffBarは無害なdead code(呼び出し無し・要素無し)、FUN範囲外ゆえ触らず記録のみ。
+- 検証: F2(コンボ)は可視かつ機構的に有意(+3%/combo・上限なし・simも1857でモデル化)=空洞でない。芯レバー由来のNG(⑫covered・②改click・㉘click)は全て既存の構造事項でR35改善対象外(経済心臓)。
+- 埋まった面白さ: 無し。**FUN勝ちは全て健在。**
