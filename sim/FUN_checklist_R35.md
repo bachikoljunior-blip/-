@@ -73,3 +73,10 @@
 - 結論: **revert(sim+game を 0.12/0.10 に戻す)**。⑫ probe が pre-lever1 と完全一致(golden 1.03e280・hunt 4.76e281・ratio96.02・covered3/5)で確認。
 - 学び(重要): (1)型の**峰は既に存在**する(golden61%/hunt45-76%/bake62%)=spawn増幅は不要。(2)真に under-shaped なのは **click のみ**(㉘10/21・㉘'10/21・②改 lift1.25=帯外)。clickのtap峰が後半に own-exponent 生産に呑まれ 設備83%へ反転する構造問題=次の本命レバー。(3)golden spawn は economy 全体を指数増幅する不安定レバー=触らない。
 - 埋まった面白さ: 無し(baselineに戻したため)。F22/F23は baseline のまま(golden/hunt/bake の峰は健全・click弱いは既存NG)。
+
+### 2026-07-22 観測ゆらぎの波インジケータ(#quantumWave・純UI)
+- 狙い: F24(能動タイミング)。量子発酵 段2の「90秒周期で全生産が上下」する波が不可視=山で動く遊びが起きなかった。
+- 実装: quantumProofingMultiplier()と同式の位相を表示のみ。山=「🌊山↑/↓ ×N.NN」+頂点付近pulse、谷=「🌊谷 山まであとN秒」+波高バー。段2解禁時のみ表示。左上=常設instrument(中央の event バッジと非干渉)。
+- チェック結果: F24=改善 / F28=改善 / 経済系全F=無影響(表示のみ・式は既存と同一) / クラッター無(左上・段2時のみ)。
+- 検証: E2E合格。表示×1.55が quantumProofingMultiplier の波係数と完全一致(可読性の整合)。谷カウントダウン46秒=(90-67)+22.5で正。pageerror無し。スクショで左上配置確認。
+- 埋まった面白さ: 無し。

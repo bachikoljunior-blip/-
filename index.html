@@ -5375,6 +5375,46 @@
       animation: goldBoostPulse 0.8s ease-in-out infinite;
     }
     @keyframes goldBoostPulse { 0%,100% { transform: translateX(-50%) scale(1); box-shadow: 0 0 10px rgba(255,190,60,0.7); } 50% { transform: translateX(-50%) scale(1.06); box-shadow: 0 0 20px rgba(255,210,90,1); } }
+    /* 観測ゆらぎの波インジケータ(R35 要素11/F24): 90秒周期の全生産の山/谷を見せ、"山で動く"能動タイミングを起こす。純UI・経済無関係 */
+    #quantumWave {
+      position: absolute;
+      left: 6px;
+      top: 6px;
+      z-index: 57;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 3px;
+      padding: 3px 9px 5px;
+      border-radius: 11px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+      color: #bfe9ff;
+      background: linear-gradient(180deg, rgba(14, 34, 58, 0.9), rgba(18, 24, 52, 0.9));
+      border: 1px solid rgba(120, 190, 240, 0.5);
+      box-shadow: 0 2px 8px rgba(60, 130, 200, 0.35);
+      pointer-events: none;
+    }
+    #quantumWave.crest { color: #d6fff0; border-color: rgba(130, 240, 200, 0.85); box-shadow: 0 0 12px rgba(90, 220, 170, 0.6); }
+    #quantumWave.peak { animation: quantumPeakPulse 0.9s ease-in-out infinite; }
+    #quantumWaveBar {
+      display: block;
+      height: 4px;
+      width: 72px;
+      border-radius: 2px;
+      background: rgba(120, 190, 240, 0.25);
+      position: relative;
+      overflow: hidden;
+    }
+    #quantumWaveBar > i {
+      position: absolute;
+      top: 0; bottom: 0; left: 0;
+      border-radius: 2px;
+      background: linear-gradient(90deg, #6fe0c0, #7ac8ff);
+      transform-origin: left center;
+    }
+    @keyframes quantumPeakPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.07); } }
     #bhGaugeBtn {
       position: absolute;
       right: 4px;
@@ -5848,6 +5888,7 @@
       <div id="critCombo" aria-hidden="true" style="display:none;"><span id="critComboN">0</span><i id="critComboBar"></i></div>
       <div id="superCritFlash" aria-hidden="true"></div>
       <div id="goldenBoostBadge" aria-hidden="true" style="display:none;"></div>
+      <div id="quantumWave" aria-hidden="true" style="display:none;"><span id="quantumWaveN"></span><i id="quantumWaveBar"><i></i></i></div>
       <div id="floatArea"></div>
     </div>
 
@@ -12697,6 +12738,7 @@ function updateTopOnly() {
   if (monsterVisible) renderMonsterHp();
   updateBossApproach(); // ボス接近インジケータ(R35)
   updateGoldenBoostBadge(); // 金ブースト発動中バッジ(R35)
+  updateQuantumWaveUI(); // 観測ゆらぎの波インジケータ(R35 F24)
 }
 
 // 生産ブースト発動中バッジ(R35 面白さ監査・要素3/11): 金ブースト・注文報酬の全生産×N・獲得+50%を一元表示。
@@ -12719,6 +12761,37 @@ function updateGoldenBoostBadge() {
   if (mul > 1) label += "⚡ 全生産 ×" + (mul >= 10 ? Math.round(mul) : mul.toFixed(1));
   if (orderCookieOn) label += (label ? " " : "⚡ ") + "獲得+50%";
   box.textContent = label + " 残り" + left + "秒";
+  box.style.display = "";
+}
+
+// 観測ゆらぎ(量子発酵 段2)の波インジケータ(R35 要素11/F24): 90秒周期の全生産の山/谷を見せる。
+// 純UI・quantumProofingMultiplier()の波と同式=表示のみ、経済に一切触れない。"山で動く"能動タイミングを起こす。
+function updateQuantumWaveUI() {
+  const box = $("quantumWave");
+  if (!box) return;
+  if (titleScreenActive() || pausedForSkillChoice() || !state.research.quantumProofing || !resStage2("quantumProofing")) {
+    box.style.display = "none"; return;
+  }
+  const rc = RESEARCH.filter(r => state.research[r.id]).length;
+  let amp = 0.5 + 0.05 * rc;
+  if (resStage3("quantumProofing")) amp *= 1 + 0.001 * maxQuotaStage();
+  const el = quotaElapsedSeconds() % 90;                 // 波の位相(quantumProofingMultiplierと同式)
+  const phase = Math.sin(2 * Math.PI * el / 90);
+  const waveM = 1 + amp * Math.max(0, phase);
+  const crest = phase > 0.02;                            // 山(全生産が増幅中)
+  box.classList.toggle("crest", crest);
+  box.classList.toggle("peak", phase > 0.85);            // 頂点付近=今が動き時
+  const fill = document.querySelector("#quantumWaveBar > i");
+  if (fill) fill.style.transform = "scaleX(" + Math.max(0.03, Math.max(0, phase)).toFixed(3) + ")";
+  const nEl = $("quantumWaveN");
+  if (nEl) {
+    if (crest) {
+      nEl.textContent = "🌊 山" + (el < 22.5 ? "↑" : "↓") + " ×" + waveM.toFixed(2);
+    } else {
+      const toPeak = Math.ceil(el < 22.5 ? 22.5 - el : (90 - el) + 22.5);
+      nEl.textContent = "🌊 谷 山まで" + toPeak + "秒";
+    }
+  }
   box.style.display = "";
 }
 
