@@ -5068,6 +5068,7 @@
     .questFill { background: linear-gradient(90deg, rgba(120,190,255,0.95), rgba(160,240,210,0.9)) !important; box-shadow: 0 0 10px rgba(120,180,255,0.3) !important; }
     .questRemain { font-size: 12px; margin: 3px 0 2px; color: #e8f2ff; }
     .questRemain b { color: #ffd36a; }
+    .questPreview { font-size: 11.5px; margin: 2px 0 3px; color: #cfe6c0; }
     .questHard { opacity: 0.82; font-style: italic; }
     /* 進行HUD: 常設で「次ステージまであとN体」を felt に(R35 動機) */
     #questHud {
@@ -11396,6 +11397,27 @@ function questProgress() {
     nextName: stageInfo(st + 1).name
   };
 }
+// 次ステージ予告(R35 動機): 解放で何が来るか=新モンスター/敵の手強さ/報酬の魅力を見せ、
+// 「欲しい(carrot)」と「手強くなる(anticipatory stress)」を同時に felt に。純参照・表示のみ。
+const STAGE_BASE_NAME = { normal: "通常", swarm: "群れ", tank: "戦車(高HP)", speedy: "俊足", goldenBeast: "黄金獣" };
+function nextStagePreview() {
+  const q = questProgress();
+  if (q.done) return "";
+  const st = q.st;
+  if (st + 1 > STAGES.length) return "深層領域へ — さらに手強い敵と深い報酬。"; // 深層ステージ
+  const cur = stageInfo(st), nxt = stageInfo(st + 1);
+  const baseSet = s => new Set((s.roster || []).map(id => (MONSTER_TYPES[id] || {}).base).filter(Boolean));
+  const curB = baseSet(cur), nxtB = baseSet(nxt);
+  const newTypes = [...nxtB].filter(b => !curB.has(b)).map(b => STAGE_BASE_NAME[b] || b);
+  const parts = [];
+  if (newTypes.length) parts.push("新モンスター「" + newTypes.join("・") + "」");
+  const hpRatio = (nxt.hpMul || 1) / (cur.hpMul || 1);
+  if (hpRatio > 1.05) parts.push("敵HP ×" + (hpRatio >= 10 ? Math.round(hpRatio) : hpRatio.toFixed(1)) + " と手強い");
+  if ((nxt.dropMul || 1) > (cur.dropMul || 1)) parts.push("素材ドロップ増");
+  if ((nxt.goldenGainMul || 1) > 1.001) parts.push("金獲得+" + Math.round(((nxt.goldenGainMul || 1) - 1) * 100) + "%");
+  if ((nxt.goldenBeastBonus || 0) > 0) parts.push("金獣ボーナス");
+  return parts.length ? parts.join(" / ") : "新たな地平。";
+}
 // 注文ボードの固定クエスト表示(2026-07-22 動機の可視化強化): 目標=次ステージ解放を進捗バー+残り数+
 // 「最新ステージのみ・周回跨ぎ・腰を据えて」の骨太フレーミングで felt に。純UI・経済無関係。
 function questBoxInner() {
@@ -11410,6 +11432,7 @@ function questBoxInner() {
       <div class="questGoal">「${q.curName}」でモンスターを討伐 <span class="questNum">${fmt(q.got)}/${fmt(q.need)}</span></div>
       <div class="orderProgressBar"><div class="orderProgressFill questFill" style="width:${pct}%"></div></div>
       <div class="questRemain">あと <b>${fmt(q.remain)}</b> 体で <b>「${q.nextName}」</b> 解放</div>
+      <div class="questPreview">🔓 解放で: ${nextStagePreview()}</div>
       <div class="desc questHard">最新ステージでの討伐だけが加算・周回を跨いで累積(目安3周回)。腰を据えて挑め。</div>
     </div>`;
 }
