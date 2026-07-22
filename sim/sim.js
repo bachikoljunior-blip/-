@@ -1927,7 +1927,7 @@ function goldenSpawnFactor(sim) {
     -Math.max(0, rateLv) * P.golden.ratePerLv
     - Math.max(0, skillEffect(sim, 'goldenRate')) * 1.8
     - rewardCategoryBonus(sim, 'golden') * 1.2
-    - (policyIs(sim, 'golden') ? 0.35 : 0) // R35レバー1実験: 0.12→0.35=金色型は金クッキーが体感で密(選択が形を変える)
+    - (policyIs(sim, 'golden') ? 0.12 : 0)
   ) * runTempoRamp(sim)
     * (wsBuffActive(sim, 'mintIce') ? P.ws.fx.mintIceGoldenInt : 1)
     * ((P.ws && wsStageDef(sim).goldenIntMul) || 1)
@@ -1951,7 +1951,7 @@ function monsterSpawnFactor(sim) {
     -Math.max(0, rateLv) * P.monster.ratePerLv
     - Math.max(0, skillEffect(sim, 'monsterRate')) * 1.8
     - rewardCategoryBonus(sim, 'hunt') * 1.0
-    - (policyIs(sim, 'hunt') ? 0.35 : 0) // R35レバー1実験: 0.10→0.35=狩猟型はモンスターが体感で密(選択が形を変える)
+    - (policyIs(sim, 'hunt') ? 0.10 : 0)
   ) * deep * portalHunt * runTempoRamp(sim) * ((r.ms && r.ms.spawn) || 1)
     / (1 + Math.max(0, equip2Fx(sim).spawnMul - 1)) // 新装備: 出現短縮系
     * (wsBuffActive(sim, 'hunterStew') ? P.ws.fx.stewMonsterInt : 1)
