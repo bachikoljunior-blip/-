@@ -8293,7 +8293,8 @@ function autoBuyMilestones() {
     bought++; lastName = ms.name;
   }
   if (bought > 0) {
-    showMessage(bought === 1 ? `実績研究「${lastName}」を自動取得` : `実績研究 ${bought}件を自動取得`);
+    // 「自動取得」(事務的)→「実績達成」(達成感)にフレーミング=同じトースト頻度で achievement を felt に(R35 動機・純テキスト)
+    showMessage(bought === 1 ? `🎖️ 実績達成「${lastName}」を解放` : `🎖️ 実績 ${bought}件 達成・解放`);
     updateTopOnly(); renderActiveTab();
   }
 }
