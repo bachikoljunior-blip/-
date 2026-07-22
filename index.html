@@ -5542,6 +5542,14 @@
       filter: brightness(1.3);
     }
 
+    /* 工房タブの通知(R35 動機): 新しく作れる装備がある=研究と同じ点滅で「次に作れる」を felt に */
+    .tab.workshopNotify { animation: researchTabBlink 0.8s ease-in-out infinite; }
+    body.fxOff .tab.workshopNotify {
+      animation: none;
+      box-shadow: inset 0 0 0 3px rgba(255, 224, 140, 1), 0 0 14px rgba(255, 205, 100, 0.8);
+      filter: brightness(1.3);
+    }
+
     /* ===== 直近要望: 表示崩れ対策 ===== */
     /* ダブルタップでの画面拡大を無効化(スクロール・パンは維持)。
        iOSは「タップされた要素自身」のtouch-actionを見るため、html/bodyだけでは
@@ -8833,6 +8841,37 @@ function checkResearchUnlockNotify() {
 function clearResearchTabNotify() {
   const tab = document.querySelector('.tab[data-tab="researchTab"]');
   if (tab) tab.classList.remove("researchNotify");
+}
+
+// ==== 工房の通知(2026-07-22 動機「全てに次を」): 新しい装備を初めて作れるようになったら工房タブを光らせる。開くと解除。 ====
+// 「次に作れる装備」を felt に=忘れられがちな工房へ引く。装備の初回作成(Lv0→素材足りる)のみ=低ノイズ・純UI。
+let lastWorkshopAvailKey = null;
+function workshopAvailIdsNow() {
+  if (!workshopTabUnlocked() || !workshopCraftUnlocked()) return [];
+  const ids = [];
+  EQUIPMENT.forEach(eq => {
+    if (equipLv(eq.id) === 0 && canAffordMaterials(equipmentCost(eq, 0))) ids.push("eq:" + eq.id);
+  });
+  return ids;
+}
+function checkWorkshopNotify() {
+  try {
+    const ids = workshopAvailIdsNow();
+    const key = ids.join(",");
+    if (lastWorkshopAvailKey === null) { lastWorkshopAvailKey = key; return; } // 初回は基準を覚えるだけ
+    if (key === lastWorkshopAvailKey) return;
+    const prev = new Set(lastWorkshopAvailKey.split(","));
+    const added = ids.some(id => !prev.has(id));
+    lastWorkshopAvailKey = key;
+    if (added && activeTab !== "workshopTab") {
+      const tab = document.querySelector('.tab[data-tab="workshopTab"]');
+      if (tab) tab.classList.add("workshopNotify");
+    }
+  } catch (e) {}
+}
+function clearWorkshopTabNotify() {
+  const tab = document.querySelector('.tab[data-tab="workshopTab"]');
+  if (tab) tab.classList.remove("workshopNotify");
 }
 
 // ==== 周回序盤のクッキーモンスター(2026-07-11 ユーザー指示) ====
@@ -15364,6 +15403,7 @@ function switchTab(tabId) {
   activeTab = tabId;
   if (tabId === "orderTab") clearOrderTabNotify();
   if (tabId === "researchTab") clearResearchTabNotify();
+  if (tabId === "workshopTab") clearWorkshopTabNotify();
   updatePrestigeTabLabel();
 
   document.body.classList.toggle("playTabActive", normalPlayScreenActive());
@@ -18268,6 +18308,7 @@ setInterval(() => {
 
   // 研究の新規解放を監視して研究タブを点滅させる(開くと解除)
   checkResearchUnlockNotify();
+  checkWorkshopNotify(); // 新しく作れる装備を工房タブで通知(R35 動機・開くと解除)
 
   // 周回序盤のクッキーモンスター(30秒おき×5体)
   checkEarlyRunSpawns();
