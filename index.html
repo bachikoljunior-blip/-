@@ -5419,6 +5419,18 @@
     @keyframes feverBadge { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
     #critCombo.fever #critComboN::before { content: "🔥 フィーバー ×"; color: #fff3c4; }
     #critCombo.fever #critComboBar { background: linear-gradient(90deg, #fff3c4, #ff5a14); }
+    /* ゴールドラッシュ演出(R35・金型の能動climax): 連続キャッチの頂点=金の雨。純演出、経済はsim不可視で担保 */
+    #goldRushAura {
+      position: absolute;
+      inset: 0;
+      z-index: 60;
+      pointer-events: none;
+      opacity: 0;
+      background: radial-gradient(circle at 50% 45%, rgba(255, 215, 60, 0) 40%, rgba(255, 205, 40, 0.24) 62%, rgba(255, 180, 20, 0.0) 80%);
+      box-shadow: inset 0 0 60px rgba(255, 200, 40, 0.5);
+    }
+    #goldRushAura.on { opacity: 1; animation: goldRushPulse 0.7s ease-in-out infinite; }
+    @keyframes goldRushPulse { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
     /* ボス接近インジケータ(R35 要素5): 不意打ちを"期待"に変える */
     #bossApproach {
       position: absolute;
@@ -6012,6 +6024,7 @@
       <button id="bhGaugeBtn" type="button" aria-label="重力圧縮の発動" style="display: none;"></button>
       <div id="critCombo" aria-hidden="true" style="display:none;"><span id="critComboN">0</span><i id="critComboBar"></i></div>
       <div id="feverAura" aria-hidden="true"></div>
+      <div id="goldRushAura" aria-hidden="true"></div>
       <div id="superCritFlash" aria-hidden="true"></div>
       <div id="floatArea"></div>
     </div>
@@ -9887,6 +9900,37 @@ function drawSuperCrit() {
 // 金の大当たり(R35・同手法): 即時金の3%が×5、残りを×Mで平均保存=経済ゼロ影響
 const GOLDEN_JACKPOT_P = 0.03, GOLDEN_JACKPOT_K = 5;
 const GOLDEN_JACKPOT_M = (1 - GOLDEN_JACKPOT_P * GOLDEN_JACKPOT_K) / (1 - GOLDEN_JACKPOT_P); // ≈0.876
+
+// ゴールドラッシュ(R35・金型版の「能動で一周のfeltが変わる」): 会心フィーバーと同じ平均保存の手法。
+// 金クッキーを"間を空けず拾い続ける"(hard-won=見逃さない立ち回り)とチェインが伸び、GOLD_RUSH_CHAIN 到達でラッシュ点火。
+// ラッシュ中は即時金の判定が確定「大当たり」になる(平時ためた大当たり分を放出)=金の雨。総量=完全不変(bank管理・下記)。
+// spawn率も即時/ブーストの分岐も一切触らない=simに不可視=経済ゼロ影響(spawn増幅の暴走を避けた設計)。
+const GOLD_RUSH_CHAIN = 4;       // 点火に必要な連続キャッチ数(間を空けず拾う)
+const GOLD_CHAIN_WINDOW = 9000;  // この時間内に次を拾えばチェイン継続(超えると1にリセット)
+const GOLD_RUSH_MS = 6000;       // ラッシュ継続(この間、即時金は溜めた大当たりを優先放出)
+const GOLD_RUSH_COOLDOWN = 40000;// 再点火間隔(=稀。長めに溜める→ラッシュが特大に)
+const GOLD_JACK_BANK_CAP = 10;   // 大当たりbankの上限(=ラッシュ最大規模&溜め過ぎ防止・未点火でも上限超で自然放出→平均保存)
+function goldRushActive() { return Date.now() < (state.goldRushUntil || 0); }
+// 大当たりを放出するか(平均保存): 即時金のたびに期待分 GOLDEN_JACKPOT_P を bank に積み、
+// ラッシュ中は bank≥1 で放出(金の雨)、平時は上限超のみ自然放出=長期平均は GOLDEN_JACKPOT_P に一致。
+function drawGoldenJackpot() {
+  state.goldJackBank = (Number(state.goldJackBank) || 0) + GOLDEN_JACKPOT_P;
+  const threshold = goldRushActive() ? 1 : GOLD_JACK_BANK_CAP;
+  if (state.goldJackBank >= threshold) { state.goldJackBank -= 1; return true; }
+  return false;
+}
+// チェイン更新+ラッシュ点火。gap は lastGoldenAt 更新前に呼ぶこと(collectGoldenCookie 冒頭)。
+function bumpGoldenChainAndMaybeRush() {
+  const now = Date.now();
+  const gap = now - (Number(state.lastGoldenAt) || 0);
+  state.goldChain = (gap <= GOLD_CHAIN_WINDOW) ? (Number(state.goldChain) || 0) + 1 : 1;
+  if (goldRushActive()) return;
+  if ((state.goldChain || 0) < GOLD_RUSH_CHAIN) return;
+  if (now <= (state.goldRushCooldownUntil || 0)) return;
+  state.goldRushUntil = now + GOLD_RUSH_MS;
+  state.goldRushCooldownUntil = state.goldRushUntil + GOLD_RUSH_COOLDOWN;
+  if (typeof triggerGoldRushFx === "function") triggerGoldRushFx();
+}
 const CHAIN_KILLS = 3;
 const MARGIN_THRESH = 2;
 // 素材ドロップの希少化(2026-07-15 ユーザー指示「もっと少なく・最初は5%に一個・強さ/レア度でドロップ率を変える」):
@@ -13191,6 +13235,20 @@ function triggerFeverFx() {
   try { playSound("crit"); } catch (e) {}
   showMessage("🔥 会心フィーバー！ 全タップ特大会心！");
 }
+// ゴールドラッシュ点火の演出(R35): オーラ点灯+メッセージ。消灯は updateGoldRushUI が時間で行う。
+function triggerGoldRushFx() {
+  const aura = $("goldRushAura");
+  if (aura) aura.classList.add("on");
+  if (!state.codex || typeof state.codex !== "object") state.codex = {};
+  state.codex.goldRush = true;
+  try { playSound("golden"); } catch (e) {}
+  showMessage("🌟 ゴールドラッシュ！ 大当たり連発！");
+}
+// ラッシュ終了検知(オーラ消灯)。毎秒tickで呼ぶ=拾う手が止まっても時間で消える。
+function updateGoldRushUI() {
+  const aura = $("goldRushAura");
+  if (aura && !goldRushActive() && aura.classList.contains("on")) aura.classList.remove("on");
+}
 
 // 会心コンボ表示(R35 面白さ監査・要素1): 連続会心の"連鎖を切らすな"を見える化。
 // 段2「会心コンボ」取得時のみ意味を持つ。コンボ≥2で表示、30秒ゲージが尽きる=リセット。経済には一切触れない純表示。
@@ -14002,6 +14060,14 @@ function codexGoldenHtml() {
           : lock),
         goldenIcon)
     : codexHiddenItem());
+
+  // ゴールドラッシュ(発動後に開示): 能動で拾い続けた頂点
+  if (codex.goldRush) {
+    items.push(codexItem("ゴールドラッシュ",
+      `<div>金クッキーを間を空けず ${GOLD_RUSH_CHAIN} 回続けて拾うとラッシュが点火し、数秒間は即時金が確定「大当たり」になる=金の雨。</div>`
+      + `<div>平時にためた大当たり分を放出しているだけなので、もらえる総量は変わらない（＝拾い方で"いつ"大きく出るかが変わる）。見逃さず拾い続けるほど濃い。</div>`,
+      goldenIcon));
+  }
 
   // 出現間隔はスキル「金色観測」で初めて観測できる読み取り値。未解放なら伏せる
   items.push(analyzed
@@ -16939,6 +17005,9 @@ function collectGoldenCookie() {
   state.codex.goldenSeen = true;
   state.msGoldens = (Number(state.msGoldens) || 0) + 1; // 実績研究: 累計金取得
 
+  // ゴールドラッシュ: 連続キャッチのチェイン更新+点火(lastGoldenAt を更新する前=gap を正しく測る)
+  bumpGoldenChainAndMaybeRush();
+
   if ((state.perks.goldenChain || 0) > 0) {
     state.goldenChainReady = true;
   }
@@ -16974,7 +17043,7 @@ function collectGoldenCookie() {
   if (r < 0.5) {
     // 金の大当たり(R35・横断"稀で特大"): 即時金のGOLDEN_JACKPOT_P割が特大(×K)、残りは僅かに小さく(×M)。
     // 平均保存の再分配=即時金の期待値は不変=simに不可視=経済/バランス影響ゼロ。稀に「大当たり!」の桁違い金。
-    const jackpot = Math.random() < GOLDEN_JACKPOT_P;
+    const jackpot = drawGoldenJackpot(); // 大当たりの"いつ出るか"はラッシュで時間再配分(平均保存・総量不変)
     const jackMul = jackpot ? GOLDEN_JACKPOT_K : GOLDEN_JACKPOT_M;
     const gained = earn(
       Math.max(100, currentCps() * 2.5, currentClickPower() * clickAnchorCoef()) * goldenAmountMultiplier() * goldenEarlyMultiplier() * equip2Fx().goldenAmtMul * jackMul // 新装備: 金獲得系
@@ -18312,6 +18381,7 @@ setInterval(() => {
       recentTapsPerSec = Math.max(0, (state.totalClicks || 0) - _lastTotalClicksSample); // 直送の基準(タップ流量)
       _lastTotalClicksSample = state.totalClicks || 0;
       updateCritComboUI(false); // 会心コンボ表示のゲージ減衰・失効時の非表示(R35)
+      updateGoldRushUI(); // ゴールドラッシュのオーラ消灯(R35)
       // ㉚解放ドリップ(毎秒1回): 生涯初の新コンテンツを30秒間隔で1つずつ棚に並べる
       if (!overlayOpen) {
         const revealedBefore = state.lastRevealAt;
