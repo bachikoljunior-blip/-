@@ -11282,8 +11282,10 @@ function monsterQuotaRequiredAtElapsed(seconds) {
 
   const x = s - 30;
 
+  // ノルマ係数 0.22→0.60(2026-07-22 ユーザー指示「初回1分経過時点でノルマが総クッキーの5割以上」):
+  // ノルマを序盤の本当の壁にする。sim baseCoef と同期。
   const base =
-    0.22 * Math.pow(x, 1.55) +
+    0.60 * Math.pow(x, 1.55) +
     0.00002 * Math.pow(x, 2.40);
 
   const wall =
@@ -12636,13 +12638,17 @@ function revealKeyOwned(key) {
   if (kind === "stage") { const m = id.match(/^(.+)__s(\d)$/); return m ? researchStagePurchased(m[1], Number(m[2])) : false; }
   return false;
 }
-// 棚に出してよいか: 解放済み or 所持済み(移行) なら常にOK。フェイルオープンの共通判定。
+// 解放ゲート撤去(2026-07-22 ユーザー指示「ゲート解放無くして、ゲーム調整で解放間隔30秒以上」):
+// 待たせるドリップは廃止。各要素は本来の解放条件(設備購入済み/スキル/トリガ)を満たした瞬間に棚へ出す。
+// 解放間隔≥30秒はノルマを本当の壁にした経済(ノルマ係数+討伐難度)で自然に生む。
 function revealOk(key) {
-  return isRevealed(key) || revealKeyOwned(key);
+  return true;
 }
 // 1tickに最大1つ、前回解放から30秒経過していれば「解放条件は満たすが未解放」の中で最安を1つ解放する。
 // 解放条件=各種visible判定のゲート手前(所持/設備購入済み/トリガ達成)まで。棚順=最安から。
 function processContentReveals() {
+  // 解放ドリップ撤去(2026-07-22): revealOk が常にtrue=棚出しは解放条件成立で即時。ドリップ処理は無効。
+  return;
   ensureRevealState();
   if (Date.now() - state.lastRevealAt < REVEAL_GAP_MS) return;
   if (pausedForSkillChoice() || titleScreenActive()) return;
@@ -16346,8 +16352,10 @@ function monsterLevel() {
 
 function monsterHpValue(level) {
   const s = quotaElapsedSeconds();
+  // hpGrowth 1.235→1.60(2026-07-22 ユーザー指示「ノルマ未達より先にモンスター倒せなくなる」):
+  // HPが火力を追い越して倒せなくなる壁を作る。sim hpGrowth と同期。
   const timePressure = 1 + Math.pow(Math.max(0, s - 45) / 430, 1.95);
-  let hp = 30 * Math.pow(1.235, Math.max(0, level - 1)) * timePressure;
+  let hp = 30 * Math.pow(1.60, Math.max(0, level - 1)) * timePressure;
   hp *= Math.exp(-Math.max(0, skillEffect("monsterHpDown")));
   hp *= deepPursuitHpPenalty();
   hp *= bakeBurntMonsterHpMultiplier();
@@ -16485,7 +16493,9 @@ function showMonster(forcedTypeId) {
         : 1,
       goldenFirstHitReady: firstHitReady,
       firstHitUsed: false,
-      maxHp: Math.max((MONSTER_TYPES[typeId] && MONSTER_TYPES[typeId].base) === "swarm" ? 12 : 40, Math.floor(monsterHpValue(level) * hpMulShared)),
+      // タップ床(旧・最低HP40/群れ12=「4発以上叩かないと倒せない」制限)撤去(2026-07-22 ユーザー指示):
+      // 討伐難度は最低HPの下支えでなく本来のHPスケール(hpBase/hpGrowth/時間圧/ステージ)だけで作る。sim同期。
+      maxHp: Math.max(1, Math.floor(monsterHpValue(level) * hpMulShared)),
       hp: 1,
       el: null,
       hideTimer: null

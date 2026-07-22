@@ -77,7 +77,7 @@ module.exports = {
     stayBase: 16000,
     stayPerLv: 0.09, rateLvHalf: 80, // ③monsterStay 1.017→再係留(2026-07-14)
     hpBase: 30,
-    hpGrowth: 1.235,
+    hpGrowth: 1.60,
     hpPressureDiv: 430, hpPressurePow: 1.95,
     lvEarlyDiv: 92,
     lvLateDiv: 320, lvLatePow: 1.22,
@@ -93,7 +93,7 @@ module.exports = {
   // ---- ノルマ ----
   quota: {
     graceSec: 30,
-    baseCoef: 0.22, basePow: 1.55,
+    baseCoef: 0.60, basePow: 1.55,
     base2Coef: 0.00002, base2Pow: 2.40,
     w1: 0.60, w1T: 480, w1D: 180, w1P: 2,
     w2: 2.20, w2T: 600, w2D: 240, w2P: 2.25,
@@ -151,11 +151,10 @@ module.exports = {
   msResearch: { massProdMul: 1.25, massProdSec: 32, momentumCapSec: 14400, momentumFixedMul: 2, momBuyDiv: 12, momBuyCapExp: 8000,
     costTable: (function () { try { return require('./ms_costs.json'); } catch (e) { return null; } })() },
 
-  // ㉚解放間隔(2026-07-21 R33 ユーザー新設「解放間隔30秒以上が9割以上」): 初登場コンテンツの順次公開の最小間隔(秒)。
-  // 旧「30秒ごとに入荷」ドリップ(全購入を待たせる=クソ機能として撤去済み)とは別物:
-  // 対象は生涯初のみ(everフラグ)=転生後の再購入・既出コンテンツは常に即。ゲーム側は非公開のうちは項目自体を出さない
-  // (見えているのに買えない待ちは発生しない)。31=判定閾値30秒+丸め余裕1秒。
-  reveal: { minGap: 31 },
+  // ㉚解放間隔(2026-07-22 ユーザー指示「ゲート解放無くして、ゲーム調整で解放間隔30秒以上」):
+  // 解放を待たせるハードゲートは撤去(minGap=0=常に解放可)。解放間隔≥30秒はノルマを本当の壁にする
+  // 経済(ノルマ係数の引き上げ+討伐が倒せなくなる難度)で自然に作る=買える物が一気に湧かない。
+  reveal: { minGap: 0 },
 
   // huntDirect: satMax 15→14(2026-07-12 ②改2: huntのlift3.09が帯上限3.00超過→飽和を微絞り)
   // peddlerFrac 0.02→0.06(2026-07-11 hunt序盤対策) / otherMul.golden 0.9(2026-07-11) / 投資量=討伐perk8種・基準=金相場

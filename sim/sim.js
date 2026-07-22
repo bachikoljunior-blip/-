@@ -3056,7 +3056,8 @@ function advanceTick(sim, strategy) {
     }
     if (sim.debugTrace && sim.runs.length === sim.opt.debugRunIdx) {
       const rr = sim.run;
-      sim.debugTrace.push({ t: sim.t, el: sim.t - rr.startT, c: rr.runCookies, boosts: rr.boosts.length, bm: goldenBoostMultiplier(sim), mon: !!rr.monster, kills: rr.kills, gold: rr.goldenTaken });
+      { const _prod = computeProd(sim); const _q = quotaAtElapsed(sim, sim.t - rr.startT); const _dmg = monsterDamage(sim, _prod); const _lvl = monsterLevel(sim); const _hp = monsterHpValue(sim, _lvl); const _tapPS = _prod.clickEV * strategy.tapRate;
+      sim.debugTrace.push({ t: sim.t, el: sim.t - rr.startT, c: rr.runCookies, cps: _prod.cps, tapPS: _tapPS, clickEV: _prod.clickEV, q: _q, qRatio: rr.runCookies>0? _q/rr.runCookies : 0, mdmg: _dmg, mhp: _hp, ttk: _dmg>0? _hp/(_dmg*strategy.tapRate):Infinity, stage: rr.maxStage, boosts: rr.boosts.length, bm: goldenBoostMultiplier(sim), mon: !!rr.monster, kills: rr.kills, gold: rr.goldenTaken }); }
     }
     const r = sim.run;
     purgeBoosts(sim);
@@ -3218,7 +3219,10 @@ function advanceTick(sim, strategy) {
           const colorHp = Math.pow((P.mcolor && P.mcolor.hpMul) || 1.08, colorTier - 1); // 上位色ほど一段強い
           const tHp = (P.mtype && P.mtype.hpMul && P.mtype.hpMul[typeId]) || 1;
           const tStay = (P.mtype && P.mtype.stayMul && P.mtype.stayMul[typeId]) || 1;
-          const maxHp = Math.max(40, Math.floor(monsterHpValue(sim, level) * tHp * colorHp * (r.nextMonsterHpMultiplier || 1)));
+          // タップ床(旧・最低HP40=「4発以上叩かないと倒せない」制限)撤去(2026-07-22 ユーザー指示):
+          // 討伐の難度は最低HPの下支えでなく本来のHPスケール(hpBase/hpGrowth/時間圧/ステージ)だけで作る。
+          // 序盤の弱個体はワンタップ可・後半はHPが火力を追い越して「倒せなくなる」=ノルマ未達より先に壁が来る設計。
+          const maxHp = Math.max(1, Math.floor(monsterHpValue(sim, level) * tHp * colorHp * (r.nextMonsterHpMultiplier || 1)));
           r.nextMonsterHpMultiplier = 1;
           r.monster = {
             typeId, colorTier, level, hp: maxHp, maxHp,
@@ -3429,13 +3433,13 @@ function simulate(strategy, opts) {
 }
 
 // 購入ヘルパー(unlockイベント記録込み)
-// ㉚解放間隔(2026-07-21 R33 ユーザー新設「解放間隔30秒以上が9割以上」): 初登場コンテンツの順次公開。
-// 旧・全購入30秒ドリップ(2026-07-15撤去のクソ機能)とは対象が違う: このゲートは生涯初(ever*未登録)の
-// 取得だけに効く=転生後の再購入・既出コンテンツは常に即。ゲーム側は非公開項目を表示しない見せ方
-// (見えるのに買えない待ちは無い)。ws料理/ノルマ層/スキルはプレイヤー主導の進行なのでゲート外
-// (小間隔の発生源として実測 計~13本/286=㉚の1割枠内)。
+// ㉚解放間隔(2026-07-22 ユーザー指示「ゲート解放無くして、ゲーム調整で解放間隔30秒以上」):
+// 解放を待たせるハードゲート(旧 P.reveal.minGap)は撤去。解放間隔≥30秒は、ノルマを本当の壁に
+// する経済(ノルマ係数の引き上げ+討伐難度)で自然に生む=買える物が一気に湧かないため間隔が空く。
+// unlockEvents の記録は継続(runner unlockgap で自然間隔を計測)。minGap=0 で常にゲート開放。
 function unlockGateOk(sim) {
-  const gap = (P.reveal && P.reveal.minGap != null) ? P.reveal.minGap : 31;
+  const gap = (P.reveal && P.reveal.minGap != null) ? P.reveal.minGap : 0;
+  if (!gap) return true;
   return sim.lastUnlockT == null || sim.t >= sim.lastUnlockT + gap;
 }
 function pushUnlock(sim, kind, id, n) {
