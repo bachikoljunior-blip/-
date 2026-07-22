@@ -17037,7 +17037,16 @@ function collectGoldenCookie() {
   // 異世界接続網: 狩り窓は金クッキーでは開かない(2026-07-09 承認の式変更・sim同期2026-07-16)。
   // 窓は討伐そのものが開き・維持する(defeatMonster側・段階2)。ここでは何もしない。
 
-  const effectSuffix = goldEffects.length ? ` / ${goldEffects.join("・")}` : "";
+  // ゴールドラッシュの"積み上がり"を felt に(コンボ表示と同じ役割): ラッシュ前・チェイン2以上で残りを予告。
+  let chainSuffix = "";
+  if (!goldRushActive()) {
+    const gc = Number(state.goldChain) || 0;
+    if (gc >= 2 && gc < GOLD_RUSH_CHAIN) {
+      const left = GOLD_RUSH_CHAIN - gc;
+      chainSuffix = ` / 🌟金チェイン ×${gc}` + (left === 1 ? "（あと1でラッシュ！）" : `（あと${left}）`);
+    }
+  }
+  const effectSuffix = (goldEffects.length ? ` / ${goldEffects.join("・")}` : "") + chainSuffix;
   const r = Math.random();
 
   if (r < 0.5) {
