@@ -2166,40 +2166,42 @@ function applyMs(sim, m, cost) {
   if (!sim.everMs) sim.everMs = {};
   if (!sim.everMs[m.id]) { sim.everMs[m.id] = true; pushUnlock(sim, 'research', m.id); } // 解放イベントは初回のみ
 }
-// 実績/スキル研究の取得(2026-07-22 ユーザー指示「自動購入は廃止。実績・スキル間隔も分散」):
-// 旧・毎tickの一括自動購入(トリガ成立の全カードを同時取得=㉚解放ラッシュの主犯)を廃止。
-//  (1) 生涯で既に解放済み(everMs)の再取得=即時・解放イベント無し。ms効果は周回ごとに r.ms がリセットされ
-//      再取得されるため、既知コンテンツの再購入は待たせない(=解放ゲートが再購入を免除するのと同じ)。
-//      repeatSec(量産体制)はクールダウン付きで何度でも。
-//  (2) 生涯初の取得=直近の解放から msGap 秒あけて最安1つだけ取得(=間隔分散・解放イベント発火)。
-//      設備/研究/段階の解放とグローバルな lastUnlockT を共有=他の解放直後30秒以内には湧かない=バースト解消。
+// 実績/スキル研究の取得(2026-07-22 ユーザー指示「自動購入は廃止。実績達成したら購入可(=手動の熟慮購入)」):
+// 旧・毎tickの一括自動購入(トリガ成立の全カードを同時取得=㉚解放ラッシュの主犯かつ「無料で降ってくる」)を廃止。
+// 実績研究は**実績を達成すると購入可になり、プレイヤーが手が届いたら買う熟慮購入**(ゲームの棚=1番下に並ぶ挙動と一致)。
+// simの表現: 各tickに**1つだけ**、達成済み・未取得・予算規律(msBudgetRatio=所持の一部)内の最安を取得
+//   =他の購入とクッキーを取り合う機会費用が発生する(無料の一括グラブでない)。1周回1tick1件=解放も自然に分散。
+//   repeatSec(量産体制=生産メトロノーム)は「自動購入」でなく生産機構なので従来どおりクールダウンで維持。
+//   ※周回ごとに r.ms リセット→再取得はゲームと同じ(達成トリガも購入状態も周回限り)。解放イベントは生涯初のみ発火。
 function tryBuyMilestones(sim, prod) {
   const r = sim.run;
   if (!r.ms) r.ms = { up: {}, click: 1, cps: 1, all: 1, golden: 1, hunt: 1, dropAdd: 0, bought: {}, cpsAdd: 0, own: {}, sup: {}, critAdd: 0, momentum: false };
-  // (1) 既解放(everMs)の再取得=即時・イベント無し。周回内で未取得のものを全て(repeatSecはクールダウンで)。
+  // 量産体制(repeatSec)=生産機構: 従来どおり(既取得はクールダウン再購入・初回はイベント発火)。
   for (const m of MILESTONE_RESEARCH) {
-    if (!(sim.everMs && sim.everMs[m.id])) continue; // 生涯初は(2)へ
-    if (m.repeatSec) {
-      if (r.ms.bought[m.id] && (r._msRepeatT && r._msRepeatT[m.id] || -Infinity) + m.repeatSec > sim.t) continue;
-    } else if (r.ms.bought[m.id]) continue; // 周回内で取得済み
+    if (!m.repeatSec) continue;
+    if (r.ms.bought[m.id] && (r._msRepeatT && r._msRepeatT[m.id] || -Infinity) + m.repeatSec > sim.t) continue;
     if (!m.trig(sim)) continue;
     const cost = msCostOf(sim, m, prod);
     if (r.cookies < cost) continue;
     applyMs(sim, m, cost);
   }
-  // (2) 生涯初の取得=解放間隔≥msGap秒で最安を1つずつ分散取得
+  // 実績研究(非repeat)=熟慮購入: 予算規律内・最安を1tick1件。
+  // ・生涯初(未everMs)=解放イベント: 直近の解放から msGap 秒あけて分散(間隔分散)。
+  // ・再取得(everMs・周回リセット後の買い直し)=イベント無し・分散なし(既知コンテンツは待たせない)。
+  const ratio = (P.reveal && P.reveal.msBudgetRatio != null) ? P.reveal.msBudgetRatio : 0.5;
   const gap = (P.reveal && P.reveal.msGap != null) ? P.reveal.msGap : 30;
-  if (sim.lastUnlockT != null && sim.t < sim.lastUnlockT + gap) return;
-  let best = null;
+  const canNew = sim.lastUnlockT == null || sim.t >= sim.lastUnlockT + gap;
+  let bestRe = null, bestNew = null;
   for (const m of MILESTONE_RESEARCH) {
-    if (sim.everMs && sim.everMs[m.id]) continue; // 既出は(1)で処理済み
-    if (r.ms.bought[m.id]) continue;
-    if (!m.trig(sim)) continue;
+    if (m.repeatSec || r.ms.bought[m.id]) continue;
+    if (!m.trig(sim)) continue; // 実績達成で購入可
     const cost = msCostOf(sim, m, prod);
-    if (r.cookies < cost) continue;
-    if (!best || cost < best.cost) best = { m, cost };
+    if (cost > r.cookies * ratio) continue; // 予算規律=他の購入と取り合う機会費用(無料一括でない)
+    if (sim.everMs && sim.everMs[m.id]) { if (!bestRe || cost < bestRe.cost) bestRe = { m, cost }; }
+    else if (canNew) { if (!bestNew || cost < bestNew.cost) bestNew = { m, cost }; }
   }
-  if (best) applyMs(sim, best.m, best.cost);
+  if (bestRe) applyMs(sim, bestRe.m, bestRe.cost); // 再取得(1件/tick・分散なし)
+  if (bestNew) applyMs(sim, bestNew.m, bestNew.cost); // 生涯初(msGap分散・解放イベント発火)
 }
 
 // 稼ぎ力 = 直接生産 + 金クッキー収入率 + 討伐報酬(投資)価値率 の合成。すべて現在状態から式で算出。
