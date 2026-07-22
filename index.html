@@ -5060,6 +5060,33 @@
       font-weight: 700;
     }
 
+    /* 固定クエスト=長期目標(次ステージ解放)を felt にする(R35 動機の可視化)。純UI */
+    .questBox { border-color: rgba(150, 200, 255, 0.55) !important; box-shadow: 0 0 14px rgba(90, 150, 230, 0.28); }
+    .questBox h3 { color: #bfe0ff; }
+    .questGoal { font-size: 13px; font-weight: 700; margin: 2px 0; }
+    .questNum { color: #ffe38a; font-weight: 900; }
+    .questFill { background: linear-gradient(90deg, rgba(120,190,255,0.95), rgba(160,240,210,0.9)) !important; box-shadow: 0 0 10px rgba(120,180,255,0.3) !important; }
+    .questRemain { font-size: 12px; margin: 3px 0 2px; color: #e8f2ff; }
+    .questRemain b { color: #ffd36a; }
+    .questHard { opacity: 0.82; font-style: italic; }
+    /* 進行HUD: 常設で「次ステージまであとN体」を felt に(R35 動機) */
+    #questHud {
+      position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%);
+      z-index: 56; max-width: 92%;
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      padding: 3px 11px 5px; border-radius: 12px;
+      font-size: 12px; font-weight: 800; white-space: nowrap;
+      color: #d8ecff;
+      background: linear-gradient(180deg, rgba(18, 34, 60, 0.92), rgba(20, 26, 52, 0.92));
+      border: 1px solid rgba(140, 190, 250, 0.55);
+      box-shadow: 0 2px 10px rgba(70, 130, 220, 0.32);
+      pointer-events: none;
+    }
+    #questHud.near { animation: questNearPulse 1s ease-in-out infinite; border-color: rgba(180, 230, 255, 0.9); }
+    #questHudBar { display: block; height: 4px; width: 120px; max-width: 60vw; border-radius: 2px; background: rgba(140,190,250,0.22); position: relative; overflow: hidden; }
+    #questHudBar > i { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 2px; background: linear-gradient(90deg, #7ac0ff, #a0f0d2); transform-origin: left center; }
+    @keyframes questNearPulse { 0%,100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.04); } }
+
     .monsterTypeLabel {
       font-size: 11px;
       font-weight: 800;
@@ -5359,7 +5386,7 @@
     #goldenBoostBadge {
       position: absolute;
       left: 50%;
-      bottom: 6px;
+      bottom: 34px; /* 進行HUD(#questHud, bottom:6px)の上に積む */
       transform: translateX(-50%);
       z-index: 63;
       padding: 4px 10px;
@@ -5929,6 +5956,7 @@
       <div id="goldenBoostBadge" aria-hidden="true" style="display:none;"></div>
       <div id="quantumWave" aria-hidden="true" style="display:none;"><span id="quantumWaveN"></span><i id="quantumWaveBar"><i></i></i></div>
       <div id="huntWindow" aria-hidden="true" style="display:none;"><span id="huntWindowN"></span><i id="huntWindowBar"><i></i></i></div>
+      <div id="questHud" aria-hidden="true" style="display:none;"><span id="questHudN"></span><i id="questHudBar"><i></i></i></div>
       <div id="floatArea"></div>
     </div>
 
@@ -9041,11 +9069,7 @@ function renderOrder() {
 
   // クエスト(2026-07-13): 注文ボードにのみ常設表示。達成で次のステージ解放+次のクエスト表示。
   // 制限時間なし・内容固定・進捗は周回を跨いで累積。制限時間注文の「下」に置く(2026-07-13 ユーザー指示)。
-  const questBoxHtml = `
-    <div class="infoBox orderBoardBox">
-      <h3>クエスト</h3>
-      <div class="desc">${currentQuestText()}</div>
-    </div>`;
+  const questBoxHtml = questBoxInner();
 
   if (!orderBoardUnlocked()) {
     box.innerHTML = `
@@ -11337,6 +11361,37 @@ function currentQuestText() {
   const need = QUEST_KILLS_NEED[st - 1] || 0;
   return `クエスト: 「${stageInfo(st).name}」でモンスターを ${need} 体討伐(${Math.min(got, need)}/${need}) → 「${stageInfo(st + 1).name}」解放`;
 }
+// クエストの進捗データ(表示用・純参照): 次のステージ解放という長期目標を felt にする。
+function questProgress() {
+  const st = state.stageUnlocked || 1;
+  if (st >= MAX_STAGE_NO) return { done: true, st };
+  const need = QUEST_KILLS_NEED[st - 1] || 0;
+  const got = Math.min((state.questKills || {})[st] || 0, need);
+  return {
+    done: false, st, got, need,
+    remain: Math.max(0, need - got),
+    ratio: need > 0 ? got / need : 0,
+    curName: stageInfo(st).name,
+    nextName: stageInfo(st + 1).name
+  };
+}
+// 注文ボードの固定クエスト表示(2026-07-22 動機の可視化強化): 目標=次ステージ解放を進捗バー+残り数+
+// 「最新ステージのみ・周回跨ぎ・腰を据えて」の骨太フレーミングで felt に。純UI・経済無関係。
+function questBoxInner() {
+  const q = questProgress();
+  if (q.done) {
+    return `<div class="infoBox orderBoardBox questBox"><h3>🎯 クエスト</h3><div class="desc">全ステージ解放済み。最果てへ。</div></div>`;
+  }
+  const pct = (q.ratio * 100).toFixed(1);
+  return `
+    <div class="infoBox orderBoardBox questBox">
+      <h3>🎯 クエスト — 次のステージへ</h3>
+      <div class="questGoal">「${q.curName}」でモンスターを討伐 <span class="questNum">${fmt(q.got)}/${fmt(q.need)}</span></div>
+      <div class="orderProgressBar"><div class="orderProgressFill questFill" style="width:${pct}%"></div></div>
+      <div class="questRemain">あと <b>${fmt(q.remain)}</b> 体で <b>「${q.nextName}」</b> 解放</div>
+      <div class="desc questHard">最新ステージでの討伐だけが加算・周回を跨いで累積(目安3周回)。腰を据えて挑め。</div>
+    </div>`;
+}
 const DIRECT_CFG = {
   equip:  { coef: 0.06, stagePow: 0.5, countPow: 2,   ref: 70,  startStage: 5, satMax: 50, otherMul: { click: 0.08, default: 0.2 }, anchorGolden: 0.15 },
   golden: { coef: 0.15, stagePow: 0.5, countPow: 1.4, ref: 30,  startStage: 5, satMax: 10, otherMul: { click: 0.3, balanced: 0.3, hunt: 0.3, default: 1 } },
@@ -12788,6 +12843,7 @@ function updateTopOnly() {
   updateGoldenBoostBadge(); // 金ブースト発動中バッジ(R35)
   updateQuantumWaveUI(); // 観測ゆらぎの波インジケータ(R35 F24)
   updateHuntWindowUI(); // 狩り窓インジケータ(延長狩り・R35 F24)
+  updateQuestHud(); // 進行HUD(次ステージ解放の長期目標・R35 動機)
 }
 
 // 生産ブースト発動中バッジ(R35 面白さ監査・要素3/11): 金ブースト・注文報酬の全生産×N・獲得+50%を一元表示。
@@ -12861,6 +12917,24 @@ function updateHuntWindowUI() {
   if (fill) fill.style.transform = "scaleX(" + Math.max(0.03, Math.min(1, left / 40000)).toFixed(3) + ")";
   const nEl = $("huntWindowN");
   if (nEl) nEl.textContent = "🗡️ 狩り窓 " + Math.ceil(left / 1000) + "秒 ⛓️" + chain + "/" + CHAIN_KILLS;
+  box.style.display = "";
+}
+
+// 進行HUD(R35 動機): 「次ステージ解放」という長期目標を常設で felt にする。
+// 純UI・questProgress()の表示のみ=経済に一切触れない。最新ステージ討伐のみ加算=腰を据えた到達目標。
+function updateQuestHud() {
+  const box = $("questHud");
+  if (!box) return;
+  // 討伐を始める前(最序盤のタップ/購入チュートリアル期)は出さない=最初の討伐で目標が actionable になった瞬間に登場。
+  if (titleScreenActive() || pausedForSkillChoice() || !((state.msKills || 0) > 0)) { box.style.display = "none"; return; }
+  const q = questProgress();
+  if (q.done) { box.style.display = "none"; return; }
+  const near = q.ratio >= 0.8 || q.remain <= 10;
+  box.classList.toggle("near", near);
+  const fill = document.querySelector("#questHudBar > i");
+  if (fill) fill.style.transform = "scaleX(" + Math.max(0.02, Math.min(1, q.ratio)).toFixed(3) + ")";
+  const nEl = $("questHudN");
+  if (nEl) nEl.textContent = "🎯 「" + q.nextName + "」まで あと " + fmt(q.remain) + " 体";
   box.style.display = "";
 }
 
