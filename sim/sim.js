@@ -1859,6 +1859,9 @@ function computeProd(sim) {
     }
     critMul *= equip2Fx(sim).critValMul; // 新装備: 会心の威力系(率は上限0.3だが威力は上限なし)
     critEV = 1 + chance * (critMul - 1);
+    // 会心フィーバー(R35)はゲーム側で「超会心の時間再配分」として実装=平均保存(mean-preserving)。
+    // 超会心は sim では不可視(mean=1・line 9832方式)なので、フィーバーもsimに一切影響しない=経済ニュートラル。
+    // (初期に検討した"確定超会心=経済ブースト"案は周回跨ぎ複利で3e87×の暴走を実測→棄却。golden spawnと同型のナイフエッジ。)
   }
 
   const boostM = goldenBoostMultiplier(sim) * afterheatMultiplier(sim);

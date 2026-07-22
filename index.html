@@ -5398,6 +5398,27 @@
       18% { transform: translate(-50%, -14px) scale(1.4); opacity: 1; }
       100% { transform: translate(-50%, -68px) scale(1.1); opacity: 0; }
     }
+    /* 会心フィーバー演出(R35・「選択と能動で一周の形が変わる」の芯): コンボを積みきった頂点。純演出、経済はsim同期側で担保 */
+    #feverAura {
+      position: absolute;
+      inset: 0;
+      z-index: 61;
+      pointer-events: none;
+      opacity: 0;
+      background: radial-gradient(circle at 50% 45%, rgba(255, 120, 40, 0) 40%, rgba(255, 90, 20, 0.22) 62%, rgba(255, 60, 10, 0.0) 80%);
+      box-shadow: inset 0 0 60px rgba(255, 110, 30, 0.5);
+    }
+    #feverAura.on { opacity: 1; animation: feverPulse 0.7s ease-in-out infinite; }
+    @keyframes feverPulse { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
+    #critCombo.fever {
+      background: linear-gradient(180deg, rgba(180, 40, 10, 0.96), rgba(255, 90, 20, 0.96));
+      border-color: rgba(255, 235, 150, 0.95);
+      box-shadow: 0 0 18px rgba(255, 140, 40, 0.9), 0 3px 12px rgba(255, 90, 20, 0.6);
+      animation: feverBadge 0.5s ease-in-out infinite;
+    }
+    @keyframes feverBadge { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+    #critCombo.fever #critComboN::before { content: "🔥 フィーバー ×"; color: #fff3c4; }
+    #critCombo.fever #critComboBar { background: linear-gradient(90deg, #fff3c4, #ff5a14); }
     /* ボス接近インジケータ(R35 要素5): 不意打ちを"期待"に変える */
     #bossApproach {
       position: absolute;
@@ -5990,6 +6011,7 @@
       </button>
       <button id="bhGaugeBtn" type="button" aria-label="重力圧縮の発動" style="display: none;"></button>
       <div id="critCombo" aria-hidden="true" style="display:none;"><span id="critComboN">0</span><i id="critComboBar"></i></div>
+      <div id="feverAura" aria-hidden="true"></div>
       <div id="superCritFlash" aria-hidden="true"></div>
       <div id="floatArea"></div>
     </div>
@@ -9832,6 +9854,36 @@ const OVERKILL_MUL = 5;
 // K×P + M×(1-P) = 1(=通常倍率を保存)。simは期待値で計算=分散再分配は不可視=経済/バランス影響ゼロ。純粋な"稀で特大"の体験。
 const SUPER_CRIT_P = 0.03, SUPER_CRIT_K = 4;
 const SUPER_CRIT_M = (1 - SUPER_CRIT_P * SUPER_CRIT_K) / (1 - SUPER_CRIT_P); // ≈0.907
+
+// 会心フィーバー(R35・「選択と能動で一周の“felt”が変わる」の芯):
+// 芯の考え方 = 超会心(SUPER_CRIT・稀で特大の×K)は元から「平均保存の再配分」でsim不可視(line上部)。フィーバーは
+// その超会心を“時間で束ねる”: 平時は超会心を溜め(bank)、コンボを FEVER_COMBO まで積みきった時だけ一気に放出する。
+// → 総量(平均)は完全不変=経済ニュートラル=sim/バッテリーに一切影響しない(=golden spawn/確定ブーストの暴走を回避)。
+// → プレイ体験だけが変わる: 平時は静か、hard-wonのコンボ到達で特大会心が“噴火”する稀で特大の頂点(#1)。
+//   能動でコンボを維持しないと起きない(#7腕→felt)・会心率が高い型=クリック型ほど噴火が濃い(自然な型署名#2)。
+// 経済を触らずに「能動で一周の“かたち(リズム)”が変わる」を出す——これが実測(3e87×暴走)から導いた正しい設計。
+const FEVER_COMBO = 15;         // 点火に必要なコンボ(硬め=腕が要る・会心率低い型は30秒で切れて到達しにくい)
+const FEVER_MS = 5000;          // 噴火の継続(この間、溜めた超会心を優先放出)
+const FEVER_COOLDOWN = 45000;   // 再点火間隔(=稀。長めに溜める→噴火が特大に。平時の谷は僅か)
+const SUPER_BANK_CAP = 12;      // 超会心bankの上限(=噴火の最大規模&溜め過ぎ防止。未点火でも上限超で自然放出→平均保存)
+function feverActive() { return Date.now() < (state.critFeverUntil || 0); }
+function tryIgniteFever() {
+  // 点火条件: フィーバー中でない・コンボ十分・クールダウン明け。コンボはリセットしない(=積んだ倍率はsteadyに残す)。
+  if (feverActive()) return;
+  if ((state.critCombo || 0) < FEVER_COMBO) return;
+  if (Date.now() <= (state.critFeverCooldownUntil || 0)) return;
+  state.critFeverUntil = Date.now() + FEVER_MS;
+  state.critFeverCooldownUntil = state.critFeverUntil + FEVER_COOLDOWN;
+  if (typeof triggerFeverFx === "function") triggerFeverFx();
+}
+// 超会心を放出するか(平均保存の再配分): 会心のたびに期待分 SUPER_CRIT_P を bank に積み、
+// フィーバー中は bank≥1 で放出(噴火)、平時は bank が上限を超えた分だけ自然放出(溜め過ぎ防止=長期平均は SUPER_CRIT_P に一致)。
+function drawSuperCrit() {
+  state.superBank = (Number(state.superBank) || 0) + SUPER_CRIT_P; // この会心で期待される超会心の“持ち分”
+  const threshold = feverActive() ? 1 : SUPER_BANK_CAP; // 噴火中は積極放出・平時は上限超のみ
+  if (state.superBank >= threshold) { state.superBank -= 1; return true; }
+  return false;
+}
 // 金の大当たり(R35・同手法): 即時金の3%が×5、残りを×Mで平均保存=経済ゼロ影響
 const GOLDEN_JACKPOT_P = 0.03, GOLDEN_JACKPOT_K = 5;
 const GOLDEN_JACKPOT_M = (1 - GOLDEN_JACKPOT_P * GOLDEN_JACKPOT_K) / (1 - GOLDEN_JACKPOT_P); // ≈0.876
@@ -13094,8 +13146,8 @@ function tapCookie() {
   if (Math.random() < fingerCritChance()) {
     // 超会心(R35・要素1B/横断"稀で特大"): 会心のSUPER_CRIT_P割が特大(×SUPER_CRIT_K)、残りは僅かに小さく(×SUPER_CRIT_M)。
     // 平均倍率は不変=平均保存の再分配。simは期待値を使うので分散再分配はsimに一切見えない=経済/バランス影響ゼロ。
-    // プレイヤーだけが「たまに桁違いの一撃」を体験する(ユーザー最愛の"たまに出る大きいやつ")。
-    superCrit = Math.random() < SUPER_CRIT_P;
+    // 超会心の"いつ出るか"はフィーバーで時間再配分(drawSuperCrit): 平時は溜め、コンボ到達の噴火で一気に放出。総量=不変。
+    superCrit = drawSuperCrit();
     tapPower *= fingerCritMultiplier() * (superCrit ? SUPER_CRIT_K : SUPER_CRIT_M);
     critical = true;
     // 段階2: 会心コンボ(30秒途切れでリセット、上限なし)
@@ -13103,6 +13155,8 @@ function tapCookie() {
       if (Date.now() - (state.lastCritAt || 0) > 30000) state.critCombo = 0;
       state.critCombo = (state.critCombo || 0) + 1;
       state.lastCritAt = Date.now();
+      // 会心フィーバー点火(コンボが FEVER_COMBO 到達・クールダウン明け)。フィーバー中は再点火しない(guardは tryIgniteFever 内)。
+      tryIgniteFever();
     }
     // 段階3: 会心の余熱(会心のたびに毎秒生産×最高到達層比の追加獲得)
     if (resStage3("fingerTechnique")) {
@@ -13130,6 +13184,14 @@ function triggerSuperCritFx() {
   el.style.animation = "none"; void el.offsetWidth; el.style.animation = "superCritFlash 0.5s ease-out";
 }
 
+// 会心フィーバー点火の演出(R35): 一度だけメッセージ+オーラ点灯。オーラの消灯は updateCritComboUI が時間で行う。
+function triggerFeverFx() {
+  const aura = $("feverAura");
+  if (aura) aura.classList.add("on");
+  try { playSound("crit"); } catch (e) {}
+  showMessage("🔥 会心フィーバー！ 全タップ特大会心！");
+}
+
 // 会心コンボ表示(R35 面白さ監査・要素1): 連続会心の"連鎖を切らすな"を見える化。
 // 段2「会心コンボ」取得時のみ意味を持つ。コンボ≥2で表示、30秒ゲージが尽きる=リセット。経済には一切触れない純表示。
 function updateCritComboUI(bump) {
@@ -13138,10 +13200,22 @@ function updateCritComboUI(bump) {
   const combo = Math.max(0, Math.floor(Number(state.critCombo) || 0));
   const elapsed = Date.now() - (Number(state.lastCritAt) || 0);
   const alive = combo >= 2 && elapsed < 30000 && resStage2("fingerTechnique");
-  if (!alive) { if (box.style.display !== "none") box.style.display = "none"; return; }
+  const fever = feverActive();
+  // フィーバー終了検知: オーラを消す(点火は triggerFeverFx で点灯)。
+  const aura = $("feverAura");
+  if (aura && !fever && aura.classList.contains("on")) aura.classList.remove("on");
+  if (!alive && !fever) { if (box.style.display !== "none") box.style.display = "none"; return; }
   box.style.display = "flex";
+  box.classList.toggle("fever", fever);
   const nEl = $("critComboN"); if (nEl) nEl.textContent = String(combo);
-  const bar = $("critComboBar"); if (bar) bar.style.transform = "scaleX(" + Math.max(0, 1 - elapsed / 30000).toFixed(3) + ")";
+  const bar = $("critComboBar");
+  if (bar) {
+    // 通常はコンボ切れまで(30秒)、フィーバー中はフィーバー残り時間をバーに映す。
+    const frac = fever
+      ? Math.max(0, ((state.critFeverUntil || 0) - Date.now()) / FEVER_MS)
+      : Math.max(0, 1 - elapsed / 30000);
+    bar.style.transform = "scaleX(" + frac.toFixed(3) + ")";
+  }
   if (bump) { box.style.animation = "none"; void box.offsetWidth; box.style.animation = ""; } // 会心ごとに弾ませる
 }
 

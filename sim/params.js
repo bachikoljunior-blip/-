@@ -433,6 +433,8 @@ module.exports = {
   //  - 重力圧縮 段3: 圧縮×(1-min(0.35,0.001×最高層)) → 圧縮×e^(-0.001×最高層)(負値防止の逓減式)
   res2: {
     comboRate: 0.03, comboWindow: 30,
+    // 会心フィーバー(R35)は超会心の「時間再配分」=平均保存でゲーム側のみに実装。simは超会心を不可視に扱う(mean=1)ため
+    // フィーバーもsimに影響しない=経済ニュートラル(=バッテリー不変)。ここに経済パラメータは持たせない。
     critCpsCoef: 0.003,
     supExtra: 0.008, supStageCoef: 0.001,
     ovenBakeMulBake: 1.7, ovenBakeMulOther: 1.2,
