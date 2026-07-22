@@ -13060,11 +13060,14 @@ function updateQuestHud() {
   const fill = document.querySelector("#questHudBar > i");
   if (q.done && q.endgame) {
     // エンドゲーム: 深層の自己ベスト更新が perpetual goal。動機は全編で途切れない。
-    box.classList.toggle("near", q.atRecord);
+    // 記録更新中、または更新まであと1-2層(=もうすぐ新記録!の緊張)は強調して「押せ」を felt に(hard-won可視化)。
+    box.classList.toggle("near", q.atRecord || q.toBest <= 2);
     if (fill) fill.style.transform = "scaleX(" + Math.max(0.02, Math.min(1, q.best > 0 ? q.cur / q.best : 1)).toFixed(3) + ")";
     if (nEl) nEl.textContent = q.atRecord
       ? "🎯 深層 第" + fmt(q.cur) + "層 — 自己ベスト更新中！"
-      : "🎯 自己ベスト第" + fmt(q.best) + "層まで あと " + fmt(q.toBest) + " 層";
+      : (q.toBest <= 2
+          ? "🎯 自己ベストまで あと " + fmt(q.toBest) + " 層 — もうすぐ新記録！"
+          : "🎯 自己ベスト第" + fmt(q.best) + "層まで あと " + fmt(q.toBest) + " 層");
     box.style.display = "";
     return;
   }
