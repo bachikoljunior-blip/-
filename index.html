@@ -5415,6 +5415,45 @@
       transform-origin: left center;
     }
     @keyframes quantumPeakPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.07); } }
+    /* 狩り窓インジケータ(R35 要素11/F24): 延長狩り(異世界接続網 段2)の40秒窓+3連撃を見せ、"討伐を切らすな"の狩りリズムを起こす。純UI */
+    #huntWindow {
+      position: absolute;
+      right: 6px;
+      top: 6px;
+      z-index: 57;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3px;
+      padding: 3px 9px 5px;
+      border-radius: 11px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+      color: #ffd0c0;
+      background: linear-gradient(180deg, rgba(58, 16, 20, 0.9), rgba(52, 18, 34, 0.9));
+      border: 1px solid rgba(240, 140, 120, 0.55);
+      box-shadow: 0 2px 8px rgba(200, 80, 70, 0.35);
+      pointer-events: none;
+    }
+    #huntWindow.chainReady { animation: huntChainPulse 0.7s ease-in-out infinite; border-color: rgba(255, 170, 120, 0.95); }
+    #huntWindowBar {
+      display: block;
+      height: 4px;
+      width: 72px;
+      border-radius: 2px;
+      background: rgba(240, 140, 120, 0.25);
+      position: relative;
+      overflow: hidden;
+    }
+    #huntWindowBar > i {
+      position: absolute;
+      top: 0; bottom: 0; right: 0;
+      border-radius: 2px;
+      background: linear-gradient(90deg, #ff8a5a, #ffb26f);
+      transform-origin: right center;
+    }
+    @keyframes huntChainPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
     #bhGaugeBtn {
       position: absolute;
       right: 4px;
@@ -5889,6 +5928,7 @@
       <div id="superCritFlash" aria-hidden="true"></div>
       <div id="goldenBoostBadge" aria-hidden="true" style="display:none;"></div>
       <div id="quantumWave" aria-hidden="true" style="display:none;"><span id="quantumWaveN"></span><i id="quantumWaveBar"><i></i></i></div>
+      <div id="huntWindow" aria-hidden="true" style="display:none;"><span id="huntWindowN"></span><i id="huntWindowBar"><i></i></i></div>
       <div id="floatArea"></div>
     </div>
 
@@ -12747,6 +12787,7 @@ function updateTopOnly() {
   updateBossApproach(); // ボス接近インジケータ(R35)
   updateGoldenBoostBadge(); // 金ブースト発動中バッジ(R35)
   updateQuantumWaveUI(); // 観測ゆらぎの波インジケータ(R35 F24)
+  updateHuntWindowUI(); // 狩り窓インジケータ(延長狩り・R35 F24)
 }
 
 // 生産ブースト発動中バッジ(R35 面白さ監査・要素3/11): 金ブースト・注文報酬の全生産×N・獲得+50%を一元表示。
@@ -12802,6 +12843,24 @@ function updateQuantumWaveUI() {
       nEl.textContent = "🌊 谷 山まで" + toPeak + "秒";
     }
   }
+  box.style.display = "";
+}
+
+// 狩り窓インジケータ(延長狩り=異世界接続網 段2)の可視化(R35 F24): 40秒窓+3連撃で「討伐を切らすな」の狩りリズムを見せる。
+// 純UI・portalHuntUntil/portalChainKillsの表示のみ=経済に一切触れない。
+function updateHuntWindowUI() {
+  const box = $("huntWindow");
+  if (!box) return;
+  const now = Date.now();
+  const active = state.research.portalNetwork && resStage2("portalNetwork") && now < (state.portalHuntUntil || 0);
+  if (titleScreenActive() || pausedForSkillChoice() || !active) { box.style.display = "none"; return; }
+  const left = Math.max(0, (state.portalHuntUntil || 0) - now);
+  const chain = Math.max(0, Math.floor(Number(state.portalChainKills) || 0));
+  box.classList.toggle("chainReady", chain >= CHAIN_KILLS - 1); // あと1体で核=強調
+  const fill = document.querySelector("#huntWindowBar > i");
+  if (fill) fill.style.transform = "scaleX(" + Math.max(0.03, Math.min(1, left / 40000)).toFixed(3) + ")";
+  const nEl = $("huntWindowN");
+  if (nEl) nEl.textContent = "🗡️ 狩り窓 " + Math.ceil(left / 1000) + "秒 ⛓️" + chain + "/" + CHAIN_KILLS;
   box.style.display = "";
 }
 
