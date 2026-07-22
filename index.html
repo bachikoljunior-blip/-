@@ -5086,6 +5086,25 @@
     #questHudBar { display: block; height: 4px; width: 120px; max-width: 60vw; border-radius: 2px; background: rgba(140,190,250,0.22); position: relative; overflow: hidden; }
     #questHudBar > i { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 2px; background: linear-gradient(90deg, #7ac0ff, #a0f0d2); transform-origin: left center; }
     @keyframes questNearPulse { 0%,100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.04); } }
+    /* クエスト達成=次ステージ解放の祝祭バナー(R35 動機の payoff): 3周回の hard-won を「triumph」として felt に。純演出 */
+    #stageUnlockBanner {
+      position: fixed; left: 50%; top: 38%; transform: translate(-50%, -50%) scale(0.6);
+      z-index: 120; pointer-events: none; opacity: 0;
+      text-align: center; padding: 14px 26px; border-radius: 18px;
+      background: linear-gradient(180deg, rgba(60, 40, 10, 0.92), rgba(90, 55, 12, 0.92));
+      border: 2px solid rgba(255, 210, 110, 0.9);
+      box-shadow: 0 0 40px rgba(255, 190, 70, 0.7), inset 0 0 20px rgba(255, 220, 130, 0.3);
+    }
+    #stageUnlockBanner.show { animation: stageUnlockAnim 3s ease-out forwards; }
+    #stageUnlockBanner .subT { font-size: 13px; font-weight: 800; color: #ffe6a8; letter-spacing: 1px; }
+    #stageUnlockBanner .mainT { font-size: 26px; font-weight: 900; color: #fff4cf; text-shadow: 0 0 14px rgba(255,180,50,0.9), 0 2px 4px rgba(0,0,0,0.8); margin-top: 3px; }
+    @keyframes stageUnlockAnim {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+      12% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+      22% { transform: translate(-50%, -50%) scale(1); }
+      82% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      100% { opacity: 0; transform: translate(-50%, -55%) scale(1.02); }
+    }
 
     .monsterTypeLabel {
       font-size: 11px;
@@ -5862,6 +5881,7 @@
 </section>
 
 <div id="transitionFx" aria-hidden="true"></div>
+<div id="stageUnlockBanner" aria-hidden="true"><div class="subT">🎉 クエスト達成 — 新ステージ解放</div><div class="mainT"></div></div>
 
 <div id="policyChoiceScreen" class="policyChoiceScreen">
   <div class="policyChoiceInner">
@@ -11349,6 +11369,7 @@ function questProgressOnKill(stageNo, units) {
     markUnlock();
     state.stageUnlocked = stageNo + 1;
     playScreenTransition();
+    celebrateStageUnlock(stageInfo(stageNo + 1).name); // 祝祭バナー(hard-wonのpayoff・R35動機)
     // dropMatは別関数内のローカル変数でここでは未定義だったため、グローバルのshowMessageに修正
     // (クエスト達成時に必ず落ちていた不具合の修正・2026-07-13)
     showMessage(`クエスト達成！ 新ステージ「${stageInfo(stageNo + 1).name}」解放！`);
@@ -12764,6 +12785,17 @@ function playScreenTransition() {
   el.classList.remove("active");
   void el.offsetWidth;
   el.classList.add("active");
+}
+
+// クエスト達成=次ステージ解放の祝祭(R35 動機の payoff): 3周回の hard-won を triumph として felt に。純演出。
+function celebrateStageUnlock(name) {
+  const el = $("stageUnlockBanner");
+  if (!el) return;
+  const main = el.querySelector(".mainT");
+  if (main) main.textContent = "「" + name + "」";
+  el.classList.remove("show");
+  void el.offsetWidth; // reflowでアニメを再起動
+  el.classList.add("show");
 }
 
 // ノルマ層が上がった/下がった瞬間にゲージへ演出を入れる
