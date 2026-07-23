@@ -166,12 +166,13 @@
 
     /* クッキー画面の合計毎秒生産(小さめのサブ表示) */
     .cookieCps {
-      /* 毎秒とダメージを左右半分ずつの固定枠に置き、増分(+X)が出ても
-         もう一方の表示位置がずれないようにする */
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      column-gap: 6px;
-      font-size: 11px;
+      /* 毎秒とダメージを縦に積む(2026-07-22 ユーザー指示: 増分も全部見えて、かつ重ならないように)。
+         各行フル幅=切り詰め不要・左右で重なることもない。 */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      row-gap: 1px;
+      font-size: 12px;
       font-weight: 700;
       line-height: 1.2;
       color: #f2d9a8;
@@ -179,11 +180,9 @@
     }
 
     .cookieCps .statHalf {
-      /* 増分(+X)も含めて全て見えるように切り詰めない(2026-07-22 ユーザー指示)。収まらなければ縮小 */
+      /* 縦積みなので各行フル幅・切り詰め無し・重なり無し(2026-07-22) */
       white-space: nowrap;
       text-align: center;
-      min-width: 0;
-      overflow: visible;
     }
 
     #cookies {
