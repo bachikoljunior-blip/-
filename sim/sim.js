@@ -2958,13 +2958,12 @@ function doPrestige(sim) {
     measure: finalizeMeasure(r)
   });
 
-  // スキル購入(戦略の優先順で、買えるだけ)。ただし1回の転生で取れるのは maxPerPrestige 個まで
-  // (2026-07-22 ユーザー指示「一度に取るスキルは5個まで」): 取り切れない分は次の転生へ。取得は永続なので
-  // 周回を重ねれば全て揃う。㉚では「転生直後にスキル派生研究(msk_)が一斉解放されるバースト」を5個に抑える効果も。
+  // スキル購入(戦略の優先順で、買えるだけ)。※1転生あたりの取得数は「合格条件」(runner skillcap)で判定する
+  // 対象であり、simに強制上限は設けない(2026-07-22 ユーザー指示「5個までは合格条件・仕様にしない」)。
+  // 自然に≤5に収まるようスキルコスト/PT獲得側で調整する。
   const bought = [];
-  const maxPerPrestige = (P.maxSkillsPerPrestige != null) ? P.maxSkillsPerPrestige : 5;
   let progress = true;
-  while (progress && bought.length < maxPerPrestige) {
+  while (progress) {
     progress = false;
     const order = sim.strat.skillOrder(sim);
     for (const id of order) {

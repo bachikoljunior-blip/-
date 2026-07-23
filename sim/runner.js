@@ -1078,6 +1078,25 @@ if (mode === 'baseline') {
     console.log(`  ${pass ? 'OK' : 'NG'} ${s.id} 解放${ev.length}件→${moments.length}モーメント 間隔${gaps.length}本 ≥30s: ${ok}/${gaps.length} (${(ratio * 100).toFixed(1)}%)`);
   }
   console.log(`㉚ 合計 ${okAll}/${cnt}方針`);
+} else if (mode === 'skillcap') {
+  // ㉛ スキル取得数(合格条件・2026-07-22 ユーザー指示「1度に取るスキルは5個まで=合格条件」):
+  // simに強制上限は設けず、1転生あたりの取得数が自然に≤capに収まるか(全転生・全方針)を判定。
+  const cap = (G.P && G.P.skillCapPerPrestige) || 5;
+  console.log(`㉛ スキル取得数: 1転生あたり≤${cap}個が全転生で成立(全方針・${hours}h)`);
+  let okAll = 0, cnt = 0;
+  for (const s of STRATEGIES) {
+    const sim = G.simulate(s, { hours });
+    const counts = sim.runs.filter(r => !r.partial).map(r => r.skillsBought || 0).filter(c => c > 0);
+    const over = counts.filter(c => c > cap);
+    const maxc = counts.length ? Math.max(...counts) : 0;
+    const pass = over.length === 0;
+    if (pass) okAll++;
+    cnt++;
+    const dist = {}; counts.forEach(c => dist[c] = (dist[c] || 0) + 1);
+    const distStr = Object.keys(dist).sort((a, b) => a - b).map(k => `${k}個×${dist[k]}`).join(' ');
+    console.log(`  ${pass ? 'OK' : 'NG'} ${s.id} スキル取得のあった転生${counts.length} 最大${maxc}個 (>${cap}=${over.length}回) [${distStr}]`);
+  }
+  console.log(`㉛ 合計 ${okAll}/${cnt}方針`);
 } else if (mode === 'eqswap') {
   // 装備(b)新定義(R19 2026-07-18 ユーザー指示「プレイ方針ごとに得意装備割り振って、周回ごとのシミュレーションを
   // 何回かやり直して同じティアの別装備でやり直して、全部50%以上行けばいい。素材は取得後全周回で中央値50%以上」):
