@@ -43,19 +43,25 @@ const fs=require('fs'); try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
     stage:state.stageUnlocked||1,kills:state.monstersDefeated||0,qfail:!!state.quotaFailed}));
 
   // 能動1刻み(発生順): 討伐→報酬→金→研究→設備→タップ。bank=貯蓄中は設備を買わない。
-  const stepActions=async(tapN,bank)=>p.evaluate(({tapN,bank})=>{
+  const stepActions=async(tapN,bank)=>p.evaluate(({tapN,bank,__TPS})=>{
     const out=[]; const add=(l,c)=>{ if(c>0)out.push([l,c]); };
     if(typeof monsters!=='undefined'&&monsters&&monsters.length&&hitMonster){ const b4=state.monstersDefeated||0; for(const m of monsters.slice())for(let k=0;k<200&&monsters.indexOf(m)>=0;k++)hitMonster(m.id); add('モンスターを討伐',(state.monstersDefeated||0)-b4); }
     { let c=0; for(let n=0;n<12;n++){ if(!(rewardModalOpen&&rewardModalOpen()))break; revealRewardChoices&&revealRewardChoices(); if(pendingRewardChoices&&pendingRewardChoices.length){chooseReward(pendingRewardChoices[0]);c++;}else break; } add('討伐報酬を選択',c); }
     if(typeof goldenVisible!=='undefined'&&goldenVisible&&collectGoldenCookie){collectGoldenCookie();add('金クッキーを回収',1);}
     if(typeof RESEARCH!=='undefined')for(const r of RESEARCH){try{ if(!state.research[r.id]&&(typeof researchUnlocked!=='function'||researchUnlocked(r))&&state.cookies.gte(D(r.cost))){ buyResearch(r.id); add('研究「'+r.name+'」を購入',1);} }catch(e){}}
-    if(!bank){ const agg={},order=[]; for(let step=0;step<400;step++){ let best=null,bestR=0,bestC=null;
-        for(const u of UPGRADES){ if(typeof upgradeUnlocked==='function'&&!upgradeUnlocked(u))continue; let c;try{c=costOf(u);}catch(e){continue;} const cn=Number(c.toString()); if(!isFinite(cn)||cn<=0)continue; const r=(u.value||1)/cn; if(r>bestR){bestR=r;best=u;bestC=cn;} }
+    if(!bank){ const agg={},order=[]; const TPSv=(typeof __TPS!=='undefined')?__TPS:5;
+      for(let step=0;step<400;step++){ let best=null,bestR=0,bestC=null;
+        for(const u of UPGRADES){ if(typeof upgradeUnlocked==='function'&&!upgradeUnlocked(u))continue;
+          // 実プレイヤの購入判断: 強い指(click)は序盤ブートストラップぶんだけ(上限25台)=偏重をやめる。以降はCPS設備を価値/費用で。
+          if(u.type==='click' && (state.upgrades[u.id]||0)>=25) continue;
+          let c;try{c=costOf(u);}catch(e){continue;} const cn=Number(c.toString()); if(!isFinite(cn)||cn<=0)continue;
+          const marg=(u.type==='click')?((u.value||1)*TPSv):(u.value||1); const r=marg/cn;
+          if(r>bestR){bestR=r;best=u;bestC=cn;} }
         if(!best||!state.cookies.gte(bestC))break; const b4=state.upgrades[best.id]||0; buyUpgrade(best.id); const bt=(state.upgrades[best.id]||0)-b4; if(bt<=0)break; if(agg[best.id]===undefined){agg[best.id]=[best.name,0];order.push(best.id);} agg[best.id][1]+=bt; }
       for(const id of order)add(agg[id][0]+'を購入',agg[id][1]); }
     if(tapCookie&&tapN>0){for(let k=0;k<tapN;k++)tapCookie();add('クッキーをタップ',tapN);}
     return out;
-  },{tapN,bank});
+  },{tapN,bank,__TPS:TPS});
 
   // 放置スキップ: ゲーム自身のoffline挙動を忠実に再現。放置生産 earn(baseCps×秒) を一発適用し、
   // 放置中は「ノルマ時計を止める」(=game loadGameが quotaPausedMs += offlineMs する挙動)ので runStart は動かさない。
