@@ -98,7 +98,9 @@ try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
 
   // 討伐フェーズ: fastForwardで出現を発火→倒す。ステージ解放の瞬間を捕捉。
   const huntPhase=async()=>{
-    let killed=0, rewards=0, stageUp=null;
+    let killed=0, rewards=0, stageUp=null, moved=null;
+    // 解放済みの最新ステージへ移動(実プレイヤは矢印で移動して新ステージのモンスターを狩る=クエスト加算はcurrentStage基準)。
+    moved=await p.evaluate(()=>{ try{ let m=null; while(currentStageNo()<maxUnlockedStageNo()){ moveStageBy(1); m=currentStageNo(); } return m?stageInfo(m).name:null; }catch(e){return null;} });
     for(let step=0; step<110; step++){ // quota壁(quotaFailed)まで長めに狩る=1窓の討伐数を最大化し転生回数を減らす
       await p.clock.fastForward(50000);
       const r=await p.evaluate(()=>{
@@ -113,7 +115,7 @@ try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
       if(r.up){ stageUp=r.up; break; } // 解放の瞬間で止めてスクショ
       if(r.qf) break; // quota壁=この周回のハント終了→転生へ
     }
-    return {killed, rewards, stageUp};
+    return {killed, rewards, stageUp, moved};
   };
 
   const doPrestige=async()=>p.evaluate(()=>{
@@ -146,6 +148,7 @@ try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
 
     // 討伐(ステージ進行)
     const h=await huntPhase();
+    if(h.moved) await rec(`ステージ「${h.moved}」へ移動`,1);
     if(h.killed>0) await rec('モンスターを討伐',h.killed);
     if(h.rewards>0) await rec('討伐報酬を選択',h.rewards);
     if(h.stageUp){ const snm=await p.evaluate(n=>stageInfo(n).name,h.stageUp);
