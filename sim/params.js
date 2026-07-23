@@ -160,6 +160,10 @@ module.exports = {
   // minGap=0=設備/研究/段階も待ちゼロ。
   reveal: { minGap: 0, msBudgetRatio: 0.5 },
 
+  // 1回の転生で取れるスキルの上限(2026-07-22 ユーザー指示「一度に取るスキルは5個まで」)。
+  // 取り切れない分は次の転生へ(スキルは永続=周回を重ねれば揃う)。㉚のスキル派生研究(msk_)の一斉解放も5個に抑制。
+  maxSkillsPerPrestige: 5,
+
   // huntDirect: satMax 15→14(2026-07-12 ②改2: huntのlift3.09が帯上限3.00超過→飽和を微絞り)
   // peddlerFrac 0.02→0.06(2026-07-11 hunt序盤対策) / otherMul.golden 0.9(2026-07-11) / 投資量=討伐perk8種・基準=金相場
   // otherMul.click 0.15→0.08(2026-07-12 ㉘click後半: 討直29-31%がタップ主役25%を圧迫。診断=partsDetail)

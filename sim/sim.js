@@ -2137,17 +2137,11 @@ const MILESTONE_RESEARCH = (() => {
 })();
 // 未購入で条件を満たしたものを自動購入(コスト=cps×msCostSec。安さゆえ全プレイヤー即買いのモデル)
 function msCostOf(sim, m, prod) {
+  // コストはゲーム内で固定(2026-07-11 / 2026-07-22 ユーザー再指示「研究のコストはゲーム内で固定に」):
+  // 焼き込み表(ms_costs.json)を優先。表に無いidだけ動的式(表生成にも使う)。収入連動の床は使わない。
   const costSec = m.costSec != null ? m.costSec : ((P.msResearch && P.msResearch.costSec != null) ? P.msResearch.costSec : 30);
   const fixed = P.msResearch && P.msResearch.costTable && P.msResearch.costTable[m.id];
-  let cost = fixed != null ? fixed : (m.cost != null ? m.cost : Math.max(100, (prod ? prod.cps : 0) * costSec));
-  // 解放間隔=ゲーム調整で作る(2026-07-22 ユーザー指示・タイマー不使用): 実績研究(非repeat)のコストに
-  // 「直近収入の msCostSec 秒ぶん」の床を敷く。次の1件を買うにはその秒数ぶん稼ぐ必要=解放が経済で自然に空く。
-  // repeatSec(量産体制=生産機構)は据え置き。earnEma=直近稼ぎ率EMA(タップ/cps/直送すべて込み=序盤cps0でも効く)。
-  if (!m.repeatSec) {
-    const sec = (P.reveal && P.reveal.msCostSec != null) ? P.reveal.msCostSec : 0;
-    if (sec > 0) cost = Math.max(cost, (sim.run.earnEma || 0) * sec);
-  }
-  return cost;
+  return fixed != null ? fixed : (m.cost != null ? m.cost : Math.max(100, (prod ? prod.cps : 0) * costSec));
 }
 function applyMs(sim, m, cost) {
   const r = sim.run;
@@ -2964,10 +2958,13 @@ function doPrestige(sim) {
     measure: finalizeMeasure(r)
   });
 
-  // スキル購入(戦略の優先順で、買えるだけ)
+  // スキル購入(戦略の優先順で、買えるだけ)。ただし1回の転生で取れるのは maxPerPrestige 個まで
+  // (2026-07-22 ユーザー指示「一度に取るスキルは5個まで」): 取り切れない分は次の転生へ。取得は永続なので
+  // 周回を重ねれば全て揃う。㉚では「転生直後にスキル派生研究(msk_)が一斉解放されるバースト」を5個に抑える効果も。
   const bought = [];
+  const maxPerPrestige = (P.maxSkillsPerPrestige != null) ? P.maxSkillsPerPrestige : 5;
   let progress = true;
-  while (progress) {
+  while (progress && bought.length < maxPerPrestige) {
     progress = false;
     const order = sim.strat.skillOrder(sim);
     for (const id of order) {
