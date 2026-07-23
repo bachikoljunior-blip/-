@@ -1101,24 +1101,27 @@ if (mode === 'baseline') {
   // ㉜ 方針間スキル差別化(合格条件・2026-07-22 ユーザー指示「署名仕様は消し、合格条件を追加。各方針が共通スキルを
   // 取った後、それぞれの方針が他の少なくとも一つの方針で取っていないスキルを一つ以上取ること」):
   // simに強制排除は設けず(POLICY_SIGNATURE撤去)、各方針の取得スキル集合が自然に差別化されるかを判定。
-  console.log('㉜ 方針間スキル差別化: 各方針が「他の≥1方針が取っていないスキル」を≥1個取る(全方針・' + hours + 'h)');
+  // 「やること無くなるまで」走らせると全方針が全スキルを取るため、差別化は最終集合でなく**取得順(先頭N個)**で測る。
+  // = 各方針が序盤に取るスキルの集合が、他方針と違う(得意枝を先に取る)ことを判定。
+  const N = (G.P && G.P.skillDiffFirstN) || 35;
+  console.log('㉜ 方針間スキル差別化: 序盤に取るスキル(先頭' + N + '個)で、各方針が「他の≥1方針が取らない」を≥1個(全方針)');
   const sets = {};
   for (const s of STRATEGIES) {
-    const sim = G.simulate(s, { hours });
-    const set = new Set();
-    for (const r of sim.runs) { if (r.skillIds) for (const id of r.skillIds) set.add(id); }
-    sets[s.id] = set;
+    const sim = G.simulate(s, { runUntilDone: true });
+    const order = [];
+    for (const r of sim.runs) { if (r.skillIds) for (const id of r.skillIds) if (!order.includes(id)) order.push(id); }
+    sets[s.id] = new Set(order.slice(0, N));
   }
   const ids = Object.keys(sets);
   let common = null;
   for (const id of ids) { if (common == null) common = new Set(sets[id]); else common = new Set([...common].filter(x => sets[id].has(x))); }
-  console.log(`  全方針共通スキル(=同じスキルをとった部分)=${common ? common.size : 0}個`);
+  console.log(`  全方針が先頭${N}個で共通=${common ? common.size : 0}個`);
   let okAll = 0;
   for (const id of ids) {
     const diff = [...sets[id]].filter(sk => ids.some(o => o !== id && !sets[o].has(sk)));
     const pass = diff.length >= 1;
     if (pass) okAll++;
-    console.log(`  ${pass ? 'OK' : 'NG'} ${id} 取得${sets[id].size}個 差別化${diff.length}個 ${diff.length ? '例:' + diff.slice(0, 4).join(',') : ''}`);
+    console.log(`  ${pass ? 'OK' : 'NG'} ${id} 先頭${sets[id].size}個中 差別化${diff.length}個 ${diff.length ? '例:' + diff.slice(0, 4).join(',') : ''}`);
   }
   console.log(`㉜ 合計 ${okAll}/${ids.length}方針`);
 } else if (mode === 'eqswap') {

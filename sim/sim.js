@@ -3383,7 +3383,10 @@ function simulate(strategy, opts) {
   sim.run.policy = strategy.pickPolicy(sim);
   scheduleGolden(sim);
   scheduleMonster(sim);
-  const horizon = sim.opt.hours * 3600;
+  // シミュレーション時間=「やること無くなるまで」(2026-07-22 ユーザー指示): runUntilDone 時は大きめの安全上限を置き、
+  // 全スキル取得(=これ以上の転生目的なし)+勝利ラップ後の idle-cut で自然終了させる(全方針~17-47hで完了を実測)。
+  // maxHours は保険(ツリー未完で走り続ける方針が万一あっても打ち切る)。通常は idle-cut が先に効く。
+  const horizon = (sim.opt.runUntilDone ? (sim.opt.maxHours || 200) : sim.opt.hours) * 3600;
   sim.hourly = [];
   if (sim.opt.debugRunIdx != null) sim.debugTrace = [];
   if (sim.opt.snapshots) sim.snapshots = [takeSnapshot(sim)];
