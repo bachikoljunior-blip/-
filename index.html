@@ -11589,9 +11589,25 @@ function quotaLayerHtml(progressRatio) {
 function renderQuota() {
   const box = $("quotaBox");
 
+  // 未達後もノルマ表示を残す(2026-07-23 ユーザー指示「ノルマ表示は未達後も表示して」)。
+  // monsterQuotaRequired() は未達後 null を返すため、経過秒からの必要量を直接算出して「未達」明示で表示する。
   if (state.quotaFailed) {
-    box.style.display = "none";
-    box.innerHTML = "";
+    box.style.display = "block";
+    box.classList.add("quotaBad");
+    const elapsedF = quotaElapsedSeconds();
+    const quotaF = Math.max(1, Math.floor(monsterQuotaRequiredAtElapsed(elapsedF) * (state.blackHoleQuotaMultiplier || 1)));
+    const runF = state.runCookies;
+    const ratioF = currentQuotaProgressRatio();
+    const stageF = quotaStageDisplay(ratioF);
+    box.innerHTML = `
+      <div class="quotaFutureLine">
+        <span>モンスター生成ノルマ ${fmt(runF)} / ${fmt(quotaF)}（未達）</span>
+      </div>
+      <div class="quotaGauge quotaUnderTarget" aria-label="モンスター生成ノルマ未達 ${fmt(runF)} / ${fmt(quotaF)}">
+        ${quotaLayerHtml(ratioF)}
+        <div class="quotaStageBadge" title="到達したノルマ層">第<span class="quotaStageNumber">${stageF.stage}</span>層・未達</div>
+      </div>
+    `;
     return;
   }
 
