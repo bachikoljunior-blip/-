@@ -58,7 +58,10 @@ const fs=require('fs'); try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
 
   // 放置スキップ: offline式 earn(baseCps×秒) を一発。totalPlaySec とノルマ経過も進める(reload不要)。
   const idleSkip=async(sec)=>p.evaluate((sec)=>{ const before=state.cookies; earn(D(baseCps()).mul(sec)); state.totalPlaySec=(state.totalPlaySec||0)+sec; if(state.runStart)state.runStart-=sec*1000; const g=state.cookies.sub(before); return (typeof fmt==='function')?fmt(g):String(g); },sec);
-  const takeSkills=async()=>{ const names=await p.evaluate(()=>{ const got=[]; if(typeof SKILLS!=='undefined'&&skillCanBuy){ for(let n=0;n<80;n++){ const s=SKILLS.find(x=>skillCanBuy(x)); if(!s)break; selectSkill(s.id); takeSelectedSkill(); got.push(s.name||s.id);} } return got; }); for(const nm of names)await rec('スキル「'+nm+'」を取得',1); return names.length; };
+  const takeSkills=async()=>{ const names=await p.evaluate(()=>{ const got=[]; if(typeof SKILLS!=='undefined'&&skillCanBuy){ for(let n=0;n<80;n++){ const s=SKILLS.find(x=>skillCanBuy(x)); if(!s)break; selectSkill(s.id); takeSelectedSkill(); got.push(s.name||s.id);} }
+      // 「この構成でスタート」= 周回を開始してスキル選択の一時停止を解除(=次周回の建て直しが動く)
+      try{ if(typeof beginRunAfterSkills==='function' && state.awaitingSkillChoice) beginRunAfterSkills(); }catch(e){}
+      return got; }); for(const nm of names)await rec('スキル「'+nm+'」を取得',1); return names.length; };
 
   const wall0=now(); let reason='blkcap', banking=false, runStartSec=0;
   for(let i=0;i<3000;i++){
