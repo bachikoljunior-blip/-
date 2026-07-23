@@ -8837,10 +8837,15 @@ function renderOrder() {
 
   // クエスト(2026-07-13): 注文ボードにのみ常設表示。達成で次のステージ解放+次のクエスト表示。
   // 制限時間なし・内容固定・進捗は周回を跨いで累積。制限時間注文の「下」に置く(2026-07-13 ユーザー指示)。
+  const qSt = state.stageUnlocked || 1;
+  const qNeed = QUEST_KILLS_NEED[qSt - 1] || 0;
+  const qGot = (state.questKills || {})[qSt] || 0;
+  const qReady = qSt < MAX_STAGE_NO && qGot >= qNeed;
   const questBoxHtml = `
     <div class="infoBox orderBoardBox">
       <h3>クエスト</h3>
       <div class="desc">${currentQuestText()}</div>
+      ${qReady ? `<button class="item canBuy" data-claimstage="${qSt}" style="width:auto;padding:9px 18px;margin-top:8px">✦ 「${stageInfo(qSt + 1).name}」を解放する</button>` : ""}
     </div>`;
 
   if (!orderBoardUnlocked()) {
@@ -8908,9 +8913,13 @@ function renderOrder() {
 // 注文タブは1秒ごとの全描画をやめ、タイマー表示だけをその場で更新する(画像のちらつき防止)。
 // 構造が変わったとき(注文の切り替え・待機↔出現・解放状態)だけ全描画する。
 function orderStructSig() {
-  if (!orderBoardUnlocked()) return "locked";
+  // クエスト達成→解放待ちの状態も含める(達成した瞬間に解放ボタンが出るよう再描画・2026-07-22)
+  const qSt = state.stageUnlocked || 1;
+  const qReady = qSt < MAX_STAGE_NO && ((state.questKills || {})[qSt] || 0) >= (QUEST_KILLS_NEED[qSt - 1] || Infinity);
+  const qTag = `q:${qSt}:${qReady ? 1 : 0}`;
+  if (!orderBoardUnlocked()) return "locked|" + qTag;
   const o = state.activeOrder;
-  return o ? `o:${o.id}:${o.expiresAt || 0}` : "wait";
+  return (o ? `o:${o.id}:${o.expiresAt || 0}` : "wait") + "|" + qTag;
 }
 
 function refreshOrderTab() {
@@ -11112,20 +11121,32 @@ function equip2Fx() {
 }
 function equip2Mult() { return equip2Fx().allMul; } // 互換(生産チェーンはclick/cps個別も適用)
 function equip2HoldMul() { const fx = equip2Fx(); return (!state.quotaFailed && fx.holdBonus > 1) ? fx.holdBonus : 1; } // 盾: ノルマ維持中全生産
-// 固定クエスト: フロンティアステージでの累計討伐(周回持ち越し)。達成で次ステージ解放+次クエスト表示
+// 固定クエスト: フロンティアステージでの累計討伐(周回持ち越し)。
+// ステージ解放は自動でなく「注文ボードで達成後その欄をタップ」で行う(2026-07-22 ユーザー指示)。
 function questProgressOnKill(stageNo, units) {
   if (stageNo !== (state.stageUnlocked || 1) || stageNo >= MAX_STAGE_NO) return;
   state.questKills = state.questKills || {};
-  state.questKills[stageNo] = (state.questKills[stageNo] || 0) + (units || 1);
+  const before = state.questKills[stageNo] || 0;
+  state.questKills[stageNo] = before + (units || 1);
   const need = QUEST_KILLS_NEED[stageNo - 1] || Infinity;
-  if (state.questKills[stageNo] >= need && unlockGateOk()) {
-    markUnlock();
-    state.stageUnlocked = stageNo + 1;
-    playScreenTransition();
-    // dropMatは別関数内のローカル変数でここでは未定義だったため、グローバルのshowMessageに修正
-    // (クエスト達成時に必ず落ちていた不具合の修正・2026-07-13)
-    showMessage(`クエスト達成！ 新ステージ「${stageInfo(stageNo + 1).name}」解放！`);
+  // 達成した瞬間だけ通知(解放は注文ボードのタップ待ち)
+  if (before < need && state.questKills[stageNo] >= need) {
+    showMessage(`クエスト達成！ 注文ボードで「${stageInfo(stageNo + 1).name}」を解放できます`);
   }
+}
+// 注文ボードのクエスト欄タップでステージ解放(達成済みのときのみ)
+function claimStageUnlock(stageNo) {
+  stageNo = Number(stageNo);
+  if (stageNo !== (state.stageUnlocked || 1) || stageNo >= MAX_STAGE_NO) return;
+  const need = QUEST_KILLS_NEED[stageNo - 1] || Infinity;
+  if (((state.questKills || {})[stageNo] || 0) < need) return;
+  markUnlock();
+  state.stageUnlocked = stageNo + 1;
+  playScreenTransition();
+  showMessage(`新ステージ「${stageInfo(stageNo + 1).name}」解放！`);
+  saveGame();
+  renderOrder();
+  renderActiveTab();
 }
 function currentQuestText() {
   const st = state.stageUnlocked || 1;
@@ -12645,6 +12666,17 @@ function updateStageArrows() {
 }
 addTap($("stageArrowL"), () => moveStageBy(-1));
 addTap($("stageArrowR"), () => moveStageBy(1));
+
+// 注文ボードのステージ解放ボタン(2026-07-22 ユーザー指示「固定クエスト達成後その欄タップで解放」)。
+// renderOrder が innerHTML を貼り替えるため、個別バインドではなく親要素への委譲で一度だけ登録する。
+(function () {
+  const panel = $("orderPanel");
+  if (!panel) return;
+  panel.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-claimstage]");
+    if (btn) { e.preventDefault(); claimStageUnlock(btn.dataset.claimstage); }
+  });
+})();
 
 // 旧「全購入を30秒待たせる」ドリップは撤廃済み(2026-07-15)。常にtrue=買う時に待たされない。
 const UNLOCK_GAP_MS = 30000;
