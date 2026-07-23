@@ -79,8 +79,11 @@ const fs=require('fs'); try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
       for(const [label,cnt] of acts) await rec(label,cnt);
     } else {
       // 以降=人間の「放置→戻ってプレイ」: 放置スキップ(一発) → 能動1セッション
-      const g=await idleSkip(IDLE_MIN*60);
-      await recRaw(`放置 ${IDLE_MIN}分（+${g}）`);
+      // 周回が進むほど放置を長めに(=繰り返しの周回を可視範囲に圧縮。人間も慣れると長く離れる)
+      const idleMin = IDLE_MIN * (s.runs>=2 ? 8 : s.runs>=1 ? 3 : 1);
+      const g=await idleSkip(idleMin*60);
+      const lbl = idleMin>=120 ? `放置 ${Math.round(idleMin/60)}時間（+${g}）` : `放置 ${idleMin}分（+${g}）`;
+      await recRaw(lbl);
       // 戻ってきて短く手を動かす(通常刻みで討伐/金/報酬も拾う)
       await p.clock.runFor(6000);
       const acts=await stepActions(Math.round(6*TPS),banking);
