@@ -794,7 +794,7 @@ if (mode === 'baseline') {
   console.log(`戦略: ${s.id} ${s.name}`);
   printDetail(sim);
   const sum = summarize(sim);
-  console.log(`合計: ${fmtN(sum.total)} / 1億倍達成 ${sum.doubleOk}/${sum.doubleAll} / PT2-100倍 ${sum.gainOk}/${sum.doubleAll} / ペース ${sum.paceOk}/${sum.paceAll}`);
+  console.log(`合計: ${fmtN(sum.total)} / ④前周回超 ${sum.doubleOk}/${sum.doubleAll} / PT2-100倍 ${sum.gainOk}/${sum.doubleAll} / ペース ${sum.paceOk}/${sum.paceAll}`);
 } else if (mode === 'pacing') {
   const s = STRATEGIES.find(x => x.id === arg) || STRATEGIES[0];
   const sim = G.simulate(s, { hours });
