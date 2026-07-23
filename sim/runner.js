@@ -1097,6 +1097,30 @@ if (mode === 'baseline') {
     console.log(`  ${pass ? 'OK' : 'NG'} ${s.id} スキル取得のあった転生${counts.length} 最大${maxc}個 (>${cap}=${over.length}回) [${distStr}]`);
   }
   console.log(`㉛ 合計 ${okAll}/${cnt}方針`);
+} else if (mode === 'skilldiff') {
+  // ㉜ 方針間スキル差別化(合格条件・2026-07-22 ユーザー指示「署名仕様は消し、合格条件を追加。各方針が共通スキルを
+  // 取った後、それぞれの方針が他の少なくとも一つの方針で取っていないスキルを一つ以上取ること」):
+  // simに強制排除は設けず(POLICY_SIGNATURE撤去)、各方針の取得スキル集合が自然に差別化されるかを判定。
+  console.log('㉜ 方針間スキル差別化: 各方針が「他の≥1方針が取っていないスキル」を≥1個取る(全方針・' + hours + 'h)');
+  const sets = {};
+  for (const s of STRATEGIES) {
+    const sim = G.simulate(s, { hours });
+    const set = new Set();
+    for (const r of sim.runs) { if (r.skillIds) for (const id of r.skillIds) set.add(id); }
+    sets[s.id] = set;
+  }
+  const ids = Object.keys(sets);
+  let common = null;
+  for (const id of ids) { if (common == null) common = new Set(sets[id]); else common = new Set([...common].filter(x => sets[id].has(x))); }
+  console.log(`  全方針共通スキル(=同じスキルをとった部分)=${common ? common.size : 0}個`);
+  let okAll = 0;
+  for (const id of ids) {
+    const diff = [...sets[id]].filter(sk => ids.some(o => o !== id && !sets[o].has(sk)));
+    const pass = diff.length >= 1;
+    if (pass) okAll++;
+    console.log(`  ${pass ? 'OK' : 'NG'} ${id} 取得${sets[id].size}個 差別化${diff.length}個 ${diff.length ? '例:' + diff.slice(0, 4).join(',') : ''}`);
+  }
+  console.log(`㉜ 合計 ${okAll}/${ids.length}方針`);
 } else if (mode === 'eqswap') {
   // 装備(b)新定義(R19 2026-07-18 ユーザー指示「プレイ方針ごとに得意装備割り振って、周回ごとのシミュレーションを
   // 何回かやり直して同じティアの別装備でやり直して、全部50%以上行けばいい。素材は取得後全周回で中央値50%以上」):
