@@ -42,38 +42,55 @@ const fs=require('fs'); try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
   for(let i=0;i<12;i++)await p.click('#cookie').catch(()=>{});
   await rec('クッキーをタップ',12);
 
-  // 1刻みの処理を発生順に返す(討伐→報酬→金→研究→設備→タップ)。設備は価値/費用の貪欲(毎手ROI再評価)。
-  const stepActions=async(tapN)=>p.evaluate((tapN)=>{
+  const snap=async()=>p.evaluate(()=>({sec:Math.round(state.totalPlaySec||0),cookies:Number(state.cookies.toString()),cps:Number(currentCps().toString()),
+    unlocked:!!(prestigeUnlocked&&prestigeUnlocked()),gain:(prestigeGain?Number(prestigeGain()):0),cost:(prestigeCookieCost?Number(prestigeCookieCost()):0),
+    runs:state.prestigeRuns||0,skills:Object.values(state.skills||{}).filter(Boolean).length}));
+
+  // 1刻みの処理を発生順に返す(討伐→報酬→金→研究→設備→タップ)。実プレイヤの購入判断=価値/費用の貪欲(毎手ROI再評価)。
+  // bank=true=転生貯蓄中は設備購入を止め(タップ/討伐/金/研究は続ける)、cookiesを1e8ラッチ→1e9転生まで貯める。
+  const stepActions=async(tapN,bank)=>p.evaluate(({tapN,bank})=>{
     const out=[]; const add=(l,c)=>{ if(c>0)out.push([l,c]); };
     if(typeof monsters!=='undefined'&&monsters&&monsters.length&&hitMonster){ const b4=state.monstersDefeated||0; for(const m of monsters.slice())for(let k=0;k<200&&monsters.indexOf(m)>=0;k++)hitMonster(m.id); add('モンスターを討伐',(state.monstersDefeated||0)-b4); }
     { let c=0; for(let n=0;n<12;n++){ if(!(rewardModalOpen&&rewardModalOpen()))break; revealRewardChoices&&revealRewardChoices(); if(pendingRewardChoices&&pendingRewardChoices.length){chooseReward(pendingRewardChoices[0]);c++;}else break; } add('討伐報酬を選択',c); }
     if(typeof goldenVisible!=='undefined'&&goldenVisible&&collectGoldenCookie){collectGoldenCookie();add('金クッキーを回収',1);}
     if(typeof RESEARCH!=='undefined')for(const r of RESEARCH){try{ if(!state.research[r.id]&&(typeof researchUnlocked!=='function'||researchUnlocked(r))&&state.cookies.gte(D(r.cost))){ buyResearch(r.id); add('研究「'+r.name+'」を購入',1);} }catch(e){}}
-    { const agg={},order=[]; for(let step=0;step<400;step++){ let best=null,bestR=0,bestC=null;
+    if(!bank){ const agg={},order=[]; for(let step=0;step<400;step++){ let best=null,bestR=0,bestC=null;
         for(const u of UPGRADES){ if(typeof upgradeUnlocked==='function'&&!upgradeUnlocked(u))continue; let c;try{c=costOf(u);}catch(e){continue;} const cn=Number(c.toString()); if(!isFinite(cn)||cn<=0)continue; const r=(u.value||1)/cn; if(r>bestR){bestR=r;best=u;bestC=cn;} }
         if(!best||!state.cookies.gte(bestC))break; const b4=state.upgrades[best.id]||0; buyUpgrade(best.id); const bt=(state.upgrades[best.id]||0)-b4; if(bt<=0)break; if(agg[best.id]===undefined){agg[best.id]=[best.name,0];order.push(best.id);} agg[best.id][1]+=bt; }
       for(const id of order)add(agg[id][0]+'を購入',agg[id][1]); }
     if(tapCookie&&tapN>0){for(let k=0;k<tapN;k++)tapCookie();add('クッキーをタップ',tapN);}
     return out;
-  },tapN);
+  },{tapN,bank});
 
-  const wall0=now(); let reason='blkcap', stallCount=0;
-  for(let i=0;i<4000;i++){
-    const sec=await gt();
-    let step=8000; if(sec>240)step=12000; if(sec>600)step=20000;
+  const takeSkills=async()=>{ const names=await p.evaluate(()=>{ const got=[]; if(typeof SKILLS!=='undefined'&&skillCanBuy){ for(let n=0;n<80;n++){ const s=SKILLS.find(x=>skillCanBuy(x)); if(!s)break; selectSkill(s.id); takeSelectedSkill(); got.push(s.name||s.id);} } return got; }); for(const nm of names)await rec('スキル「'+nm+'」を取得',1); };
+
+  const TPS=Number(process.env.TPS||6); // 実プレイヤの連続タップ(毎秒)
+  const wall0=now(); let reason='blkcap', stallCount=0, banking=false;
+  for(let i=0;i<8000;i++){
+    let s=await snap();
+    // 転生: 貯蓄が実って cookies>=cost なら転生→スキル取得(ゲームの第2の柱)
+    if(s.unlocked && s.gain>0 && s.cookies>=s.cost){
+      const pr=await p.evaluate(()=>{try{if(state.cookies.gte(prestigeCookieCost())&&prestigeGain()>0){prestigeReset();return 1;}}catch(e){}return 0;});
+      if(pr){ await rec('転生(スキルツリー解放)',1); await takeSkills(); banking=false; s=await snap(); stallCount=0; }
+    }
+    // 数分の貯蓄で cost に届くなら銀行モード(1e8ラッチ→1e9転生)。純経済で到達=stage進行(討伐100体)より現実的。
+    if(!banking && s.gain>0 && (s.cookies + s.cps*600) >= s.cost) banking=true;
+    const sec=s.sec;
+    let step=8000; if(sec>240)step=15000; if(sec>900)step=30000; if(banking)step=Math.max(step,30000);
+    const stepSec=step/1000;
     await p.clock.runFor(step);
-    const tapN = sec<180 ? 60 : (sec<600 ? 40 : 25);
-    const acts=await stepActions(tapN);
+    const tapN=Math.round(stepSec*TPS);
+    const acts=await stepActions(tapN,banking);
     let progressed=false;
     for(const [label,cnt] of acts){ await rec(label,cnt); if(!/タップ/.test(label))progressed=true; }
-    if(progressed) stallCount=0; else stallCount++;
+    if(progressed||banking) stallCount=0; else stallCount++;
     const s2=await gt();
     if(L.length>=MAXBLK){reason='blkcap';break;}
-    if(s2>=MAXSEC){reason='seccap';break;}
-    if(stallCount>=14){reason='stall(経済頭打ち)';break;}
+    if(s2>=MAXSEC && !banking){reason='seccap';break;}
+    if(stallCount>=20){reason='stall(経済頭打ち)';break;}
     if((now()-wall0)>WALLCAP){reason='wallcap';break;}
     if(i%6===0){ try{fs.writeFileSync(DIR+'/ops.json',JSON.stringify(L,null,1));}catch(e){}
-      console.log(`i=${i} ${fmtT(s2)} blk=${L.length} stall=${stallCount} wall=${((now()-wall0)/1000).toFixed(0)}s`); }
+      console.log(`i=${i} ${fmtT(s2)} blk=${L.length} bank=${banking} runs=${s.runs} sk=${s.skills} cps=${s.cps.toExponential(1)} wall=${((now()-wall0)/1000).toFixed(0)}s`); }
   }
   fs.writeFileSync(DIR+'/ops.json',JSON.stringify(L,null,1));
   console.log('DONE reason='+reason,'blocks='+L.length,'lastT='+(L.length?L[L.length-1].t:'-'),'errors='+errs.length);
