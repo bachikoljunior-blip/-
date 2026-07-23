@@ -39,7 +39,8 @@ const fs=require('fs'); try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
 
   const snap=async()=>p.evaluate(()=>({sec:Math.round(state.totalPlaySec||0),cookies:Number(state.cookies.toString()),cps:Number(currentCps().toString()),
     unlocked:!!(prestigeUnlocked&&prestigeUnlocked()),gain:(prestigeGain?Number(prestigeGain()):0),cost:(prestigeCookieCost?Number(prestigeCookieCost()):0),
-    runs:state.prestigeRuns||0,skills:Object.values(state.skills||{}).filter(Boolean).length,fmt:(typeof fmt==='function'?'':'')}));
+    runs:state.prestigeRuns||0,skills:Object.values(state.skills||{}).filter(Boolean).length,
+    stage:state.stageUnlocked||1,kills:state.monstersDefeated||0,qfail:!!state.quotaFailed}));
 
   // 能動1刻み(発生順): 討伐→報酬→金→研究→設備→タップ。bank=貯蓄中は設備を買わない。
   const stepActions=async(tapN,bank)=>p.evaluate(({tapN,bank})=>{
@@ -56,8 +57,11 @@ const fs=require('fs'); try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
     return out;
   },{tapN,bank});
 
-  // 放置スキップ: offline式 earn(baseCps×秒) を一発。totalPlaySec とノルマ経過も進める(reload不要)。
-  const idleSkip=async(sec)=>p.evaluate((sec)=>{ const before=state.cookies; earn(D(baseCps()).mul(sec)); state.totalPlaySec=(state.totalPlaySec||0)+sec; if(state.runStart)state.runStart-=sec*1000; const g=state.cookies.sub(before); return (typeof fmt==='function')?fmt(g):String(g); },sec);
+  // 放置スキップ: ゲーム自身のoffline挙動を忠実に再現。放置生産 earn(baseCps×秒) を一発適用し、
+  // 放置中は「ノルマ時計を止める」(=game loadGameが quotaPausedMs += offlineMs する挙動)ので runStart は動かさない。
+  // これによりノルマ経過は能動プレイ時間だけで進み、放置で貯めた runCookies で戻ったとき討伐が続く=ステージ進行が生きる。
+  // クロックは進めない=Date.now基準の quotaElapsed は据え置き(=ノルマ時計が放置中は止まる、というゲーム挙動と一致)。
+  const idleSkip=async(sec)=>p.evaluate((sec)=>{ const before=state.cookies; earn(D(baseCps()).mul(sec)); state.totalPlaySec=(state.totalPlaySec||0)+sec; const g=state.cookies.sub(before); return (typeof fmt==='function')?fmt(g):String(g); },sec);
   const takeSkills=async()=>{ const names=await p.evaluate(()=>{ const got=[];
       // 実プレイヤの購入判断: 生産を伸ばすスキル(全生産>毎秒>タップ>開始クッキー>放置)を優先して取る。
       const score=(s)=>{ let v=0; for(const e of (s.effects||[])){ const t=e.type, val=Number(e.value)||0; if(t==='all')v+=val*1000; else if(t==='cps'||t==='cpsMul')v+=val*100; else if(t==='click')v+=val*40; else if(t==='startCookies')v+=Math.log10(Math.max(10,val))*30; else if(t==='offlineHours')v+=val*20; else if(t==='goldenAmount'||t==='goldenMul')v+=val*15; else v+=1; } return v; };
@@ -87,16 +91,27 @@ const fs=require('fs'); try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
       const g=await idleSkip(idleMin*60);
       const lbl = idleMin>=120 ? `放置 ${Math.round(idleMin/60)}時間（+${g}）` : `放置 ${idleMin}分（+${g}）`;
       await recRaw(lbl);
-      // 戻ってきて短く手を動かす(通常刻みで討伐/金/報酬も拾う)
+      // 戻ってきてプレイ: まず設備/研究/タップ(通常刻み)。
       await p.clock.runFor(6000);
       const acts=await stepActions(Math.round(6*TPS),banking);
       for(const [label,cnt] of acts) await rec(label,cnt);
+      // ステージ未踏破なら「戻ってきた分の討伐」: 放置で貯めた runCookies でノルマ済みのモンスターを狩る。
+      // 能動時間(quotaElapsed)は伸びるが runCookies>>quota の間は湧き続ける=ステージ進行が動く。
+      if(s.stage<6){ let killedAny=0;
+        for(let h=0;h<12;h++){ await p.clock.runFor(4000);
+          const k=await p.evaluate(()=>{ for(let n=0;n<10;n++){if(!(rewardModalOpen&&rewardModalOpen()))break;revealRewardChoices&&revealRewardChoices();if(pendingRewardChoices&&pendingRewardChoices.length)chooseReward(pendingRewardChoices[0]);else break;}
+              let c=0; if(typeof monsters!=='undefined'&&monsters&&monsters.length&&hitMonster){const b4=state.monstersDefeated||0;for(const m of monsters.slice())for(let z=0;z<300&&monsters.indexOf(m)>=0;z++)hitMonster(m.id);c=(state.monstersDefeated||0)-b4;} return c; });
+          killedAny+=k; if(k===0&&h>=3)break; }
+        if(killedAny)await rec('モンスターを討伐',killedAny);
+        const rw=await p.evaluate(()=>{let c=0;for(let n=0;n<20;n++){if(!(rewardModalOpen&&rewardModalOpen()))break;revealRewardChoices&&revealRewardChoices();if(pendingRewardChoices&&pendingRewardChoices.length){chooseReward(pendingRewardChoices[0]);c++;}else break;}return c;});
+        if(rw)await rec('討伐報酬を選択',rw);
+      }
     }
     const s2=await gt();
     if(L.length>=MAXBLK){reason='blkcap';break;}
     if((now()-wall0)>WALLCAP){reason='wallcap';break;}
     if(i%5===0){ try{fs.writeFileSync(DIR+'/ops.json',JSON.stringify(L,null,1));}catch(e){}
-      console.log(`i=${i} ${fmtT(s2)} blk=${L.length} bank=${banking} runs=${s.runs} sk=${s.skills} cps=${s.cps.toExponential(1)} wall=${((now()-wall0)/1000).toFixed(0)}s`); }
+      console.log(`i=${i} ${fmtT(s2)} blk=${L.length} bank=${banking} runs=${s.runs} sk=${s.skills} cps=${s.cps.toExponential(1)} stg=${s.stage} kills=${s.kills} qf=${s.qfail} wall=${((now()-wall0)/1000).toFixed(0)}s`); }
   }
   fs.writeFileSync(DIR+'/ops.json',JSON.stringify(L,null,1));
   const fin=await snap();
