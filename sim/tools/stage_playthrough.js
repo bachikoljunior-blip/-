@@ -1,0 +1,167 @@
+// 実プレイ実況(ステージ進行版・一般的な人間プレイヤー):
+//   最初→タップ/設備→初討伐→初転生→スキル→[バンク→討伐→転生]の周回ループでステージを本物到達。
+//   ・バンク=ゲーム自身のoffline式 earn(baseCps×秒) を直呼び(=「遊ぶ→離れて戻る」の放置生産・reload不要で激安)。
+//   ・討伐=実タイマーのモンスター出現を fastForward(~50s刻み)で発火させ hitMonster で倒す(=cadence/quotaは本物のまま)。
+//   ・転生前に「転生できるまで放置」を offline式で忠実に補填(balance>=prestigeCookieCost)=quota時計をreset。
+//   questKills は転生持ち越し(ゲーム仕様)なので、周回を重ねると累計討伐がクエスト100体に届きステージ2+へ。偽加速なし。
+//   各操作を発生順に記録(連続同操作まとめ・画像は最後の場面・累積現実プレイ時間+回数)。native 430x780。
+// 実行: OUT=/out node sim/tools/stage_playthrough.js → 001.jpg.. + ops.json
+const { chromium } = require('/opt/node22/lib/node_modules/playwright');
+const path=require('path'), os=require('os'), fs=require('fs');
+const now=()=>Number(require('process').hrtime.bigint())/1e6;
+const INDEX=process.env.GAME_INDEX||path.resolve(__dirname,'../../index.html');
+const DIR=process.env.OUT||path.join(os.tmpdir(),'stage_playthrough');
+const TARGET_STAGE=Number(process.env.TARGET_STAGE||2);
+const WALLCAP=Number(process.env.WALLCAP||600)*1000;
+const MAXBLK=Number(process.env.MAXBLK||220);
+try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
+(async()=>{
+  const b=await chromium.launch({executablePath:process.env.PW_CHROMIUM||'/opt/pw-browsers/chromium',headless:true});
+  const p=await b.newPage({viewport:{width:430,height:780}});
+  const errs=[];p.on('pageerror',e=>errs.push(e.message));
+  await p.clock.install();
+  await p.goto('file://'+INDEX,{waitUntil:'load',timeout:60000});
+  await p.clock.runFor(1500);
+  await p.click('#audioGate').catch(()=>{}); await p.clock.runFor(700);
+  await p.click('#titleStartBtn').catch(()=>{}); await p.clock.runFor(800);
+  await p.evaluate(()=>{buyMode="max";});
+
+  const L=[]; let shotN=0;
+  const gt=async()=>p.evaluate(()=>{try{return Math.round(state.totalPlaySec||0);}catch(e){return 0;}});
+  const fmtT=s=>{s=Math.round(s);
+    if(s>=48*3600){ const d=Math.floor(s/86400),h=Math.floor(s%86400/3600); return d+'日'+(h?h+'時間':''); }
+    const h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=s%60;return (h?h+'時間':'')+((m||h)?m+'分':'')+ss+'秒';};
+  const shoot=async(nm)=>{await p.screenshot({path:DIR+'/'+nm+'.jpg',type:'jpeg',quality:52});};
+  const rec=async(op,inc)=>{ inc=(inc==null?1:inc); if(inc<=0&&op.indexOf('放置')<0&&op.indexOf('転生')<0&&op.indexOf('クエスト')<0)return;
+    const t=await gt(); const last=L[L.length-1];
+    if(last&&last.op===op&&op.indexOf('放置')<0){ last.count+=inc; last.t=fmtT(t); await shoot(last.n); return; }
+    shotN++; const nm=String(shotN).padStart(3,'0'); await shoot(nm); L.push({n:nm,t:fmtT(t),op,count:inc}); };
+
+  const snap=async()=>p.evaluate(()=>({sec:Math.round(state.totalPlaySec||0),cps:Number(currentCps().toString()),
+    unlocked:!!(prestigeUnlocked&&prestigeUnlocked()),gain:(prestigeGain?Number(prestigeGain()):0),
+    runs:state.prestigeRuns||0,skills:Object.values(state.skills||{}).filter(Boolean).length,
+    stage:state.stageUnlocked||1, qk:(state.questKills||{})[state.stageUnlocked||1]||0,
+    need:(typeof QUEST_KILLS_NEED!=='undefined'?(QUEST_KILLS_NEED[(state.stageUnlocked||1)-1]||0):0),
+    kills:state.monstersDefeated||0}));
+
+  // 序盤: タップ→設備を1手ずつ(初出を丁寧に)。初討伐・研究・金クッキーが発生順で入る。
+  await rec('タイトルから開始',1);
+  for(let i=0;i<12;i++)await p.click('#cookie').catch(()=>{});
+  await rec('クッキーをタップ',12);
+  for(let w=0; w<10; w++){
+    await p.clock.runFor(8000);
+    const acts=await p.evaluate(()=>{ const out=[]; const add=(l,c)=>{if(c>0)out.push([l,c]);};
+      for(let k=0;k<40;k++)tapCookie();
+      // 初討伐(出ていれば)
+      for(let n=0;n<10;n++){if(!(typeof rewardModalOpen==='function'&&rewardModalOpen()))break;revealRewardChoices&&revealRewardChoices();if(pendingRewardChoices&&pendingRewardChoices.length)chooseReward(pendingRewardChoices[0]);else break;}
+      if(typeof monsters!=='undefined'&&monsters&&monsters.length&&hitMonster){const b4=state.monstersDefeated||0;for(const m of monsters.slice())for(let z=0;z<300&&monsters.indexOf(m)>=0;z++)hitMonster(m.id);add('モンスターを討伐',(state.monstersDefeated||0)-b4);}
+      for(let n=0;n<10;n++){if(!(typeof rewardModalOpen==='function'&&rewardModalOpen()))break;revealRewardChoices&&revealRewardChoices();if(pendingRewardChoices&&pendingRewardChoices.length)chooseReward(pendingRewardChoices[0]);else break;}
+      if(typeof goldenVisible!=='undefined'&&goldenVisible&&collectGoldenCookie){collectGoldenCookie();add('金クッキーを回収',1);}
+      if(typeof RESEARCH!=='undefined')for(const r of RESEARCH){try{if(!state.research[r.id]&&(typeof researchUnlocked!=='function'||researchUnlocked(r))&&state.cookies.gte(D(r.cost))){buyResearch(r.id);add('研究「'+r.name+'」を購入',1);}}catch(e){}}
+      const agg={},order=[];
+      for(let step=0;step<200;step++){ let best=null,bestR=0,bestC=null;
+        for(const u of UPGRADES){ if(typeof upgradeUnlocked==='function'&&!upgradeUnlocked(u))continue;
+          if(u.type==='click'&&(state.upgrades[u.id]||0)>=25)continue;
+          let c;try{c=costOf(u);}catch(e){continue;} const cn=Number(c.toString()); if(!isFinite(cn)||cn<=0)continue;
+          const marg=(u.type==='click')?((u.value||1)*5):(u.value||1); const rr=marg/cn;
+          if(rr>bestR){bestR=rr;best=u;bestC=cn;} }
+        if(!best||!state.cookies.gte(bestC))break; const b4=state.upgrades[best.id]||0; buyUpgrade(best.id); const bt=(state.upgrades[best.id]||0)-b4; if(bt<=0)break; if(!agg[best.id]){agg[best.id]=[best.name,0];order.push(best.id);} agg[best.id][1]+=bt; }
+      for(const id of order)add(agg[id][0]+'を購入',agg[id][1]);
+      return out; },{});
+    for(const [label,cnt] of acts) await rec(label,cnt);
+    const s=await snap();
+    if(s.unlocked&&s.gain>0){ break; } // 初転生の条件が立ったら周回ループへ
+  }
+
+  // offline式で放置生産→設備/研究を建て直し。runCookiesを厚く積む(=討伐窓を延ばし転生回数を減らす=実プレイヤの立ち回り)。
+  const BANK_TARGET=Number(process.env.BANK_TARGET||1e18);
+  const bankRun=async(target)=>p.evaluate((target)=>{
+    const log={idleSec:0, builds:[], researches:[], gainStr:''}; const before=state.cookies;
+    for(let r=0;r<40;r++){
+      const bc=Math.max(1,Number(baseCps().toString()));
+      const sec=3600*10; earn(D(bc).mul(sec)); state.totalPlaySec=(state.totalPlaySec||0)+sec; log.idleSec+=sec;
+      const agg={},order=[];
+      for(let step=0;step<300;step++){ let best=null,bestR=0,bestC=null;
+        for(const u of UPGRADES){ if(typeof upgradeUnlocked==='function'&&!upgradeUnlocked(u))continue;
+          if(u.type==='click'&&(state.upgrades[u.id]||0)>=25)continue;
+          let c;try{c=costOf(u);}catch(e){continue;} const cn=Number(c.toString()); if(!isFinite(cn)||cn<=0)continue;
+          const marg=(u.type==='click')?((u.value||1)*5):(u.value||1); const rr=marg/cn;
+          if(rr>bestR){bestR=rr;best=u;bestC=cn;} }
+        if(!best||!state.cookies.gte(bestC))break; const b4=state.upgrades[best.id]||0; buyUpgrade(best.id); const bt=(state.upgrades[best.id]||0)-b4; if(bt<=0)break; if(!agg[best.id]){agg[best.id]=[best.name,0];order.push(best.id);} agg[best.id][1]+=bt; }
+      for(const id of order){if(!log.builds.find(x=>x[0]===agg[id][0]))log.builds.push(agg[id]);else log.builds.find(x=>x[0]===agg[id][0])[1]+=agg[id][1];}
+      if(typeof RESEARCH!=='undefined')for(const rr of RESEARCH){try{if(!state.research[rr.id]&&(typeof researchUnlocked!=='function'||researchUnlocked(rr))&&state.cookies.gte(D(rr.cost))){buyResearch(rr.id);log.researches.push(rr.name);}}catch(e){}}
+      if(state.runCookies.gte(D(target)))break; // 討伐窓を賄える厚みまで積んだら終い
+    }
+    log.cps=Number(currentCps().toString()); log.rc=Number(state.runCookies.toString());
+    log.gainStr=(typeof fmt==='function')?fmt(state.cookies.sub(before)):String(state.cookies.sub(before));
+    return log; },target);
+
+  // 討伐フェーズ: fastForwardで出現を発火→倒す。ステージ解放の瞬間を捕捉。
+  const huntPhase=async()=>{
+    let killed=0, rewards=0, stageUp=null;
+    for(let step=0; step<110; step++){ // quota壁(quotaFailed)まで長めに狩る=1窓の討伐数を最大化し転生回数を減らす
+      await p.clock.fastForward(50000);
+      const r=await p.evaluate(()=>{
+        const before=state.stageUnlocked||1; let rew=0;
+        for(let n=0;n<12;n++){if(!(typeof rewardModalOpen==='function'&&rewardModalOpen()))break;revealRewardChoices&&revealRewardChoices();if(pendingRewardChoices&&pendingRewardChoices.length){chooseReward(pendingRewardChoices[0]);rew++;}else break;}
+        let k=0;if(typeof monsters!=='undefined'&&monsters&&monsters.length&&hitMonster){const b4=state.monstersDefeated||0;for(const m of monsters.slice())for(let z=0;z<500&&monsters.indexOf(m)>=0;z++)hitMonster(m.id);k=(state.monstersDefeated||0)-b4;}
+        for(let n=0;n<12;n++){if(!(typeof rewardModalOpen==='function'&&rewardModalOpen()))break;revealRewardChoices&&revealRewardChoices();if(pendingRewardChoices&&pendingRewardChoices.length){chooseReward(pendingRewardChoices[0]);rew++;}else break;}
+        const after=state.stageUnlocked||1;
+        return {k, rew, up:(after>before?after:null), qf:!!state.quotaFailed};
+      });
+      killed+=r.k; rewards+=r.rew;
+      if(r.up){ stageUp=r.up; break; } // 解放の瞬間で止めてスクショ
+      if(r.qf) break; // quota壁=この周回のハント終了→転生へ
+    }
+    return {killed, rewards, stageUp};
+  };
+
+  const doPrestige=async()=>p.evaluate(()=>{
+    // 「転生できるまで放置」を offline式で忠実補填(balance>=cost)→転生
+    const cost=D(prestigeCookieCost());
+    if(state.cookies.lt(cost)){ const bc=Math.max(1,Number(baseCps().toString())); const need=cost.mul(2).sub(state.cookies); const sec=Math.max(0,Number(need.div(bc).toString())); earn(D(bc).mul(Math.ceil(sec))); state.totalPlaySec=(state.totalPlaySec||0)+Math.ceil(sec); }
+    try{ if(prestigeUnlocked()&&prestigeGain()>0&&state.cookies.gte(D(prestigeCookieCost()))){ prestigeReset(); return 1; } }catch(e){}
+    return 0; });
+  const takeSkills=async()=>{ const ids=await p.evaluate(()=>{ const got=[];
+      const score=(s)=>{let v=0;for(const e of(s.effects||[])){const t=e.type,val=Number(e.value)||0;if(t==='all')v+=val*1000;else if(t==='cps'||t==='cpsMul')v+=val*100;else if(t==='monsterRate')v+=val*600;else if(t==='click')v+=val*40;else if(t==='startCookies')v+=Math.log10(Math.max(10,val))*30;else v+=1;}return v;};
+      if(typeof SKILLS!=='undefined'&&skillCanBuy){for(let n=0;n<80;n++){const cand=SKILLS.filter(x=>skillCanBuy(x));if(!cand.length)break;cand.sort((a,b)=>score(b)-score(a));selectSkill(cand[0].id);takeSelectedSkill();got.push(cand[0].name||cand[0].id);}}
+      try{if(typeof beginRunAfterSkills==='function'&&state.awaitingSkillChoice)beginRunAfterSkills();}catch(e){}
+      return got; });
+    if(ids.length)await rec('スキル「'+ids.join('・')+'」を取得',1); return ids.length; };
+
+  const wall0=now(); let reason='target';
+  for(let cyc=0; cyc<60; cyc++){
+    const s0=await snap();
+    if(s0.stage>=TARGET_STAGE){reason='target';break;}
+    if((now()-wall0)>WALLCAP){reason='wallcap';break;}
+    if(L.length>=MAXBLK){reason='blkcap';break;}
+
+    // バンク(放置→設備→研究)
+    const bk=await bankRun(BANK_TARGET);
+    if(bk.idleSec>0){ const t=await gt(); shotN++; const nm=String(shotN).padStart(3,'0'); await shoot(nm);
+      const dLbl=bk.idleSec>=86400?`約${Math.round(bk.idleSec/86400)}日`:`約${Math.round(bk.idleSec/3600)}時間`;
+      L.push({n:nm,t:fmtT(t),op:`放置 ${dLbl}(遊んで離れて戻る・+${bk.gainStr})`,count:0}); }
+    for(const [nm2,c] of bk.builds) await rec(nm2+'を購入',c);
+    for(const rn of [...new Set(bk.researches)]) await rec('研究「'+rn+'」を購入',1);
+
+    // 討伐(ステージ進行)
+    const h=await huntPhase();
+    if(h.killed>0) await rec('モンスターを討伐',h.killed);
+    if(h.rewards>0) await rec('討伐報酬を選択',h.rewards);
+    if(h.stageUp){ const snm=await p.evaluate(n=>stageInfo(n).name,h.stageUp);
+      await rec(`クエスト達成！ステージ${h.stageUp}「${snm}」解放`,1);
+      console.log(`*** STAGE ${h.stageUp} 「${snm}」 unlocked at cyc=${cyc} wall=${((now()-wall0)/1000).toFixed(0)}s`); continue; }
+
+    // 転生→スキル(quota時計reset・questKillsは持ち越し)
+    const pr=await doPrestige();
+    if(pr){ await rec('転生(スキルツリー解放)',1); await takeSkills(); }
+
+    const s2=await snap();
+    fs.writeFileSync(DIR+'/ops.json',JSON.stringify(L,null,1));
+    console.log(`cyc=${cyc} idle=${Math.round(bk.idleSec/3600)}h cps=${bk.cps.toExponential(1)} killed=${h.killed} rew=${h.rewards} stageUp=${h.stageUp||'-'} pr=${pr} | stage=${s2.stage} qk=${s2.qk}/${s2.need} runs=${s2.runs} sk=${s2.skills} blk=${L.length} wall=${((now()-wall0)/1000).toFixed(0)}s`);
+  }
+  fs.writeFileSync(DIR+'/ops.json',JSON.stringify(L,null,1));
+  const fin=await snap();
+  console.log(`DONE reason=${reason} stage=${fin.stage} runs=${fin.runs} skills=${fin.skills} blocks=${L.length} lastT=${L.length?L[L.length-1].t:'-'} errors=${errs.length}`, errs.slice(0,3).join(' | '));
+  await b.close();
+})().catch(e=>{console.error('FATAL',e.message,e.stack);process.exit(1);});
