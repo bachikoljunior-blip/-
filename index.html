@@ -4536,6 +4536,9 @@
       overflow-x: auto;
       overflow-y: hidden;
       -webkit-overflow-scrolling: touch;
+      /* 横スクロールを指で確実に効かせる(親の touch-action:pan-y が横パンを潰すのを上書き・2026-07-22) */
+      touch-action: pan-x;
+      overscroll-behavior-x: contain;
       scrollbar-width: thin;
       padding-bottom: 4px;
     }
@@ -5099,6 +5102,17 @@
     .eq2Need img { width: 42px; height: 42px; object-fit: contain; }
     .eq2CraftBtn { flex: 0 0 auto; width: auto; padding: 8px 14px; }
     @media (max-width: 700px) { .eq2CraftBox { width: 100%; } }
+    /* 装備中スロットの視認・変更をしやすく(2026-07-22 ユーザー指示): 大きめアイコン+名前/効果+変更ボタン */
+    .eq2SlotRow { display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-top: 1px solid rgba(255,255,255,0.10); }
+    .eq2SlotRow .eq2SlotLabel { flex: 0 0 auto; min-width: 60px; font-weight: 700; opacity: 0.8; font-size: 13px; }
+    .eq2SlotRow .eq2SlotItem { flex: 1 1 auto; display: flex; align-items: center; gap: 9px; min-width: 0; }
+    .eq2SlotRow .eq2SlotItem > img { width: 46px; height: 46px; object-fit: contain; flex: 0 0 auto; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5)); }
+    .eq2SlotRow .eq2SlotName { min-width: 0; overflow: hidden; }
+    .eq2SlotRow .eq2SlotName b { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .eq2SlotRow .eq2SlotName .desc { font-size: 12px; display: block; }
+    .eq2SlotChangeBtn { flex: 0 0 auto; width: auto; padding: 7px 13px; }
+    .eq2SlotChooser { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 6px 10px; }
+    .eq2SlotChooser .item img { width: 30px; height: 30px; }
     /* 小粒(群れ)は他より一回り小さく(2026-07-13)。基準160に対して小さめ */
     .monsterInstance.mtype-swarm {
       width: 128px;
@@ -9827,16 +9841,23 @@ function renderEquip2Tab() {
       let chooser = "";
       if (choosing) {
         const cat = slot;
-        const cands = equip2Items().filter(x => x.cat === cat && (state.eq2Owned[x.id] || 0) > 0);
+        // 装備中は先頭・その後は所持数の多い順(見つけやすく)。効果も表示。
+        const cands = equip2Items().filter(x => x.cat === cat && (state.eq2Owned[x.id] || 0) > 0)
+          .sort((a, b) => (b.id === id ? 1 : 0) - (a.id === id ? 1 : 0));
         chooser = cands.length
-          ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">` + cands.map(c =>
-              `<button class="item canBuy" data-eq2equip="${c.id}" data-eq2slot="${slot}" style="width:auto;padding:4px 10px"><img class="matIcon" src="${assetUrl(equip2Art(c))}" style="filter:${equip2Filter(c)}" alt="">${c.name}(${c.fxText})</button>`).join("") + `</div>`
-          : `<div class="desc">所持している${EQUIP2_CAT_NAMES[cat]}がない</div>`;
+          ? `<div class="eq2SlotChooser">` + cands.map(c =>
+              `<button class="item ${c.id === id ? "tabSel" : "canBuy"}" data-eq2equip="${c.id}" data-eq2slot="${slot}" style="width:auto;padding:5px 10px"><img class="matIcon" src="${assetUrl(equip2Art(c))}" style="filter:${equip2Filter(c)}" alt="">${c.name}(${c.fxText})${c.id === id ? " ✓" : ""}</button>`).join("") + `</div>`
+          : `<div class="desc" style="padding:2px 6px 10px">所持している${EQUIP2_CAT_NAMES[cat]}がない</div>`;
       }
-      return `<div class="infoRow"><b>${equip2SlotLabel(slot)}</b>:
-        <button class="item ${it ? "canBuy" : ""}" data-eq2choose="${slot}" style="width:auto;padding:4px 10px">
-          ${it ? `<img class="matIcon" src="${assetUrl(equip2Art(it))}" style="filter:${equip2Filter(it)}" alt="">${it.name}(${it.fxText})` : "なし(押して装備)"}
-        </button>${chooser}</div>`;
+      return `<div class="eq2SlotRow">
+        <span class="eq2SlotLabel">${equip2SlotLabel(slot)}</span>
+        <div class="eq2SlotItem">
+          ${it
+            ? `<img src="${assetUrl(equip2Art(it))}" style="filter:${equip2Filter(it)}" alt=""><span class="eq2SlotName"><b>${it.name}</b><span class="desc">${it.fxText}</span></span>`
+            : `<span class="desc">装備なし</span>`}
+        </div>
+        <button class="item ${choosing ? "tabSel" : (it ? "" : "canBuy")} eq2SlotChangeBtn" data-eq2choose="${slot}">${choosing ? "閉じる" : (it ? "変更" : "装備する")}</button>
+      </div>${choosing ? chooser : ""}`;
     }).join("");
   } else if (sub === "owned") {
     // 所持装備はカテゴリごとのタブで切り替える。先頭に「全て」を置き、最初はそれを開く(2026-07-13 ユーザー指示)
@@ -9924,7 +9945,12 @@ function renderWorkshop() {
   const craftCats = ["all", ...EQUIP2_CATS];
   if (!craftCats.includes(state.eq2CraftCat)) state.eq2CraftCat = "all";
   const craftableAll = equip2Items().filter(it => equip2CraftableNow(it));
-  const craftList = state.eq2CraftCat === "all" ? craftableAll : craftableAll.filter(it => it.cat === state.eq2CraftCat);
+  const craftListRaw = state.eq2CraftCat === "all" ? craftableAll : craftableAll.filter(it => it.cat === state.eq2CraftCat);
+  // 作成できるもの(素材が揃っている)を1番上に(2026-07-22 ユーザー指示)。同順内は元の並び(ティア順)を維持。
+  const craftList = craftListRaw
+    .map((it, i) => ({ it, i, afford: equip2Afford(it) }))
+    .sort((a, b) => (b.afford - a.afford) || (a.i - b.i))
+    .map(x => x.it);
   const craftCatBar = `<div class="buyModeBar tabScrollRow" style="margin-bottom:8px;gap:4px">`
     + `<button class="item ${state.eq2CraftCat === "all" ? "tabSel" : ""}" data-eq2craftcat="all" style="width:auto;padding:4px 9px">全て</button>`
     + EQUIP2_CATS.map(cat =>
