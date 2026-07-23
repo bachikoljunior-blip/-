@@ -1,6 +1,10 @@
 // 通し実況ジェネレータ(頑健・再現可能): 最初→コンテンツ完走(全設備/研究/75スキル/装備全ティア/stage-type6)まで、
 // 各里程標を game-time + 画面 + 事象で捕捉。序盤=実プレイ、以降=ゲーム自身の論理(debugで加速)で整合的に前進。
 const { chromium } = require('/opt/node22/lib/node_modules/playwright');
+// [現実時間対応] cap の label 末尾に想定現実時間を付す運用。sim(sim/tools_timeline.js)由来の目安:
+//  初討伐~30秒 / 会心研究~3分 / 初転生~27分 / 会心コンボ段2(フィーバー)~数時間(転生後) / エンド設備~数十時間 / 全75スキル完走~数百時間。
+//  出力は撮影順。時系列(現実時間)で見せる時は full_chrono の並べ替え順を使う: 01 02 03 05 04 10 11 12 13 14 06 07 08 09 15 16。
+
 const DIR=process.env.FULL_DIR||(require('os').tmpdir()+'/cookie_full_report');
 const fs=require('fs');try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
 (async()=>{
