@@ -118,15 +118,8 @@ const SKILL_NODES = [
   // 割り込まない生の値(既存46ラングの経済を一切動かさない)。値段はQoL枠(utilRatio×入口)=はしご非消費。
   { id: 'click_amp', cost: 15, prereqs: ['click_1'], fixed: true, effects: [['click', null, 0.75]] },
   { id: 'golden_amp', cost: 15, prereqs: ['golden_1'], fixed: true, effects: [['goldenAmount', null, 0.50]] },
-  // 提案12「金は金を呼ぶ」(2026-07-11 ユーザー承認): 金を取った瞬間、確率pで追いの金が1枚即出現(連鎖なし)
-  { id: 'golden_echo', cost: 15, prereqs: ['golden_amp'], effects: [['unlockSystem', 'goldenEcho']] },
-  // 提案13「編成の心得」(2026-07-11 ユーザー承認・通常型=バランス方針限定): 4稼ぎ口がそろっているほど全生産ボーナス
-  { id: 'ensemble', cost: 15, prereqs: ['core'], effects: [['unlockSystem', 'ensemble']] },
+  // おまけスキル(金は金を呼ぶ/編成の心得/土産の屋台/戦利品の行商)撤去(2026-07-22 ユーザー指示)。
   { id: 'monster_amp', cost: 15, prereqs: ['monster_1'], fixed: true, effects: [['monsterDamageSkill', null, 0.60]] },
-  // 提案10/11(2026-07-11 ユーザー承認・「消さない・毎秒生産に直接乗せる」形へ単純化):
-  // タップ/討伐の直送収入を、研究段2より前からスキルで弱く先行開始する(段2でフル。以後も出続ける=置き換え演出なし)
-  { id: 'click_stall', cost: 15, prereqs: ['click_amp'], effects: [['unlockSystem', 'tapStall']] },
-  { id: 'monster_peddler', cost: 15, prereqs: ['monster_1'], effects: [['unlockSystem', 'huntPeddler']] },
   { id: 'auto_amp', cost: 15, prereqs: ['auto_1'], fixed: true, effects: [['cps', null, 0.75]] },
   { id: 'golden_2', cost: 43, prereqs: ['golden_1'], effects: [['goldenAmount', null, 0.15]] },
   { id: 'golden_3', cost: 47, prereqs: ['golden_2'], effects: [['goldenPower', null, 0.35]] },
@@ -214,10 +207,7 @@ const UTILITY_SKILLS = new Set([
   'eqcraft_t2', 'eqcraft_t3', 'eqcraft_t4', 'eqcraft_t5', 'eqcraft_t6',
   // 方針入口の増幅ノード(第12次R4): 価格ははしご非消費のおまけ価格。効果は固定値(fixed)
   'click_amp', 'golden_amp', 'monster_amp', 'auto_amp',
-  // 提案10/11(2026-07-11): 直送の早期入口ノード(価格はおまけ枠・効果はゲート解放)
-  'click_stall', 'monster_peddler',
-  // 提案12/13(2026-07-11 承認): おまけ価格枠
-  'golden_echo', 'ensemble'
+  // おまけスキル(click_stall/monster_peddler/golden_echo/ensemble)は撤去(2026-07-22 ユーザー指示)。
 ]);
 function isUtilitySkill(id) { return UTILITY_SKILLS.has(id); }
 
@@ -225,7 +215,7 @@ function isUtilitySkill(id) { return UTILITY_SKILLS.has(id); }
 const SKILL_HAND_ORDER = [
   // 2026-07-06 第8次 ⑲対応v3: 取得順(=コストはしご順)。全ツリー辺のメインラング差≤5。
   // 設備解放: 月面=r12(7種設備の壁dec40を跨ぐ前)、時空=r17、以降約3ラングごとに第16種(r40)まで。
-  'core', 'ensemble', 'click_1', 'click_amp', 'click_stall', 'golden_1', 'golden_amp', 'golden_echo', 'monster_1', 'monster_amp', 'monster_peddler', 'workshop_1', 'workshop_2', 'eqcraft_t2', 'eqcraft_t3', 'eqcraft_t4', 'eqcraft_t5', 'eqcraft_t6', 'auto_1', 'auto_amp', 'economy_1',
+  'core', 'click_1', 'click_amp', 'golden_1', 'golden_amp', 'monster_1', 'monster_amp', 'workshop_1', 'workshop_2', 'eqcraft_t2', 'eqcraft_t3', 'eqcraft_t4', 'eqcraft_t5', 'eqcraft_t6', 'auto_1', 'auto_amp', 'economy_1',
   'click_2', 'golden_2', 'monster_2', 'auto_2', 'economy_2',
   'mastery_low',
   'click_3', 'upgrade_moon', 'auto_3', 'research_1', 'research_remodel', 'economy_analysis', 'order_board',
@@ -2101,18 +2091,7 @@ const MILESTONE_RESEARCH = (() => {
     const NN = sorted.length;
     sorted.forEach((n, rank) => { skResTier[n.id] = Math.min(5, Math.floor(rank * 6 / NN)); });
   })();
-  const csLadder = skResLadder; // 後方互換(未使用: costSecではなく固定costを渡す)
-  SKILL_NODES.forEach((n, i) => {
-    const c1 = skResLadder[skResTier[n.id]];
-    add('msk_' + n.id, sim => !!sim.skills[n.id], branchFx(n.id), c1);
-    list[list.length - 1].cost = c1; // 固定コスト(毎秒生産非依存・≥2倍間隔の階段)
-    const t = Object.keys(branchFx(n.id))[0];
-    if (t === 'click' || t === 'cps' || t === 'golden' || t === 'hunt') {
-      const c2 = skResLadder[skResTier[n.id] + 1]; // 奥義=1段上(≥2倍・応用<奥義)
-      add('msk2_' + n.id, sim => !!sim.skills[n.id], branchFx(n.id), c2);
-      list[list.length - 1].cost = c2;
-    }
-  });
+  // スキル取得由来の実績研究(msk_/msk2_)は撤去(2026-07-22 ユーザー指示「スキルを取得したことによる実績研究は全て消して」)。
   return list;
 })();
 // 未購入で条件を満たしたものを自動購入(コスト=cps×msCostSec。安さゆえ全プレイヤー即買いのモデル)

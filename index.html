@@ -1382,14 +1382,22 @@
       to { filter: brightness(1.35); }
     }
 
+    /* 取得済み=はっきり明るく+緑の枠+✓(2026-07-22 ユーザー指示: 取得済み/未取得の違いを分かりやすく) */
     .skillNode.done {
       opacity: 1;
       background:
-        radial-gradient(circle at 50% 38%, rgba(var(--branch-rgb),0.48), transparent 52%),
-        linear-gradient(145deg, rgba(255,255,255,0.12), rgba(0,0,0,0.10)),
+        radial-gradient(circle at 50% 38%, rgba(var(--branch-rgb),0.55), transparent 52%),
+        linear-gradient(145deg, rgba(255,255,255,0.16), rgba(0,0,0,0.10)),
         rgba(2,18,26,0.98);
-      border-color: rgba(var(--branch-rgb),0.92);
+      border-color: rgba(120,240,150,0.95);
+      box-shadow: 0 0 0 2px rgba(120,240,150,0.35), inset 0 0 12px rgba(var(--branch-rgb),0.30);
     }
+    .skillNode.done .nodeCheck {
+      position: absolute; right: -4px; top: -4px; width: 17px; height: 17px; border-radius: 50%;
+      background: #3ad07a; color: #06210f; font-size: 12px; font-weight: 900; line-height: 17px; text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.5); pointer-events: none; z-index: 2;
+    }
+    .skillNode:not(.done) .nodeCheck { display: none; }
 
     .skillNode.canBuy {
       background:
@@ -1405,8 +1413,9 @@
     }
 
     .skillNode.locked {
-      opacity: 0.54;
-      filter: grayscale(0.35);
+      /* 未取得(前提未達)=はっきり暗く+モノクロ寄り(取得済みとの差を明確に・2026-07-22) */
+      opacity: 0.42;
+      filter: grayscale(0.6);
       background:
         radial-gradient(circle at 50% 38%, rgba(var(--branch-rgb),0.16), transparent 50%),
         rgba(5,8,14,0.94);
@@ -6489,12 +6498,8 @@ const SKILL_NODES = [
   // 方針入口の増幅スキル(2026-07-11): 分岐炉心の各方針入口を選んだ直後に、その方針の主役効果を安価に増幅する
   { id: "click_amp", name: "速射の指", branchId: "click", cost: 8, x: 1619, y: -159, icon: "◆", prereqs: ["click_1"], desc: "タップ生産 +75%。", effects: [{ type: "click", value: 0.75 }] },
   { id: "golden_amp", name: "金箔集め", branchId: "golden", cost: 15, x: 665, y: 966, icon: "✦", prereqs: ["golden_1"], desc: "金クッキー即時獲得量 +50%。", effects: [{ type: "goldenAmount", value: 0.5 }] },
-  { id: "golden_echo", name: "金は金を呼ぶ", branchId: "golden", cost: 5, x: 537, y: 850, icon: "✧", prereqs: ["golden_amp"], desc: "金取得時35%で追加の金クッキー1枚(連鎖なし)。", effects: [{ type: "unlockSystem", target: "goldenEcho" }] },
-  { id: "ensemble", name: "編成の心得", branchId: "core", cost: 3, x: 728, y: 547, icon: "❖", prereqs: ["core"], desc: "標準方針で、4つの稼ぎ方が揃うほど全生産アップ(最大+15%)。", effects: [{ type: "unlockSystem", target: "ensemble" }] },
+  // おまけスキル(金は金を呼ぶ/編成の心得/土産の屋台/戦利品の行商)撤去(2026-07-22 ユーザー指示)。
   { id: "monster_amp", name: "仕留めの一撃", branchId: "monster", cost: 20, x: 382, y: 959, icon: "◉", prereqs: ["monster_1"], desc: "モンスター最終ダメージ +60%。", effects: [{ type: "monsterDamageSkill", value: 0.6 }] },
-  // 提案10/11(2026-07-11 承認): タップ/討伐の換金収入を安いスキルで先行開始(研究の段階2でフル。消えずに出続ける)
-  { id: "click_stall", name: "土産の屋台", branchId: "click", cost: 2, x: 1999, y: -144, icon: "◆", prereqs: ["click_amp"], desc: "屋台を解放。毎秒収入(強い指系と最高到達層で上昇)。「指先の型」段階2までは5%。", effects: [{ type: "unlockSystem", target: "tapStall" }] },
-  { id: "monster_peddler", name: "戦利品の行商", branchId: "monster", cost: 20, x: 343, y: 1156, icon: "◉", prereqs: ["monster_1"], desc: "行商を解放。毎秒収入(討伐系報酬カードの所持数と最高到達層で上昇)。「異世界接続網」段階2までは6%。", effects: [{ type: "unlockSystem", target: "huntPeddler" }] },
   { id: "auto_amp", name: "炉の熱気", branchId: "auto", cost: 35, x: 251, y: 2599, icon: "◇", prereqs: ["auto_1"], desc: "毎秒生産 +75%。", effects: [{ type: "cps", value: 0.75 }] },
   { id: "golden_2", name: "金粉回収", branchId: "golden", cost: 1550, x: 869, y: 773, icon: "✦", prereqs: ["golden_1"], desc: "金クッキー即時獲得量 +75%。", effects: [{ type: "goldenAmount", value: 0.75 }] },
   { id: "golden_3", name: "輝き増幅", branchId: "golden", cost: 550000, x: 1028, y: 858, icon: "✦", prereqs: ["golden_2"], desc: "金ブースト倍率 +2.1。", effects: [{ type: "goldenPower", value: 2.1 }] },
@@ -7938,18 +7943,7 @@ const MILESTONE_RESEARCH = (() => {
     const NN = sorted.length;
     sorted.forEach((n, rank) => { skResTier[n.id] = Math.min(5, Math.floor(rank * 6 / NN)); });
   })();
-  SKILL_NODES.forEach((n, i) => {
-    const [fx, ft] = branchFx(n.id);
-    const c1 = skResLadder[skResTier[n.id]];
-    add("msk_" + n.id, n.name + "の応用", "スキル「" + n.name + "」を取得", () => hasSkill(n.id), ft, fx, c1);
-    list[list.length - 1].cost = c1;
-    const t = Object.keys(fx)[0];
-    if (t === "click" || t === "cps" || t === "golden" || t === "hunt") {
-      const c2 = skResLadder[skResTier[n.id] + 1];
-      add("msk2_" + n.id, n.name + "の奥義", "スキル「" + n.name + "」を取得", () => hasSkill(n.id), ft, fx, c2);
-      list[list.length - 1].cost = c2;
-    }
-  });
+  // スキル取得由来の実績研究(msk_/msk2_)は撤去(2026-07-22 ユーザー指示「スキルを取得したことによる実績研究は全て消して」)。
   return list;
 })();
 function skillNameOf(id) { const n = SKILL_NODES.find(x => x.id === id); return n ? n.name : id; }
@@ -12811,9 +12805,7 @@ function buyResearchStage(id, stageNo) {
 }
 
 function skillVisible(skill) {
-  if (skill.prereqs.length === 0) return true;
-  // 前提が1つでも解放されていれば表示する(購入は全前提解放後)
-  return skill.prereqs.some(id => hasSkill(id));
+  return true; // スキルと配線を最初から全て表示(2026-07-22 ユーザー指示)。取得可否は skillCanBuy が判定。
 }
 
 function skillCanBuy(skill) {
@@ -13234,11 +13226,10 @@ function renderSkillChoiceScreen() {
   }
 
   const lines = visibleSkills.flatMap(skill => {
-    // 前提が全て解放される(=購入可能になる)まで線は繋がない
-    if (!skill.prereqs.every(id => hasSkill(id))) return "";
+    // 配線は最初から全て表示(2026-07-22 ユーザー指示)。取得済みは done、取得可能(前提済)は ready で色分け。
     return skill.prereqs.map(reqId => {
       const from = getSkill(reqId);
-      if (!from || !skillVisible(from)) return "";
+      if (!from) return "";
 
       const done = hasSkill(reqId) && hasSkill(skill.id);
       const ready = hasSkill(reqId) && !hasSkill(skill.id);
@@ -13264,6 +13255,7 @@ function renderSkillChoiceScreen() {
         ${ASSETS.skills && ASSETS.skills[skill.id]
           ? `<img class="nodeArt" src="${assetUrl(ASSETS.skills[skill.id])}" alt="" aria-hidden="true" decoding="async">`
           : `<span class="nodeMark">${skill.icon}</span>`}
+        ${done ? `<span class="nodeCheck">✓</span>` : ""}
       </button>
     `;
   }).join("");
