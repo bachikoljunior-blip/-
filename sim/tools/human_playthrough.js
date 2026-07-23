@@ -58,7 +58,10 @@ const fs=require('fs'); try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
 
   // 放置スキップ: offline式 earn(baseCps×秒) を一発。totalPlaySec とノルマ経過も進める(reload不要)。
   const idleSkip=async(sec)=>p.evaluate((sec)=>{ const before=state.cookies; earn(D(baseCps()).mul(sec)); state.totalPlaySec=(state.totalPlaySec||0)+sec; if(state.runStart)state.runStart-=sec*1000; const g=state.cookies.sub(before); return (typeof fmt==='function')?fmt(g):String(g); },sec);
-  const takeSkills=async()=>{ const names=await p.evaluate(()=>{ const got=[]; if(typeof SKILLS!=='undefined'&&skillCanBuy){ for(let n=0;n<80;n++){ const s=SKILLS.find(x=>skillCanBuy(x)); if(!s)break; selectSkill(s.id); takeSelectedSkill(); got.push(s.name||s.id);} }
+  const takeSkills=async()=>{ const names=await p.evaluate(()=>{ const got=[];
+      // 実プレイヤの購入判断: 生産を伸ばすスキル(全生産>毎秒>タップ>開始クッキー>放置)を優先して取る。
+      const score=(s)=>{ let v=0; for(const e of (s.effects||[])){ const t=e.type, val=Number(e.value)||0; if(t==='all')v+=val*1000; else if(t==='cps'||t==='cpsMul')v+=val*100; else if(t==='click')v+=val*40; else if(t==='startCookies')v+=Math.log10(Math.max(10,val))*30; else if(t==='offlineHours')v+=val*20; else if(t==='goldenAmount'||t==='goldenMul')v+=val*15; else v+=1; } return v; };
+      if(typeof SKILLS!=='undefined'&&skillCanBuy){ for(let n=0;n<80;n++){ const cand=SKILLS.filter(x=>skillCanBuy(x)); if(!cand.length)break; cand.sort((a,b)=>score(b)-score(a)); const s=cand[0]; selectSkill(s.id); takeSelectedSkill(); got.push(s.name||s.id);} }
       // 「この構成でスタート」= 周回を開始してスキル選択の一時停止を解除(=次周回の建て直しが動く)
       try{ if(typeof beginRunAfterSkills==='function' && state.awaitingSkillChoice) beginRunAfterSkills(); }catch(e){}
       return got; }); for(const nm of names)await rec('スキル「'+nm+'」を取得',1); return names.length; };
