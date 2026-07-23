@@ -7978,6 +7978,53 @@ function msBought(id) {
   }
   return !!((state.msResearch || {})[id]);
 }
+// スキル取得の成長効果(2026-07-23 sim同期): 旧「スキル取得由来の研究(msk_/msk2_)」は撤去したが、
+// その成長倍率はスキル自体の効果として内包する(研究アイテムは消え、成長は残す=ユーザー意図)。
+// 所持スキルごとに下の倍率を生産へ自動適用(旧msk_=1回・旧msk2_のclick/cps/golden/huntは2回)。
+function skillBranchFx(id) {
+  if (id === "upgrade_godfinger") return { critAdd: 0.04 };
+  if (id.startsWith("click_")) return { click: 1.3 };
+  if (id.startsWith("golden_")) return { golden: 1.25 };
+  if (id.startsWith("monster_") || id === "hunt_analysis" || id.startsWith("unlock_reward_")) return { hunt: 1.3 };
+  if (id.startsWith("auto_")) return { own: { oven: 0.003 } };
+  if (id.startsWith("upgrade_")) return { cps: 1.3 };
+  if (id.startsWith("economy_") || id === "order_board") return { sup: ["bank", "grandma", 0.002] };
+  if (id.startsWith("research_")) return { all: 1.08 };
+  if (id.startsWith("reward_")) return { hunt: 1.2 };
+  if (id.startsWith("workshop_")) return { dropAdd: 1 };
+  if (id.startsWith("start_") || id === "offline_1" || id === "endless_oven") return { cpsAdd: 50 };
+  return { all: 1.1 };
+}
+// 所持スキルの成長効果を集約(スキル集合が変わった時だけ再計算=キャッシュ)。
+let _sgCache = null, _sgKey = -1;
+function skillGrowth() {
+  const s = state.skills || {};
+  let key = 0; for (const k in s) if (s[k]) key++;
+  if (_sgCache && _sgKey === key) return _sgCache;
+  const g = { up: {}, click: 1, cps: 1, all: 1, golden: 1, hunt: 1, dropAdd: 0, cpsAdd: 0, own: {}, sup: {}, critAdd: 0 };
+  const apply = fx => {
+    if (fx.up) for (const k in fx.up) g.up[k] = (g.up[k] || 1) * fx.up[k];
+    if (fx.click) g.click *= fx.click;
+    if (fx.cps) g.cps *= fx.cps;
+    if (fx.all) g.all *= fx.all;
+    if (fx.golden) g.golden *= fx.golden;
+    if (fx.hunt) g.hunt *= fx.hunt;
+    if (fx.dropAdd) g.dropAdd += fx.dropAdd;
+    if (fx.cpsAdd) g.cpsAdd += fx.cpsAdd;
+    if (fx.own) for (const k in fx.own) g.own[k] = (g.own[k] || 0) + fx.own[k];
+    if (fx.sup) { const [up, src, rate] = fx.sup; (g.sup[up] = g.sup[up] || []).push([src, rate]); }
+    if (fx.critAdd) g.critAdd += fx.critAdd;
+  };
+  for (const k in s) {
+    if (!s[k]) continue;
+    const fx = skillBranchFx(k);
+    apply(fx);
+    const t = Object.keys(fx)[0];
+    if (t === "click" || t === "cps" || t === "golden" || t === "hunt") apply(fx); // 奥義(旧msk2_)
+  }
+  _sgCache = g; _sgKey = key;
+  return g;
+}
 function msMulOf(kind, upId) {
   let m = kind === "dropAdd" ? 0 : 1;
   const b = state.msResearch || {};
@@ -7988,6 +8035,11 @@ function msMulOf(kind, upId) {
     else if (kind === "dropAdd") { if (ms.fx.dropAdd) m += ms.fx.dropAdd * times; }
     else if (ms.fx[kind]) m *= Math.pow(ms.fx[kind], times);
   }
+  // スキル取得の成長効果(旧msk_/msk2_の内包)を合流
+  const g = skillGrowth();
+  if (kind === "up") { if (g.up[upId]) m *= g.up[upId]; }
+  else if (kind === "dropAdd") { m += g.dropAdd; }
+  else if (g[kind] != null && kind !== "own" && kind !== "sup") m *= g[kind];
   return m;
 }
 // 効果多様化(2026-07-15 sim同期): own=自設備数連動 / sup=他設備数連動 / cpsAdd=加算 / critAdd=会心確率
@@ -7998,10 +8050,14 @@ function msDiverseUpgradeMul(u) {
     if (ms.fx.own && ms.fx.own[u.id]) m *= Math.pow(1 + ms.fx.own[u.id], state.upgrades[u.id] || 0);
     if (ms.fx.sup && ms.fx.sup[0] === u.id) m *= Math.pow(1 + ms.fx.sup[2], state.upgrades[ms.fx.sup[1]] || 0);
   }
+  // スキル取得の成長効果(own=自設備数連動 / sup=他設備数連動)を合流
+  const g = skillGrowth();
+  if (g.own[u.id]) m *= Math.pow(1 + g.own[u.id], state.upgrades[u.id] || 0);
+  if (g.sup[u.id]) for (const [src, rate] of g.sup[u.id]) m *= Math.pow(1 + rate, state.upgrades[src] || 0);
   return m;
 }
-function msCpsAdd() { let a = 0; const b = state.msResearch || {}; for (const ms of MILESTONE_RESEARCH) if (b[ms.id] && ms.fx.cpsAdd) a += ms.fx.cpsAdd; return a; }
-function msCritAdd() { let a = 0; const b = state.msResearch || {}; for (const ms of MILESTONE_RESEARCH) if (b[ms.id] && ms.fx.critAdd) a += ms.fx.critAdd; return a; }
+function msCpsAdd() { let a = 0; const b = state.msResearch || {}; for (const ms of MILESTONE_RESEARCH) if (b[ms.id] && ms.fx.cpsAdd) a += ms.fx.cpsAdd; return a + skillGrowth().cpsAdd; }
+function msCritAdd() { let a = 0; const b = state.msResearch || {}; for (const ms of MILESTONE_RESEARCH) if (b[ms.id] && ms.fx.critAdd) a += ms.fx.critAdd; return a + skillGrowth().critAdd; }
 // コストはゲーム内で固定(2026-07-11 ユーザー指示): sim/ms_costs.json(10方針100h測定の初回購入額の中央値・丸め済み)と同期。
 // 表に無い研究のみ動的(解放時点の毎秒×costSec)。
 const MS_COST_TABLE = {"ms_taps_p1":100,"ms_stage_s1":100,"ms_taps_p2":100,"ms_golden_g1":100,"ms_kills_k1":100,"ms_finger_t1":100,"ms_taps_p3":62000,"ms_golden_g2":41000,"ms_oven_t1":1550000,"ms_grandma_t1":5400000,"ms_spiceRack_t1":130000000,"msk_core":100,"ms_kills_k2":38000,"ms_kills_k3":81500000,"ms_factory_t1":145000000,"ms_bank_t1":155000000,"ms_portal_t1":195000000,"ms_oven_t2":1300000000,"ms_finger_t2":2750000000,"ms_prestige_r1":100,"msk_click_1":300,"msk2_click_1":900,"msk_click_amp":100,"msk2_click_amp":300,"msk_click_stall":100,"msk2_click_stall":300,"ms_grandma_t2":13500000000,"ms_factory_t2":45000000000,"ms_golden_g3":28000000000,"ms_spiceRack_t2":1050000000000,"msk_golden_1":300,"msk2_golden_1":900,"msk_golden_amp":100,"msk2_golden_amp":300,"ms_stage_s2":170000000000,"ms_taps_p4":16000000000000,"ms_bank_t2":4050000000000,"ms_portal_t2":2750000000000,"ms_oven_t3":33500000000000,"ms_kills_k4":650000000000,"ms_factory_t3":87000000000000,"msk_monster_1":300,"msk2_monster_1":900,"ms_golden_g4":1550000000000000,"ms_finger_t3":135000000000000000,"ms_prestige_r2":100,"msk_monster_amp":100,"msk2_monster_amp":300,"msk_monster_peddler":100,"msk2_monster_peddler":300,"msk_auto_1":300,"msk2_auto_1":900,"ms_spiceRack_t3":605000000000000000,"ms_grandma_t3":4400000000000000000,"ms_kills_k5":15500000000000000000,"msk_auto_amp":100,"msk2_auto_amp":300,"msk_economy_1":900,"msk2_economy_1":2700,"ms_portal_t3":1.6e+21,"ms_oven_t4":6.45e+22,"ms_stage_s3":8.15e+21,"ms_factory_t4":3.1e+22,"ms_bank_t3":5.1e+22,"msk_click_2":300,"msk2_click_2":900,"msk_workshop_1":100,"msk_workshop_2":100,"ms_spiceRack_t4":4.05e+27,"msk_golden_2":300,"msk2_golden_2":900,"ms_kills_k6":4.2999999999999994e+30,"ms_finger_t4":5.3e+32,"msk_monster_2":300,"msk2_monster_2":900,"ms_grandma_t4":5.050000000000001e+34,"ms_prestige_r3":100,"msk_auto_2":900,"msk2_auto_2":2700,"msk_economy_2":900,"msk2_economy_2":2700,"msk_economy_analysis":300,"msk2_economy_analysis":900,"ms_portal_t4":1.5999999999999997e+38,"msk_mastery_low":900,"msk_order_board":300,"msk2_order_board":900,"ms_bank_t4":2.6500000000000002e+41,"ms_stage_s4":1.5e+43,"msk_click_3":900,"msk2_click_3":2700,"ms_kills_k7":4.35e+44,"msk_upgrade_moon":900,"msk2_upgrade_moon":2700,"ms_moonBakery_t1":1000000000000,"ms_moonBakery_t2":2050000000000000,"ms_moonBakery_t3":5.7e+22,"ms_moonBakery_t4":3.95e+42,"msk_auto_3":900,"msk2_auto_3":2700,"msk_research_1":900,"msk_research_remodel":2700,"msk_research_analysis":900,"msk_golden_3":2700,"msk2_golden_3":8100,"msk_golden_analysis":900,"msk2_golden_analysis":2700,"msk_upgrade_time":2700,"msk2_upgrade_time":8100,"ms_timeOven_t1":51500000000000,"ms_timeOven_t2":80000000000000000,"ms_timeOven_t3":6.55e+24,"ms_timeOven_t4":2.35e+43,"ms_prestige_r4":100,"msk_monster_3":2700,"msk2_monster_3":8100,"msk_auto_4":2700,"msk2_auto_4":8100,"msk_hunt_analysis":900,"msk2_hunt_analysis":2700,"ms_stage_s5":2.0500000000000002e+73,"msk_click_4":2700,"msk2_click_4":8100,"msk_offline_1":2700,"msk_upgrade_galaxy":2700,"msk2_upgrade_galaxy":8100,"ms_galaxyFactory_t1":6850000000000000000,"ms_galaxyFactory_t2":945000000000000000000,"ms_galaxyFactory_t3":2.8e+29,"ms_galaxyFactory_t4":6.949999999999999e+44,"msk_mastery_high":2700,"ms_kills_k8":9.8e+90,"msk_golden_4":8100,"msk2_golden_4":24300,"ms_golden_g5":1.4500000000000001e+96,"msk_monster_4":8100,"msk2_monster_4":24300,"msk_start_1":2700,"msk_start_2":2700,"msk_upgrade_blackhole":8100,"msk2_upgrade_blackhole":24300,"msk_reward_1":2700,"msk2_reward_1":8100,"msk_reward_synergy":2700,"msk2_reward_synergy":8100,"msk_reward_choice_2":900,"msk2_reward_choice_2":2700,"ms_blackHoleMixer_t1":53500000000000000000,"ms_blackHoleMixer_t2":4.3e+21,"ms_blackHoleMixer_t3":7.15e+29,"ms_blackHoleMixer_t4":2.3e+45,"ms_golden_g6":1.5500000000000001e+94,"ms_stage_s6":2.85e+112,"msk_unlock_reward_crackedFang":8100,"msk2_unlock_reward_crackedFang":24300,"msk_unlock_reward_goldenChain":8100,"msk2_unlock_reward_goldenChain":24300,"msk_upgrade_universe":8100,"msk2_upgrade_universe":24300,"ms_universeOven_t1":635000000000000000000,"ms_universeOven_t2":3.5e+22,"ms_universeOven_t3":1.1499999999999998e+30,"ms_universeOven_t4":3.6999999999999996e+47,"msk_unlock_reward_chainPrep":8100,"msk2_unlock_reward_chainPrep":24300,"msk_unlock_reward_huntFocus":8100,"msk2_unlock_reward_huntFocus":24300,"msk_upgrade_godfinger":8100,"msk2_upgrade_godfinger":24300,"ms_godFinger_t1":1.7e+21,"ms_godFinger_t2":9.9e+22,"ms_godFinger_t3":4.7499999999999996e+30,"ms_godFinger_t4":1.8e+49,"msk_unlock_reward_goldenTarget":8100,"msk2_unlock_reward_goldenTarget":24300,"msk_upgrade_singularity":8100,"msk2_upgrade_singularity":24300,"ms_cookieSingularity_t1":1.65e+23,"ms_cookieSingularity_t2":4.3999999999999995e+26,"ms_cookieSingularity_t3":1.3e+31,"ms_cookieSingularity_t4":2.5e+49,"msk_unlock_reward_goldenFirstHit":8100,"msk2_unlock_reward_goldenFirstHit":24300,"msk_unlock_reward_beastScent":24300,"msk2_unlock_reward_beastScent":72900,"msk_reward_2":24300,"msk2_reward_2":72900,"msk_upgrade_quantum":24300,"msk2_upgrade_quantum":72900,"ms_quantumBakery_t1":3.0499999999999995e+24,"ms_quantumBakery_t2":4.95e+27,"ms_quantumBakery_t3":1.2e+32,"ms_quantumBakery_t4":6.75e+49,"msk_unlock_reward_biteRecovery":24300,"msk2_unlock_reward_biteRecovery":72900,"msk_unlock_reward_beastHeatFerment":24300,"msk2_unlock_reward_beastHeatFerment":72900,"msk_unlock_reward_huntingCore":24300,"msk2_unlock_reward_huntingCore":72900,"msk_upgrade_antimatter":24300,"msk2_upgrade_antimatter":72900,"ms_antimatterOven_t1":5.0999999999999995e+25,"ms_antimatterOven_t2":2.2000000000000001e+27,"ms_antimatterOven_t3":4.3e+32,"ms_antimatterOven_t4":2.4500000000000002e+51,"msk_unlock_reward_brandHunt":24300,"msk2_unlock_reward_brandHunt":72900,"msk_unlock_reward_crushedMill":24300,"msk2_unlock_reward_crushedMill":72900,"msk_unlock_reward_deepPursuit":24300,"msk2_unlock_reward_deepPursuit":72900,"msk_unlock_reward_goldenBeastMutation":24300,"msk2_unlock_reward_goldenBeastMutation":72900,"msk_master_final":24300,"ms_taps_p5":null,"ms_taps_p6":null};

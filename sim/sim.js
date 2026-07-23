@@ -2016,6 +2016,50 @@ function goldenBoostDurationMs(sim) {
 // 解放トリガ: その周回の設備所持数 / 累計実績(討伐・金・タップ・最高層・転生回数) / スキル取得。
 // コスト=解放時点の毎秒生産×msCostSec秒ぶん(常に手が届く=全プレイヤーが即買いする安さのため自動購入でモデル化)。
 // 効果は正の単純倍率のみ(共鳴型は禁止のまま)。周回リセットで買い直し(実績系トリガは累計なので次周回もすぐ出る)。
+
+// スキル取得の成長効果(2026-07-23): 旧「スキル取得由来の研究(msk_/msk2_)」は撤去したが、
+// その成長倍率はスキル自体の効果として内包する(ユーザー意図=クラッタの研究アイテムを消すだけで
+// 成長は残す)。所持スキルごとに毎周回、下の倍率を r.ms へ自動適用(旧msk_と同一・研究購入は不要)。
+// 系統ごとに効果型を散らす(倍率/加算/自設備数連動/他設備数連動/会心確率)。
+function skillBranchFx(id) {
+  if (id === 'upgrade_godfinger') return { critAdd: 0.04 };                 // 会心確率
+  if (id.startsWith('click_')) return { click: 1.3 };                       // 倍率
+  if (id.startsWith('golden_')) return { golden: 1.25 };
+  if (id.startsWith('monster_') || id === 'hunt_analysis' || id.startsWith('unlock_reward_')) return { hunt: 1.3 };
+  if (id.startsWith('auto_')) return { own: { oven: 0.003 } };              // 自設備数連動(オーブン台数で伸びる)
+  if (id.startsWith('upgrade_')) return { cps: 1.3 };
+  if (id.startsWith('economy_') || id === 'order_board') return { sup: ['bank', 'grandma', 0.002] }; // 他設備数連動
+  if (id.startsWith('research_')) return { all: 1.08 };
+  if (id.startsWith('reward_')) return { hunt: 1.2 };
+  if (id.startsWith('workshop_')) return { dropAdd: 1 };                    // 加算(素材)
+  if (id.startsWith('start_') || id === 'offline_1' || id === 'endless_oven') return { cpsAdd: 50 }; // 加算(+固定生産)
+  return { all: 1.1 };
+}
+// 1つのfxを r.ms へ乗算/加算(applyMs と同じ写像)。
+function applySkillFxToMs(ms, fx) {
+  if (fx.up) for (const k in fx.up) ms.up[k] = (ms.up[k] || 1) * fx.up[k];
+  if (fx.click) ms.click *= fx.click;
+  if (fx.cps) ms.cps = (ms.cps || 1) * fx.cps;
+  if (fx.all) ms.all *= fx.all;
+  if (fx.golden) ms.golden *= fx.golden;
+  if (fx.hunt) ms.hunt *= fx.hunt;
+  if (fx.dropAdd) ms.dropAdd += fx.dropAdd;
+  if (fx.cpsAdd) ms.cpsAdd = (ms.cpsAdd || 0) + fx.cpsAdd;
+  if (fx.own) for (const k in fx.own) ms.own[k] = (ms.own[k] || 0) + fx.own[k];
+  if (fx.sup) { const [up, src, rate] = fx.sup; (ms.sup[up] = ms.sup[up] || []).push([src, rate]); }
+  if (fx.critAdd) ms.critAdd = (ms.critAdd || 0) + fx.critAdd;
+}
+// 所持スキル全ての成長倍率を r.ms へ適用(周回開始時に1回)。旧msk_=1回、旧msk2_=click/cps/golden/huntは2回。
+function applySkillGrowth(sim) {
+  const ms = sim.run.ms;
+  for (const id in sim.skills) {
+    if (!sim.skills[id]) continue;
+    const fx = skillBranchFx(id);
+    applySkillFxToMs(ms, fx);
+    const t = Object.keys(fx)[0];
+    if (t === 'click' || t === 'cps' || t === 'golden' || t === 'hunt') applySkillFxToMs(ms, fx); // 奥義(旧msk2_)
+  }
+}
 const MILESTONE_RESEARCH = (() => {
   // 第12次R5続き4(2026-07-11 ユーザー指示「第0回研究とスキル解放研究で100ずつぐらい、コストもばらけさせて」):
   // 実績系(設備数・周回内実績)≈94本+スキル解放研究≈112本の生成器。コストは「解放時点の毎秒生産×costSec秒ぶん」で
@@ -2060,24 +2104,6 @@ const MILESTONE_RESEARCH = (() => {
   // 転生実績 4段(通算)
   const prTiers = [[2, 300], [5, 600], [10, 1500], [20, 3000]];
   prTiers.forEach(([n, cs], i) => add('ms_prestige_r' + (i + 1), sim => (sim.prestigeRuns || 0) >= n, { all: 1.2 }, cs));
-  // スキル解放研究(2026-07-15 ユーザー訂正「スキルで"解放"で研究に追加される。実績じゃない」):
-  // スキルを取るとそのスキル用の研究が解放され、研究として追加される(段2/3と同じゲート方式)。
-  // simでは「スキル所持=その研究効果が有効」でモデル化(実績=milestoneではないが、効果適用は同一)。
-  // 効果多様化(2026-07-15): 系統ごとに効果型を散らす(倍率/加算/自設備数連動/他設備数連動/会心確率)
-  const branchFx = id => {
-    if (id === 'upgrade_godfinger') return { critAdd: 0.04 };                 // 会心確率
-    if (id.startsWith('click_')) return { click: 1.3 };                       // 倍率
-    if (id.startsWith('golden_')) return { golden: 1.25 };
-    if (id.startsWith('monster_') || id === 'hunt_analysis' || id.startsWith('unlock_reward_')) return { hunt: 1.3 };
-    if (id.startsWith('auto_')) return { own: { oven: 0.003 } };              // 自設備数連動(オーブン台数で伸びる)
-    if (id.startsWith('upgrade_')) return { cps: 1.3 };
-    if (id.startsWith('economy_') || id === 'order_board') return { sup: ['bank', 'grandma', 0.002] }; // 他設備数連動(銀行がおばあちゃんで伸びる)
-    if (id.startsWith('research_')) return { all: 1.08 };
-    if (id.startsWith('reward_')) return { hunt: 1.2 };
-    if (id.startsWith('workshop_')) return { dropAdd: 1 };                    // 加算(素材)
-    if (id.startsWith('start_') || id === 'offline_1' || id === 'endless_oven') return { cpsAdd: 50 }; // 加算(+固定生産)
-    return { all: 1.1 };
-  };
   // スキル解放研究のコストは全て二倍以上違う(2026-07-16 ユーザー指示):
   // 固定コスト=スキルの深さ(はしごコスト順位)で6ティアに割った比3の階段。隣接ティアは常に≥2倍差。
   // 応用(msk_)=そのスキルのティア、奥義(msk2_)=1段上(=同一スキルでも応用<奥義を常に満たす)。
@@ -2136,6 +2162,8 @@ function applyMs(sim, m, cost) {
 function tryBuyMilestones(sim, prod) {
   const r = sim.run;
   if (!r.ms) r.ms = { up: {}, click: 1, cps: 1, all: 1, golden: 1, hunt: 1, dropAdd: 0, bought: {}, cpsAdd: 0, own: {}, sup: {}, critAdd: 0, momentum: false };
+  // スキル取得の成長効果(旧msk_/msk2_の内包)を周回開始時に1回だけ r.ms へ適用(2026-07-23)。
+  if (!r._skGrowthDone) { applySkillGrowth(sim); r._skGrowthDone = true; }
   // 量産体制(repeatSec)=生産機構: 従来どおり(既取得はクールダウン再購入・初回はイベント発火)。
   for (const m of MILESTONE_RESEARCH) {
     if (!m.repeatSec) continue;
