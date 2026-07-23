@@ -405,13 +405,8 @@ function newSim(strategy, opts) {
     prevDuration: 0,            // 提案9(到達連動ノルマ): 前回周回の長さ(秒)。未達判定の進行比 ρ=経過秒/前回長 の分母。
     skills: {},
     everUpgrade: {}, everResearch: {}, everStage: {},
-    unlockEvents: [],           // {t, kind, id} = 通知が「表示された」時刻(㉚はこれで測る)
+    unlockEvents: [],           // {t, kind, id}
     lastUnlockT: -Infinity,     // 解放ゲート(2026-07-14 ユーザー指示「開放間隔は30秒以上」)の直前解放時刻
-    // 解放通知キュー(2026-07-23 ユーザー指示「解放だけ完全達成」): 解放(=購入/取得)は即時だが、
-    // 「○○解放!」の通知は1つずつ≥30秒間隔で提示する(機関銃通知禁止・1つずつ味わう=㉚の意図そのもの)。
-    // 旧「開放まで30秒待つ(購入をブロック)」とは別物=購入は一切待たせない。unlockEvents は通知表示時刻で記録。
-    unlockQueue: [],            // {kind, id, n, realT} 未表示の解放通知(FIFO・同一tickは1件に統合)
-    lastUnlockShownT: -Infinity,// 直近に通知を表示した時刻(次表示は +NOTIFY_GAP 以降)
     firstResearchBuy: {}, firstPerk: {}, firstStageBuy: {},
     runs: [],                   // 各周回の結果
     // 工房・素材・ステージ・注文(第12次P統合・転生持ち越し)
@@ -3404,7 +3399,6 @@ function simulate(strategy, opts) {
   if (sim.opt.snapshots) sim.snapshots = [takeSnapshot(sim)];
   while (sim.t < horizon) {
     const prestiged = advanceTick(sim, strategy);
-    drainUnlockQueue(sim); // 解放通知を≥30秒間隔で1件ずつ表示(㉚)
     if (prestiged && sim.opt.snapshots) sim.snapshots.push(takeSnapshot(sim));
     // スキルは転生時のみ増える=転生した時だけ完成判定(毎tickのevalを避ける)
     // 完成=「買える全スキル(他方針の署名を除く)を取得済み」。署名相互排除で全ツリー完走は起きないため
@@ -3426,7 +3420,6 @@ function simulate(strategy, opts) {
     // 値はクランプせず、打ち切りだけ早める(検証高速化)。記録にInfinityが残るのは許容仕様。完全周回には無影響。
   }
 
-  flushUnlockQueue(sim); // 残った解放通知を吐き出す(記録の一貫性)
   // 終了時の進行中周回も記録
   const r = sim.run;
   sim.runs.push({
@@ -3462,39 +3455,11 @@ function unlockGateOk(sim) {
   if (!gap) return true;
   return sim.lastUnlockT == null || sim.t >= sim.lastUnlockT + gap;
 }
-const NOTIFY_GAP = 30; // 解放通知の最小間隔(秒)。㉚(≥30秒が9割以上)を構成上満たす。
-// 解放通知をキューへ積む(購入/取得自体は呼び出し側で即時完了済み=待たせない)。
-// 同一tick(=同一瞬間の複数解放:転生時の複数スキル・設備+その研究など)は「1回の解放体験」として1件に統合
-// (2026-07-22 ユーザー指示「一回の転生で複数スキルを取っても一回判定で」)。
 function pushUnlock(sim, kind, id, n) {
   sim.lastUnlockT = sim.t;
-  const q = sim.unlockQueue;
-  const last = q[q.length - 1];
-  if (last && last.realT === sim.t) { // 同一瞬間の解放は統合
-    last.id += ',' + id; last.kind += '+' + kind; last.n = (last.n || 1) + (n != null ? n : 1);
-    return;
-  }
-  q.push({ kind, id, n: n != null ? n : 1, realT: sim.t });
-}
-// 通知キューのドレイン(毎tick): 直近表示から NOTIFY_GAP 秒空いていれば、先頭の通知を1件だけ表示。
-function drainUnlockQueue(sim) {
-  if (!sim.unlockQueue.length) return;
-  if (sim.t < sim.lastUnlockShownT + NOTIFY_GAP) return;
-  const item = sim.unlockQueue.shift();
-  const ev = { t: sim.t, kind: item.kind, id: item.id };
-  if (item.n != null) ev.n = item.n;
+  const ev = { t: sim.t, kind, id };
+  if (n != null) ev.n = n;
   sim.unlockEvents.push(ev);
-  sim.lastUnlockShownT = sim.t;
-}
-// 終了時に残った通知を ≥NOTIFY_GAP 間隔で吐き出す(記録の一貫性のため)。
-function flushUnlockQueue(sim) {
-  while (sim.unlockQueue.length) {
-    const item = sim.unlockQueue.shift();
-    sim.lastUnlockShownT = Math.max(sim.t, sim.lastUnlockShownT + NOTIFY_GAP);
-    const ev = { t: sim.lastUnlockShownT, kind: item.kind, id: item.id };
-    if (item.n != null) ev.n = item.n;
-    sim.unlockEvents.push(ev);
-  }
 }
 function tryBuyUpgrade(sim, u, budgetRatio) {
   if (!sim.everUpgrade[u.id] && !unlockGateOk(sim)) return false;
