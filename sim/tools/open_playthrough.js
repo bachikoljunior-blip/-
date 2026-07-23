@@ -76,9 +76,14 @@ const fs=require('fs'); try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
     // 数分の貯蓄で cost に届くなら銀行モード(1e8ラッチ→1e9転生)。純経済で到達=stage進行(討伐100体)より現実的。
     if(!banking && s.gain>0 && (s.cookies + s.cps*600) >= s.cost) banking=true;
     const sec=s.sec;
-    let step=8000; if(sec>240)step=15000; if(sec>900)step=30000; if(banking)step=Math.max(step,30000);
+    // 序盤(最初の5分)は細かく=初出の一手を丁寧に。以降の反復グラインドは大きく早送り(まとめ前提)=転生を可視範囲に収める。
+    let step=8000; if(sec>=300)step=60000; if(sec>=1200)step=180000; if(banking)step=Math.max(step,120000);
     const stepSec=step/1000;
-    await p.clock.runFor(step);
+    // クロックはsub分割で進める(討伐/報酬を取りこぼさない・報酬ポーズで生産が止まらない)
+    { let done=0; const sub=15000; while(done<step){ const st=Math.min(sub,step-done); await p.clock.runFor(st); done+=st;
+        if(done<step)await p.evaluate(()=>{ for(let n=0;n<8;n++){ if(!(rewardModalOpen&&rewardModalOpen()))break; revealRewardChoices&&revealRewardChoices(); if(pendingRewardChoices&&pendingRewardChoices.length)chooseReward(pendingRewardChoices[0]); else break; }
+          if(typeof monsters!=='undefined'&&monsters&&monsters.length&&hitMonster)for(const m of monsters.slice())for(let k=0;k<200&&monsters.indexOf(m)>=0;k++)hitMonster(m.id);
+          if(typeof goldenVisible!=='undefined'&&goldenVisible&&collectGoldenCookie)collectGoldenCookie(); }); } }
     const tapN=Math.round(stepSec*TPS);
     const acts=await stepActions(tapN,banking);
     let progressed=false;
