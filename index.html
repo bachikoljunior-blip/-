@@ -170,7 +170,8 @@
          もう一方の表示位置がずれないようにする */
       display: grid;
       grid-template-columns: 1fr 1fr;
-      font-size: 12px;
+      column-gap: 6px;
+      font-size: 11px;
       font-weight: 700;
       line-height: 1.2;
       color: #f2d9a8;
@@ -178,10 +179,11 @@
     }
 
     .cookieCps .statHalf {
+      /* 増分(+X)も含めて全て見えるように切り詰めない(2026-07-22 ユーザー指示)。収まらなければ縮小 */
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
       text-align: center;
+      min-width: 0;
+      overflow: visible;
     }
 
     #cookies {
@@ -863,7 +865,7 @@
       display: block;
       width: 100%;
       background: #6b4527;
-      margin: 8px 0;
+      margin: 5px 0;
       text-align: left;
       border: 1px solid rgba(255,255,255,0.07);
     }
@@ -1398,6 +1400,13 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.5); pointer-events: none; z-index: 2;
     }
     .skillNode:not(.done) .nodeCheck { display: none; }
+    /* 取得可能=はっきり分かる「＋」バッジ(2026-07-22 ユーザー指示: 取得可能/取得不可の違いを明確に) */
+    .skillNode.canBuy .nodeCanBuy {
+      position: absolute; right: -4px; top: -4px; width: 17px; height: 17px; border-radius: 50%;
+      background: #ffd15a; color: #3a2606; font-size: 13px; font-weight: 900; line-height: 16px; text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.5), 0 0 8px rgba(255,209,90,0.7); pointer-events: none; z-index: 2;
+    }
+    .skillNode:not(.canBuy) .nodeCanBuy { display: none; }
 
     .skillNode.canBuy {
       background:
@@ -1786,10 +1795,11 @@
 
     .rewardBtn {
       position: relative;
-      min-height: 84px;
+      /* 選択肢数が最大でも1画面に収まるようコンパクトに(2026-07-22 ユーザー指示) */
+      min-height: 56px;
       overflow: hidden;
-      padding: 11px 106px 11px 12px;
-      border-radius: 14px;
+      padding: 7px 84px 7px 10px;
+      border-radius: 12px;
       background:
         linear-gradient(90deg, rgba(99,57,25,0.96), rgba(78,43,21,0.88) 54%, rgba(48,25,10,0.36)),
         linear-gradient(145deg, rgba(128,73,32,0.66), rgba(34,18,8,0.96));
@@ -5111,17 +5121,16 @@
     .eq2Need img { width: 42px; height: 42px; object-fit: contain; }
     .eq2CraftBtn { flex: 0 0 auto; width: auto; padding: 8px 14px; }
     @media (max-width: 700px) { .eq2CraftBox { width: 100%; } }
-    /* 装備中スロットの視認・変更をしやすく(2026-07-22 ユーザー指示): 大きめアイコン+名前/効果+変更ボタン */
-    .eq2SlotRow { display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-top: 1px solid rgba(255,255,255,0.10); }
-    .eq2SlotRow .eq2SlotLabel { flex: 0 0 auto; min-width: 60px; font-weight: 700; opacity: 0.8; font-size: 13px; }
-    .eq2SlotRow .eq2SlotItem { flex: 1 1 auto; display: flex; align-items: center; gap: 9px; min-width: 0; }
-    .eq2SlotRow .eq2SlotItem > img { width: 46px; height: 46px; object-fit: contain; flex: 0 0 auto; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5)); }
+    /* 装備中スロット(2026-07-22 大きさは元のコンパクトに戻す・変更ボタンは維持) */
+    .eq2SlotRow { display: flex; align-items: center; gap: 8px; padding: 5px 4px; border-top: 1px solid rgba(255,255,255,0.10); }
+    .eq2SlotRow .eq2SlotLabel { flex: 0 0 auto; min-width: 52px; font-weight: 700; opacity: 0.8; font-size: 12px; }
+    .eq2SlotRow .eq2SlotItem { flex: 1 1 auto; display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .eq2SlotRow .eq2SlotItem > img { width: 24px; height: 24px; object-fit: contain; flex: 0 0 auto; }
     .eq2SlotRow .eq2SlotName { min-width: 0; overflow: hidden; }
-    .eq2SlotRow .eq2SlotName b { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .eq2SlotRow .eq2SlotName .desc { font-size: 12px; display: block; }
-    .eq2SlotChangeBtn { flex: 0 0 auto; width: auto; padding: 7px 13px; }
-    .eq2SlotChooser { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 6px 10px; }
-    .eq2SlotChooser .item img { width: 30px; height: 30px; }
+    .eq2SlotRow .eq2SlotName b { font-size: 13px; }
+    .eq2SlotRow .eq2SlotName .desc { font-size: 11px; }
+    .eq2SlotChangeBtn { flex: 0 0 auto; width: auto; padding: 4px 10px; }
+    .eq2SlotChooser { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 6px 8px; }
     /* 小粒(群れ)は他より一回り小さく(2026-07-13)。基準160に対して小さめ */
     .monsterInstance.mtype-swarm {
       width: 128px;
@@ -7420,6 +7429,20 @@ function addTap(el, handler) {
     moved = true;
     el.classList.remove("pressed");
   });
+}
+
+// タップした瞬間(触れた瞬間=pointerdown)に発火する版(2026-07-22 ユーザー指示: クッキーは離した時でなく触れた瞬間)。
+// 連打の反応を最速化。移動しても発火済みなので、スクロール開始と競合しない位置(クッキーボタン)専用。
+function addTapImmediate(el, handler) {
+  el.addEventListener("pointerdown", e => {
+    el.classList.add("pressed");
+    e.preventDefault();
+    handler(e);
+  });
+  const clear = () => el.classList.remove("pressed");
+  el.addEventListener("pointerup", clear);
+  el.addEventListener("pointercancel", clear);
+  el.addEventListener("pointerleave", clear);
 }
 
 function fmtShort(n) {
@@ -9754,7 +9777,9 @@ function equip2Afford(it) {
 // 作成ティア解放(2026-07-15 ユーザー指示「作成のティア2以降をそれぞれスキル解放で作成欄が出る」):
 // ティア1=工房の拡張(workshop_2)。ティア2-6は各解放スキル(eqcraft_tN)で作成欄が出る。
 function eqCraftTierUnlocked(tier) { return tier <= 1 || hasSkill('eqcraft_t' + tier); }
-function equip2CraftableNow(it) { return eqCraftTierUnlocked(it.tier) && (it.stages || [it.tier]).includes(Math.min(EQUIP2_CFG.tiers, currentStageNo())); } // ステージ配置ばらけ(2026-07-14)+ティア解放スキル(2026-07-15)
+// 作成項目は全ステージ共通(2026-07-22 ユーザー指示「ステージごとの作成項目を全て一つにまとめて全ステージ共通に」):
+// ステージ配置の絞り込みを撤去し、ティアが解放されていればどのステージでも作成欄に出る。
+function equip2CraftableNow(it) { return eqCraftTierUnlocked(it.tier); }
 // 表示解禁の判定(前ティア装備の所持は問わない)。素材が必要数に達したら表示する(2026-07-14 ユーザー指示)。
 // 作成の可否(equip2Afford)は従来どおり前ティア所持が必須。
 function equip2MatsAfford(it) {
@@ -9857,7 +9882,8 @@ function renderEquip2Tab() {
     // 所持装備はカテゴリごとのタブで切り替える。先頭に「全て」を置き、最初はそれを開く(2026-07-13 ユーザー指示)
     const ownedCats = ["all", ...EQUIP2_CATS];
     if (!ownedCats.includes(equip2OwnedCat)) equip2OwnedCat = "all";
-    const rowFor = x => `<div class="infoRow"><img class="matIcon" src="${assetUrl(equip2Art(x))}" style="filter:${equip2Filter(x)}" alt=""><b>${x.name}</b> ×${fmt(state.eq2Owned[x.id])} / ${x.fxText}<button class="item eq2DiscardBtn" data-eq2discard="${x.id}" style="width:auto;padding:3px 10px;margin-left:auto">捨てる</button></div>`;
+    // 所持装備欄から直接装備できる(2026-07-22 ユーザー指示)。装備中は「装備中」表示にする。
+    const rowFor = x => { const equipped = state.eq2Equipped[x.cat] === x.id; return `<div class="infoRow"><img class="matIcon" src="${assetUrl(equip2Art(x))}" style="filter:${equip2Filter(x)}" alt=""><b>${x.name}</b> ×${fmt(state.eq2Owned[x.id])} / ${x.fxText}<button class="item ${equipped ? "tabSel" : "canBuy"} eq2EquipBtn" data-eq2equipown="${x.id}" data-eq2equipcat="${x.cat}" style="width:auto;padding:3px 10px;margin-left:auto">${equipped ? "装備中" : "装備"}</button><button class="item eq2DiscardBtn" data-eq2discard="${x.id}" style="width:auto;padding:3px 10px;margin-left:6px">捨てる</button></div>`; };
     const ownedTotal = equip2Items().reduce((s, x) => s + (state.eq2Owned[x.id] || 0), 0);
     const catBar = `<div class="buyModeBar" style="margin-bottom:8px;flex-wrap:wrap;gap:4px">` +
       `<button class="item ${equip2OwnedCat === "all" ? "tabSel" : ""}" data-eq2ownedcat="all" style="width:auto;padding:4px 9px">全て${ownedTotal > 0 ? `(${fmt(ownedTotal)})` : ""}</button>` +
@@ -9886,6 +9912,7 @@ function renderEquip2Tab() {
   box.querySelectorAll("[data-eq2sub]").forEach(b => addTap(b, () => { equip2SubTab = b.dataset.eq2sub; equip2ChoosingSlot = null; renderEquip2Tab(); }));
   box.querySelectorAll("[data-eq2ownedcat]").forEach(b => addTap(b, () => { equip2OwnedCat = b.dataset.eq2ownedcat; renderEquip2Tab(); }));
   box.querySelectorAll("[data-eq2discard]").forEach(b => addTap(b, () => discardEquip2(b.dataset.eq2discard)));
+  box.querySelectorAll("[data-eq2equipown]").forEach(b => addTap(b, () => { equipItemToSlot(b.dataset.eq2equipown, b.dataset.eq2equipcat); renderEquip2Tab(); }));
   box.querySelectorAll("[data-eq2choose]").forEach(b => addTap(b, () => { equip2ChoosingSlot = equip2ChoosingSlot === b.dataset.eq2choose ? null : b.dataset.eq2choose; renderEquip2Tab(); }));
   box.querySelectorAll("[data-eq2equip]").forEach(b => addTap(b, () => { equip2ChoosingSlot = null; equipItemToSlot(b.dataset.eq2equip, b.dataset.eq2slot); }));
 }
@@ -12596,7 +12623,7 @@ function tapCookie() {
   updateTopOnly();
 }
 
-addTap($("cookie"), tapCookie);
+addTapImmediate($("cookie"), tapCookie); // 触れた瞬間に発火(2026-07-22)
 // ステージ矢印(2026-07-14 ユーザー指示): 2個目のステージ解放後、クッキー左右の矢印で周回中でもステージ移動できる
 function moveStageBy(dir) {
   const cur = currentStageNo();
@@ -13255,7 +13282,7 @@ function renderSkillChoiceScreen() {
         ${ASSETS.skills && ASSETS.skills[skill.id]
           ? `<img class="nodeArt" src="${assetUrl(ASSETS.skills[skill.id])}" alt="" aria-hidden="true" decoding="async">`
           : `<span class="nodeMark">${skill.icon}</span>`}
-        ${done ? `<span class="nodeCheck">✓</span>` : ""}
+        ${done ? `<span class="nodeCheck">✓</span>` : (canBuy ? `<span class="nodeCanBuy">＋</span>` : "")}
       </button>
     `;
   }).join("");
@@ -17215,8 +17242,9 @@ function spawnMaterialDropIcons(payload) {
 }
 
 // 素材入手テキストを、アイコンの位置にしっかり読める時間(約1.4秒)だけ出す
-function showMaterialGetText(text, x, y) {
-  const area = $("floatArea");
+function showMaterialGetText(text, x, y, host) {
+  // 素材アイコンと同じコンテナへ出す(=同じ座標系)。floatAreaとは原点が違い位置がずれて見えなくなっていた(2026-07-22 修正)。
+  const area = host || $("floatArea");
   if (!area) return;
   const div = document.createElement("div");
   div.className = "matGetText";
@@ -17248,7 +17276,7 @@ function dropOneMaterialIcon(host, item, x, y) {
     gainMaterial(item.id, item.qty);
     if (showText) {
       const name = getMaterial(item.id) ? getMaterial(item.id).name : "素材";
-      showMaterialGetText(`入手 ${name}${item.qty > 1 ? " ×" + item.qty : ""}`, x + 17, y - 6);
+      showMaterialGetText(`入手 ${name}${item.qty > 1 ? " ×" + item.qty : ""}`, x + 17, y - 6, host);
       playSound("buy");
     }
     saveGame();
