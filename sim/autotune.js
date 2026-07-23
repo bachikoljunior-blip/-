@@ -26,10 +26,13 @@ function setNum(text, re, val) {
 
 // ---- モード実行(子プロセス・例外/タイムアウトは null を返す) ----
 function runMode(mode, timeoutMs) {
+  const t0 = Date.now();
+  log(`  計測中 ${mode} (${HORIZON}h)…`); // 進捗可視化(初回~20分の無音対策)
   try {
-    const out = execSync(`node runner.js ${mode} "" ${HORIZON}`, { cwd: __dirname, timeout: timeoutMs || 900000, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+    const out = execSync(`node runner.js ${mode} "" ${HORIZON}`, { cwd: __dirname, timeout: timeoutMs || 1800000, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+    log(`  計測完了 ${mode} (${((Date.now() - t0) / 1000).toFixed(0)}s)`);
     return out;
-  } catch (e) { return (e.stdout ? e.stdout.toString() : '') || null; }
+  } catch (e) { log(`  計測失敗 ${mode}(継続)`); return (e.stdout ? e.stdout.toString() : '') || null; }
 }
 // 「... 合計 X/Y方針」や「X/Y」を拾う汎用パーサ。condKey ごとに評価関数を持つ。
 function pass(out, re) { const m = out && out.match(re); return m ? [Number(m[1]), Number(m[2])] : null; }
