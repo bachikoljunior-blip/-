@@ -1,0 +1,81 @@
+// 実プレイ実況の生成器(序盤=実プレイで本物に撮れる範囲・イベント駆動・注入なし)。
+// 実機ブラウザで「そのまま遊んだ操作列」を、合成クロックで短時間に再現。各操作を発生順に記録し、
+// 連続同操作はまとめ・画像は最後の場面・累積現実プレイ時間+回数を付ける(native 430x780)。
+//
+// 実行: OUT=/path/out node sim/tools/open_playthrough.js  → OUT に 001.jpg.. と ops.json
+// 生成HTML: SRC=/path/out CUT=60 node sim/tools/open_report.js  → op_jikkyo.html
+//
+// なぜ「序盤だけ」か(実測・2026-07-23): このゲームは設計上コンテンツ完走に現実で数百時間かかる
+//  (ステージ2解放だけで討伐100体・転生は1e9クッキー)。ブラウザ実行のクロック早送りは実時間の約0.3倍
+//  コスト=数百時間ぶんは現実的に回せない。かつ手書き自動プレイヤは stage1 経済(cps~2000)で頭打ち。
+//  よって「実プレイで本物として短時間に撮れる」のは序盤=芯の輪(タップ→討伐→報酬→金→設備→研究)。
+//  深部(ステージ2-6/スキル75/装備6ティア/転生ループ)は別手段(sim由来の時刻・コンテンツ地図)で補う。
+const { chromium } = require('/opt/node22/lib/node_modules/playwright');
+const path = require('path');
+const os = require('os');
+const now=()=>Number(require('process').hrtime.bigint())/1e6;
+const INDEX = process.env.GAME_INDEX || path.resolve(__dirname, '../../index.html');
+const DIR = process.env.OUT || path.join(os.tmpdir(), 'open_playthrough');
+const MAXBLK=Number(process.env.MAXBLK||95);
+const MAXSEC=Number(process.env.MAXSEC||1500);
+const WALLCAP=Number(process.env.WALLCAP||1400)*1000;
+const fs=require('fs'); try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
+(async()=>{
+  const b=await chromium.launch({executablePath:process.env.PW_CHROMIUM||'/opt/pw-browsers/chromium',headless:true});
+  const p=await b.newPage({viewport:{width:430,height:780}});
+  const errs=[];p.on('pageerror',e=>errs.push(e.message));
+  await p.clock.install();
+  await p.goto('file://'+INDEX,{waitUntil:'load',timeout:60000});
+  await p.clock.runFor(1500);
+  await p.click('#audioGate').catch(()=>{}); await p.clock.runFor(700);
+  await p.click('#titleStartBtn').catch(()=>{}); await p.clock.runFor(800);
+  await p.evaluate(()=>{try{buyMode="1";}catch(e){}});
+
+  const L=[]; let shotN=0;
+  const gt=async()=>p.evaluate(()=>{try{return Math.round(state.totalPlaySec||0);}catch(e){return 0;}});
+  const fmtT=s=>{s=Math.round(s);const h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=s%60;return (h?h+'時間':'')+((m||h)?m+'分':'')+ss+'秒';};
+  const rec=async(op,inc)=>{ inc=(inc==null?1:inc); const t=await gt(); const last=L[L.length-1];
+    if(last && last.op===op){ last.count+=inc; last.t=fmtT(t); await p.screenshot({path:DIR+'/'+last.n+'.jpg',type:'jpeg',quality:50}); return; }
+    shotN++; const nm=String(shotN).padStart(3,'0'); await p.screenshot({path:DIR+'/'+nm+'.jpg',type:'jpeg',quality:50}); L.push({n:nm,t:fmtT(t),op,count:inc}); };
+
+  await rec('タイトルから開始',0);
+  for(let i=0;i<12;i++)await p.click('#cookie').catch(()=>{});
+  await rec('クッキーをタップ',12);
+
+  // 1刻みの処理を発生順に返す(討伐→報酬→金→研究→設備→タップ)。設備は価値/費用の貪欲(毎手ROI再評価)。
+  const stepActions=async(tapN)=>p.evaluate((tapN)=>{
+    const out=[]; const add=(l,c)=>{ if(c>0)out.push([l,c]); };
+    if(typeof monsters!=='undefined'&&monsters&&monsters.length&&hitMonster){ const b4=state.monstersDefeated||0; for(const m of monsters.slice())for(let k=0;k<200&&monsters.indexOf(m)>=0;k++)hitMonster(m.id); add('モンスターを討伐',(state.monstersDefeated||0)-b4); }
+    { let c=0; for(let n=0;n<12;n++){ if(!(rewardModalOpen&&rewardModalOpen()))break; revealRewardChoices&&revealRewardChoices(); if(pendingRewardChoices&&pendingRewardChoices.length){chooseReward(pendingRewardChoices[0]);c++;}else break; } add('討伐報酬を選択',c); }
+    if(typeof goldenVisible!=='undefined'&&goldenVisible&&collectGoldenCookie){collectGoldenCookie();add('金クッキーを回収',1);}
+    if(typeof RESEARCH!=='undefined')for(const r of RESEARCH){try{ if(!state.research[r.id]&&(typeof researchUnlocked!=='function'||researchUnlocked(r))&&state.cookies.gte(D(r.cost))){ buyResearch(r.id); add('研究「'+r.name+'」を購入',1);} }catch(e){}}
+    { const agg={},order=[]; for(let step=0;step<400;step++){ let best=null,bestR=0,bestC=null;
+        for(const u of UPGRADES){ if(typeof upgradeUnlocked==='function'&&!upgradeUnlocked(u))continue; let c;try{c=costOf(u);}catch(e){continue;} const cn=Number(c.toString()); if(!isFinite(cn)||cn<=0)continue; const r=(u.value||1)/cn; if(r>bestR){bestR=r;best=u;bestC=cn;} }
+        if(!best||!state.cookies.gte(bestC))break; const b4=state.upgrades[best.id]||0; buyUpgrade(best.id); const bt=(state.upgrades[best.id]||0)-b4; if(bt<=0)break; if(agg[best.id]===undefined){agg[best.id]=[best.name,0];order.push(best.id);} agg[best.id][1]+=bt; }
+      for(const id of order)add(agg[id][0]+'を購入',agg[id][1]); }
+    if(tapCookie&&tapN>0){for(let k=0;k<tapN;k++)tapCookie();add('クッキーをタップ',tapN);}
+    return out;
+  },tapN);
+
+  const wall0=now(); let reason='blkcap', stallCount=0;
+  for(let i=0;i<4000;i++){
+    const sec=await gt();
+    let step=8000; if(sec>240)step=12000; if(sec>600)step=20000;
+    await p.clock.runFor(step);
+    const tapN = sec<180 ? 60 : (sec<600 ? 40 : 25);
+    const acts=await stepActions(tapN);
+    let progressed=false;
+    for(const [label,cnt] of acts){ await rec(label,cnt); if(!/タップ/.test(label))progressed=true; }
+    if(progressed) stallCount=0; else stallCount++;
+    const s2=await gt();
+    if(L.length>=MAXBLK){reason='blkcap';break;}
+    if(s2>=MAXSEC){reason='seccap';break;}
+    if(stallCount>=14){reason='stall(経済頭打ち)';break;}
+    if((now()-wall0)>WALLCAP){reason='wallcap';break;}
+    if(i%6===0){ try{fs.writeFileSync(DIR+'/ops.json',JSON.stringify(L,null,1));}catch(e){}
+      console.log(`i=${i} ${fmtT(s2)} blk=${L.length} stall=${stallCount} wall=${((now()-wall0)/1000).toFixed(0)}s`); }
+  }
+  fs.writeFileSync(DIR+'/ops.json',JSON.stringify(L,null,1));
+  console.log('DONE reason='+reason,'blocks='+L.length,'lastT='+(L.length?L[L.length-1].t:'-'),'errors='+errs.length);
+  await b.close();
+})().catch(e=>{console.error('FATAL',e.message);process.exit(1);});
