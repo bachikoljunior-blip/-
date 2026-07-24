@@ -98,10 +98,13 @@ try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
 
   // 討伐フェーズ: fastForwardで出現を発火→倒す。ボスは別ブロックで捕捉、ステージ解放の瞬間も捕捉。
   // huntPhase自身が通常討伐/ボス/報酬をrec(=ボス出現前に通常討伐をflushして時系列を保つ)。
+  const msCount=async()=>p.evaluate(()=>{try{return Object.values(state.msResearch||{}).filter(Boolean).length;}catch(e){return 0;}});
   const huntPhase=async()=>{
     let killed=0, rewards=0, stageUp=null, moved=null, bossSeen=0;
-    let pendKills=0, pendRew=0;
-    const flush=async()=>{ if(pendKills>0){await rec('モンスターを討伐',pendKills);pendKills=0;} if(pendRew>0){await rec('討伐報酬を選択',pendRew);pendRew=0;} };
+    let pendKills=0, pendRew=0; const ms0=await msCount();
+    const flush=async()=>{ if(pendKills>0){await rec('モンスターを討伐',pendKills);pendKills=0;} if(pendRew>0){await rec('討伐報酬を選択',pendRew);pendRew=0;}
+      const msn=await msCount(); if(msn>flush._ms){ await rec('🎖️ 実績を達成',msn-flush._ms); flush._ms=msn; } };
+    flush._ms=ms0;
     // 解放済みの最新ステージへ移動(実プレイヤは矢印で移動して新ステージのモンスターを狩る=クエスト加算はcurrentStage基準)。
     moved=await p.evaluate(()=>{ try{ let m=null; while(currentStageNo()<maxUnlockedStageNo()){ moveStageBy(1); m=currentStageNo(); } return m?stageInfo(m).name:null; }catch(e){return null;} });
     if(moved) await rec(`ステージ「${moved}」へ移動`,1);
