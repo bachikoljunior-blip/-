@@ -18,7 +18,11 @@ try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
 (async()=>{
   const b=await chromium.launch({executablePath:process.env.PW_CHROMIUM||'/opt/pw-browsers/chromium',headless:true});
   const p=await b.newPage({viewport:{width:430,height:780}});
-  const errs=[];p.on('pageerror',e=>errs.push(e.message));
+  // 批判監査F1: pageerrorだけでなく console.error/warning/requestfailed も監視(旧QAは見逃していた)。
+  const errs=[]; const consoleIssues=[];
+  p.on('pageerror',e=>errs.push('PAGEERR '+e.message));
+  p.on('console',m=>{const t=m.type();if(t==='error'||t==='warning')consoleIssues.push(t+': '+m.text().slice(0,140));});
+  p.on('requestfailed',r=>consoleIssues.push('reqfail: '+r.url().slice(0,90)));
   await p.clock.install();
   await p.goto('file://'+INDEX,{waitUntil:'load',timeout:60000});
   await p.clock.runFor(1500);
@@ -199,6 +203,8 @@ try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
   }
   fs.writeFileSync(DIR+'/ops.json',JSON.stringify(L,null,1));
   const fin=await snap();
-  console.log(`DONE reason=${reason} stage=${fin.stage} runs=${fin.runs} skills=${fin.skills} blocks=${L.length} lastT=${L.length?L[L.length-1].t:'-'} errors=${errs.length}`, errs.slice(0,3).join(' | '));
+  const uniqIssues=[...new Set(consoleIssues)];
+  console.log(`DONE reason=${reason} stage=${fin.stage} runs=${fin.runs} skills=${fin.skills} blocks=${L.length} lastT=${L.length?L[L.length-1].t:'-'} pageerrors=${errs.length} consoleIssues=${uniqIssues.length}`, errs.slice(0,3).join(' | '));
+  if(uniqIssues.length) console.log('  console/network:', uniqIssues.slice(0,6).join(' | '));
   await b.close();
 })().catch(e=>{console.error('FATAL',e.message,e.stack);process.exit(1);});
