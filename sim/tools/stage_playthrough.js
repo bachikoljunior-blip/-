@@ -12,6 +12,8 @@ const now=()=>Number(require('process').hrtime.bigint())/1e6;
 const INDEX=process.env.GAME_INDEX||path.resolve(__dirname,'../../index.html');
 const DIR=process.env.OUT||path.join(os.tmpdir(),'stage_playthrough');
 const TARGET_STAGE=Number(process.env.TARGET_STAGE||2);
+const FF_STEP=Number(process.env.FF_STEP||50000); // 討伐fastForward刻み(粗くすると速いが粒度が落ちる)。速度改善ループで調整。
+const HUNT_STEPS=Math.max(30,Math.round(110*50000/FF_STEP)); // 総game-timeを一定に保つ
 const WALLCAP=Number(process.env.WALLCAP||600)*1000;
 const MAXBLK=Number(process.env.MAXBLK||220);
 try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
@@ -117,8 +119,8 @@ try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
     // 解放済みの最新ステージへ移動(実プレイヤは矢印で移動して新ステージのモンスターを狩る=クエスト加算はcurrentStage基準)。
     moved=await p.evaluate(()=>{ try{ let m=null; while(currentStageNo()<maxUnlockedStageNo()){ moveStageBy(1); m=currentStageNo(); } return m?stageInfo(m).name:null; }catch(e){return null;} });
     if(moved) await rec(`ステージ「${moved}」へ移動`,1);
-    for(let step=0; step<110; step++){ // quota壁(quotaFailed)まで長めに狩る=1窓の討伐数を最大化し転生回数を減らす
-      await p.clock.fastForward(50000);
+    for(let step=0; step<HUNT_STEPS; step++){ // quota壁(quotaFailed)まで長めに狩る=1窓の討伐数を最大化し転生回数を減らす
+      await p.clock.fastForward(FF_STEP);
       // まずボス出現を検出(倒す前に=ボスが画面に居る瞬間を撮る)
       const boss=await p.evaluate(()=>{ try{ return !!(typeof monsters!=='undefined'&&monsters&&monsters.some(m=>m&&m.typeId==='boss')); }catch(e){return false;} });
       if(boss){ await flush(); await rec('👑 ボスが出現',1); bossSeen++; }
@@ -181,7 +183,7 @@ try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
         const mv=await p.evaluate(n=>{try{while(currentStageNo()<n)moveStageBy(1);return stageInfo(currentStageNo()).name;}catch(e){return null;}},h.stageUp);
         if(mv) await rec(`ステージ「${mv}」へ移動`,1);
         let taste=0;
-        for(let step=0; step<40 && taste<12; step++){ await p.clock.fastForward(50000);
+        for(let step=0; step<Math.round(40*50000/FF_STEP) && taste<12; step++){ await p.clock.fastForward(FF_STEP);
           const k=await p.evaluate(()=>{ for(let n=0;n<10;n++){if(!(typeof rewardModalOpen==='function'&&rewardModalOpen()))break;revealRewardChoices&&revealRewardChoices();if(pendingRewardChoices&&pendingRewardChoices.length)chooseReward(pendingRewardChoices[0]);else break;}
             let k=0;if(typeof monsters!=='undefined'&&monsters&&monsters.length&&hitMonster){const b4=state.monstersDefeated||0;for(const m of monsters.slice())for(let z=0;z<600&&monsters.indexOf(m)>=0;z++)hitMonster(m.id);k=(state.monstersDefeated||0)-b4;}
             for(let n=0;n<10;n++){if(!(typeof rewardModalOpen==='function'&&rewardModalOpen()))break;revealRewardChoices&&revealRewardChoices();if(pendingRewardChoices&&pendingRewardChoices.length)chooseReward(pendingRewardChoices[0]);else break;}
