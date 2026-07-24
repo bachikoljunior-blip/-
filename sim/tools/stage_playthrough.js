@@ -56,7 +56,11 @@ try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
       for(let n=0;n<10;n++){if(!(typeof rewardModalOpen==='function'&&rewardModalOpen()))break;revealRewardChoices&&revealRewardChoices();if(pendingRewardChoices&&pendingRewardChoices.length)chooseReward(pendingRewardChoices[0]);else break;}
       if(typeof monsters!=='undefined'&&monsters&&monsters.length&&hitMonster){const b4=state.monstersDefeated||0;for(const m of monsters.slice())for(let z=0;z<300&&monsters.indexOf(m)>=0;z++)hitMonster(m.id);add('モンスターを討伐',(state.monstersDefeated||0)-b4);}
       for(let n=0;n<10;n++){if(!(typeof rewardModalOpen==='function'&&rewardModalOpen()))break;revealRewardChoices&&revealRewardChoices();if(pendingRewardChoices&&pendingRewardChoices.length)chooseReward(pendingRewardChoices[0]);else break;}
-      if(typeof goldenVisible!=='undefined'&&goldenVisible&&collectGoldenCookie){collectGoldenCookie();add('金クッキーを回収',1);}
+      if(typeof goldenVisible!=='undefined'&&goldenVisible&&collectGoldenCookie){collectGoldenCookie();
+        // 金の payoff(全生産ブースト/大当たり/エコー)を実況ラベルに反映=「金クッキー活用」を見せる。
+        let gm=''; try{gm=(document.getElementById('message')||{}).textContent||'';}catch(e){}
+        gm=gm.replace(/^💰?\s*/,'').trim();
+        add(gm?('金クッキーを回収 → '+gm):'金クッキーを回収',1);}
       if(typeof RESEARCH!=='undefined')for(const r of RESEARCH){try{if(!state.research[r.id]&&(typeof researchUnlocked!=='function'||researchUnlocked(r))&&state.cookies.gte(D(r.cost))){buyResearch(r.id);add('研究「'+r.name+'」を購入',1);}}catch(e){}}
       const agg={},order=[];
       for(let step=0;step<200;step++){ let best=null,bestR=0,bestC=null;
@@ -100,9 +104,10 @@ try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
   // huntPhase自身が通常討伐/ボス/報酬をrec(=ボス出現前に通常討伐をflushして時系列を保つ)。
   const msCount=async()=>p.evaluate(()=>{try{return Object.values(state.msResearch||{}).filter(Boolean).length;}catch(e){return 0;}});
   const huntPhase=async()=>{
-    let killed=0, rewards=0, stageUp=null, moved=null, bossSeen=0;
+    let killed=0, rewards=0, stageUp=null, moved=null, bossSeen=0, goldCount=0;
     let pendKills=0, pendRew=0; const ms0=await msCount();
     const flush=async()=>{ if(pendKills>0){await rec('モンスターを討伐',pendKills);pendKills=0;} if(pendRew>0){await rec('討伐報酬を選択',pendRew);pendRew=0;}
+      if(goldCount>0){ await rec('金クッキーを回収',goldCount); goldCount=0; }
       const msn=await msCount(); if(msn>flush._ms){ await rec('🎖️ 実績を達成',msn-flush._ms); flush._ms=msn; } };
     flush._ms=ms0;
     // 解放済みの最新ステージへ移動(実プレイヤは矢印で移動して新ステージのモンスターを狩る=クエスト加算はcurrentStage基準)。
@@ -118,10 +123,12 @@ try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
         for(let n=0;n<12;n++){if(!(typeof rewardModalOpen==='function'&&rewardModalOpen()))break;revealRewardChoices&&revealRewardChoices();if(pendingRewardChoices&&pendingRewardChoices.length){chooseReward(pendingRewardChoices[0]);rew++;}else break;}
         let k=0;if(typeof monsters!=='undefined'&&monsters&&monsters.length&&hitMonster){const b4=state.monstersDefeated||0;for(const m of monsters.slice())for(let z=0;z<600&&monsters.indexOf(m)>=0;z++)hitMonster(m.id);k=(state.monstersDefeated||0)-b4;}
         for(let n=0;n<12;n++){if(!(typeof rewardModalOpen==='function'&&rewardModalOpen()))break;revealRewardChoices&&revealRewardChoices();if(pendingRewardChoices&&pendingRewardChoices.length){chooseReward(pendingRewardChoices[0]);rew++;}else break;}
+        // 金クッキーは出ていれば回収(経済の忠実性=実プレイヤは狩り中も拾う)。ブロックは乱発せず窓ごとに集約(下でgoldCount)。
+        let gold=false;if(typeof goldenVisible!=='undefined'&&goldenVisible&&typeof collectGoldenCookie==='function'){collectGoldenCookie();gold=true;}
         const after=state.stageUnlocked||1; const aBoss=Object.values(state.bossKills||{}).reduce((a,b)=>a+(Number(b)||0),0);
-        return {k, rew, bossK:Math.max(0,aBoss-bBoss), up:(after>before?after:null), qf:!!state.quotaFailed};
+        return {k, rew, bossK:Math.max(0,aBoss-bBoss), gold, up:(after>before?after:null), qf:!!state.quotaFailed};
       });
-      killed+=r.k; rewards+=r.rew;
+      killed+=r.k; rewards+=r.rew; if(r.gold)goldCount++;
       if(r.bossK>0){ await rec('👑 ボスを撃破',r.bossK); pendKills+=Math.max(0,r.k-r.bossK); pendRew+=r.rew; }
       else { pendKills+=r.k; pendRew+=r.rew; }
       if(r.up){ await flush(); stageUp=r.up; break; } // 解放の瞬間で止めてスクショ
