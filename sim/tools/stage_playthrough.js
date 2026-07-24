@@ -153,7 +153,23 @@ try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
     if(h.rewards>0) await rec('討伐報酬を選択',h.rewards);
     if(h.stageUp){ const snm=await p.evaluate(n=>stageInfo(n).name,h.stageUp);
       await rec(`クエスト達成！ステージ${h.stageUp}「${snm}」解放`,1);
-      console.log(`*** STAGE ${h.stageUp} 「${snm}」 unlocked at cyc=${cyc} wall=${((now()-wall0)/1000).toFixed(0)}s`); continue; }
+      console.log(`*** STAGE ${h.stageUp} 「${snm}」 unlocked at cyc=${cyc} wall=${((now()-wall0)/1000).toFixed(0)}s`);
+      if(h.stageUp>=TARGET_STAGE){
+        // 到達ステージの中身を「味見」: 新ステージへ移動し、同一周回のまま少しだけ狩る(=転生を増やさず時間ラベルを保つ)。
+        const mv=await p.evaluate(n=>{try{while(currentStageNo()<n)moveStageBy(1);return stageInfo(currentStageNo()).name;}catch(e){return null;}},h.stageUp);
+        if(mv) await rec(`ステージ「${mv}」へ移動`,1);
+        let taste=0;
+        for(let step=0; step<40 && taste<12; step++){ await p.clock.fastForward(50000);
+          const k=await p.evaluate(()=>{ for(let n=0;n<10;n++){if(!(typeof rewardModalOpen==='function'&&rewardModalOpen()))break;revealRewardChoices&&revealRewardChoices();if(pendingRewardChoices&&pendingRewardChoices.length)chooseReward(pendingRewardChoices[0]);else break;}
+            let k=0;if(typeof monsters!=='undefined'&&monsters&&monsters.length&&hitMonster){const b4=state.monstersDefeated||0;for(const m of monsters.slice())for(let z=0;z<600&&monsters.indexOf(m)>=0;z++)hitMonster(m.id);k=(state.monstersDefeated||0)-b4;}
+            for(let n=0;n<10;n++){if(!(typeof rewardModalOpen==='function'&&rewardModalOpen()))break;revealRewardChoices&&revealRewardChoices();if(pendingRewardChoices&&pendingRewardChoices.length)chooseReward(pendingRewardChoices[0]);else break;}
+            return {k, qf:!!state.quotaFailed}; },{});
+          taste+=k.k; if(k.qf&&taste===0)break; if(k.qf)break;
+        }
+        if(taste>0){ await rec(`「${mv}」でモンスターを討伐`,taste); }
+        console.log(`   taste hunt on ${mv}: ${taste} kills`);
+      }
+      continue; }
 
     // 転生→スキル(quota時計reset・questKillsは持ち越し)
     const pr=await doPrestige();
