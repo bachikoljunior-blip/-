@@ -12788,12 +12788,11 @@ function revealKeyOwned(key) {
   if (kind === "stage") { const m = id.match(/^(.+)__s(\d)$/); return m ? researchStagePurchased(m[1], Number(m[2])) : false; }
   return false;
 }
-// 解放ゲート撤去(2026-07-22 ユーザー指示):
-// 設備/研究/段階=本来の解放条件を満たした瞬間に即棚出し(待ちゼロ)。
-// 実績/スキル研究(ms:)だけは「自動購入廃止・間隔分散」の代替として1つずつ棚出し(下 processContentReveals)。
+// 解放ゲート完全撤去(2026-07-23 ユーザー指示「棚出しで30秒待たせる仕様がダメ」):
+// 設備/研究/段階/実績研究すべて、解放条件を満たした瞬間に即棚出し(待ちゼロ)。
+// 実績研究の30秒ドリップ(棚出しペーシング)も撤去=待ちは一切なし。
 function revealOk(key) {
-  if (typeof key !== "string" || key.indexOf("ms:") !== 0) return true; // 設備/研究/段階/工房は即時
-  return isRevealed(key); // 実績/スキル研究は分散ドリップで解放されたものだけ
+  return true; // 全コンテンツ即時(棚出しの待ちゼロ)
 }
 // 1tickに最大1つ、前回解放から30秒経過していれば「解放条件は満たすが未解放」の中で最安を1つ解放する。
 // 解放条件=各種visible判定のゲート手前(所持/設備購入済み/トリガ達成)まで。棚順=最安から。
@@ -12802,6 +12801,7 @@ function revealOk(key) {
 // トリガ成立済み・未解放の中から30秒ごとに最安1つを棚へ出す=解放ラッシュ(機関銃通知)を防ぐ。
 // 設備/研究/段階/工房は revealOk が即true=待ちは無い。棚に出た後の購入はプレイヤーが手動でタップ(自動購入なし)。
 function processContentReveals() {
+  return; // 棚出しドリップ撤去(2026-07-23): 全コンテンツ即時表示=待ちなし。revealOk は常時true。
   ensureRevealState();
   if (Date.now() - state.lastRevealAt < REVEAL_GAP_MS) return;
   if (pausedForSkillChoice() || titleScreenActive()) return;

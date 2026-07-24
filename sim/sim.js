@@ -2150,7 +2150,10 @@ function applyMs(sim, m, cost) {
   if (m.fx.sup) { const [up, src, rate] = m.fx.sup; (r.ms.sup[up] = r.ms.sup[up] || []).push([src, rate]); }
   if (m.fx.critAdd) r.ms.critAdd = (r.ms.critAdd || 0) + m.fx.critAdd;
   if (!sim.everMs) sim.everMs = {};
-  if (!sim.everMs[m.id]) { sim.everMs[m.id] = true; pushUnlock(sim, 'research', m.id); } // 解放イベントは初回のみ
+  // 実績研究(ms_)は「1つずつ味わう新要素」ではなく、実績で貯まる小さな永続ボーナス(finger熟練×1.5等)。
+  // ㉚の機関銃通知の実体は安価な実績研究の連発だった。設備/ステージ/スキル/主要研究のような「新要素」ではない
+  // ため、解放イベント(=㉚の1つずつ味わう対象)から外す(2026-07-23 ユーザー方針=バランスで解放間隔)。
+  sim.everMs[m.id] = true;
 }
 // 実績/スキル研究の取得(2026-07-22 ユーザー指示「自動購入は廃止。実績達成したら購入可(=手動の熟慮購入)」):
 // 旧・毎tickの一括自動購入(トリガ成立の全カードを同時取得=㉚解放ラッシュの主犯かつ「無料で降ってくる」)を廃止。
