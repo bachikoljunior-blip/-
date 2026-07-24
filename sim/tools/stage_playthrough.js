@@ -96,26 +96,36 @@ try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
     log.gainStr=(typeof fmt==='function')?fmt(state.cookies.sub(before)):String(state.cookies.sub(before));
     return log; },target);
 
-  // 討伐フェーズ: fastForwardで出現を発火→倒す。ステージ解放の瞬間を捕捉。
+  // 討伐フェーズ: fastForwardで出現を発火→倒す。ボスは別ブロックで捕捉、ステージ解放の瞬間も捕捉。
+  // huntPhase自身が通常討伐/ボス/報酬をrec(=ボス出現前に通常討伐をflushして時系列を保つ)。
   const huntPhase=async()=>{
-    let killed=0, rewards=0, stageUp=null, moved=null;
+    let killed=0, rewards=0, stageUp=null, moved=null, bossSeen=0;
+    let pendKills=0, pendRew=0;
+    const flush=async()=>{ if(pendKills>0){await rec('モンスターを討伐',pendKills);pendKills=0;} if(pendRew>0){await rec('討伐報酬を選択',pendRew);pendRew=0;} };
     // 解放済みの最新ステージへ移動(実プレイヤは矢印で移動して新ステージのモンスターを狩る=クエスト加算はcurrentStage基準)。
     moved=await p.evaluate(()=>{ try{ let m=null; while(currentStageNo()<maxUnlockedStageNo()){ moveStageBy(1); m=currentStageNo(); } return m?stageInfo(m).name:null; }catch(e){return null;} });
+    if(moved) await rec(`ステージ「${moved}」へ移動`,1);
     for(let step=0; step<110; step++){ // quota壁(quotaFailed)まで長めに狩る=1窓の討伐数を最大化し転生回数を減らす
       await p.clock.fastForward(50000);
+      // まずボス出現を検出(倒す前に=ボスが画面に居る瞬間を撮る)
+      const boss=await p.evaluate(()=>{ try{ return !!(typeof monsters!=='undefined'&&monsters&&monsters.some(m=>m&&m.typeId==='boss')); }catch(e){return false;} });
+      if(boss){ await flush(); await rec('👑 ボスが出現',1); bossSeen++; }
       const r=await p.evaluate(()=>{
-        const before=state.stageUnlocked||1; let rew=0;
+        const before=state.stageUnlocked||1; const bBoss=Object.values(state.bossKills||{}).reduce((a,b)=>a+(Number(b)||0),0); let rew=0;
         for(let n=0;n<12;n++){if(!(typeof rewardModalOpen==='function'&&rewardModalOpen()))break;revealRewardChoices&&revealRewardChoices();if(pendingRewardChoices&&pendingRewardChoices.length){chooseReward(pendingRewardChoices[0]);rew++;}else break;}
-        let k=0;if(typeof monsters!=='undefined'&&monsters&&monsters.length&&hitMonster){const b4=state.monstersDefeated||0;for(const m of monsters.slice())for(let z=0;z<500&&monsters.indexOf(m)>=0;z++)hitMonster(m.id);k=(state.monstersDefeated||0)-b4;}
+        let k=0;if(typeof monsters!=='undefined'&&monsters&&monsters.length&&hitMonster){const b4=state.monstersDefeated||0;for(const m of monsters.slice())for(let z=0;z<600&&monsters.indexOf(m)>=0;z++)hitMonster(m.id);k=(state.monstersDefeated||0)-b4;}
         for(let n=0;n<12;n++){if(!(typeof rewardModalOpen==='function'&&rewardModalOpen()))break;revealRewardChoices&&revealRewardChoices();if(pendingRewardChoices&&pendingRewardChoices.length){chooseReward(pendingRewardChoices[0]);rew++;}else break;}
-        const after=state.stageUnlocked||1;
-        return {k, rew, up:(after>before?after:null), qf:!!state.quotaFailed};
+        const after=state.stageUnlocked||1; const aBoss=Object.values(state.bossKills||{}).reduce((a,b)=>a+(Number(b)||0),0);
+        return {k, rew, bossK:Math.max(0,aBoss-bBoss), up:(after>before?after:null), qf:!!state.quotaFailed};
       });
       killed+=r.k; rewards+=r.rew;
-      if(r.up){ stageUp=r.up; break; } // 解放の瞬間で止めてスクショ
-      if(r.qf) break; // quota壁=この周回のハント終了→転生へ
+      if(r.bossK>0){ await rec('👑 ボスを撃破',r.bossK); pendKills+=Math.max(0,r.k-r.bossK); pendRew+=r.rew; }
+      else { pendKills+=r.k; pendRew+=r.rew; }
+      if(r.up){ await flush(); stageUp=r.up; break; } // 解放の瞬間で止めてスクショ
+      if(r.qf){ await flush(); break; } // quota壁=この周回のハント終了→転生へ
+      if(step===109) await flush();
     }
-    return {killed, rewards, stageUp, moved};
+    return {killed, rewards, stageUp, moved, bossSeen};
   };
 
   const doPrestige=async()=>p.evaluate(()=>{
@@ -146,11 +156,9 @@ try{fs.mkdirSync(DIR,{recursive:true});}catch(e){}
     for(const [nm2,c] of bk.builds) await rec(nm2+'を購入',c);
     for(const rn of [...new Set(bk.researches)]) await rec('研究「'+rn+'」を購入',1);
 
-    // 討伐(ステージ進行)
+    // 討伐(ステージ進行)。移動はhunt冒頭で行うが実況の並びを保つため先に記録。
+    // huntPhaseが通常討伐/ボス/報酬をrec済み(=ボスを別ブロックで surface)。
     const h=await huntPhase();
-    if(h.moved) await rec(`ステージ「${h.moved}」へ移動`,1);
-    if(h.killed>0) await rec('モンスターを討伐',h.killed);
-    if(h.rewards>0) await rec('討伐報酬を選択',h.rewards);
     if(h.stageUp){ const snm=await p.evaluate(n=>stageInfo(n).name,h.stageUp);
       await rec(`クエスト達成！ステージ${h.stageUp}「${snm}」解放`,1);
       console.log(`*** STAGE ${h.stageUp} 「${snm}」 unlocked at cyc=${cyc} wall=${((now()-wall0)/1000).toFixed(0)}s`);
